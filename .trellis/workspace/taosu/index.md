@@ -8,8 +8,8 @@
 
 <!-- @@@auto:current-status -->
 - **Active File**: `journal-1.md`
-- **Total Sessions**: 16
-- **Last Active**: 2026-01-25
+- **Total Sessions**: 17
+- **Last Active**: 2026-01-29
 <!-- @@@/auto:current-status -->
 
 ---
@@ -19,7 +19,7 @@
 <!-- @@@auto:active-documents -->
 | File | Lines | Status |
 |------|-------|--------|
-| `journal-1.md` | ~705 | Active |
+| `journal-1.md` | ~759 | Active |
 <!-- @@@/auto:active-documents -->
 
 ---
@@ -29,6 +29,7 @@
 <!-- @@@auto:session-history -->
 | # | Date | Title | Commits |
 |---|------|-------|---------|
+| 17 | 2026-01-29 | Multi-Agent Pipeline 研究与修复 | `cb596fc`, `ace7dea` |
 | 16 | 2026-01-25 | Bugfix and Readme Update | `a711df3`, `900bd01` |
 | 15 | 2026-01-25 | Agent Session Resume Support | `853c2d0`, `fd2f97e`, `964dcd5`, `9376793` |
 | 14 | 2026-01-22 | Complete naming consistency fixes for 0.2.0 | `8a46da4` |

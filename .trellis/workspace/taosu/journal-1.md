@@ -703,3 +703,57 @@ Fixed a bug in add-session.sh and updated readme with new images.
 ### Next Steps
 
 - None - task complete
+
+## Session 17: Multi-Agent Pipeline 研究与修复
+
+**Date**: 2026-01-29
+**Task**: Multi-Agent Pipeline 研究与修复
+
+### Summary
+
+(Add summary)
+
+### Main Changes
+
+## 本次工作
+
+### 1. 研究 Parallel 流程
+完整分析了 Trellis 的 multi-agent parallel 流程：
+- `/trellis:parallel` 命令入口
+- plan.sh → start.sh → dispatch agent 的调度链
+- 上下文注入机制 (inject-subagent-context.py)
+- Ralph Loop 循环控制 (ralph-loop.py)
+
+### 2. 修复 Status 显示问题
+**问题**: Pipeline 完成后 status.sh 显示 `[stopped]` 而非 `[completed]`
+
+**原因**: create-pr.sh 将 task status 设为 `"review"`，但 status.sh 期望 `"completed"`
+
+**修复**: 修改 create-pr.sh，PR 创建后设置 `status = "completed"`
+- `.trellis/scripts/multi-agent/create-pr.sh`
+- `src/templates/trellis/scripts/multi-agent/create-pr.sh`
+
+### 3. 补充 Gitignore
+添加 multi-agent 临时文件到根目录 .gitignore：
+- `.session-id`
+- `.agent-log`
+- `.agent-runner.sh`
+
+### Git Commits
+
+| Hash | Message |
+|------|---------|
+| `cb596fc` | (see git log) |
+| `ace7dea` | (see git log) |
+
+### Testing
+
+- [OK] (Add test results)
+
+### Status
+
+[OK] **Completed**
+
+### Next Steps
+
+- None - task complete
