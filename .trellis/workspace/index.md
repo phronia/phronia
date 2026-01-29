@@ -27,7 +27,7 @@ workspace/
 
 | Developer | Last Active | Sessions | Active File |
 |-----------|-------------|----------|-------------|
-| (none yet) | - | - | - |
+| kleinhe | 2026-01-26 | 12 | journal-1.md |
 
 ---
 
