@@ -8,8 +8,8 @@
 
 <!-- @@@auto:current-status -->
 - **Active File**: `journal-1.md`
-- **Total Sessions**: 11
-- **Last Active**: 2026-01-22
+- **Total Sessions**: 14
+- **Last Active**: 2026-01-29
 <!-- @@@/auto:current-status -->
 
 ---
@@ -19,7 +19,7 @@
 <!-- @@@auto:active-documents -->
 | File | Lines | Status |
 |------|-------|--------|
-| `journal-1.md` | ~529 | Active |
+| `journal-1.md` | ~667 | Active |
 <!-- @@@/auto:active-documents -->
 
 ---
@@ -29,6 +29,9 @@
 <!-- @@@auto:session-history -->
 | # | Date | Title | Commits |
 |---|------|-------|---------|
+| 14 | 2026-01-29 | Context Overhead Analysis | `d050b3c`, `6b0eda9` |
+| 13 | 2026-01-26 | Create Mintlify Documentation Task | - |
+| 12 | 2026-01-26 | README Redesign & Use Case Images | `648d863`, `f206d92`, `09d2785` |
 | 11 | 2026-01-22 | 解决 main 合并冲突 | `a6d6425` |
 | 10 | 2026-01-22 | 创建 better-issue-recording 任务 | `23ec8ad` |
 | 9 | 2026-01-22 | Update 机制完善与测试 | `24cb8ff`, `ffdb732`, `ed0eafc`, `03716e0` |

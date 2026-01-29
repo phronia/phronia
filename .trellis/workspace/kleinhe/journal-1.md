@@ -527,3 +527,141 @@ Trellis 产品定位与分发策略：是否应该包装成 Claude Skill？
 ### Next Steps
 
 - None - task complete
+
+## Session 12: README Redesign & Use Case Images
+
+**Date**: 2026-01-26
+**Task**: README visual polish
+
+### Summary
+
+Rewrote README with new copy, fixed issues, and added use case images with proper padding.
+
+### Main Changes
+
+| Change | Description |
+|--------|-------------|
+| README Rewrite | Updated copy and fixed formatting issues |
+| Use Case Images | Added visual examples for 3 use cases |
+| Image Polish | Trimmed excess padding from images |
+
+### Git Commits
+
+| Hash | Message |
+|------|---------|
+| `648d863` | docs: rewrite README with new copy and fix issues |
+| `f206d92` | docs: add use case images |
+| `09d2785` | docs: trim excess padding from use case images |
+
+### Testing
+
+- [OK] README renders correctly on GitHub
+
+### Status
+
+[OK] **Completed**
+
+### Next Steps
+
+- None - feature complete
+
+## Session 13: Create Mintlify Documentation Task
+
+**Date**: 2026-01-26
+**Task**: mintlify-docs
+
+### Summary
+
+Created task for setting up Mintlify documentation site for Trellis.
+
+### Main Changes
+
+| Item | Description |
+|------|-------------|
+| Task Created | `.trellis/tasks/01-26-mintlify-docs/` |
+| PRD Written | 4-phase plan with detailed requirements |
+| Structure Proposed | `docs/` directory with intro, guides, reference |
+
+### PRD Highlights
+
+- **Phase 1**: Initial setup (`mint.json`, basic structure)
+- **Phase 2**: Core docs (Introduction, Quick Start, Concepts)
+- **Phase 3**: Reference docs (Scripts, Hooks, Agents)
+- **Phase 4**: Advanced topics (Writing specs, troubleshooting)
+
+### Git Commits
+
+(No commits - planning session)
+
+### Testing
+
+- [OK] Task directory created
+
+### Status
+
+[OK] **Completed**
+
+### Next Steps
+
+- Start Mintlify docs implementation
+
+## Session 14: Context Overhead Analysis
+
+**Date**: 2026-01-29
+**Task**: Context Overhead Analysis
+
+### Summary
+
+(Add summary)
+
+### Main Changes
+
+## Summary
+
+Responded to community user question: "How much context does Trellis + Skill + MCP consume?"
+
+## Deliverables
+
+| File | Description |
+|------|-------------|
+| `docs/context-overhead.md` | English version - detailed context analysis |
+| `docs/context-overhead-zh.md` | Chinese version |
+| `.trellis/tasks/archive/2026-01/01-29-context-benchmark/` | Archived benchmark task with raw data |
+
+## Key Findings
+
+| Scenario | Tokens | 1M Window | 200k Window |
+|----------|--------|-----------|-------------|
+| Session start | ~6,500 | 0.65% | 3.25% |
+| Peak (Implement) | ~11,000 | 1.1% | 5.5% |
+
+**Important insight**: Subagent context is independent, not cumulative. Each subagent runs with isolated context that's discarded after completion.
+
+## Per-Agent Breakdown
+
+| Agent | Tokens | 1M | 200k |
+|-------|--------|-----|------|
+| Research | ~1,000 | 0.10% | 0.50% |
+| Finish | ~1,900 | 0.19% | 0.95% |
+| Check | ~2,300 | 0.23% | 1.15% |
+| Debug | ~2,200 | 0.22% | 1.10% |
+| Implement | ~4,100 | 0.41% | 2.05% |
+
+### Git Commits
+
+| Hash | Message |
+|------|---------|
+| `d050b3c` | (see git log) |
+| `6b0eda9` | (see git log) |
+
+### Testing
+
+- [OK] (Add test results)
+
+### Status
+
+[OK] **Completed**
+
+### Next Steps
+
+- None - task complete
