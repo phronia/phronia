@@ -51,4 +51,4 @@
 
 - Sessions are appended to traces files
 - New traces file created when current exceeds 2000 lines
-- Use `add-session.sh` to record sessions
+- Use `python3 add_session.py` to record sessions
