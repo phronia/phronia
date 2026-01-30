@@ -838,3 +838,95 @@ demo4 完整测试通过：
 ### Next Steps
 
 - None - task complete
+
+
+## Session 19: Migration System Enhancements for Breaking Changes
+
+**Date**: 2026-01-30
+**Task**: Migration System Enhancements for Breaking Changes
+
+### Summary
+
+(Add summary)
+
+### Main Changes
+
+
+## Summary
+
+Enhanced the Trellis migration system to better handle breaking changes, with user-friendly warnings and AI-assisted migration support.
+
+## Key Features Added
+
+| Feature | Description |
+|---------|-------------|
+| **Breaking Change Warnings** | Prominent visual alerts when updating to versions with breaking changes |
+| **Changelog Display** | Show detailed changelog from migration manifests |
+| **Migration Recommendations** | Display `--migrate` recommendation for breaking changes |
+| **Auto-Create Migration Task** | Automatically create task with prd.md and task.json for breaking changes |
+| **AI Instructions** | Include AI assistant instructions in migration tasks |
+
+## New Manifest Fields
+
+```typescript
+interface MigrationManifest {
+  // Existing fields...
+  changelog?: string;           // Detailed changelog
+  breaking?: boolean;           // Is breaking change
+  recommendMigrate?: boolean;   // Recommend --migrate flag
+  migrationGuide?: string;      // Detailed migration guide (markdown)
+  aiInstructions?: string;      // Instructions for AI assistants
+}
+```
+
+## 0.3.0 Manifest Updates
+
+- Added 19 `delete` migrations for legacy shell scripts
+- Added comprehensive `migrationGuide` for shell-to-python migration
+- Added `aiInstructions` for AI-assisted migration
+- Marked as `breaking: true` with `recommendMigrate: true`
+
+## Update Command Behavior
+
+When user runs `trellis update`:
+
+1. **Shows breaking change warning** (red banner)
+2. **Displays changelog** with version info
+3. **Shows recommendation** to use `--migrate`
+4. **Auto-creates task** `MM-DD-migrate-to-X.X.X/` with:
+   - `task.json` (creator: trellis-update, assignee: current developer)
+   - `prd.md` (migration guide + AI instructions)
+
+## Files Modified
+
+- `src/types/migration.ts` - New manifest fields
+- `src/migrations/index.ts` - `getMigrationMetadata()` function
+- `src/migrations/manifests/0.3.0.json` - Shell deletion + metadata
+- `src/commands/update.ts` - Warning display + task creation
+- `src/templates/trellis/scripts/task.py` - Lint fix (Ruff F541)
+- `.trellis/scripts/task.py` - Lint fix (Ruff F541)
+
+
+
+### Git Commits
+
+| Hash | Message |
+|------|---------|
+| `475951a` | (see git log) |
+| `ad0a9d9` | (see git log) |
+| `570d406` | (see git log) |
+| `1fc3934` | (see git log) |
+| `0eaab6a` | (see git log) |
+| `102d64d` | (see git log) |
+
+### Testing
+
+- [OK] (Add test results)
+
+### Status
+
+[OK] **Completed**
+
+### Next Steps
+
+- None - task complete
