@@ -757,3 +757,84 @@ Fixed a bug in add-session.sh and updated readme with new images.
 ### Next Steps
 
 - None - task complete
+
+
+## Session 18: Shell to Python Migration - Complete
+
+**Date**: 2026-01-30
+**Task**: Shell to Python Migration - Complete
+
+### Summary
+
+(Add summary)
+
+### Main Changes
+
+## Summary
+
+将 `.trellis/scripts/` 下的 19 个 shell 脚本完整迁移为 Python 脚本，实现跨平台兼容（Windows/macOS/Linux）。
+
+## Changes
+
+| Category | Changes |
+|----------|---------|
+| Python Scripts | 19 个新脚本（common/*.py, multi_agent/*.py, root *.py） |
+| Shell Archive | 旧脚本归档到 scripts-shell-archive/ |
+| Templates | 所有模板更新为 Python 引用 |
+| Documentation | guide.md, guide-zh.md 等全部更新 |
+| CLI | init.ts, update.ts 调用 Python 脚本 |
+| Hooks | session-start.py, inject-subagent-context.py, ralph-loop.py |
+
+## Key Change: Agent Launcher
+
+**Before**: `start.sh` 生成临时 `.agent-runner.sh` 脚本
+**After**: `start.py` 直接用 `subprocess.Popen` 启动，创建 `.session-id` 追踪
+
+## Testing
+
+demo4 完整测试通过：
+- 25 项功能测试全部通过
+- Hooks 正常工作
+- 跨平台启动验证
+
+## Files Modified
+
+**Templates:**
+- `src/templates/trellis/scripts/*.py` - 新 Python 脚本
+- `src/templates/claude/agents/*.md` - Agent 文档
+- `src/templates/claude/commands/trellis/*.md` - 命令模板
+- `src/templates/cursor/commands/*.md` - Cursor 命令
+
+**CLI:**
+- `src/commands/init.ts` - init_developer.py, create_bootstrap.py
+- `src/commands/update.ts` - .py 文件权限处理
+
+**Docs:**
+- `docs/guide.md`, `docs/guide-zh.md` - 完整更新
+
+
+### Git Commits
+
+| Hash | Message |
+|------|---------|
+| `813a2d2` | (see git log) |
+| `50f83c0` | (see git log) |
+| `299db2d` | (see git log) |
+| `ef5f0a1` | (see git log) |
+| `d0d61b8` | (see git log) |
+| `23b9aca` | (see git log) |
+| `1aae5e0` | (see git log) |
+| `b24f060` | (see git log) |
+| `2612fbd` | (see git log) |
+
+### Testing
+
+- [OK] (Add test results)
+
+### Status
+
+[OK] **Completed**
+
+### Next Steps
+
+- None - task complete
