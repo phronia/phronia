@@ -962,3 +962,97 @@ Created trellis-meta skill with comprehensive documentation organized by platfor
 ### Next Steps
 
 - None - task complete
+
+
+## Session 21: Add trellis-meta skill & sync hotfix
+
+**Date**: 2026-01-31
+**Task**: Add trellis-meta skill & sync hotfix
+
+### Summary
+
+(Add summary)
+
+### Main Changes
+
+## Work Done
+
+| Item | Description |
+|------|-------------|
+| trellis-meta skill | Created comprehensive documentation skill for Trellis system |
+| Hotfix sync | Cherry-picked writeFile hotfix from main, resolved conflict |
+| Scripts cleanup | Removed redundant publish:beta/publish:latest scripts |
+| Beta release | Released 0.3.0-beta.6 |
+
+## trellis-meta Skill Structure
+
+```
+.claude/skills/trellis-meta/
+├── SKILL.md                    # Main entry point
+└── references/
+    ├── core/                   # All platforms (Claude Code, Cursor, OpenCode)
+    │   ├── overview.md
+    │   ├── files.md
+    │   ├── workspace.md
+    │   ├── tasks.md
+    │   ├── specs.md
+    │   └── scripts.md
+    ├── claude-code/            # Claude Code only features
+    │   ├── overview.md
+    │   ├── hooks.md
+    │   ├── agents.md
+    │   ├── ralph-loop.md
+    │   ├── multi-session.md
+    │   ├── worktree-config.md
+    │   └── scripts.md
+    ├── how-to-modify/          # Modification guides
+    │   ├── overview.md
+    │   ├── add-command.md
+    │   ├── add-agent.md
+    │   ├── add-spec.md
+    │   ├── add-phase.md
+    │   ├── modify-hook.md
+    │   └── change-verify.md
+    └── meta/                   # Meta documentation
+        ├── platform-compatibility.md
+        ├── self-iteration-guide.md
+        └── trellis-local-template.md
+```
+
+## Hotfix Details
+
+Cherry-picked `43b3e23` - all file copies now use `writeFile()` for user choice on conflicts:
+- `.claude/` directory
+- `.cursor/` directory  
+- `.trellis/scripts/` directory
+
+Resolved conflict: kept both writeFile usage AND .py executable support.
+
+## CI Publish Flow
+
+Simplified release scripts - CI auto-publishes on tag push:
+- `release:beta` → pushes tag → CI publishes with `--tag beta`
+- `release` → pushes tag → CI publishes with `--tag latest`
+
+
+### Git Commits
+
+| Hash | Message |
+|------|---------|
+| `90bdb89` | (see git log) |
+| `b786434` | (see git log) |
+| `dfc0266` | (see git log) |
+| `2f0fe16` | (see git log) |
+| `2b67fd7` | (see git log) |
+
+### Testing
+
+- [OK] (Add test results)
+
+### Status
+
+[OK] **Completed**
+
+### Next Steps
+
+- None - task complete
