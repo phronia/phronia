@@ -8,7 +8,7 @@
 
 <!-- @@@auto:current-status -->
 - **Active File**: `journal-1.md`
-- **Total Sessions**: 21
+- **Total Sessions**: 22
 - **Last Active**: 2026-01-31
 <!-- @@@/auto:current-status -->
 
@@ -19,7 +19,7 @@
 <!-- @@@auto:active-documents -->
 | File | Lines | Status |
 |------|-------|--------|
-| `journal-1.md` | ~1058 | Active |
+| `journal-1.md` | ~1206 | Active |
 <!-- @@@/auto:active-documents -->
 
 ---
@@ -29,6 +29,7 @@
 <!-- @@@auto:session-history -->
 | # | Date | Title | Commits |
 |---|------|-------|---------|
+| 22 | 2026-01-31 | Windows Compatibility & Task UX Improvements | `6e9e7fa`, `eef6609`, `5b3f62c`, `75d3ab0`, `c54e39a`, `d103cf1`, `73ce5c4`, `a60161b`, `f5ab732`, `ef8050f`, `cba79ac` |
 | 21 | 2026-01-31 | Add trellis-meta skill & sync hotfix | `90bdb89`, `b786434`, `dfc0266`, `2f0fe16`, `2b67fd7` |
 | 20 | 2026-01-31 | Add trellis-meta skill documenting Trellis system | `90bdb89` |
 | 19 | 2026-01-30 | Migration System Enhancements for Breaking Changes | `475951a`, `ad0a9d9`, `570d406`, `1fc3934`, `0eaab6a`, `102d64d` |

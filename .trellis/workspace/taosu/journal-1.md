@@ -1129,3 +1129,78 @@ Fixed two GitHub issues related to Windows compatibility and Claude Code hook in
 - [ ] 更新 `.trellis/spec/guides/` 添加 "Cross-Platform Development" 指南
 - [ ] 创建 GitHub Issue: "Add Windows CI testing"
 - [ ] 创建 GitHub Issue: "Migrate remaining Python scripts to TypeScript"
+
+
+## Session 22: Windows Compatibility & Task UX Improvements
+
+**Date**: 2026-01-31
+**Task**: Windows Compatibility & Task UX Improvements
+
+### Summary
+
+(Add summary)
+
+### Main Changes
+
+
+## Summary
+
+Fixed GitHub Issues #18 and #19 (Windows compatibility), improved task command UX, and updated documentation/specs.
+
+## Key Changes
+
+| Category | Change |
+|----------|--------|
+| **Issue #18 Fix** | Correct Claude Code hook JSON output format |
+| **Issue #19 Fix** | UTF-8 encoding for cross-platform compatibility |
+| **Refactor** | Rewrite `createBootstrapTask` in TypeScript |
+| **UX Improvement** | All task commands now support task name lookup |
+| **Docs** | Update cross-platform thinking guide with new patterns |
+| **Docs** | Improve break-loop command to require immediate spec updates |
+
+## Bug Analysis (Issue #18 & #19)
+
+**Root Cause**:
+- Category A (Missing Spec): Hook JSON format undocumented
+- Category E (Implicit Assumption): Assumed `python3`, UTF-8, `tail -f` availability
+
+**Prevention**:
+- `getPythonCommand()` for cross-platform Python detection
+- `sys.executable` for Python subprocess calls
+- Explicit `encoding="utf-8"` with `errors="replace"`
+- Git `-c i18n.logOutputEncoding=UTF-8` for UTF-8 output
+
+## Releases
+
+- **0.3.0-beta.7**: Windows compatibility fixes
+- **0.3.0-beta.8**: Task name lookup support
+
+
+
+### Git Commits
+
+| Hash | Message |
+|------|---------|
+| `6e9e7fa` | (see git log) |
+| `eef6609` | (see git log) |
+| `5b3f62c` | (see git log) |
+| `75d3ab0` | (see git log) |
+| `c54e39a` | (see git log) |
+| `d103cf1` | (see git log) |
+| `73ce5c4` | (see git log) |
+| `a60161b` | (see git log) |
+| `f5ab732` | (see git log) |
+| `ef8050f` | (see git log) |
+| `cba79ac` | (see git log) |
+
+### Testing
+
+- [OK] (Add test results)
+
+### Status
+
+[OK] **Completed**
+
+### Next Steps
+
+- None - task complete
