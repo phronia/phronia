@@ -930,3 +930,35 @@ When user runs `trellis update`:
 ### Next Steps
 
 - None - task complete
+
+
+## Session 20: Add trellis-meta skill documenting Trellis system
+
+**Date**: 2026-01-31
+**Task**: Add trellis-meta skill documenting Trellis system
+
+### Summary
+
+Created trellis-meta skill with comprehensive documentation organized by platform compatibility (core/, claude-code/, how-to-modify/, meta/). Added version tracking, platform support matrix, file references, and modification guides.
+
+### Main Changes
+
+
+
+### Git Commits
+
+| Hash | Message |
+|------|---------|
+| `90bdb89` | (see git log) |
+
+### Testing
+
+- [OK] (Add test results)
+
+### Status
+
+[OK] **Completed**
+
+### Next Steps
+
+- None - task complete
