@@ -19,7 +19,7 @@ Trellis 目前深度绑定 Claude Code，高级功能（Hooks、Multi-Session）
 | 非交互式 CLI | `opencode run` | ✅ 完全对应 |
 | Agent 加载 | `--agent` flag | ✅ 完全对应 |
 | 会话管理 | `--session` / `--continue` | ✅ 完全对应 |
-| 跳过权限 | `run` 模式默认自动批准 | ✅ 完全对应 |
+| 跳过权限 | `--yolo` / `--dangerously-skip-permissions` | ✅ 完全对应 |
 | JSON 输出 | `--format json` | ✅ 完全对应 |
 | **Task 工具 (Subagent)** | Task tool + `mode: "subagent"` | ✅ 完全对应 |
 | **Verbose 日志** | `--log-level DEBUG --print-logs` | ✅ 完全对应 |
@@ -32,6 +32,8 @@ Trellis 目前深度绑定 Claude Code，高级功能（Hooks、Multi-Session）
 | Hooks → Plugins（Python → JS） | 中 | P1 |
 | Agent 定义格式转换 | 中 | P1 |
 | Agent 命名冲突（plan → trellis-plan） | 低 | P1 |
+| Dispatch Agent 两个版本 | 中 | P1 |
+| status.py 恢复命令适配 | 低 | P1 |
 | Multi-Session 脚本适配 | 低 | P2 |
 
 ## 实现方案
@@ -404,7 +406,7 @@ subprocess.Popen(opencode_cmd, cwd=worktree_path, ...)
 **OpenCode 适配**：
 - 状态文件是纯文件系统操作，无需改动
 - OpenCode plugin 需要读取 `worktree.yaml` 的 `verify` 配置
-- 由于没有 SubagentStop hook，需要用 `session.idle` 或 `tool.execute.after` 模拟
+- ✅ OpenCode 有 `stop` hook 可以拦截 agent 停止（见决策 #27）
 
 ### 17. Subagent 上下文注入 (PreToolUse:Task)
 
@@ -562,6 +564,113 @@ verify:
 
 **实现方式**：Plugin 里用 `$` 调用 Python 脚本解析 YAML
 
+### 23. status.py 恢复命令输出
+
+**问题**：`status.py` 硬编码了 Claude Code 的恢复命令：
+
+```python
+print(f"cd {worktree} && claude --resume {session_id}")
+```
+
+**需要适配**：根据 `registry.json` 中的 `platform` 字段输出不同命令
+
+```python
+if platform == "opencode":
+    print(f"cd {worktree} && opencode run --session {session_id}")
+else:
+    print(f"cd {worktree} && claude --resume {session_id}")
+```
+
+### 24. Agent 定义路径
+
+**问题**：`plan.py` 和 `start.py` 硬编码了 agent 路径：
+
+```python
+PLAN_MD_PATH = ".claude/agents/plan.md"
+DISPATCH_MD_PATH = ".claude/agents/dispatch.md"
+```
+
+**OpenCode 适配**：
+- OpenCode agent 定义在 `opencode.json` 或 `.opencode/agent/*.md`
+- 需要根据平台检查不同路径
+
+**决策**：各平台各自验证 agent 存在，不做统一处理
+
+### 25. 环境变量传递给 Agent
+
+**问题**：`plan.py` 通过环境变量传递参数：
+
+```python
+env["PLAN_TASK_NAME"] = task_name
+env["PLAN_DEV_TYPE"] = dev_type
+env["PLAN_TASK_DIR"] = task_dir
+env["PLAN_REQUIREMENT"] = requirement
+```
+
+**研究结论**：OpenCode plugin 可以通过 `$` 调用 shell 访问环境变量
+
+**适配方案**：
+- 环境变量传递方式两平台通用
+- Agent prompt 中可以引导 agent 读取环境变量
+- 或者直接在 prompt 中包含参数（更可靠）
+
+### 26. 跳过权限确认
+
+**✅ 已验证**：OpenCode 已支持 `--yolo` / `--dangerously-skip-permissions`
+
+| 平台 | 方式 |
+|-----|------|
+| Claude Code | `--dangerously-skip-permissions` |
+| OpenCode | `--yolo` 或 `--dangerously-skip-permissions` |
+| OpenCode | 环境变量 `OPENCODE_YOLO=true` |
+| OpenCode | 配置 `"yolo": true` |
+
+**参考**：[GitHub Issue #8463](https://github.com/anomalyco/opencode/issues/8463) - 已在 PR #9073 中实现
+
+**适配方案**：
+```python
+if platform == "opencode":
+    cmd.append("--yolo")
+else:
+    cmd.append("--dangerously-skip-permissions")
+```
+
+### 27. Ralph Loop 的 Stop Hook
+
+**✅ 已验证**：OpenCode 有 `stop` hook 可以拦截 agent 停止
+
+**Claude Code**：`SubagentStop` hook
+**OpenCode**：`stop` hook
+
+**OpenCode stop hook 示例**：
+```javascript
+export const RalphLoop = async ({ $, directory }) => ({
+  "stop": async (input, output) => {
+    // 运行 verify 命令
+    const result = await $`python3 ${directory}/.trellis/scripts/verify.py`
+    if (result.exitCode !== 0) {
+      output.block = true
+      output.message = "Verification failed, please fix issues"
+    }
+  }
+})
+```
+
+**注意**：需要确认 `stop` hook 是否能区分不同的 subagent 类型
+
+### 28. Dispatch Agent 需要两个版本
+
+**问题**：`dispatch.md` 中使用了 Claude Code 特有的 Task 调用语法
+
+**决策**：维护两个版本
+- Claude Code: `.claude/agents/dispatch.md`
+- OpenCode: `.opencode/agent/dispatch.md` 或 `opencode.json` 中配置
+
+**差异点**：
+- Task 工具参数格式可能不同
+- TaskOutput 轮询机制需要验证
+- model 参数指定方式不同
+
 ## 待讨论问题
 
 （暂无）
@@ -578,3 +687,5 @@ verify:
 - [GitHub Issue #4271](https://github.com/sst/opencode/issues/4271) - 无法覆盖内置 agent (plan/build)
 - [OpenCode Agent System (DeepWiki)](https://deepwiki.com/sst/opencode/3.2-agent-system) - 内置 agent 完整列表
 - [OpenCode Tools 文档](https://opencode.ai/docs/tools/) - 内置工具列表
+- [OpenCode Plugins Guide (Gist)](https://gist.github.com/johnlindquist/0adf1032b4e84942f3e1050aba3c5e4a) - Plugin 事件和数据结构
+- [GitHub Issue #8463](https://github.com/anomalyco/opencode/issues/8463) - --dangerously-skip-permissions (已实现)
