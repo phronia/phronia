@@ -8,8 +8,8 @@
 
 <!-- @@@auto:current-status -->
 - **Active File**: `journal-1.md`
-- **Total Sessions**: 17
-- **Last Active**: 2026-01-29
+- **Total Sessions**: 18
+- **Last Active**: 2026-02-01
 <!-- @@@/auto:current-status -->
 
 ---
@@ -19,7 +19,7 @@
 <!-- @@@auto:active-documents -->
 | File | Lines | Status |
 |------|-------|--------|
-| `journal-1.md` | ~759 | Active |
+| `journal-1.md` | ~816 | Active |
 <!-- @@@/auto:active-documents -->
 
 ---
@@ -29,6 +29,7 @@
 <!-- @@@auto:session-history -->
 | # | Date | Title | Commits |
 |---|------|-------|---------|
+| 18 | 2026-02-01 | Add CONTRIBUTING.md | `942c9f3` |
 | 17 | 2026-01-29 | Multi-Agent Pipeline 研究与修复 | `cb596fc`, `ace7dea` |
 | 16 | 2026-01-25 | Bugfix and Readme Update | `a711df3`, `900bd01` |
 | 15 | 2026-01-25 | Agent Session Resume Support | `853c2d0`, `fd2f97e`, `964dcd5`, `9376793` |

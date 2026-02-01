@@ -757,3 +757,60 @@ Fixed a bug in add-session.sh and updated readme with new images.
 ### Next Steps
 
 - None - task complete
+
+## Session 18: Add CONTRIBUTING.md
+
+**Date**: 2026-02-01
+**Task**: Add CONTRIBUTING.md
+
+### Summary
+
+(Add summary)
+
+### Main Changes
+
+## Summary
+Created contributing guidelines for the Trellis project in both English and Chinese.
+
+## What Was Done
+- Researched best practices from React, VS Code, Simple Icons
+- Created `CONTRIBUTING.md` (English) and `CONTRIBUTING_CN.md` (Chinese)
+- Followed existing naming convention (`_CN` suffix like README)
+
+## Content Structure
+| Section | Description |
+|---------|-------------|
+| Ways to Contribute | Bug reports, feature requests, docs, code |
+| Development Setup | Prerequisites, fork/clone, install, build |
+| Running Checks | lint, lint:py, lint:all, typecheck + pre-commit hook note |
+| Project Structure | Directory overview with template sync warning |
+| Commit Guidelines | Conventional commits format |
+| Pull Request Process | 6-step workflow |
+
+## Key Decisions
+- Placed in root directory (GitHub standard, matches most projects)
+- Used `_CN` suffix to match existing `README_CN.md` convention
+- Added note about syncing `.claude/`, `.trellis/` changes with `src/templates/`
+- Documented pre-commit hooks from feat/opencode branch
+
+## Files Added
+- `CONTRIBUTING.md`
+- `CONTRIBUTING_CN.md`
+
+### Git Commits
+
+| Hash | Message |
+|------|---------|
+| `942c9f3` | (see git log) |
+
+### Testing
+
+- [OK] (Add test results)
+
+### Status
+
+[OK] **Completed**
+
+### Next Steps
+
+- None - task complete
