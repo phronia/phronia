@@ -31,6 +31,7 @@ Trellis 目前深度绑定 Claude Code，高级功能（Hooks、Multi-Session）
 | CLI adapter（参数映射） | 低 | P0 |
 | Hooks → Plugins（Python → JS） | 中 | P1 |
 | Agent 定义格式转换 | 中 | P1 |
+| Agent 命名冲突（plan → trellis-plan） | 低 | P1 |
 | Multi-Session 脚本适配 | 低 | P2 |
 
 ## 实现方案
@@ -115,6 +116,51 @@ python3 .trellis/scripts/multi_agent/start.py .trellis/tasks/xxx --platform open
 - OpenCode: `opencode.json` 中的 `agent` 配置
 
 **理由**：避免转换脚本的维护成本，两个平台的 agent 能力可能有差异
+
+### 2.1 Agent 命名冲突
+
+**研究结论**：OpenCode 有内置 agent，**无法被同名自定义 agent 覆盖**
+
+**OpenCode 内置 agent 完整列表**：
+
+| 类型 | Agent | 用途 | Trellis 冲突 |
+|------|-------|------|-------------|
+| Primary | `build` | 默认，完整权限开发 | ✓ 无冲突 |
+| Primary | `plan` | 只读，分析和规划 | ⚠️ **冲突** |
+| Subagent | `general` | 复杂搜索和多步任务 | ✓ 无冲突 |
+| Subagent | `explore` | 代码库探索 | ✓ 无冲突 |
+| Internal | `title` | 自动生成会话标题 | ✓ 无冲突 |
+| Internal | `summary` | 生成消息摘要 | ✓ 无冲突 |
+| Internal | `compaction` | 压缩上下文 | ✓ 无冲突 |
+
+**OpenCode 内置命令**（可以被覆盖）：
+- `/init`, `/undo`, `/redo`, `/share`, `/help`
+- Trellis 命令使用 `/trellis:` 或 `/project:trellis:` 前缀，无冲突
+
+**OpenCode 内置工具**（14 个，与 Trellis 无关）：
+- `bash`, `edit`, `write`, `read`, `grep`, `glob`, `list`, `lsp`, `patch`, `skill`, `todowrite`, `todoread`, `webfetch`, `question`
+
+**已知限制**：[GitHub Issue #4271](https://github.com/sst/opencode/issues/4271) - 无法覆盖内置 "build" 和 "plan" agent
+
+**解决方案**：Trellis 在 OpenCode 下使用不同的 agent 名称
+
+| Trellis Agent | Claude Code | OpenCode |
+|---------------|-------------|----------|
+| plan | `plan` | `trellis-plan` |
+| dispatch | `dispatch` | `dispatch` |
+| implement | `implement` | `implement` |
+| check | `check` | `check` |
+| research | `research` | `research` |
+| debug | `debug` | `debug` |
+
+**适配方案**：CLI adapter 根据平台自动映射 agent 名称
+
+```python
+def get_agent_name(agent: str, platform: str) -> str:
+    if platform == "opencode" and agent == "plan":
+        return "trellis-plan"
+    return agent
+```
 
 ### 3. Commands 迁移
 
@@ -529,3 +575,6 @@ verify:
 - [OpenCode Agents 文档](https://opencode.ai/docs/agents/) - Subagent 配置和 Task tool
 - [OpenCode 内部实现分析](https://cefboud.com/posts/coding-agents-internals-opencode-deepdive/) - Task tool 工作原理
 - [GitHub Issue #4267](https://github.com/sst/opencode/issues/4267) - Subagent 权限控制
+- [GitHub Issue #4271](https://github.com/sst/opencode/issues/4271) - 无法覆盖内置 agent (plan/build)
+- [OpenCode Agent System (DeepWiki)](https://deepwiki.com/sst/opencode/3.2-agent-system) - 内置 agent 完整列表
+- [OpenCode Tools 文档](https://opencode.ai/docs/tools/) - 内置工具列表
