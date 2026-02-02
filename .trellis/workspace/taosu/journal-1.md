@@ -814,3 +814,73 @@ Created contributing guidelines for the Trellis project in both English and Chin
 ### Next Steps
 
 - None - task complete
+
+## Session 19: Add platform flag & CONTRIBUTING docs
+
+**Date**: 2026-02-02
+**Task**: Add platform flag & CONTRIBUTING docs
+
+### Summary
+
+(Add summary)
+
+### Main Changes
+
+## Summary
+Two improvements to the Trellis project:
+1. Created CONTRIBUTING.md guidelines (EN/CN)
+2. Added --platform flag to task.sh to support Cursor
+
+## Changes
+
+### 1. CONTRIBUTING.md (942c9f3)
+| Section | Content |
+|---------|---------|
+| Ways to Contribute | Bug reports, feature requests, docs, code |
+| Development Setup | Prerequisites, fork/clone, pnpm install, build |
+| Running Checks | lint, lint:py, lint:all, typecheck + pre-commit note |
+| Project Structure | Directory overview with template sync warning |
+| Commit Guidelines | Conventional commits format |
+| PR Process | 6-step workflow |
+
+- Created both `CONTRIBUTING.md` (English) and `CONTRIBUTING_CN.md` (Chinese)
+- Followed `_CN` suffix convention matching existing README
+
+### 2. Platform Flag for task.sh (74bc5cc)
+Fixed hardcoded `.claude` paths in task.sh by adding `--platform` flag:
+
+```bash
+# Default (claude)
+task.sh init-context <dir> backend
+
+# For Cursor users
+task.sh init-context <dir> frontend --platform cursor
+```
+
+Path handling:
+- Claude: `.claude/commands/trellis/<name>.md`
+- Cursor: `.cursor/commands/trellis-<name>.md`
+
+## Files Changed
+- `CONTRIBUTING.md` (new)
+- `CONTRIBUTING_CN.md` (new)
+- `.trellis/scripts/task.sh` (modified)
+
+### Git Commits
+
+| Hash | Message |
+|------|---------|
+| `942c9f3` | (see git log) |
+| `74bc5cc` | (see git log) |
+
+### Testing
+
+- [OK] (Add test results)
+
+### Status
+
+[OK] **Completed**
+
+### Next Steps
+
+- None - task complete
