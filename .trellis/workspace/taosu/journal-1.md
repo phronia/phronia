@@ -1350,3 +1350,62 @@ Completed OpenCode platform adaptation sync and template updates:
 ### Next Steps
 
 - None - task complete
+
+
+## Session 25: OpenCode Verification & Documentation
+
+**Date**: 2026-02-02
+**Task**: OpenCode Verification & Documentation
+
+### Summary
+
+(Add summary)
+
+### Main Changes
+
+## Summary
+
+验证 OpenCode 平台适配功能，并完善文档记录。
+
+## 验证结果
+
+| 测试项 | 状态 |
+|--------|------|
+| Session ID 格式 (`ses_xxx`) | ✅ 验证通过 |
+| Session Resume (`--session <id>`) | ✅ 能恢复上下文 |
+| status.py 平台特定恢复命令 | ✅ 区分 Claude/OpenCode |
+| parallel.md 模型说明 | ✅ 已修复 |
+
+## Commits
+
+- `a612deb` fix(opencode): update model description in parallel.md
+- `2827dd3` docs(tasks): update OpenCode task with verification results
+- `f374ba9` docs(tasks): add commit history to OpenCode PRD
+- `8e0001e` docs(workspace): record session 24
+
+## 文档更新
+
+- `task.md` - 添加技术参考（Agent 格式、--platform 用法、Session 机制）
+- `prd.md` - 添加 Commit 记录用于溯源
+
+
+### Git Commits
+
+| Hash | Message |
+|------|---------|
+| `a612deb` | (see git log) |
+| `2827dd3` | (see git log) |
+| `f374ba9` | (see git log) |
+| `8e0001e` | (see git log) |
+
+### Testing
+
+- [OK] (Add test results)
+
+### Status
+
+[OK] **Completed**
+
+### Next Steps
+
+- None - task complete
