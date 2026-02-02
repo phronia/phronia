@@ -3,7 +3,7 @@
   "name": "opencode-support",
   "title": "OpenCode 平台集成支持",
   "description": "",
-  "status": "planning",
+  "status": "in_progress",
   "dev_type": "backend",
   "scope": [
     "scripts",
@@ -18,7 +18,7 @@
   "branch": "feat/opencode-support",
   "base_branch": null,
   "worktree_path": null,
-  "current_phase": 1,
+  "current_phase": 2,
   "next_action": [
     {
       "phase": 1,

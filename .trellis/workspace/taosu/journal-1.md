@@ -1204,3 +1204,79 @@ Fixed GitHub Issues #18 and #19 (Windows compatibility), improved task command U
 ### Next Steps
 
 - None - task complete
+
+
+## Session 23: OpenCode Platform Support - Phase 1 & 3 Complete
+
+**Date**: 2026-02-02
+**Task**: OpenCode Platform Support - Phase 1 & 3 Complete
+
+### Summary
+
+(Add summary)
+
+### Main Changes
+
+## 完成内容
+
+### Phase 3: Plugins ✅
+| 组件 | 文件 | 状态 |
+|------|------|------|
+| Session Start | `.opencode/plugin/session-start.js` | ✅ 完成并验证 |
+| Subagent Inject | `.opencode/plugin/inject-subagent-context.js` | ⚠️ 架构限制 |
+| Context Utils | `.opencode/lib/trellis-context.js` | ✅ 完成 |
+| Agents | `.opencode/agents/*.md` | ✅ 6个 agent |
+| Commands | `.opencode/commands/trellis/*.md` | ✅ 15个 commands |
+
+### Phase 1: CLI Adapter ✅
+| 功能 | 方法 |
+|------|------|
+| 命令构建 | `CLIAdapter.build_run_command()` |
+| Agent 映射 | `CLIAdapter.get_agent_name()` (plan → trellis-plan) |
+| 恢复命令 | `CLIAdapter.build_resume_command()` |
+| 环境变量 | `CLIAdapter.get_non_interactive_env()` |
+
+### 重大发现：架构限制
+- 项目级 plugin 无法拦截 subagent 的 `tool.execute.before`
+- 只有全局 plugin (npm 包) 才有完整 hook 权限
+- **解决方案**: Context Self-Loading 降级 + omo 主方案
+
+### Context Self-Loading 降级方案
+在 agent prompt 中添加自检逻辑：
+- 有 omo → 上下文已注入，跳过
+- 无 omo → agent 自己读取 `.trellis/.current-task` 和对应 JSONL
+
+## 验证结果
+
+| 功能 | 场景 | 状态 |
+|------|------|------|
+| session-start | OpenCode + omo | ✅ omo 处理 |
+| session-start | 纯 OpenCode | ✅ plugin 处理 |
+| inject-subagent | OpenCode + omo | ✅ omo + Python hook |
+| inject-subagent | 纯 OpenCode | ⚠️ Self-Loading 降级 |
+
+## 相关 Issue
+- [#5894](https://github.com/sst/opencode/issues/5894) - Plugin hooks don't intercept subagent
+- [#2588](https://github.com/sst/opencode/issues/2588) - Feature request: inherit_context
+
+## 下一步
+- Phase 2: Multi-Session 脚本适配 (start.py, plan.py, status.py)
+
+
+### Git Commits
+
+| Hash | Message |
+|------|---------|
+| `342993e` | (see git log) |
+
+### Testing
+
+- [OK] (Add test results)
+
+### Status
+
+[OK] **Completed**
+
+### Next Steps
+
+- None - task complete

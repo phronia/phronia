@@ -8,6 +8,25 @@ Trellis 目前深度绑定 Claude Code，高级功能（Hooks、Multi-Session）
 
 让 Trellis 的核心功能在 OpenCode 环境下可用，实现"一套 Trellis，多平台运行"。
 
+## 实现进度（2026-02-02 更新）
+
+| Phase | 状态 | 描述 |
+|-------|------|------|
+| Phase 1 | ✅ 完成 | CLI Adapter - `.trellis/scripts/common/cli_adapter.py` |
+| Phase 2 | ⏳ 待开始 | Multi-Session 脚本适配 (start.py, plan.py, status.py) |
+| Phase 3 | ✅ 完成 | Plugins - session-start.js, inject-subagent-context.js |
+| Phase 4 | ✅ 完成 | Agent 定义 - `.opencode/agents/*.md` |
+| Phase 5 | ✅ 完成 | Commands 迁移 - `.opencode/commands/trellis/` |
+| Phase 6 | ⏳ 待开始 | Init 流程适配 |
+| Phase 7 | ⏳ 待开始 | 日志解析适配 |
+
+**当前支持矩阵**：
+
+| 场景 | Session Start | Subagent 上下文 |
+|------|--------------|----------------|
+| OpenCode + omo | ✅ 自动注入 | ✅ 自动注入 |
+| 纯 OpenCode | ✅ plugin 处理 | ⚠️ Self-Loading 降级 |
+
 ## 研究结论
 
 ### 已确认兼容

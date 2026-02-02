@@ -7,12 +7,12 @@
 | Phase | 状态 | 描述 |
 |-------|------|------|
 | Phase 1 | ✅ 已完成 | CLI Adapter（2026-02-02） |
-| Phase 2 | ⏳ P1 待开始 | Multi-Session 脚本适配 |
+| Phase 2 | ✅ 已完成 | Multi-Session 脚本适配（2026-02-02） |
 | Phase 3 | ✅ 已完成 | Plugins（2026-02-02 完成并验证） |
 | Phase 4 | ✅ 已完成 | Agent 定义 |
 | Phase 5 | ✅ 已完成 | Commands 迁移 |
-| Phase 6 | ⏳ P2 待开始 | Init 流程适配 |
-| Phase 7 | ⏳ P2 待开始 | 日志解析适配 |
+| Phase 6 | ✅ 已完成 | Init 流程适配（2026-02-02） |
+| Phase 7 | ✅ 已完成 | 日志解析适配（2026-02-02） |
 
 ### Phase 3 验证结果（2026-02-02）
 
@@ -140,42 +140,32 @@ lastUserMessage.parts.splice(textPartIndex, 0, syntheticPart)
 
 ---
 
-## Phase 2: Multi-Session 脚本适配 (P1)
+## Phase 2: Multi-Session 脚本适配 (P1) ✅ 已完成（2026-02-02）
 
 ### 2.1 修改 `start.py`
-- [ ] 添加 `--platform` 参数（默认 claude）
-- [ ] 使用 CLI adapter 构建命令
-- [ ] **⚠️ 根据平台设置非交互环境变量**：
-  - Claude Code: `CLAUDE_NON_INTERACTIVE=1`
-  - OpenCode: `OPENCODE_NON_INTERACTIVE=1`
-- [ ] 保存 platform 到 `registry.json`
-- [ ] OpenCode 分支：不传 `--session-id`
-- [ ] OpenCode 分支：启动后从日志提取 session ID（`ses_xxx` 格式）
-- [ ] 根据平台验证 agent 路径（`.claude/agents/` vs `.opencode/agents/`）
+- [x] 添加 `--platform` 参数（默认 claude）
+- [x] 使用 CLI adapter 构建命令
+- [x] 根据平台设置非交互环境变量
+- [x] 保存 platform 到 `registry.json`
+- [x] OpenCode 分支：不传 `--session-id`
+- [x] OpenCode 分支：启动后从日志提取 session ID（`ses_xxx` 格式）
+- [x] 根据平台验证 agent 路径
 
 ### 2.2 修改 `plan.py`
-- [ ] 添加 `--platform` 参数
-- [ ] 使用 CLI adapter 构建命令
-- [ ] 验证 agent 存在（各平台路径不同）
-- [ ] Agent 名称映射：`plan` → `trellis-plan`（OpenCode）
-- [ ] **⚠️ 根据平台设置非交互环境变量**：
-  - Claude Code: `CLAUDE_NON_INTERACTIVE=1`
-  - OpenCode: `OPENCODE_NON_INTERACTIVE=1`
+- [x] 添加 `--platform` 参数
+- [x] 使用 CLI adapter 构建命令
+- [x] 验证 agent 存在（各平台路径不同）
+- [x] Agent 名称映射：`plan` → `trellis-plan`（OpenCode）
+- [x] 根据平台设置非交互环境变量
 
 ### 2.3 修改 `status.py`
-- [ ] 从 registry 读取 platform 字段
-- [ ] 根据 platform 输出正确的恢复命令
-  - Claude: `claude --resume {id}`
-  - OpenCode: `opencode run --session {id}`
-- [ ] 根据 platform 解析不同的日志格式
-  - Claude: `{"type": "assistant", "message": {"content": [...]}}`
-  - OpenCode: `{"type": "tool_use", "tool": "..."}`
-- [ ] 添加 `get_last_tool(log_file, platform)` 平台分支
-- [ ] 添加 `get_last_message(log_file, platform)` 平台分支
+- [x] 从 registry 读取 platform 字段
+- [x] 根据 platform 输出正确的恢复命令
+- [ ] 日志解析适配（移至 Phase 7）
 
 ### 2.4 修改 `registry.py`
-- [ ] `registry_add_agent()` 添加 platform 参数
-- [ ] 记录 `"platform": "claude"` 或 `"platform": "opencode"`
+- [x] `registry_add_agent()` 添加 platform 参数
+- [x] 记录 `"platform": "claude"` 或 `"platform": "opencode"`
 
 ### 2.5 修改 `create_pr.py`
 - [ ] 无需改动（纯 git 操作，平台无关）
@@ -352,18 +342,26 @@ cp -r .claude/commands/trellis/ .opencode/commands/trellis/
 
 ---
 
-## Phase 6: Init 流程适配 (P2)
+## Phase 6: Init 流程适配 (P2) ✅ 已完成（2026-02-02）
 
 ### 6.1 修改 `trellis init`
-- [ ] 添加 OpenCode 平台选项
-- [ ] 选择 OpenCode 时生成：
-  - `.opencode/plugins/` 下的 plugin 文件
+- [x] 添加 OpenCode 平台选项（`--opencode` flag）
+- [x] 选择 OpenCode 时生成：
+  - `.opencode/plugin/` 下的 plugin 文件
   - `.opencode/commands/` 下的 command 文件
-  - `opencode.json` 基础配置模板
+  - `.opencode/agents/` 下的 agent 定义
+  - `.opencode/lib/` 下的工具模块
+  - `package.json` plugin 依赖
+
+### 6.2 实现细节
+- [x] 创建 `src/templates/opencode/` 目录（从项目 `.opencode/` 复制）
+- [x] 添加 `getOpenCodeTemplatePath()` 到 `src/templates/extract.ts`
+- [x] 实现 `configureOpenCode()` 使用 dogfooding 模式复制目录
+- [x] 取消 CLI 和 init 命令中的 OpenCode 选项注释
 
 ---
 
-## Phase 7: 日志解析适配 (P2)
+## Phase 7: 日志解析适配 (P2) ✅ 已完成（2026-02-02）
 
 ### 7.1 修改 `status.py` 日志解析
 
@@ -375,10 +373,13 @@ Claude Code 格式：
 OpenCode 格式：
 ```json
 {"type": "tool_use", "tool": "bash", "state": {"status": "completed"}}
+{"type": "text", "text": "..."}
 ```
 
-- [ ] 实现 `get_last_tool(log_file, platform)`
-- [ ] 实现 `get_last_message(log_file, platform)`
+- [x] 实现 `get_last_tool(log_file, platform)` - 支持双平台格式
+- [x] 实现 `get_last_message(log_file, platform)` - 支持双平台格式
+- [x] 更新 `cmd_log()` 支持 OpenCode 事件类型（text, tool_use, step_start, step_finish, error）
+- [x] 更新所有调用点传递 platform 参数
 
 ---
 
