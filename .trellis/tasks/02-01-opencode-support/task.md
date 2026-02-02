@@ -83,7 +83,10 @@ lastUserMessage.parts.splice(textPartIndex, 0, syntheticPart)
 ## 新发现的 Edge Cases
 
 1. ✅ **Phase 追踪缺失**：`inject-subagent-context.js` 已添加 `updateCurrentPhase()` 逻辑
-2. ⏳ **Session ID 提取**：OpenCode 不支持创建时指定 session ID，需启动后从日志提取（待 Phase 2）
+2. ✅ **Session ID 提取**（2026-02-02 验证）：
+   - OpenCode 日志格式：`{"sessionID": "ses_xxx", ...}`
+   - 正则提取：`ses_[a-zA-Z0-9]+` ✅ 工作正常
+   - Session Resume：`opencode run --session <id>` ✅ 已验证能恢复上下文
 3. ✅ **Non-Interactive 环境变量**（2026-02-02 完善）
 
    **⚠️ 重要设计决策**：Multi-Agent 脚本需设置非交互标识防止 session-start 重复注入
@@ -100,9 +103,12 @@ lastUserMessage.parts.splice(textPartIndex, 0, syntheticPart)
    **不需要检测的文件**：
    - `inject-subagent-context.*` - subagent 始终需要上下文
 4. ✅ **Plugins 目录结构**：工具模块放 `.opencode/lib/`，plugin 放 `.opencode/plugin/`
-5. ⏳ **日志格式差异**：`status.py` 需要支持两种日志格式（待 Phase 7）
-6. ⏳ **恢复命令差异**：`status.py` 需要根据平台输出不同命令（待 Phase 7）
-7. ⏳ **Registry Platform 字段**：需要记录 agent 使用的平台（待 Phase 2）
+5. ✅ **日志格式差异**（2026-02-02 完成）：`status.py` 支持两种日志格式
+6. ✅ **恢复命令差异**（2026-02-02 验证）：
+   - Claude Code: `claude --resume <id>`
+   - OpenCode: `opencode run --session <id>`
+   - `status.py` 使用 `get_cli_adapter(platform)` 生成平台特定命令
+7. ✅ **Registry Platform 字段**（2026-02-02 完成）：`registry.json` 记录 `"platform": "opencode"`
 8. ❌ **Ralph Loop**：OpenCode/omo 不需要，已删除
 
 ## ⚠️ 模板注意事项
@@ -402,9 +408,9 @@ OpenCode 格式：
 
 ### 混合使用
 - [x] 同一项目可以同时使用 Claude Code 和 OpenCode（✅ Trellis + omo 上下文共存）
-- [ ] Registry 能区分不同平台的 agent（`platform` 字段）
-- [ ] 恢复命令能正确输出对应平台的命令
-- [ ] 日志解析能正确处理两种格式
+- [x] Registry 能区分不同平台的 agent（✅ `platform` 字段已实现）
+- [x] 恢复命令能正确输出对应平台的命令（✅ 2026-02-02 验证）
+- [x] 日志解析能正确处理两种格式（✅ 2026-02-02 完成）
 
 ### ⚠️ 前置条件
 - [x] **推荐安装 oh-my-opencode**（完整功能，自动上下文注入）
@@ -427,9 +433,81 @@ OpenCode 格式：
 
 ---
 
+## 2026-02-02 更新总结
+
+### Agent 定义格式更新
+
+**Permission 格式**（OpenCode 正确格式）：
+```yaml
+---
+description: |
+  Agent description here
+mode: primary  # or subagent
+permission:
+  read: allow
+  write: allow
+  edit: allow
+  bash: allow
+  glob: allow
+  grep: allow
+  task: allow  # for agents that call subagents
+---
+```
+
+**注意**：
+- 使用 `permission:` 而非已弃用的 `tools:`
+- 不写 `model:` 字段，继承用户全局配置
+- 已更新所有 6 个 agent 文件
+
+### --platform flag 使用
+
+| 脚本 | 命令 | 默认值 |
+|------|------|--------|
+| `plan.py` | `--platform opencode` | `claude` |
+| `start.py` | `--platform opencode` | `claude` |
+| `status.py` | 无需指定 | 从 registry 读取 |
+
+### OpenCode Session 机制
+
+**Session ID 格式**：`ses_[a-zA-Z0-9]+`（如 `ses_3e23a7056ffeR09OSfYsr3J83u`）
+
+**日志输出**：
+```json
+{"type":"step_start","sessionID":"ses_xxx",...}
+{"type":"text","sessionID":"ses_xxx","part":{"text":"..."}}
+{"type":"step_finish","sessionID":"ses_xxx",...}
+```
+
+**恢复命令**：
+- `opencode run --session <id>` - 恢复指定会话
+- `opencode run --continue` - 恢复最后会话
+
+### 模板同步状态
+
+| 目录 | 源 | 目标 | 状态 |
+|------|-----|------|------|
+| agents | `.opencode/agents/` | `src/templates/opencode/agents/` | ✅ |
+| commands | `.opencode/commands/` | `src/templates/opencode/commands/` | ✅ |
+| plugin | `.opencode/plugin/` | `src/templates/opencode/plugin/` | ✅ |
+| scripts | `.trellis/scripts/` | `src/templates/trellis/scripts/` | ✅ |
+| hooks | `.claude/hooks/` | `src/templates/claude/hooks/` | ✅ |
+
+### 平台功能对比
+
+| 功能 | Claude Code | OpenCode + omo | 纯 OpenCode |
+|------|-------------|----------------|-------------|
+| Session Start 注入 | ✅ hooks | ✅ omo 加载 hooks | ✅ plugin |
+| Subagent 上下文注入 | ✅ hooks | ✅ omo 加载 hooks | ⚠️ Self-Loading |
+| Session ID | 创建时指定 | 日志提取 | 日志提取 |
+| Session Resume | `--resume` | `--session` | `--session` |
+| Agent 命名 | `plan` | `trellis-plan` | `trellis-plan` |
+
+---
+
 ## 参考文档
 
 - PRD: `prd.md`
 - Claude Code Hooks: `.claude/hooks/`
 - Multi-Session Scripts: `.trellis/scripts/multi_agent/`
-- Agent Definitions: `.claude/agents/`
+- Agent Definitions: `.claude/agents/`, `.opencode/agents/`
+- Templates: `src/templates/opencode/`, `src/templates/claude/`
