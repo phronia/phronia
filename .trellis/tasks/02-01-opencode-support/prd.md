@@ -1118,3 +1118,50 @@ Otherwise, load context yourself:
 - [OpenCode Tools 文档](https://opencode.ai/docs/tools/) - 内置工具列表
 - [OpenCode Plugins Guide (Gist)](https://gist.github.com/johnlindquist/0adf1032b4e84942f3e1050aba3c5e4a) - Plugin 事件和数据结构
 - [GitHub Issue #8463](https://github.com/anomalyco/opencode/issues/8463) - --dangerously-skip-permissions (已实现)
+
+---
+
+## Commit 记录
+
+### 2026-02-02 Session（模板同步 & 验证）
+
+| Commit | Message | 改动 |
+|--------|---------|------|
+| `f077a20` | refactor(opencode): update agent permission format | `.opencode/agents/*.md` - 改用 permission 格式，移除 model 字段 |
+| `bd9a631` | docs(opencode): add --platform flag to parallel.md | `.opencode/commands/trellis/parallel.md` - 加 --platform opencode |
+| `e1bc6a8` | feat(scripts): add --platform flag for OpenCode support | `cli_adapter.py`, `registry.py`, `plan.py`, `start.py`, `status.py` |
+| `2aa151a` | chore(templates): sync OpenCode platform support | `src/templates/` - 同步 opencode/, trellis/scripts/, claude/hooks/ |
+| `50bf65e` | feat(init): add OpenCode platform support to trellis init | `src/cli/`, `src/commands/init.ts`, `src/configurators/opencode.ts` |
+| `54268ab` | docs(tasks): update OpenCode support task progress | `.trellis/tasks/02-01-opencode-support/` |
+| `a612deb` | fix(opencode): update model description in parallel.md | parallel.md - "opus model" → "globally configured model" |
+| `2827dd3` | docs(tasks): update OpenCode task with verification results | task.md - 添加验证结果和技术参考 |
+
+### 关键文件变更
+
+**新增文件：**
+- `src/templates/opencode/` - 完整 OpenCode 模板目录（agents, commands, plugin, lib）
+- `src/templates/trellis/scripts/common/cli_adapter.py` - CLI 平台适配器
+
+**修改文件：**
+- `.trellis/scripts/common/cli_adapter.py` - 添加 verbose 支持
+- `.trellis/scripts/common/registry.py` - 添加 platform 字段
+- `.trellis/scripts/multi_agent/plan.py` - 使用 CLIAdapter，支持 --platform
+- `.trellis/scripts/multi_agent/start.py` - 使用 CLIAdapter，OpenCode session ID 提取
+- `.trellis/scripts/multi_agent/status.py` - 双平台日志解析，平台特定恢复命令
+- `.claude/hooks/session-start.py` - 检测 OPENCODE_NON_INTERACTIVE
+- `.opencode/agents/*.md` - permission 格式，移除 model，添加 Self-Loading
+- `.opencode/commands/trellis/parallel.md` - --platform opencode
+
+### 验证结果
+
+| 测试项 | 状态 | 备注 |
+|--------|------|------|
+| Session ID 格式 | ✅ | `ses_[a-zA-Z0-9]+` |
+| Session Resume | ✅ | `opencode run --session <id>` 能恢复上下文 |
+| status.py 恢复命令 | ✅ | 根据 platform 输出不同命令 |
+| plan.py + research subagent | ✅ | 之前 Kimi CLI 任务已验证 |
+
+### 未完整测试
+
+- `start.py --platform opencode` → Dispatch → Implement → Check 全流程
+- create_pr.py 在 worktree 中执行
