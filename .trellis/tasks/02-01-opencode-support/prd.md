@@ -52,34 +52,88 @@ def get_ai_cli_command(platform: str, agent: str, session_id: str, prompt: str) 
 
 修改 `multi_agent/start.py` 和 `plan.py` 使用 adapter。
 
-### Phase 2: Session Start Plugin (P1)
+### Phase 2: Session Start Plugin (P1) ✅ 已完成
 
-创建 `.opencode/plugins/trellis-session.js`：
+创建 `.opencode/plugin/session-start.js`（注意是 `plugin` 单数）：
+
+**关键发现**：OpenCode 的 `event` hook 无法注入上下文（没有 `output` 参数）。
+必须使用 `experimental.chat.system.transform` hook：
 
 ```javascript
-export const TrellisSession = async ({ $, directory }) => ({
-  "session.created": async (input, output) => {
-    const context = await $`python3 ${directory}/.trellis/scripts/get_context.py`
-    output.context.push(context.stdout)
+export const TrellisSession = async ({ $, directory }) => {
+  let contextInjected = false
+
+  return {
+    "experimental.chat.system.transform": async ({ system }) => {
+      if (contextInjected) return { system }
+
+      // 检测 multi-agent 模式，跳过注入
+      const nonInteractive = await $`echo $OPENCODE_NON_INTERACTIVE`.text()
+      if (nonInteractive.trim() === "1") {
+        contextInjected = true
+        return { system }
+      }
+
+      // 构建并注入上下文
+      const context = buildContext(directory)
+      contextInjected = true
+      return { system: system + "\n\n" + context }
+    }
+  }
+}
+```
+
+**OpenCode Plugin 注册机制**：
+- 插件自动从 `.opencode/plugin/` 目录加载
+- **不需要**在 `opencode.json` 中配置 `plugins` 键（会报错）
+- 参考：https://github.com/frap129/opencode-rules
+
+### Phase 3: Context Injection Plugin (P1) ✅ 已完成
+
+创建 `.opencode/plugin/inject-subagent-context.js`：
+
+```javascript
+export const TrellisInjectSubagentContext = async ({ $, directory }) => ({
+  "tool.execute.before": async ({ tool, input }) => {
+    if (tool !== "Task") return { input }
+
+    // 读取 .current-task，获取 JSONL 路径
+    const currentTask = readFile(`${directory}/.trellis/.current-task`)
+    const jsonlPath = /* 从 current-task 构建路径 */
+
+    // 读取 JSONL 最后 N 条消息
+    const context = extractRecentMessages(jsonlPath)
+
+    // 更新 phase 追踪
+    updateCurrentPhase(input.args.subagent_type, directory)
+
+    // 注入上下文到 prompt
+    return {
+      input: {
+        ...input,
+        args: {
+          ...input.args,
+          prompt: input.args.prompt + "\n\n" + context
+        }
+      }
+    }
   }
 })
 ```
 
-### Phase 3: Context Injection Plugin (P1)
+### Phase 4: Agent 定义转换 (P1) ✅ 已完成
 
-创建 `.opencode/plugins/trellis-context.js`：
+**更正**：OpenCode 使用 `.opencode/agents/*.md` 格式（与 Claude Code 相同），**不是** `opencode.json` 配置。
 
-```javascript
-export const TrellisContext = async ({ $, directory }) => ({
-  "tool.execute.before": async (input, output) => {
-    // 读取 .current-task，加载 JSONL，注入上下文
-  }
-})
+```bash
+# 直接复制 agent 定义
+cp -r .claude/agents/ .opencode/agents/
+
+# 重命名有冲突的 agent
+mv .opencode/agents/plan.md .opencode/agents/trellis-plan.md
 ```
 
-### Phase 4: Agent 定义转换 (P1)
-
-创建脚本将 `.claude/agents/*.md` 转换为 OpenCode 的 `opencode.json` agent 配置格式。
+已完成复制，但需要注意 `plan` → `trellis-plan` 的命名差异。
 
 ### Phase 5: Ralph Loop 替代方案 (P2)
 
@@ -94,9 +148,59 @@ OpenCode 没有 SubagentStop hook，需要用 `session.idle` 或其他机制实�
 
 ## 技术约束
 
-1. OpenCode Plugins 只支持 JavaScript/TypeScript，不支持 Python
+1. OpenCode 原生 Plugins 只支持 JavaScript/TypeScript，不支持 Python
 2. Plugin 可以通过 shell 调用 Python 脚本（`$\`python3 ...\``）
 3. OpenCode 没有 SubagentStop hook，Ralph Loop 需要变通
+4. **oh-my-opencode 提供 Claude Code 兼容层**（见下方重大发现）
+
+---
+
+## 🔥 重大发现：oh-my-opencode 兼容层
+
+**发现时间**：2026-02-01
+
+### 发现过程
+
+测试 `OPENCODE_NON_INTERACTIVE=1` 环境变量时，发现即使 `.opencode/plugin/session-start.js` 正确跳过注入（debug 显示 `willInject: false`），上下文仍然被注入。
+
+经排查发现：
+1. 禁用 `.opencode/plugin/session-start.js` → 上下文仍被注入
+2. 禁用 `AGENTS.md` → 上下文仍被注入
+3. 禁用 `oh-my-opencode` → 上下文仍被注入
+4. **禁用 `.claude/hooks/` → 上下文消失！**
+
+### 结论
+
+**oh-my-opencode** 插件会自动加载并执行 `.claude/hooks/` 目录下的 Python hooks：
+
+```
+Hook Loader: src/hooks/claude-code-hooks/
+支持的 hook 类型: PreToolUse, PostToolUse, UserPromptSubmit, Stop, SessionStart
+```
+
+来源：https://deepwiki.com/fractalmind-ai/oh-my-opencode/8.1-claude-code-compatibility
+
+### 对 Trellis 的影响
+
+| 场景 | 方案 |
+|------|------|
+| 用户有 oh-my-opencode | `.claude/hooks/` 自动生效，无需额外配置 |
+| 用户没有 oh-my-opencode | 需要 `.opencode/plugin/*.js` 或建议安装 oh-my-opencode |
+
+### 已完成的适配
+
+```python
+# .claude/hooks/session-start.py
+def should_skip_injection() -> bool:
+    return (
+        os.environ.get("CLAUDE_NON_INTERACTIVE") == "1"
+        or os.environ.get("OPENCODE_NON_INTERACTIVE") == "1"  # 新增
+    )
+```
+
+这使得同一个 hook 文件同时支持 Claude Code 和 OpenCode（通过 oh-my-opencode）。
+
+---
 
 ## 设计决策
 
@@ -112,12 +216,12 @@ python3 .trellis/scripts/multi_agent/start.py .trellis/tasks/xxx --platform open
 
 ### 2. Agent 定义处理
 
-**决策**：维护两套配置，分别管理
+**更正**：OpenCode 也使用 `.md` 文件格式，可以直接复制
 
 - Claude Code: `.claude/agents/*.md`
-- OpenCode: `opencode.json` 中的 `agent` 配置
+- OpenCode: `.opencode/agents/*.md`（格式相同）
 
-**理由**：避免转换脚本的维护成本，两个平台的 agent 能力可能有差异
+**决策**：直接复制 agent 文件，只需处理命名冲突（`plan` → `trellis-plan`）
 
 ### 2.1 Agent 命名冲突
 
@@ -342,13 +446,34 @@ def get_last_tool(log_file: Path, platform: str) -> str | None:
 | 环境变量 | Claude Code | OpenCode | 处理方式 |
 |---------|-------------|----------|---------|
 | 代理 | `https_proxy` | `HTTPS_PROXY` | 通用，直接传 |
-| 非交互标识 | `CLAUDE_NON_INTERACTIVE=1` | 不需要 | OpenCode 分支不传 |
+| 非交互标识 | `CLAUDE_NON_INTERACTIVE=1` | `OPENCODE_NON_INTERACTIVE=1` | 各平台各自设置 |
 | 配置文件 | `CLAUDE_PROJECT_DIR` | `OPENCODE_CONFIG` | 平台各自处理 |
+
+**⚠️ 重要：Non-Interactive 环境变量**
+
+Multi-Agent Pipeline 脚本（start.py, plan.py）需要设置非交互标识，防止 session-start hook 重复注入上下文：
+
+```python
+# start.py / plan.py
+if platform == "claude":
+    env["CLAUDE_NON_INTERACTIVE"] = "1"
+elif platform == "opencode":
+    env["OPENCODE_NON_INTERACTIVE"] = "1"
+```
+
+**所有 session-start 相关代码必须检测两个变量**：
+
+| 文件 | 检测逻辑 |
+|------|---------|
+| `.claude/hooks/session-start.py` | `CLAUDE_NON_INTERACTIVE` 或 `OPENCODE_NON_INTERACTIVE` |
+| `.opencode/plugin/session-start.js` | `OPENCODE_NON_INTERACTIVE` |
+
+**inject-subagent-context 不需要检测**：subagent 始终需要上下文注入，即使在非交互模式下。
 
 **适配方案**：
 - 代理变量通用，直接传递
-- `CLAUDE_NON_INTERACTIVE` 只在 Claude Code 分支设置
-- OpenCode 的 `opencode run` 本身就是非交互模式
+- 非交互标识：各平台设置对应的环境变量
+- OpenCode 的 `opencode run` 本身就是非交互模式，但仍需设置环境变量让 hook 知道
 
 ### 13. Working Directory 处理
 
@@ -671,9 +796,294 @@ export const RalphLoop = async ({ $, directory }) => ({
 - TaskOutput 轮询机制需要验证
 - model 参数指定方式不同
 
+### 29. Agent Mode 分类（Primary vs Subagent）
+
+**研究结论**：根据 agent 的启动方式决定 OpenCode 中的 `mode` 配置
+
+**分析过程**：
+
+1. **入口 Agents（通过 `claude -p --agent` 启动）**
+   - `dispatch` — 由 `start.py` 启动，是 Multi-Agent Pipeline 的入口
+   - `plan` — 由 `plan.py` 启动，是规划阶段的入口
+
+2. **真正的 Subagents（通过 Task() 工具调用）**
+   - `research` — 被 plan agent 和 /trellis:start 调用
+   - `implement` — 被 dispatch agent 和 /trellis:start 调用
+   - `check` — 被 dispatch agent 和 /trellis:start 调用
+   - `debug` — 被 dispatch agent 调用
+
+**调用关系图**：
+```
+plan.py → plan/trellis-plan (primary)
+    └── Task(research)
+
+start.py → dispatch (primary)
+    ├── Task(implement)
+    ├── Task(check)
+    ├── Task(debug)
+    └── Bash(create_pr.py)
+```
+
+**OpenCode 配置决策**：
+
+| Agent | Claude Code | OpenCode mode | 理由 |
+|-------|-------------|---------------|------|
+| dispatch | agent | **primary** | 被 CLI 直接启动 |
+| plan | agent | **primary** (名为 `trellis-plan`) | 被 CLI 直接启动 |
+| implement | agent | subagent | 被 Task() 调用 |
+| check | agent | subagent | 被 Task() 调用 |
+| research | agent | subagent | 被 Task() 调用 |
+| debug | agent | subagent | 被 Task() 调用 |
+
+**使用方式差异**：
+
+| Mode | 启动方式 | 适用场景 |
+|------|---------|---------|
+| primary | `opencode --agent xxx` / Tab 切换 | 用户直接交互的入口 |
+| subagent | `@xxx` 提及 / Task() 调用 | 被其他 agent 调用 |
+
+**配置示例**（`.opencode/agents/dispatch.md`）：
+```yaml
+---
+description: Multi-Agent Pipeline main dispatcher
+mode: primary
+model: claude-max/claude-opus-4
+tools:
+  read: true
+  bash: true
+  task: true
+---
+```
+
+### 30. Plugin 中的 Phase 追踪
+
+**问题**：Python hook `inject-subagent-context.py` 有 `update_current_phase()` 函数（93-147行），在调用 subagent 时自动更新 `task.json` 的 `current_phase` 字段。
+
+**✅ 已完成**：已在 `inject-subagent-context.js` 中添加 `updateCurrentPhase()` 函数，逻辑与 Python 版本一致：
+- 读取 `task.json` 的 `next_action` 数组
+- 找到下一个匹配 subagent 类型的 phase
+- 只向前移动，不后退
+- debug/research 不更新 phase
+
+### 31. Session ID 提取（OpenCode 特有）
+
+**问题**：`start.py` 在启动前生成 UUID 并传给 Claude Code：
+```python
+session_id = str(uuid.uuid4()).lower()
+claude_cmd.extend(["--session-id", session_id])
+```
+
+OpenCode 不支持创建时指定 session ID。
+
+**解决方案**：
+1. OpenCode 分支不传 `--session-id`
+2. 启动后从日志解析 session ID（格式如 `ses_xxx`）
+3. 保存到 `.session-id` 文件
+
+**实现方式**：
+```python
+if platform == "opencode":
+    # 启动后等待几秒，从日志提取 session ID
+    time.sleep(2)
+    session_id = extract_session_id_from_log(log_file)
+```
+
+### 32. Non-Interactive 检测（Plugin 层）
+
+**问题**：Python hook 检查 `CLAUDE_NON_INTERACTIVE` 环境变量来跳过上下文注入。
+
+**✅ 已完成**：已在 `session-start.js` 中添加检测：
+```javascript
+if (process.env.CLAUDE_NON_INTERACTIVE === "1" ||
+    process.env.OPENCODE_NON_INTERACTIVE === "1") {
+  return
+}
+```
+
+同时支持两个环境变量，保持兼容性。
+
+### 33. Plugins 注册配置
+
+**问题**：创建的 OpenCode plugins 需要在 `opencode.json` 中注册才能生效。
+
+**✅ 已完成**：已在本项目 `opencode.json` 中配置：
+```json
+{
+  "plugins": [
+    ".opencode/plugins/session-start.js",
+    ".opencode/plugins/inject-subagent-context.js",
+    ".opencode/plugins/ralph-loop.js"
+  ]
+}
+```
+
+### 34. Fallback 路径一致性
+
+**问题**：Python hook 的 fallback 路径使用 `.claude/commands/trellis/`：
+```python
+check_files = [
+    (".claude/commands/trellis/finish-work.md", "..."),
+    ...
+]
+```
+
+JS plugin 使用 `.opencode/commands/trellis/`。
+
+**当前状态**：两边路径已分离，但需确保内容同步。
+
+**验证点**：确保 `.opencode/commands/trellis/` 和 `.claude/commands/trellis/` 内容一致。
+
+### 35. TaskOutput API 兼容性
+
+**问题**：Dispatch agent 使用 TaskOutput 轮询 subagent 完成状态：
+```
+TaskOutput(task_id, block=true, timeout=300000)
+```
+
+**待验证**：OpenCode 的 TaskOutput 是否有相同的参数和行为。
+
+### 36. Worktree 复制文件（平台感知）
+
+**问题**：`worktree.yaml` 的 `copy` 列表可能需要区分平台：
+```yaml
+copy:
+  - .claude/  # Claude Code only
+  - .opencode/  # OpenCode only
+  - .env  # 通用
+```
+
+**当前状态**：未区分。
+
+**解决方案**：
+1. 方案 A：添加平台前缀 `copy_claude:` / `copy_opencode:`
+2. 方案 B：维持现状，两个目录都复制（简单，但浪费）
+
+**决策**：暂用方案 B，两个目录都复制，不增加复杂度。
+
+## ⚠️ 模板化注意事项
+
+### Provider 配置
+
+**当前本地配置**：使用 Claude Max 反代（localhost:3456）
+```json
+{
+  "provider": {
+    "claude-max": {
+      "npm": "@ai-sdk/openai-compatible",
+      "options": { "baseURL": "http://localhost:3456/v1" }
+    }
+  }
+}
+```
+
+**模板化时需要**：
+1. Research OpenCode 标准 provider 配置方式
+2. 提供多种 provider 选项：
+   - Anthropic API（官方）
+   - OpenAI Compatible（自部署）
+   - 本地模型（Ollama 等）
+3. 模板中不能硬编码 localhost 地址
+4. 考虑使用环境变量或 init 时交互配置
+
+### Plugins 配置
+
+模板需要包含：
+```json
+{
+  "plugins": [
+    ".opencode/plugins/session-start.js",
+    ".opencode/plugins/inject-subagent-context.js",
+    ".opencode/plugins/ralph-loop.js"
+  ]
+}
+```
+
 ## 待讨论问题
 
 （暂无）
+
+---
+
+## 🔴 已知限制：项目级 Plugin 无法拦截 Subagent（2026-02-02 验证）
+
+### 问题描述
+
+OpenCode 项目级 plugin (`.opencode/plugin/*.js`) **无法拦截 subagent 的任何操作**：
+
+| Hook | 主 Session | Subagent |
+|------|-----------|----------|
+| `chat.message` | ✅ 触发 | ❌ 不触发 |
+| `experimental.chat.messages.transform` | ✅ 触发 | ❌ 不触发 |
+| `experimental.chat.system.transform` | ✅ 触发 | ❌ 不触发 |
+| `tool.execute.before` | ❌ 不触发 | ❌ 不触发 |
+
+### 根本原因
+
+这是 OpenCode 的**架构限制**，已有多个相关 Issue：
+
+| Issue | 标题 | 状态 |
+|-------|------|------|
+| [#5894](https://github.com/sst/opencode/issues/5894) | Plugin hooks (tool.execute.before) don't intercept subagent tool calls | ⚠️ 已知 bug |
+| [#7474](https://github.com/anomalyco/opencode/issues/7474) | Subagent permissions not enforced | 安全 bug |
+| [#2588](https://github.com/sst/opencode/issues/2588) | Feature request: let subagents inherit context | Feature request |
+| [#3808](https://github.com/anomalyco/opencode/issues/3808) | Task should inherit current agent permissions/tools | Feature request |
+| [#6396](https://github.com/sst/opencode/issues/6396) | Custom agent 'deny' permissions ignored via SDK | Bug |
+
+### 全局 vs 项目级 Plugin
+
+| 类型 | 安装方式 | tool.execute.before | subagent hooks |
+|------|---------|---------------------|----------------|
+| 全局 plugin | `npm install -g xxx` | ✅ 支持 | ✅ 支持 |
+| 项目级 plugin | `.opencode/plugin/*.js` | ❌ 不支持 | ❌ 不支持 |
+
+**oh-my-opencode** 作为全局 plugin，能够：
+1. 注册 `tool.execute.before` hook
+2. 拦截 Task 工具调用
+3. 读取 `.claude/settings.json` 执行 Python hooks
+4. 将修改后的 prompt 传递给 subagent
+
+### 解决方案
+
+| 方案 | 描述 | 状态 |
+|------|------|------|
+| **依赖 omo** | 要求用户安装 oh-my-opencode，利用其全局 plugin 权限 | ✅ 主要方案 |
+| **Context Self-Loading** | Agent prompt 包含自检逻辑，无上下文时自己读取文件 | ✅ 降级方案（已实现） |
+| **打包 npm** | 将 Trellis 打包成 `trellis-opencode-plugin` npm 包 | 💡 未来选项 |
+
+### Context Self-Loading 降级方案（2026-02-02 实现）
+
+在 `.opencode/agents/*.md` 中添加自检逻辑：
+
+```markdown
+## Context Self-Loading
+
+**If you see "# Implement Agent Task" header with pre-loaded context above, skip this section.**
+
+Otherwise, load context yourself:
+
+1. Read `.trellis/.current-task` → get task directory
+2. Read `{task_dir}/implement.jsonl` (or `spec.jsonl` as fallback)
+3. For each entry in JSONL, read the referenced file
+4. Read `{task_dir}/prd.md` for requirements
+5. Read `{task_dir}/info.md` for technical design
+```
+
+**工作原理**：
+- 有 omo → 上下文已注入，agent 看到 header 直接跳过自检
+- 无 omo → agent 自己读取文件，功能完整
+
+**代价**：
+- 无 omo 时多几轮工具调用（读文件）
+- 稍微增加 token 消耗
+
+### 对 Trellis 的影响
+
+1. **session-start.js** - 项目级 plugin 可用，能注入主 session 上下文 ✅
+2. **inject-subagent-context.js** - 项目级 plugin 无法工作，必须依赖 omo ❌
+
+**结论**：Trellis + OpenCode 用户**必须安装 oh-my-opencode** 才能使用完整的 subagent 上下文注入功能。
+
+---
 
 ## 参考资料
 

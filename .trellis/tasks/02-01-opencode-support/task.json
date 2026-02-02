@@ -5,7 +5,11 @@
   "description": "",
   "status": "planning",
   "dev_type": "backend",
-  "scope": ["scripts", "plugins", "adapter"],
+  "scope": [
+    "scripts",
+    "plugins",
+    "adapter"
+  ],
   "priority": "P1",
   "creator": "taosu",
   "assignee": "taosu",
@@ -14,7 +18,7 @@
   "branch": "feat/opencode-support",
   "base_branch": null,
   "worktree_path": null,
-  "current_phase": 0,
+  "current_phase": 1,
   "next_action": [
     {
       "phase": 1,
