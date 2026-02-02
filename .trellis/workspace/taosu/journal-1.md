@@ -1280,3 +1280,73 @@ Fixed GitHub Issues #18 and #19 (Windows compatibility), improved task command U
 ### Next Steps
 
 - None - task complete
+
+
+## Session 24: OpenCode Platform Sync & Template Update
+
+**Date**: 2026-02-02
+**Task**: OpenCode Platform Sync & Template Update
+
+### Summary
+
+(Add summary)
+
+### Main Changes
+
+## Summary
+
+Completed OpenCode platform adaptation sync and template updates:
+
+| Category | Changes |
+|----------|---------|
+| Agent Format | Updated permission format, removed hardcoded model |
+| Commands | Added --platform opencode to parallel.md |
+| Scripts | Added --platform flag to plan.py, start.py, status.py |
+| Templates | Synced all OpenCode templates (agents, commands, plugins, scripts) |
+| Init Flow | Added --opencode flag to trellis init |
+
+## Key Changes
+
+**Scripts with --platform support:**
+- `plan.py` - Planning phase
+- `start.py` - Dispatch phase  
+- `status.py` - Log parsing (internal)
+
+**Template Sync:**
+- `.opencode/` → `src/templates/opencode/`
+- `.trellis/scripts/` → `src/templates/trellis/scripts/`
+- `.claude/hooks/session-start.py` → `src/templates/claude/hooks/`
+
+**Files Modified:**
+- `.opencode/agents/*.md` (6 files)
+- `.opencode/commands/trellis/parallel.md`
+- `.trellis/scripts/common/cli_adapter.py`
+- `.trellis/scripts/common/registry.py`
+- `.trellis/scripts/multi_agent/{plan,start,status}.py`
+- `src/templates/opencode/` (new directory, 25+ files)
+- `src/cli/index.ts`, `src/commands/init.ts`
+- `src/configurators/opencode.ts`, `src/templates/extract.ts`
+
+
+### Git Commits
+
+| Hash | Message |
+|------|---------|
+| `f077a20` | (see git log) |
+| `bd9a631` | (see git log) |
+| `e1bc6a8` | (see git log) |
+| `2aa151a` | (see git log) |
+| `50bf65e` | (see git log) |
+| `54268ab` | (see git log) |
+
+### Testing
+
+- [OK] (Add test results)
+
+### Status
+
+[OK] **Completed**
+
+### Next Steps
+
+- None - task complete
