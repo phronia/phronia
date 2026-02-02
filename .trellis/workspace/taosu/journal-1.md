@@ -1409,3 +1409,78 @@ Completed OpenCode platform adaptation sync and template updates:
 ### Next Steps
 
 - None - task complete
+
+
+## Session 26: Windows UTF-8 编码修复
+
+**Date**: 2026-02-02
+**Task**: Windows UTF-8 编码修复
+
+### Summary
+
+(Add summary)
+
+### Main Changes
+
+## 修复内容
+
+修复 Windows 用户使用 Trellis hooks 和 scripts 时遇到的编码错误。
+
+### 问题根因
+
+1. **UnicodeEncodeError**: Windows 控制台默认使用 GBK 编码,无法处理中文字符(如 git commit 信息)
+2. **SyntaxWarning 污染输出**: Python 3.12+ 对无效转义序列发出警告,stderr 内容污染 hook 的 JSON 输出
+
+### 修复方案
+
+在所有会输出内容的 Python 脚本开头添加:
+
+```python
+# -*- coding: utf-8 -*-
+
+import warnings
+warnings.filterwarnings("ignore")
+
+import sys
+if sys.platform == "win32":
+    import io
+    sys.stdout = io.TextIOWrapper(sys.stdout.buffer, encoding="utf-8", errors="replace")
+```
+
+### 修复文件
+
+**Hooks (6 files)**:
+- `.claude/hooks/session-start.py`
+- `.claude/hooks/inject-subagent-context.py`
+- `.claude/hooks/ralph-loop.py`
+- `src/templates/claude/hooks/*` (同步)
+
+**Scripts (6 files)**:
+- `.trellis/scripts/common/git_context.py`
+- `.trellis/scripts/task.py`
+- `.trellis/scripts/add_session.py`
+- `src/templates/trellis/scripts/*` (同步)
+
+### 版本发布
+
+创建 **0.3.0-beta.10** 版本,建议 Windows 用户升级。
+
+
+### Git Commits
+
+| Hash | Message |
+|------|---------|
+| `c4c485c` | (see git log) |
+| `a810e8e` | (see git log) |
+
+### Testing
+
+- [OK] (Add test results)
+
+### Status
+
+[OK] **Completed**
+
+### Next Steps
+
+- None - task complete
