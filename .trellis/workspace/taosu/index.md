@@ -8,7 +8,7 @@
 
 <!-- @@@auto:current-status -->
 - **Active File**: `journal-1.md`
-- **Total Sessions**: 29
+- **Total Sessions**: 30
 - **Last Active**: 2026-02-03
 <!-- @@@/auto:current-status -->
 
@@ -29,6 +29,7 @@
 <!-- @@@auto:session-history -->
 | # | Date | Title | Commits |
 |---|------|-------|---------|
+| 30 | 2026-02-03 | Merge main & Fix OpenCode task paths | - |
 | 29 | 2026-02-03 | OpenCode Multi-Agent Prompt Fix | `14bfbe9` |
 | 28 | 2026-02-02 | PR Review & CLI Adapter Fix | `19f8a68` |
 | 27 | 2026-02-02 | Windows Hook Debug & Backslash Fix | `b282b14` |
