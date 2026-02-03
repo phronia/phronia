@@ -1918,3 +1918,81 @@ User on branch A → task create (base_branch=A) → parallel → worktree with 
 ### Next Steps
 
 - None - task complete
+
+
+## Session 31: Cursor支持、manifest修复、分支保护配置
+
+**Date**: 2026-02-03
+**Task**: Cursor支持、manifest修复、分支保护配置
+
+### Summary
+
+(Add summary)
+
+### Main Changes
+
+## 主要工作
+
+| 功能 | 描述 |
+|------|------|
+| Cursor 平台支持 | cli_adapter.py 添加 Cursor 平台，task.py 动态生成命令路径 |
+| base_branch 自动记录 | 创建 task 时自动记录当前分支为 PR 目标 |
+| set-base-branch 命令 | 新增手动修改 PR 目标分支的命令 |
+| manifest 缺失修复 | 添加 0.2.12, 0.2.13, beta.1-6, beta.11 共 9 个缺失的 manifest |
+| undefined path 修复 | 修复 update.ts 中 orphanedMigrations 的 item.from 可能 undefined 的 bug |
+| 微信群二维码更新 | 合并 main 分支的二维码更新 |
+
+## 问题修复
+
+用户从 0.2.12/0.2.13 升级到 0.3.0-beta.13 时报错：
+```
+Error: The "path" argument must be of type string. Received undefined
+```
+
+**原因**：
+1. dist/migrations/manifests 目录缺少多个版本的 manifest 文件
+2. orphanedMigrations filter 中未检查 item.from 是否存在
+
+**修复**：
+1. 添加所有缺失的 manifest 文件（共 9 个）
+2. 在 update.ts 中添加 `!item.from` 防御性检查
+
+## GitHub 分支保护配置
+
+协助配置 Trellis 仓库的 Branch Ruleset：
+- 保护 main 分支
+- 要求通过 PR 合并（1 人 review）
+- 禁止 force push 和删除
+- Admin bypass 紧急情况可用
+
+## 待发布
+
+需要发布 0.3.0-beta.14 修复版本。
+
+**更新文件**:
+- `src/commands/update.ts` - 添加 item.from 检查
+- `src/migrations/manifests/` - 新增 9 个 manifest 文件
+- `.trellis/scripts/task.py` - base_branch 自动记录 + set-base-branch
+- `.trellis/scripts/common/cli_adapter.py` - Cursor 平台支持
+
+
+### Git Commits
+
+| Hash | Message |
+|------|---------|
+| `4c01ac9` | (see git log) |
+| `d1eea41` | (see git log) |
+| `e38578b` | (see git log) |
+| `5357e98` | (see git log) |
+
+### Testing
+
+- [OK] (Add test results)
+
+### Status
+
+[OK] **Completed**
+
+### Next Steps
+
+- None - task complete

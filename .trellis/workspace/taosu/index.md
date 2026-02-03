@@ -8,7 +8,7 @@
 
 <!-- @@@auto:current-status -->
 - **Active File**: `journal-1.md`
-- **Total Sessions**: 30
+- **Total Sessions**: 31
 - **Last Active**: 2026-02-03
 <!-- @@@/auto:current-status -->
 
@@ -19,7 +19,7 @@
 <!-- @@@auto:active-documents -->
 | File | Lines | Status |
 |------|-------|--------|
-| `journal-1.md` | ~1701 | Active |
+| `journal-1.md` | ~1998 | Active |
 <!-- @@@/auto:active-documents -->
 
 ---
@@ -29,6 +29,7 @@
 <!-- @@@auto:session-history -->
 | # | Date | Title | Commits |
 |---|------|-------|---------|
+| 31 | 2026-02-03 | Cursor支持、manifest修复、分支保护配置 | `4c01ac9`, `d1eea41`, `e38578b`, `5357e98` |
 | 30 | 2026-02-03 | Merge main & Fix OpenCode task paths | - |
 | 29 | 2026-02-03 | OpenCode Multi-Agent Prompt Fix | `14bfbe9` |
 | 28 | 2026-02-02 | PR Review & CLI Adapter Fix | `19f8a68` |
