@@ -8,8 +8,8 @@
 
 <!-- @@@auto:current-status -->
 - **Active File**: `journal-1.md`
-- **Total Sessions**: 19
-- **Last Active**: 2026-02-02
+- **Total Sessions**: 20
+- **Last Active**: 2026-02-03
 <!-- @@@/auto:current-status -->
 
 ---
@@ -19,7 +19,7 @@
 <!-- @@@auto:active-documents -->
 | File | Lines | Status |
 |------|-------|--------|
-| `journal-1.md` | ~886 | Active |
+| `journal-1.md` | ~963 | Active |
 <!-- @@@/auto:active-documents -->
 
 ---
@@ -29,6 +29,7 @@
 <!-- @@@auto:session-history -->
 | # | Date | Title | Commits |
 |---|------|-------|---------|
+| 20 | 2026-02-03 | Fix task directory path bug in agent docs | `6a3ffba` |
 | 19 | 2026-02-02 | Add platform flag & CONTRIBUTING docs | `942c9f3`, `74bc5cc` |
 | 18 | 2026-02-01 | Add CONTRIBUTING.md | `942c9f3` |
 | 17 | 2026-01-29 | Multi-Agent Pipeline 研究与修复 | `cb596fc`, `ace7dea` |
