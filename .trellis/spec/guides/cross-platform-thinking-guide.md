@@ -259,6 +259,51 @@ output = {
 
 ---
 
+## JSON/External Data Defensive Checks
+
+When parsing JSON or external data, TypeScript types are **compile-time only**. Runtime data may not match.
+
+**Rule**: Always add defensive checks for required fields before using them.
+
+```typescript
+// BAD - Trusts TypeScript type definition
+interface MigrationItem {
+  from: string;  // TypeScript says required
+  to?: string;
+}
+
+function process(item: MigrationItem) {
+  const path = item.from;  // Runtime: could be undefined!
+}
+
+// GOOD - Defensive check before use
+function process(item: MigrationItem) {
+  if (!item.from) return;  // Skip invalid data
+  const path = item.from;  // Now guaranteed
+}
+```
+
+**When to apply**:
+- Parsing JSON files (manifests, configs)
+- API responses
+- User input
+- Any data from external sources
+
+**Pattern**: Check existence → then use
+
+```typescript
+// Filter pattern - skip invalid items
+const validItems = items.filter(item => item.from && item.to);
+
+// Early return pattern - bail on invalid
+if (!data.requiredField) {
+  console.warn("Missing required field");
+  return defaultValue;
+}
+```
+
+---
+
 ## Common Mistakes
 
 ### 1. "It works on my Mac"
@@ -317,3 +362,27 @@ subprocess.run(cmd, capture_output=True, text=True)  # Garbled Chinese/Unicode
 ---
 
 **Core Principle**: If it's not explicit, it's an assumption. And assumptions break.
+
+---
+
+## Release Checklist: Versioned Files
+
+When releasing a new version, ensure **all versioned files** are created/updated:
+
+- [ ] `src/migrations/manifests/{version}.json` - Migration manifest exists
+- [ ] Manifest has correct version, description, changelog
+- [ ] `pnpm build` copies manifests to `dist/`
+- [ ] Test upgrade path from older versions (not just adjacent)
+
+**Why this matters**: Missing manifests cause "path undefined" errors when users upgrade from older versions.
+
+```bash
+# Verify all expected manifests exist
+ls src/migrations/manifests/
+
+# Test upgrade path
+node -e "
+const { getMigrationsForVersion } = require('./dist/migrations/index.js');
+console.log('From 0.2.12:', getMigrationsForVersion('0.2.12', 'CURRENT').length);
+"
+```
