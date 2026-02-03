@@ -1484,3 +1484,218 @@ if sys.platform == "win32":
 ### Next Steps
 
 - None - task complete
+
+
+## Session 27: Windows Hook Debug & Backslash Fix
+
+**Date**: 2026-02-02
+**Task**: Windows Hook Debug & Backslash Fix
+
+### Summary
+
+(Add summary)
+
+### Main Changes
+
+## Summary
+调查并修复 Windows 用户 SessionStart hook 失败问题
+
+## 工作内容
+
+| 项目 | 描述 |
+|------|------|
+| 问题调查 | 调试 Windows 用户的 "Hook output does not start with {" 错误 |
+| 根因分析 | 通过 Exa 搜索发现是 Claude Code 已知 bug (#18469) |
+| 临时修复 | 替换 markdown 中的反斜杠字符 (`\--` → `+--`, `\->` → `-->`) |
+
+## 发现
+
+**根本原因**: Claude Code 在 Windows 上使用 Git Bash 执行 hook 时，stdout 被错误路由到 stderr
+
+- GitHub Issue #18469: Bash tool doesn't capture stdout from shell script files on Windows
+- GitHub Issue #20034: Hook stdout incorrectly routed to stderr when using Git Bash
+- 状态: **OPEN** - 尚未修复
+
+## Windows 用户 Workaround
+
+修改 `.claude/settings.json` 用 cmd.exe 执行:
+```json
+{
+  "hooks": {
+    "SessionStart": [{
+      "matcher": "startup",
+      "hooks": [{
+        "type": "command",
+        "command": "cmd.exe /c python .claude/hooks/session-start.py",
+        "timeout": 10
+      }]
+    }]
+  }
+}
+```
+
+## 修改文件
+- `src/templates/trellis/workflow.md` - 反斜杠替换
+- `src/templates/*/commands/trellis/*.md` - 反斜杠替换
+- `.trellis/workflow.md` - 本地同步
+- `.claude/commands/trellis/*.md` - 本地同步
+
+
+### Git Commits
+
+| Hash | Message |
+|------|---------|
+| `b282b14` | (see git log) |
+
+### Testing
+
+- [OK] (Add test results)
+
+### Status
+
+[OK] **Completed**
+
+### Next Steps
+
+- None - task complete
+
+
+## Session 28: PR Review & CLI Adapter Fix
+
+**Date**: 2026-02-02
+**Task**: PR Review & CLI Adapter Fix
+
+### Summary
+
+(Add summary)
+
+### Main Changes
+
+## Summary
+Reviewed PR #21 (brainstorm command) and fixed hardcoded `.claude` paths in task.py.
+
+## PR #21 Analysis
+- **Author**: dehan (external contributor)
+- **Issue**: Branch forked from old commit `fcdc47c2` (main), ~54 commits behind `feat/opencode`
+- **Content**: New brainstorm command with 6-phase workflow, root-cause-first principle
+- **License change**: FSL-1.1-MIT → AGPL-3.0-only
+
+## Fix: Platform-Specific Command Paths
+Removed hardcoded `.claude` references in `task.py`:
+
+| Before | After |
+|--------|-------|
+| `.claude/commands/trellis/...` | `{adapter.config_dir_name}/commands/trellis/...` |
+
+**Changes to cli_adapter.py:**
+- Added `config_dir_name` property (returns `.claude` or `.opencode`)
+- Added `detect_platform()` - auto-detects via env var or directory existence
+- Added `get_cli_adapter_auto()` factory function
+
+**Changes to task.py:**
+- `get_check_context()` and `get_debug_context()` now accept `repo_root`
+- Uses cli_adapter for dynamic path generation
+
+## Updated Files
+- `.trellis/scripts/common/cli_adapter.py`
+- `.trellis/scripts/task.py`
+- `src/templates/trellis/scripts/common/cli_adapter.py`
+- `src/templates/trellis/scripts/task.py`
+
+
+### Git Commits
+
+| Hash | Message |
+|------|---------|
+| `19f8a68` | (see git log) |
+
+### Testing
+
+- [OK] (Add test results)
+
+### Status
+
+[OK] **Completed**
+
+### Next Steps
+
+- None - task complete
+
+
+## Session 29: OpenCode Multi-Agent Prompt Fix
+
+**Date**: 2026-02-03
+**Task**: OpenCode Multi-Agent Prompt Fix
+
+### Summary
+
+(Add summary)
+
+### Main Changes
+
+## Summary
+修复 OpenCode/GPT 模型在 multi-agent pipeline 中的兼容性问题
+
+## 问题分析
+
+用户报告使用 GPT/Codex 模型运行 multi-agent pipeline 时，dispatch agent 卡住：
+- Agent 在问 "Start the pipeline 是什么"
+- 然后 `step_finish reason=stop`，进程退出
+- 实现阶段从未开始
+
+## 根因
+
+| 问题 | 原因 |
+|------|------|
+| Prompt 太模糊 | `"Start the pipeline"` 只有 3 个单词 |
+| 术语歧义 | "pipeline" 被误解为 CI/CD pipeline |
+| 模型差异 | GPT/Codex 更严格遵循用户输入，忽略 agent 定义 |
+
+## 修复
+
+修改 `start.py` 中的 dispatch agent 启动 prompt：
+
+**Before**:
+```
+"Start the pipeline"
+```
+
+**After**:
+```
+"Follow your agent instructions to execute the task workflow. Start by reading .trellis/.current-task to get the task directory, then execute each action in task.json next_action array in order."
+```
+
+**关键改进**:
+1. `"Follow your agent instructions"` - 引导模型参考 dispatch.md
+2. 给出明确的起始步骤
+3. 避免使用可能产生歧义的 "pipeline" 术语
+
+## 测试
+
+创建临时 task 用 OpenCode + deepseek-reasoner 模型测试：
+- ✅ Dispatch agent 正确读取 .current-task
+- ✅ 正确读取 task.json
+- ✅ 成功调用 implement subagent
+
+## 修改文件
+- `src/templates/trellis/scripts/multi_agent/start.py`
+- `.trellis/scripts/multi_agent/start.py`
+
+
+### Git Commits
+
+| Hash | Message |
+|------|---------|
+| `14bfbe9` | (see git log) |
+
+### Testing
+
+- [OK] (Add test results)
+
+### Status
+
+[OK] **Completed**
+
+### Next Steps
+
+- None - task complete
