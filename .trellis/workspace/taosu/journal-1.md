@@ -961,3 +961,75 @@ Added `0.2.14.json` migration manifest with:
 ### Next Steps
 
 - None - task complete
+
+## Session 21: Fix parallel workflow bugs for 0.2.15
+
+**Date**: 2026-02-03
+**Task**: Fix parallel workflow bugs for 0.2.15
+
+### Summary
+
+(Add summary)
+
+### Main Changes
+
+## Summary
+
+Fixed multiple bugs in the parallel workflow reported by user (WSL, Trellis 0.2.13).
+
+## Issues Fixed
+
+### 1. Task Directory Path Bug
+- **Problem**: Agent docs showed wrong path `.trellis/workspace/{dev}/tasks/` instead of `.trellis/tasks/`
+- **Cause**: Hardcoded examples in dispatch.md, plan.md contained wrong paths and `taosu` developer name
+- **Fix**: Corrected paths in both local files and templates
+
+### 2. Base Branch Bug  
+- **Problem**: Worktrees created with wrong base_branch (e.g., master instead of develop)
+- **Cause**: base_branch was only set during worktree creation, and create-pr defaulted to "main"
+- **Fix**: Auto-record current branch as base_branch when task is created
+
+### 3. Migration Bug
+- **Problem**: `trellis update` failed with "path argument undefined" error
+- **Cause**: 0.2.14 migration used unsupported `update` type
+- **Fix**: Removed invalid migration entries
+
+## Key Changes
+
+| File | Change |
+|------|--------|
+| `task.sh` | Auto-set base_branch on task create |
+| `start.sh` | Respect pre-configured base_branch |
+| `dispatch.md` / `plan.md` | Fix path examples |
+| `status.sh` | Remove hardcoded `taosu` |
+| `0.2.14.json` | Remove invalid `update` type |
+| `0.2.15.json` | Add changelog |
+
+## Correct Flow
+
+```
+User on branch A → task create (base_branch=A) → parallel → worktree with feature branch → PR targets A
+```
+
+### Git Commits
+
+| Hash | Message |
+|------|---------|
+| `6d357fd` | (see git log) |
+| `4a00923` | (see git log) |
+| `a098707` | (see git log) |
+| `a6f43e3` | (see git log) |
+| `e8f1c4b` | (see git log) |
+| `6a3ffba` | (see git log) |
+
+### Testing
+
+- [OK] (Add test results)
+
+### Status
+
+[OK] **Completed**
+
+### Next Steps
+
+- None - task complete

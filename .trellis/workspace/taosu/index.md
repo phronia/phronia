@@ -8,7 +8,7 @@
 
 <!-- @@@auto:current-status -->
 - **Active File**: `journal-1.md`
-- **Total Sessions**: 20
+- **Total Sessions**: 21
 - **Last Active**: 2026-02-03
 <!-- @@@/auto:current-status -->
 
@@ -19,7 +19,7 @@
 <!-- @@@auto:active-documents -->
 | File | Lines | Status |
 |------|-------|--------|
-| `journal-1.md` | ~963 | Active |
+| `journal-1.md` | ~1035 | Active |
 <!-- @@@/auto:active-documents -->
 
 ---
@@ -29,6 +29,7 @@
 <!-- @@@auto:session-history -->
 | # | Date | Title | Commits |
 |---|------|-------|---------|
+| 21 | 2026-02-03 | Fix parallel workflow bugs for 0.2.15 | `6d357fd`, `4a00923`, `a098707`, `a6f43e3`, `e8f1c4b`, `6a3ffba` |
 | 20 | 2026-02-03 | Fix task directory path bug in agent docs | `6a3ffba` |
 | 19 | 2026-02-02 | Add platform flag & CONTRIBUTING docs | `942c9f3`, `74bc5cc` |
 | 18 | 2026-02-01 | Add CONTRIBUTING.md | `942c9f3` |
