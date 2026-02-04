@@ -90,3 +90,29 @@ When you've made similar changes to multiple files:
 - [ ] No copy-pasted logic that should be shared
 - [ ] Constants defined in one place
 - [ ] Similar patterns follow same structure
+
+---
+
+## Template File Registration (Trellis-specific)
+
+When adding new files to `src/templates/trellis/scripts/`:
+
+**CRITICAL**: New script files must be registered in THREE places:
+
+1. **`src/templates/trellis/index.ts`**:
+   - Add `export const xxxScript = readTemplate("scripts/path/file.py");`
+   - Add to `getAllScripts()` Map
+
+2. **`src/commands/update.ts`**:
+   - Add to import statement
+   - Add to `collectTemplateFiles()` Map
+
+**Why this matters**: Without registration, `trellis update` won't sync the file to user projects. Bug fixes and features won't propagate.
+
+### Quick Checklist for New Scripts
+
+```bash
+# After adding a new .py file, verify:
+grep -l "newFileName" src/templates/trellis/index.ts  # Should match
+grep -l "newFileName" src/commands/update.ts          # Should match
+```

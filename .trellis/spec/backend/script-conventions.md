@@ -202,6 +202,89 @@ def run_command(
 
 ## Cross-Platform Compatibility
 
+### CRITICAL: Windows stdout Encoding
+
+On Windows, Python's stdout defaults to the system code page (e.g., GBK/CP936 in China, CP1252 in Western locales). This causes `UnicodeEncodeError` when printing non-ASCII characters.
+
+**The Problem Chain**:
+
+```
+Windows code page = GBK (936)
+    ↓
+Python stdout defaults to GBK encoding
+    ↓
+Subprocess output contains special chars → replaced with \ufffd (replacement char)
+    ↓
+json.dumps(ensure_ascii=False) → print()
+    ↓
+GBK cannot encode \ufffd → UnicodeEncodeError: 'gbk' codec can't encode character
+```
+
+**Root Cause**: Even if you set `PYTHONIOENCODING` in subprocess calls, the **parent process's stdout** still uses the system code page. The error occurs when `print()` tries to write to stdout.
+
+---
+
+#### GOOD: Use `sys.stdout.reconfigure()` (Python 3.7+)
+
+```python
+import sys
+
+# MUST be at the top of the script, before any print() calls
+if sys.platform == "win32":
+    sys.stdout.reconfigure(encoding="utf-8", errors="replace")
+    sys.stderr.reconfigure(encoding="utf-8", errors="replace")
+```
+
+**Why this works**: `reconfigure()` modifies the existing stream **in-place**, changing its encoding settings directly. This affects all subsequent writes to stdout.
+
+**Best Practice**: Add this to `common/__init__.py` so all scripts that `from common import ...` automatically get the fix:
+
+```python
+# common/__init__.py
+import sys
+
+if sys.platform == "win32":
+    sys.stdout.reconfigure(encoding="utf-8", errors="replace")
+    sys.stderr.reconfigure(encoding="utf-8", errors="replace")
+
+# ... rest of exports
+```
+
+---
+
+#### BAD: Do NOT use `io.TextIOWrapper`
+
+```python
+# BAD - This does NOT reliably fix the encoding issue!
+import sys
+import io
+
+if sys.platform == "win32":
+    sys.stdout = io.TextIOWrapper(sys.stdout.buffer, encoding="utf-8", errors="replace")
+```
+
+**Why this fails**:
+
+1. **Creates a new wrapper, doesn't fix the underlying issue**: `TextIOWrapper` wraps `sys.stdout.buffer`, but the original stdout object and its encoding settings may still interfere in some code paths.
+
+2. **Loses original stdout properties**: The new wrapper may not preserve all attributes of the original `sys.stdout` (like `isatty()`, line buffering behavior).
+
+3. **Race condition with buffering**: If any output was buffered before the replacement, it may still be encoded with the old encoding.
+
+4. **Not idempotent**: Calling this multiple times creates nested wrappers, while `reconfigure()` is safe to call multiple times.
+
+**Real-world failure case**: Users reported that `io.TextIOWrapper` did not fix the `UnicodeEncodeError` on Windows, while `sys.stdout.reconfigure()` worked immediately.
+
+---
+
+#### Summary
+
+| Method | Works? | Reason |
+|--------|--------|--------|
+| `sys.stdout.reconfigure(encoding="utf-8")` | ✅ Yes | Modifies stream in-place |
+| `io.TextIOWrapper(sys.stdout.buffer, ...)` | ❌ No | Creates wrapper, doesn't fix underlying encoding |
+| `PYTHONIOENCODING=utf-8` env var | ⚠️ Partial | Only works if set **before** Python starts |
+
 ### CRITICAL: Always Use `python3` Explicitly
 
 Windows does not support shebang (`#!/usr/bin/env python3`). Always document invocation with explicit `python3`:
