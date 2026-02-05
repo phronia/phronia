@@ -328,3 +328,62 @@ GBK cannot encode \ufffd → UnicodeEncodeError
 ### Next Steps
 
 - None - task complete
+
+
+## Session 37: 改进 update-spec 指引 + 更新 spec 设计决策
+
+**Date**: 2026-02-05
+**Task**: 改进 update-spec 指引 + 更新 spec 设计决策
+
+### Summary
+
+(Add summary)
+
+### Main Changes
+
+## 完成内容
+
+| 改动 | 说明 |
+|------|------|
+| update-spec.md 改进 | 添加 "Implemented a feature"、"Made a design decision" 触发条件 |
+| 新增模板 | "Adding a Design Decision"、"Adding a Project Convention" 模板 |
+| Interactive Mode 优化 | 改为更开放的判断标准，不只是"避免问题" |
+| 全平台同步 | Claude、Cursor、iFlow、OpenCode 7个文件同步更新 |
+| Spec 更新 | 在 directory-structure.md 添加 Design Decisions section |
+
+## 设计决策记录
+
+记录到 `.trellis/spec/backend/directory-structure.md`：
+- **giget 选择** - 为什么选择 giget 而非 degit
+- **目录冲突策略** - skip/overwrite/append 模式
+- **扩展性设计** - type + 映射表实现模板类型扩展
+
+## 改动文件
+
+- `.claude/commands/trellis/update-spec.md` (源文件)
+- `.cursor/commands/trellis-update-spec.md`
+- `.opencode/commands/trellis/update-spec.md`
+- `src/templates/*/commands/*/update-spec.md` (4个模板)
+- `.trellis/spec/backend/directory-structure.md`
+- `.trellis/spec/backend/index.md`
+
+
+### Git Commits
+
+| Hash | Message |
+|------|---------|
+| `c0c8893` | (see git log) |
+| `0ab309b` | (see git log) |
+| `f85df4e` | (see git log) |
+
+### Testing
+
+- [OK] (Add test results)
+
+### Status
+
+[OK] **Completed**
+
+### Next Steps
+
+- None - task complete
