@@ -387,3 +387,78 @@ GBK cannot encode \ufffd → UnicodeEncodeError
 ### Next Steps
 
 - None - task complete
+
+
+## Session 38: Cross-Platform Python Fix & Init Refactor
+
+**Date**: 2026-02-05
+**Task**: Cross-Platform Python Fix & Init Refactor
+
+### Summary
+
+(Add summary)
+
+### Main Changes
+
+## Summary
+
+Fixed cross-platform Python command compatibility and refactored init tool selection logic.
+
+## Changes
+
+| Category | Description |
+|----------|-------------|
+| **Cross-Platform Fix** | Settings.json now uses `{{PYTHON_CMD}}` placeholder, replaced at init time based on platform |
+| **Bug Fix** | Tool flags (--iflow, --opencode) now take precedence over -y default |
+| **Refactor** | Data-driven tool selection with TOOLS array (single source of truth) |
+| **Spec Update** | Added CLI Design Patterns to quality-guidelines.md |
+
+## Platform Handling
+
+| Platform | Claude/iFlow settings.json | OpenCode |
+|----------|---------------------------|----------|
+| macOS/Linux | `python3` | Runtime detection |
+| Windows | `python` | `platform() === "win32"` |
+
+## Test Results
+
+All manual tests passed:
+- `--claude -y` ✅
+- `--iflow -y` ✅
+- `--opencode -y` ✅
+- `--claude --iflow --opencode -y` ✅
+- `-y` (default cursor+claude) ✅
+- `pnpm lint` ✅
+- `pnpm typecheck` ✅
+
+## Files Modified
+
+- `src/commands/init.ts` - Data-driven tool selection
+- `src/configurators/claude.ts` - Placeholder replacement
+- `src/configurators/iflow.ts` - Placeholder replacement
+- `src/templates/*/settings.json` - `{{PYTHON_CMD}}` placeholder
+- `dist/templates/opencode/lib/trellis-context.js` - Runtime platform detection
+- `.trellis/spec/backend/quality-guidelines.md` - CLI patterns
+
+
+### Git Commits
+
+| Hash | Message |
+|------|---------|
+| `754f40d` | (see git log) |
+| `0f2d7e5` | (see git log) |
+| `923afa6` | (see git log) |
+| `fe80432` | (see git log) |
+| `3042225` | (see git log) |
+
+### Testing
+
+- [OK] (Add test results)
+
+### Status
+
+[OK] **Completed**
+
+### Next Steps
+
+- None - task complete

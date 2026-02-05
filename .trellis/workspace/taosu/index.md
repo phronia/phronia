@@ -8,7 +8,7 @@
 
 <!-- @@@auto:current-status -->
 - **Active File**: `journal-2.md`
-- **Total Sessions**: 37
+- **Total Sessions**: 38
 - **Last Active**: 2026-02-05
 <!-- @@@/auto:current-status -->
 
@@ -19,7 +19,7 @@
 <!-- @@@auto:active-documents -->
 | File | Lines | Status |
 |------|-------|--------|
-| `journal-2.md` | ~389 | Active |
+| `journal-2.md` | ~464 | Active |
 | `journal-1.md` | ~1998 | Archived |
 <!-- @@@/auto:active-documents -->
 
@@ -30,6 +30,7 @@
 <!-- @@@auto:session-history -->
 | # | Date | Title | Commits |
 |---|------|-------|---------|
+| 38 | 2026-02-05 | Cross-Platform Python Fix & Init Refactor | `754f40d`, `0f2d7e5`, `923afa6`, `fe80432`, `3042225` |
 | 37 | 2026-02-05 | 改进 update-spec 指引 + 更新 spec 设计决策 | `c0c8893`, `0ab309b`, `f85df4e` |
 | 36 | 2026-02-05 | 实现远程模板初始化功能 | `c59aba7`, `ebdd24f` |
 | 35 | 2026-02-04 | 修复 update 只更新已配置平台 | `8955e52` |
