@@ -273,3 +273,58 @@ GBK cannot encode \ufffd → UnicodeEncodeError
 ### Next Steps
 
 - None - task complete
+
+
+## Session 36: 实现远程模板初始化功能
+
+**Date**: 2026-02-05
+**Task**: 实现远程模板初始化功能
+
+### Summary
+
+(Add summary)
+
+### Main Changes
+
+## 完成内容
+
+| 功能 | 说明 |
+|------|------|
+| `--template` 参数 | 支持指定远程模板 (如 `--template electron-fullstack`) |
+| `--overwrite` / `--append` | 处理已有目录的策略选项 |
+| 交互式模板选择 | 无 `-y` 时显示模板列表，blank 为默认 |
+| 模板类型扩展性 | 支持 spec/skill/command/full 类型，根据 type 自动选择安装路径 |
+
+## 改动文件
+
+- `src/utils/template-fetcher.ts` - 新增：模板索引获取和下载逻辑
+- `src/cli/index.ts` - 添加 CLI 参数
+- `src/commands/init.ts` - 添加模板选择流程
+- `src/configurators/workflow.ts` - 添加 skipSpecTemplates 选项
+- `package.json` - 添加 giget 依赖
+
+## 相关 Task PRD
+
+- `02-05-remote-template-init` - 主功能 PRD (已完成)
+- `02-05-cross-platform-python` - 待实现
+- `02-05-improve-brainstorm-flow` - 待实现
+
+
+### Git Commits
+
+| Hash | Message |
+|------|---------|
+| `c59aba7` | (see git log) |
+| `ebdd24f` | (see git log) |
+
+### Testing
+
+- [OK] (Add test results)
+
+### Status
+
+[OK] **Completed**
+
+### Next Steps
+
+- None - task complete

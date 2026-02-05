@@ -8,8 +8,8 @@
 
 <!-- @@@auto:current-status -->
 - **Active File**: `journal-2.md`
-- **Total Sessions**: 35
-- **Last Active**: 2026-02-04
+- **Total Sessions**: 36
+- **Last Active**: 2026-02-05
 <!-- @@@/auto:current-status -->
 
 ---
@@ -19,7 +19,7 @@
 <!-- @@@auto:active-documents -->
 | File | Lines | Status |
 |------|-------|--------|
-| `journal-2.md` | ~275 | Active |
+| `journal-2.md` | ~330 | Active |
 | `journal-1.md` | ~1998 | Archived |
 <!-- @@@/auto:active-documents -->
 
@@ -30,6 +30,7 @@
 <!-- @@@auto:session-history -->
 | # | Date | Title | Commits |
 |---|------|-------|---------|
+| 36 | 2026-02-05 | 实现远程模板初始化功能 | `c59aba7`, `ebdd24f` |
 | 35 | 2026-02-04 | 修复 update 只更新已配置平台 | `8955e52` |
 | 34 | 2026-02-04 | PR #22 iFlow CLI 同步与 lint 修复 | `a6e4fcb`, `26adbaf` |
 | 33 | 2026-02-04 | Windows stdout encoding fix & spec/guide distinction | pending |
