@@ -462,3 +462,60 @@ All manual tests passed:
 ### Next Steps
 
 - None - task complete
+
+
+## Session 39: Brainstorm Command Enhancement
+
+**Date**: 2026-02-05
+**Task**: Brainstorm Command Enhancement
+
+### Summary
+
+(Add summary)
+
+### Main Changes
+
+## Summary
+
+Enhanced `/trellis:brainstorm` command with major workflow improvements.
+
+## Key Changes
+
+| Feature | Description |
+|---------|-------------|
+| **Task-first (Step 0)** | Create task immediately with temp title, don't wait |
+| **Auto-Context (Step 1)** | Gather context before asking questions |
+| **Question Gate (Step 3)** | Gate A/B/C to filter low-value questions |
+| **Research-first (Step 4)** | Mandatory research for technical choices |
+| **Expansion Sweep (Step 5)** | Diverge → Converge pattern for better thinking |
+| **Anti-Patterns** | Explicit list of things to avoid |
+
+## Pain Points Addressed
+
+1. Task creation timing - now immediate
+2. Low-value questions - filtered by gates
+3. Missing research - now mandatory for tech choices
+4. Narrow thinking - expansion sweep forces divergent thinking
+
+## Files Modified
+
+- `.claude/commands/trellis/brainstorm.md` - Complete rewrite
+
+
+### Git Commits
+
+| Hash | Message |
+|------|---------|
+| `6d07441` | (see git log) |
+
+### Testing
+
+- [OK] (Add test results)
+
+### Status
+
+[OK] **Completed**
+
+### Next Steps
+
+- None - task complete
