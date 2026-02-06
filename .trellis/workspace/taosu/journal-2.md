@@ -726,3 +726,184 @@ Enhanced `/trellis:brainstorm` command with major workflow improvements.
 ### Next Steps
 
 - None - task complete
+
+
+## Session 44: refactor: shared.ts + remove templates.ts dispatcher
+
+**Date**: 2026-02-06
+**Task**: refactor: shared.ts + remove templates.ts dispatcher
+
+### Summary
+
+(Add summary)
+
+### Main Changes
+
+## What was done
+
+提取 `resolvePlaceholders()` 到 `configurators/shared.ts`，消除三处重复（claude.ts, iflow.ts, index.ts）。删除 `configurators/templates.ts`（硬编码 if/else 分发器），改为在 index.ts 直接导入各平台 `getAllCommands`。
+
+| Change | Details |
+|--------|---------|
+| Created `src/configurators/shared.ts` | `resolvePlaceholders()` 单一来源 |
+| Updated `claude.ts`, `iflow.ts` | 改为从 shared.ts 导入 |
+| Updated `index.ts` | 直接导入各平台 getAllCommands，不再走 templates.ts |
+| Deleted `src/configurators/templates.ts` | 不再需要的分发器 |
+| Deleted `test/configurators/templates.test.ts` | 对应测试文件 |
+
+**Tests**: 333 pass (down from 339 due to removed template tests)
+
+
+### Git Commits
+
+| Hash | Message |
+|------|---------|
+| `eaae43a` | (see git log) |
+
+### Testing
+
+- [OK] (Add test results)
+
+### Status
+
+[OK] **Completed**
+
+### Next Steps
+
+- None - task complete
+
+
+## Session 45: feat: release tooling (beta/rc/release) + release:rc script
+
+**Date**: 2026-02-06
+**Task**: feat: release tooling (beta/rc/release) + release:rc script
+
+### Summary
+
+(Add summary)
+
+### Main Changes
+
+## What was done
+
+更新 `scripts/create-manifest.js` 支持完整发布生命周期（beta → rc → release），新增 `release:rc` package.json 脚本。
+
+| Change | Details |
+|--------|---------|
+| `scripts/create-manifest.js` | `getNextBetaVersion` → `getNextVersion`，支持 beta/rc/stable 版本推进 |
+| `package.json` | 新增 `release:rc` 脚本 |
+| Next steps output | 引用 `pnpm release:beta` / `pnpm release:rc` / `pnpm release` |
+
+**npm dist-tags**: beta, rc, latest 都是任意字符串，只有 latest 是默认安装标签。
+
+
+### Git Commits
+
+| Hash | Message |
+|------|---------|
+| `f933c70` | (see git log) |
+
+### Testing
+
+- [OK] (Add test results)
+
+### Status
+
+[OK] **Completed**
+
+### Next Steps
+
+- None - task complete
+
+
+## Session 46: docs: platform-integration spec deep fix + journal
+
+**Date**: 2026-02-06
+**Task**: docs: platform-integration spec deep fix + journal
+
+### Summary
+
+(Add summary)
+
+### Main Changes
+
+## What was done
+
+对 `platform-integration.md` 进行深度审查（deep research），修复 5 处不准确 + 补充 8 处遗漏。同时记录了 session #40-#43。
+
+| Spec Fix | Details |
+|----------|---------|
+| Step 1 | 补充 `CliFlag` union type |
+| Step 2 | 补充 `_AssertCliFlagsInOptions` 编译时断言说明 |
+| Step 4 | 区分 Python hooks 模式 vs JS plugin 模式（OpenCode） |
+| Step 6 | 修正 `config_dir` → `config_dir_name` |
+| Common Mistakes | 新增 iFlow getAllCommands 已知问题 |
+| Architecture | 新增 `shared.ts` 引用，删除已修复的命名不一致 gap |
+
+
+### Git Commits
+
+| Hash | Message |
+|------|---------|
+| `07a57d3` | (see git log) |
+
+### Testing
+
+- [OK] (Add test results)
+
+### Status
+
+[OK] **Completed**
+
+### Next Steps
+
+- None - task complete
+
+
+## Session 47: RC manifest + fragile test audit & cleanup (339→312)
+
+**Date**: 2026-02-06
+**Task**: RC manifest + fragile test audit & cleanup (339→312)
+
+### Summary
+
+(Add summary)
+
+### Main Changes
+
+## What was done
+
+创建 0.3.0-rc.0 发布 manifest，并对全部测试进行深度审计，清理 21 个脆弱/无意义测试。
+
+| Change | Details |
+|--------|---------|
+| `src/migrations/manifests/0.3.0-rc.0.json` | RC changelog（remote spec templates, registry refactor, placeholder fixes, test coverage, release tooling） |
+| `test/regression.test.ts` | 硬编码 manifest 数量改为动态文件系统计数 |
+| `test/templates/trellis.test.ts` | 删除硬编码 scripts.size=23, typeof 检查 |
+| `test/registry-invariants.test.ts` | 删除 9 个重复 roundtrip 测试（已在 index.test.ts 覆盖） |
+| `test/types/ai-tools.test.ts` | 重写删除同义反复测试（4→2 tests） |
+| `test/templates/claude.test.ts` | 删除 Array.isArray/typeof/同义反复（13→8 tests） |
+| `test/templates/iflow.test.ts` | 同上（11→6 tests） |
+
+**Anti-patterns found**: hardcoded counts, tautological assertions, redundant type checks, duplicate coverage across files.
+
+**Tests**: 312 pass, 17 files (was 339/19)
+
+
+### Git Commits
+
+| Hash | Message |
+|------|---------|
+| `7ee4c69` | (see git log) |
+
+### Testing
+
+- [OK] (Add test results)
+
+### Status
+
+[OK] **Completed**
+
+### Next Steps
+
+- None - task complete

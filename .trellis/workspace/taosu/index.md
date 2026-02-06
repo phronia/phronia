@@ -8,7 +8,7 @@
 
 <!-- @@@auto:current-status -->
 - **Active File**: `journal-2.md`
-- **Total Sessions**: 43
+- **Total Sessions**: 47
 - **Last Active**: 2026-02-06
 <!-- @@@/auto:current-status -->
 
@@ -19,7 +19,7 @@
 <!-- @@@auto:active-documents -->
 | File | Lines | Status |
 |------|-------|--------|
-| `journal-2.md` | ~728 | Active |
+| `journal-2.md` | ~909 | Active |
 | `journal-1.md` | ~1998 | Archived |
 <!-- @@@/auto:active-documents -->
 
@@ -30,6 +30,10 @@
 <!-- @@@auto:session-history -->
 | # | Date | Title | Commits |
 |---|------|-------|---------|
+| 47 | 2026-02-06 | RC manifest + fragile test audit & cleanup (339→312) | `7ee4c69` |
+| 46 | 2026-02-06 | docs: platform-integration spec deep fix + journal | `07a57d3` |
+| 45 | 2026-02-06 | feat: release tooling (beta/rc/release) + release:rc script | `f933c70` |
+| 44 | 2026-02-06 | refactor: shared.ts + remove templates.ts dispatcher | `eaae43a` |
 | 43 | 2026-02-06 | docs: workflow commands + task PRDs | `55f129e` |
 | 42 | 2026-02-06 | docs(spec): unit-test conventions + platform-integration | `949757d` |
 | 41 | 2026-02-06 | test: 339 unit + integration tests with coverage | `f825d5c` |
