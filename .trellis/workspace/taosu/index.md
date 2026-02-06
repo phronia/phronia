@@ -8,8 +8,8 @@
 
 <!-- @@@auto:current-status -->
 - **Active File**: `journal-2.md`
-- **Total Sessions**: 39
-- **Last Active**: 2026-02-05
+- **Total Sessions**: 43
+- **Last Active**: 2026-02-06
 <!-- @@@/auto:current-status -->
 
 ---
@@ -19,7 +19,7 @@
 <!-- @@@auto:active-documents -->
 | File | Lines | Status |
 |------|-------|--------|
-| `journal-2.md` | ~521 | Active |
+| `journal-2.md` | ~728 | Active |
 | `journal-1.md` | ~1998 | Archived |
 <!-- @@@/auto:active-documents -->
 
@@ -30,6 +30,10 @@
 <!-- @@@auto:session-history -->
 | # | Date | Title | Commits |
 |---|------|-------|---------|
+| 43 | 2026-02-06 | docs: workflow commands + task PRDs | `55f129e` |
+| 42 | 2026-02-06 | docs(spec): unit-test conventions + platform-integration | `949757d` |
+| 41 | 2026-02-06 | test: 339 unit + integration tests with coverage | `f825d5c` |
+| 40 | 2026-02-06 | feat: opencode platform + registry refactor | `c1e1f6b` |
 | 39 | 2026-02-05 | Brainstorm Command Enhancement | `6d07441` |
 | 38 | 2026-02-05 | Cross-Platform Python Fix & Init Refactor | `754f40d`, `0f2d7e5`, `923afa6`, `fe80432`, `3042225` |
 | 37 | 2026-02-05 | 改进 update-spec 指引 + 更新 spec 设计决策 | `c0c8893`, `0ab309b`, `f85df4e` |

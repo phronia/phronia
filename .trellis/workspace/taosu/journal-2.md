@@ -519,3 +519,210 @@ Enhanced `/trellis:brainstorm` command with major workflow improvements.
 ### Next Steps
 
 - None - task complete
+
+
+## Session 40: feat: opencode platform + registry refactor
+
+**Date**: 2026-02-06
+**Task**: feat: opencode platform + registry refactor
+
+### Summary
+
+(Add summary)
+
+### Main Changes
+
+## What was done
+
+将平台配置从 init.ts / update.ts 中的硬编码分散逻辑，重构为 `src/configurators/index.ts` 中的集中式注册表模式。新增 opencode 平台支持。
+
+| Change | Description |
+|--------|-------------|
+| Registry pattern | `PLATFORM_REGISTRY` map 统一管理所有平台的 templates、commands、settings |
+| `resolvePlaceholders()` | 修复 collectTemplates settings 中占位符未替换的 roundtrip bug |
+| Remove stale guide | 删除 update.ts 中已不存在的 cross-platform-thinking-guide.md 引用 |
+| `src/constants/version.ts` | 抽取 VERSION 常量，消除 cli/index.ts 的循环引用风险 |
+| opencode platform | 新增 opencode 的 commands + settings 模板 |
+
+**Key files**:
+- `src/configurators/index.ts` (new — centralized registry)
+- `src/constants/version.ts` (new — extracted VERSION)
+- `src/commands/init.ts` (simplified via registry)
+- `src/commands/update.ts` (simplified + bug fix)
+- `src/types/ai-tools.ts` (opencode tool definitions)
+
+
+### Git Commits
+
+| Hash | Message |
+|------|---------|
+| `c1e1f6b` | (see git log) |
+
+### Testing
+
+- [OK] (Add test results)
+
+### Status
+
+[OK] **Completed**
+
+### Next Steps
+
+- None - task complete
+
+
+## Session 41: test: 339 unit + integration tests with coverage
+
+**Date**: 2026-02-06
+**Task**: test: 339 unit + integration tests with coverage
+
+### Summary
+
+(Add summary)
+
+### Main Changes
+
+## What was done
+
+为平台注册表重构建立了全面的测试覆盖，包括单元测试、集成测试、回归测试。配置了 `@vitest/coverage-v8` 代码覆盖率工具。
+
+| Category | Files | Tests | Coverage |
+|----------|-------|-------|----------|
+| Configurators | 3 files | 51 | registry, platforms, templates |
+| Templates | 5 files | 57 | claude, cursor, iflow, trellis, extract |
+| Commands | 3 files | 13 + 10 integration | update-internals, init integration, update integration |
+| Utils | 4 files | 69 | template-hash, project-detector, file-writer, template-fetcher |
+| Other | 5 files | 139 | paths, migrations, ai-tools, registry-invariants, regression |
+| **Total** | **20 files** | **339** | **75.87% lines, 57.03% branch** |
+
+**Integration test highlights**:
+- init: 正确创建所有平台文件，幂等性验证
+- update: same-version no-op 使用完整目录快照断言（零新增/删除/变更文件）
+- update: 降级场景正确跳过
+
+**Coverage setup**: `pnpm test:coverage` → text + html + json-summary reports
+
+**Key files**:
+- `test/` (20 test files)
+- `vitest.config.ts` (coverage config)
+- `package.json` (+test:coverage script, +@vitest/coverage-v8)
+
+
+### Git Commits
+
+| Hash | Message |
+|------|---------|
+| `f825d5c` | (see git log) |
+
+### Testing
+
+- [OK] (Add test results)
+
+### Status
+
+[OK] **Completed**
+
+### Next Steps
+
+- None - task complete
+
+
+## Session 42: docs(spec): unit-test conventions + platform-integration
+
+**Date**: 2026-02-06
+**Task**: docs(spec): unit-test conventions + platform-integration
+
+### Summary
+
+(Add summary)
+
+### Main Changes
+
+## What was done
+
+基于测试实践经验，创建了 `.trellis/spec/unit-test/` 规范目录（4 个文件），并更新了 platform-integration 指南。
+
+| Spec File | Content |
+|-----------|---------|
+| `index.md` | 测试总览、CI/Pipeline 策略（pre-commit=lint, CI=full suite） |
+| `conventions.md` | 文件命名、结构、断言模式、When to Write Tests 决策流 |
+| `mock-strategies.md` | 最小 mock 原则、标准 mock 集、inquirer mock 差异 |
+| `integration-patterns.md` | 函数级集成测试、setup 模式、快照对比、发现的 bug |
+
+**platform-integration.md 更新**:
+- 新增 Common Mistakes: 占位符未替换 + 模板 init/update 不一致
+
+**Key files**:
+- `.trellis/spec/unit-test/` (4 new files)
+- `.trellis/spec/backend/platform-integration.md`
+
+
+### Git Commits
+
+| Hash | Message |
+|------|---------|
+| `949757d` | (see git log) |
+
+### Testing
+
+- [OK] (Add test results)
+
+### Status
+
+[OK] **Completed**
+
+### Next Steps
+
+- None - task complete
+
+
+## Session 43: docs: workflow commands + task PRDs
+
+**Date**: 2026-02-06
+**Task**: docs: workflow commands + task PRDs
+
+### Summary
+
+(Add summary)
+
+### Main Changes
+
+## What was done
+
+将测试相关指引集成到开发工作流命令中，更新了今天完成的 3 个任务 PRD。
+
+| Command Updated | Change |
+|----------------|--------|
+| `/trellis:start` | Step 3 加入 `cat .trellis/spec/unit-test/index.md` |
+| `/trellis:before-backend-dev` | 加入读取 unit-test/conventions.md "When to Write Tests" |
+| `/trellis:check-backend` | 加入检查是否需要新增/更新测试 |
+| `/trellis:finish-work` | 新增 "1.5 Test Coverage" checklist |
+
+| Task PRD Updated | Status |
+|-----------------|--------|
+| `02-06-platform-registry-refactor` | 全部 9 项验收标准 ✓ |
+| `02-06-unit-test-platform-registry` | 测试数更新 304→339, 17→20 files |
+| `02-06-e2e-integration-tests` | 两个 bug 标记"已修复" |
+
+**Key files**:
+- `.claude/commands/trellis/` (4 commands)
+- `.trellis/tasks/02-06-*/prd.md` (3 PRDs)
+
+
+### Git Commits
+
+| Hash | Message |
+|------|---------|
+| `55f129e` | (see git log) |
+
+### Testing
+
+- [OK] (Add test results)
+
+### Status
+
+[OK] **Completed**
+
+### Next Steps
+
+- None - task complete
