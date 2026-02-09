@@ -907,3 +907,56 @@ Enhanced `/trellis:brainstorm` command with major workflow improvements.
 ### Next Steps
 
 - None - task complete
+
+
+## Session 48: fix: compareVersions prerelease bug + rc.0/rc.1 release
+
+**Date**: 2026-02-06
+**Task**: fix: compareVersions prerelease bug + rc.0/rc.1 release
+
+### Summary
+
+(Add summary)
+
+### Main Changes
+
+## What was done
+
+发现并修复 `cli/index.ts` 中 `compareVersions` 不处理 prerelease 的 bug（rc 版本被误判为低于 beta），提取为公共模块消除三处重复。发布 rc.0 和 rc.1。
+
+| Change | Details |
+|--------|---------|
+| Created `src/utils/compare-versions.ts` | 完整版 compareVersions，处理 prerelease（alpha < beta < rc < release） |
+| Fixed `src/cli/index.ts` | 删除残缺版（不处理 prerelease），改为 import 公共模块 |
+| Fixed `src/commands/update.ts` | 删除内联副本，改为 import |
+| Fixed `src/migrations/index.ts` | 删除内联副本，改为 import |
+| Updated `src/migrations/manifests/0.3.0-rc.0.json` | 测试数量 333→312 |
+| Created `src/migrations/manifests/0.3.0-rc.1.json` | hotfix changelog |
+| Spec updates | conventions.md anti-patterns, mock-strategies.md shared.ts path, index.md test count |
+| Journal | Sessions #44-#47 recorded |
+
+**Root Cause**: `parseInt("0-rc", 10)` = 0, `parseInt("16", 10)` = 16, 所以简化版认为 rc.0 < beta.16
+
+**Released**: v0.3.0-rc.0 + v0.3.0-rc.1 (hotfix)
+
+
+### Git Commits
+
+| Hash | Message |
+|------|---------|
+| `f98a085` | (see git log) |
+| `7affd33` | (see git log) |
+| `72ef5fc` | (see git log) |
+| `00c4793` | (see git log) |
+
+### Testing
+
+- [OK] (Add test results)
+
+### Status
+
+[OK] **Completed**
+
+### Next Steps
+
+- None - task complete
