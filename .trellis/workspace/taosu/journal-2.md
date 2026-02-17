@@ -1009,3 +1009,59 @@ Enhanced `/trellis:brainstorm` command with major workflow improvements.
 ### Next Steps
 
 - None - task complete
+
+
+## Session 50: Finish agent active spec sync + brainstorm templates
+
+**Date**: 2026-02-17
+**Task**: Finish agent active spec sync + brainstorm templates
+
+### Summary
+
+(Add summary)
+
+### Main Changes
+
+## Changes
+
+### 1. Finish Agent Active Spec Sync (14695a4, 02cb4a7, bc63bbb)
+- **Problem**: Finish agent only passively verified spec sync — never actually executed updates
+- **Fix**: Inject `update-spec.md` into finish context; rewrite finish prompt from passive verification to active 5-step workflow (review → verify → spec sync → checks → confirm)
+- **Scope**: All 3 pipeline platforms (claude/iflow/opencode) hooks + dispatch.md + finish-work.md across all 5 platforms
+- **Total**: 18 files changed (templates + deployed copies)
+
+### 2. Brainstorm Templates (3b423c9, d74fb67)
+- **Problem**: `brainstorm.md` only existed in deployed `.claude/` and `.agents/` dirs, missing from `src/templates/` — `trellis init/update` never generated it
+- **Fix**: Added brainstorm command to all 5 platform templates with platform-specific syntax (`/trellis:`, `/trellis-`, `$`)
+- **Also**: Updated 4 platforms' `start.md` to add Complex Task classification, brainstorm-first section, and command table entry (matching Claude's existing structure)
+- **Total**: 9 new/modified files
+
+### 3. Release (d870289, 262364f)
+- Created 0.3.0-rc.4 manifest and version bump
+
+**Files touched**: 27 files across `src/templates/`, `.claude/`, `.opencode/`, `.cursor/`, `.agents/`
+
+
+### Git Commits
+
+| Hash | Message |
+|------|---------|
+| `14695a4` | (see git log) |
+| `02cb4a7` | (see git log) |
+| `bc63bbb` | (see git log) |
+| `d870289` | (see git log) |
+| `262364f` | (see git log) |
+| `3b423c9` | (see git log) |
+| `d74fb67` | (see git log) |
+
+### Testing
+
+- [OK] (Add test results)
+
+### Status
+
+[OK] **Completed**
+
+### Next Steps
+
+- None - task complete
