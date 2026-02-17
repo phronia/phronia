@@ -64,11 +64,12 @@ When user describes a task, classify it:
 |------|----------|----------|
 | **Question** | User asks about code, architecture, or how something works | Answer directly |
 | **Trivial Fix** | Typo fix, comment update, single-line change, < 5 minutes | Direct Edit |
-| **Development Task** | Any code change that: modifies logic, adds features, fixes bugs, touches multiple files | **Task Workflow** |
+| **Simple Task** | Clear goal, 1-2 files, well-defined scope | Quick confirm → Task Workflow |
+| **Complex Task** | Vague goal, multiple files, architectural decisions | **Brainstorm → Task Workflow** |
 
 ### Decision Rule
 
-> **If in doubt, use Task Workflow.**
+> **If in doubt, use Brainstorm + Task Workflow.**
 >
 > Task Workflow ensures code-specs are injected to the right context, resulting in higher quality code.
 > The overhead is minimal, but the benefit is significant.
@@ -84,6 +85,21 @@ For questions or trivial fixes, work directly:
 
 ---
 
+## Complex Task - Brainstorm First
+
+For complex or vague tasks, use the brainstorm process to clarify requirements.
+
+See `$brainstorm` for the full process. Summary:
+
+1. **Acknowledge and classify** - State your understanding
+2. **Create task directory** - Track evolving requirements in `prd.md`
+3. **Ask questions one at a time** - Update PRD after each answer
+4. **Propose approaches** - For architectural decisions
+5. **Confirm final requirements** - Get explicit approval
+6. **Proceed to Task Workflow** - With clear requirements in PRD
+
+---
+
 ## Task Workflow (Development Tasks)
 
 **Why this workflow?**
@@ -95,7 +111,9 @@ For questions or trivial fixes, work directly:
 
 ### Step 1: Understand the Task `[AI]`
 
-Before creating anything, understand what user wants:
+**If coming from Brainstorm:** Skip this step - requirements are already in PRD.
+
+**If Simple Task:** Quick confirm understanding:
 - What is the goal?
 - What type of development? (frontend / backend / fullstack)
 - Any specific requirements or constraints?

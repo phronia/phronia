@@ -94,7 +94,9 @@ Ready for your task. What would you like to work on?
 2. Implement the task directly `[AI]`
 3. Remind user to run `/trellis-finish-work` before committing `[USER]`
 
-### For Complex Tasks (Multi-Step Tasks)
+### For Complex Tasks (Vague or Multi-Step)
+
+For complex or vague tasks, use `/trellis-brainstorm` first to clarify requirements before implementation.
 
 #### Step 1: Create Task `[AI]`
 
@@ -144,6 +146,7 @@ The following slash commands are for users (not AI):
 | Command | Description |
 |---------|-------------|
 | `/trellis-start` | Start development session (this command) |
+| `/trellis-brainstorm` | Clarify vague requirements before implementation |
 | `/trellis-before-frontend-dev` | Read frontend guidelines |
 | `/trellis-before-backend-dev` | Read backend guidelines |
 | `/trellis-check-frontend` | Check frontend code |
