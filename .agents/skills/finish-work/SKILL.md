@@ -55,7 +55,7 @@ If this change touches infra or cross-layer contracts, this is a blocking checkl
 - [ ] Includes required tests and assertion points
 
 **Block Rule**:
-If infra/cross-layer changed but the related spec is still abstract, do NOT finish. Complete `/trellis:update-spec` first.
+If infra/cross-layer changed but the related spec is still abstract, do NOT finish. Run `/trellis:update-spec` manually first.
 
 ### 3. API Changes
 
