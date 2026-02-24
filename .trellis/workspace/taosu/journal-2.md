@@ -1009,3 +1009,76 @@ Enhanced `/trellis:brainstorm` command with major workflow improvements.
 ### Next Steps
 
 - None - task complete
+
+
+## Session 50: PR Review: Kilo #40 + Kiro #43 Platform Integration
+
+**Date**: 2026-02-24
+**Task**: PR Review: Kilo #40 + Kiro #43 Platform Integration
+
+### Summary
+
+(Add summary)
+
+### Main Changes
+
+
+## Summary
+
+Reviewed, fixed, and merged two community PRs adding new platform support (Kilo CLI #40 and Kiro Code #43). Also synced the docs project with current Trellis state.
+
+## PR #40 — Kilo CLI (external contributor: Xintong120)
+
+- Reviewed against platform-integration spec, posted review comment
+- Pushed fixes directly to contributor's branch (maintainerCanModify):
+  - Added missing `brainstorm.md` command
+  - Fixed `create-command.md` referencing wrong paths (.cursor/.opencode → .kilocode)
+  - Added `test/templates/kilo.test.ts` with full command list verification
+- Merged to main
+
+## PR #43 — Kiro Code (team: KleinHE)
+
+- Rebased onto latest main (post-Kilo merge), resolved 9 file conflicts
+- Replaced Codex template reuse with independent skill templates:
+  - Copied 14 skills to `src/templates/kiro/skills/`
+  - Fixed `.agents/skills/` → `.kiro/skills/` in create-command and integrate-skill
+  - Rewrote `kiro/index.ts` to read from own directory
+- Added brainstorm to test, added path-leak test
+- 337 tests passing, pushed for merge
+
+## Docs Project Updates
+
+- Updated FAQ with per-platform getting started guide (5 platforms)
+- Updated commands.mdx (added brainstorm, check-cross-layer, create-command, integrate-skill)
+- Updated quickstart.mdx (platform flags, useful flags, trellis update)
+- Updated multi-agent.mdx (5 platforms, 6-agent pipeline)
+- Filled all missing changelogs (beta.9-16, rc.0-rc.5, 28 files)
+- Fixed markdownlint MD036 errors
+
+**Key Files**:
+- `src/templates/kiro/` — new platform templates
+- `src/templates/kilo/` — new platform templates
+- `test/templates/kilo.test.ts` — kilo command verification
+- `test/templates/kiro.test.ts` — kiro skill verification
+- `docs/guides/faq.mdx` — per-platform getting started
+- `docs/changelog/` — 28 new changelog files
+
+
+### Git Commits
+
+| Hash | Message |
+|------|---------|
+| `af9cd7d` | (see git log) |
+| `57edf20` | (see git log) |
+
+### Testing
+
+- [OK] (Add test results)
+
+### Status
+
+[OK] **Completed**
+
+### Next Steps
+
+- None - task complete
