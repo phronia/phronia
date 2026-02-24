@@ -1082,3 +1082,52 @@ Reviewed, fixed, and merged two community PRs adding new platform support (Kilo 
 ### Next Steps
 
 - None - task complete
+
+
+## Session 51: Fix init-context phantom paths & bootstrap task enhancement
+
+**Date**: 2026-02-24
+**Task**: Fix init-context phantom paths & bootstrap task enhancement
+
+### Summary
+
+(Add summary)
+
+### Main Changes
+
+
+| Change | Description |
+|--------|-------------|
+| Bootstrap task PRD | Step 0 expanded from 6 to 13 AI config file formats (Windsurf, Cline, Roo Code, aider, VS Code Copilot, etc.) |
+| init-context defaults | Removed 4 non-existent hardcoded paths (spec/shared/index.md, backend/api-module.md, backend/quality.md, frontend/components.md) |
+| Agent templates | Replaced spec/shared/ references with spec/guides/ in 4 implement/research agent templates |
+| Design decision | Only inject index.md entry points — users may rename/delete spec files freely |
+
+**Updated Files**:
+- `src/commands/init.ts` — bootstrap task Step 0 comprehensive AI config file table
+- `src/templates/trellis/scripts/task.py` — removed phantom paths from init-context generators
+- `src/templates/claude/agents/implement.md` — spec/shared → spec/guides
+- `src/templates/iflow/agents/implement.md` — spec/shared → spec/guides
+- `src/templates/opencode/agents/implement.md` — spec/shared → spec/guides
+- `src/templates/opencode/agents/research.md` — spec/shared → spec/guides
+
+**Bug context**: User reported `validate` failing because init-context injected `.trellis/spec/shared/index.md` which was never created by `trellis init`.
+
+
+### Git Commits
+
+| Hash | Message |
+|------|---------|
+| `20fe241` | (see git log) |
+
+### Testing
+
+- [OK] (Add test results)
+
+### Status
+
+[OK] **Completed**
+
+### Next Steps
+
+- None - task complete
