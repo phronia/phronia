@@ -1131,3 +1131,65 @@ Reviewed, fixed, and merged two community PRs adding new platform support (Kilo 
 ### Next Steps
 
 - None - task complete
+
+
+## Session 52: Restructure Task Workflow into 3 Phases
+
+**Date**: 2026-02-26
+**Task**: Restructure Task Workflow into 3 Phases
+
+### Summary
+
+(Add summary)
+
+### Main Changes
+
+## What was done
+
+Restructured the start/brainstorm workflow so that Research happens AFTER PRD is confirmed, not before.
+
+### Problem
+Old linear Step 1→9 flow had:
+- Research (Step 2) before PRD existed for brainstorm path
+- Redundant Create Task Dir (Step 3) and Write PRD (Step 5) when coming from brainstorm
+- Codex/Kiro output files incorrectly contained `Task()` sub-agent calls
+
+### Solution
+Restructured into 3 Phases:
+- **Phase 1**: Establish Requirements (Path A: brainstorm skips; Path B: simple task creates dir + PRD)
+- **Phase 2**: Prepare for Implementation (shared: depth check → research → configure context → activate)
+- **Phase 3**: Execute (shared: implement → check → complete)
+
+### Files changed (19 total)
+
+**Source templates** (14 files):
+- `src/templates/*/start.md` — 7 platforms restructured
+- `src/templates/*/brainstorm.md` — 7 platforms integration section updated
+
+**Output files** (5 files):
+- `.claude/commands/trellis/start.md` + `brainstorm.md`
+- `.agents/skills/start/SKILL.md` + `brainstorm/SKILL.md`
+- `.cursor/commands/trellis-start.md`
+
+### Platform style distinction preserved
+- Sub-agent style (claude, iflow, kilo, opencode): keeps `Task()` calls
+- Self-driven style (codex, kiro, cursor): no `Task()` calls, AI does work directly
+
+
+### Git Commits
+
+| Hash | Message |
+|------|---------|
+| `6bfc0dc` | (see git log) |
+
+### Testing
+
+- [OK] (Add test results)
+
+### Status
+
+[OK] **Completed**
+
+### Next Steps
+
+- None - task complete
