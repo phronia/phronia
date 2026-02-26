@@ -1193,3 +1193,143 @@ Restructured into 3 Phases:
 ### Next Steps
 
 - None - task complete
+
+
+## Session 53: feat: Gemini CLI platform support (Cursor-level)
+
+**Date**: 2026-02-26
+**Task**: feat: Gemini CLI platform support (Cursor-level)
+
+### Summary
+
+Added Gemini CLI as a first-class Trellis platform with TOML command templates
+
+### Main Changes
+
+## What Was Done
+
+Added Gemini CLI (Google's AI coding CLI) as the 8th supported Trellis platform, at Cursor-level (commands only, no hooks/agents/settings).
+
+### Key Decisions
+- **TOML format**: Gemini CLI is the first platform using `.toml` instead of `.md` for commands
+- **Subdirectory namespacing**: `commands/trellis/start.toml` → `/trellis:start` (same as Claude)
+- **Direct TOML templates**: Independent `.toml` files per command (not runtime conversion from Markdown)
+- **defaultChecked: false**: New platform, users opt-in explicitly
+
+### Changes (5 commits, 24 files)
+
+| Commit | Scope | Files |
+|--------|-------|-------|
+| `ec6114a` | Type definitions + registry | `src/types/ai-tools.ts` |
+| `698a77b` | TOML templates + path resolution | 14 `.toml` files + `gemini/index.ts` + `extract.ts` |
+| `9758468` | Configurator + CLI + registration | `gemini.ts` + `index.ts` + `cli/index.ts` + `init.ts` |
+| `927856a` | Python cli_adapter | `cli_adapter.py` |
+| `3c39d08` | Documentation | `README.md` + `README_CN.md` |
+
+### Spec Updated
+- `.trellis/spec/backend/platform-integration.md` — Added TOML commands pattern, commands-only pattern, updated Command Format table, added EXCLUDE_PATTERNS gotcha
+
+### Quality
+- Lint: 0 errors
+- TypeCheck: 0 errors
+- Tests: 337/337 passed
+- Check Agent found and fixed: missing `.js` in EXCLUDE_PATTERNS (production build artifact leak)
+
+
+### Git Commits
+
+| Hash | Message |
+|------|---------|
+| `ec6114a` | (see git log) |
+| `698a77b` | (see git log) |
+| `9758468` | (see git log) |
+| `927856a` | (see git log) |
+| `3c39d08` | (see git log) |
+
+### Testing
+
+- [OK] (Add test results)
+
+### Status
+
+[OK] **Completed**
+
+### Next Steps
+
+- None - task complete
+
+
+## Session 54: feat: Gemini CLI platform support (complete)
+
+**Date**: 2026-02-26
+**Task**: feat: Gemini CLI platform support (complete)
+
+### Summary
+
+Added Gemini CLI as 8th Trellis platform with full tests and spec updates
+
+### Main Changes
+
+## What Was Done
+
+Added Gemini CLI (Google's AI coding CLI) as the 8th supported Trellis platform, at Cursor-level (commands only, no hooks/agents/settings). Then fixed gaps found by comparing with PR #47 (Antigravity).
+
+### Phase 1: Core Implementation (commits 1-4)
+- Type definitions + AI_TOOLS registry (`ai-tools.ts`)
+- 14 TOML command templates in `src/templates/gemini/commands/trellis/`
+- Template path resolution + deprecated alias (`extract.ts`)
+- Configurator using copyDirFiltered (`gemini.ts`)
+- PLATFORM_FUNCTIONS registration (`index.ts`)
+- CLI flag `--gemini` + InitOptions
+- Python cli_adapter with explicit branches for all 8 methods
+
+### Phase 2: Tests (commit 5)
+Found by comparing with PR #47 — original implementation had zero tests.
+- `test/templates/gemini.test.ts` — TOML command validation (NEW)
+- `test/configurators/platforms.test.ts` — detection + configure tests
+- `test/commands/init.integration.test.ts` — init integration + negatives
+- `test/templates/extract.test.ts` — path function tests
+- `test/regression.test.ts` — registration + cli_adapter + withTracking
+
+### Phase 3: Documentation (commit 6)
+- README.md / README_CN.md — supported tools + Quick Start
+- `platform-integration.md` — TOML pattern, cli_adapter method checklist, Step 11 (mandatory tests)
+- `code-reuse-thinking-guide.md` — Python if/elif/else exhaustive check gotcha
+
+### Key Decisions
+- **TOML format**: First non-Markdown command platform
+- **Direct TOML templates**: Independent files, not runtime conversion
+- **defaultChecked: false**: New platform, opt-in
+
+### Quality
+- Lint: 0 errors | TypeCheck: 0 errors | Tests: 351/351 passed (23 files)
+
+### Break-Loop Analysis
+- Root cause: Change Propagation Failure (C) + Test Coverage Gap (D)
+- Python if/elif/else has no exhaustive check — new platforms silently fall through to Claude defaults
+- Dynamic iteration tests only verify registry metadata, not runtime behavior
+- Prevention: Added Step 11 (mandatory tests) to platform-integration spec
+
+
+### Git Commits
+
+| Hash | Message |
+|------|---------|
+| `4b59007` | (see git log) |
+| `f6e9eb1` | (see git log) |
+| `653e86d` | (see git log) |
+| `5f00905` | (see git log) |
+| `94295c0` | (see git log) |
+| `7b9699a` | (see git log) |
+
+### Testing
+
+- [OK] (Add test results)
+
+### Status
+
+[OK] **Completed**
+
+### Next Steps
+
+- None - task complete
