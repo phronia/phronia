@@ -1381,3 +1381,61 @@ Found by comparing with PR #47 — original implementation had zero tests.
 ### Next Steps
 
 - None - task complete
+
+
+## Session 56: 0.3.0 Release & Post-release Fixes
+
+**Date**: 2026-02-28
+**Task**: 0.3.0 Release & Post-release Fixes
+
+### Summary
+
+(Add summary)
+
+### Main Changes
+
+| Change | Description |
+|--------|-------------|
+| Bug Fix | `update.ts` early-return 不写 `.version` — 修复 rc→stable 升级死循环 |
+| Manifest | 新增 `0.3.0.json` 聚合 beta.0~rc.6 changelog |
+| Tests | 新增 10 个测试（集成 #12、迁移边界、回归防护，369 total） |
+| Release Script | 新增 `release:promote` 脚本，预发布→正式版一键升级 |
+| Release | 执行 `pnpm release:promote`，CI 通过，npm 发布 `@mindfoldhq/trellis@0.3.0` |
+| Post-release Fix | `0.3.0.json` breaking flag 改为 false — rc 用户升级不再误显 breaking 警告 |
+| Docs | 两个 README 加入官网链接 (docs.trytrellis.app) |
+
+**发现的问题**:
+- `0.3.0.json` 的 `breaking: true` 会影响 rc→stable 用户（`getMigrationMetadata` 聚合了该 manifest），已修为 false，beta.0 的 breaking flag 足以覆盖 0.2.x 用户
+- `pnpm release` (patch) 对预发布版本会跳到 0.3.1 而非 0.3.0，需用 `release:promote`
+
+**Updated Files**:
+- `src/commands/update.ts` — 修复 early-return 版本戳
+- `src/migrations/manifests/0.3.0.json` — 正式版 manifest (breaking: false)
+- `test/commands/update.integration.test.ts` — 集成测试 #12
+- `test/migrations/index.test.ts` — 迁移边界测试
+- `test/regression.test.ts` — rc→stable 回归测试
+- `package.json` — 新增 release:promote 脚本
+- `README.md` / `README_CN.md` — 官网链接
+
+
+### Git Commits
+
+| Hash | Message |
+|------|---------|
+| `e4b7227` | (see git log) |
+| `c2e9118` | (see git log) |
+| `d18137d` | (see git log) |
+| `54798d7` | (see git log) |
+| `be49762` | (see git log) |
+
+### Testing
+
+- [OK] (Add test results)
+
+### Status
+
+[OK] **Completed**
+
+### Next Steps
+
+- None - task complete
