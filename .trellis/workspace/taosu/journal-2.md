@@ -1439,3 +1439,45 @@ Found by comparing with PR #47 — original implementation had zero tests.
 ### Next Steps
 
 - None - task complete
+
+
+## Session 57: fix: spec templates respect project type + dead code cleanup
+
+**Date**: 2026-02-28
+**Task**: fix: spec templates respect project type + dead code cleanup
+
+### Summary
+
+(Add summary)
+
+### Main Changes
+
+| Change | Description |
+|--------|-------------|
+| `collectTemplateFiles()` | Added `fs.existsSync` checks — backend/frontend spec files only included when their dirs exist |
+| `createSpecTemplates()` | Renamed `_projectType` → `projectType`, conditionally creates backend/frontend based on type |
+| Dead code removal | Deleted `guidesCrossPlatformThinkingGuideContent` export + 3 dead links in guides/index.md.txt |
+| Integration tests | init #11/#12 (backend/frontend-only), update #13/#14 (spec dir removal) |
+| Regression tests | 2 tests verifying dead export + dead links removed |
+| Spec updates | `platform-integration.md` new Common Mistake, `integration-patterns.md` bug #3 |
+
+**Key Rule**: When init creates content conditionally based on project type, update must check for directory existence before including files in its template map.
+
+
+### Git Commits
+
+| Hash | Message |
+|------|---------|
+| `8f15f36` | (see git log) |
+
+### Testing
+
+- [OK] (Add test results)
+
+### Status
+
+[OK] **Completed**
+
+### Next Steps
+
+- None - task complete

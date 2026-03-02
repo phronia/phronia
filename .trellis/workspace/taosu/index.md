@@ -8,7 +8,7 @@
 
 <!-- @@@auto:current-status -->
 - **Active File**: `journal-2.md`
-- **Total Sessions**: 56
+- **Total Sessions**: 57
 - **Last Active**: 2026-02-28
 <!-- @@@/auto:current-status -->
 
@@ -19,7 +19,7 @@
 <!-- @@@auto:active-documents -->
 | File | Lines | Status |
 |------|-------|--------|
-| `journal-2.md` | ~1441 | Active |
+| `journal-2.md` | ~1483 | Active |
 | `journal-1.md` | ~1998 | Archived |
 <!-- @@@/auto:active-documents -->
 
@@ -30,6 +30,7 @@
 <!-- @@@auto:session-history -->
 | # | Date | Title | Commits |
 |---|------|-------|---------|
+| 57 | 2026-02-28 | fix: spec templates respect project type + dead code cleanup | `8f15f36` |
 | 56 | 2026-02-28 | 0.3.0 Release & Post-release Fixes | `e4b7227`, `c2e9118`, `d18137d`, `54798d7`, `be49762` |
 | 55 | 2026-02-28 | 0.3.0 Release Prep: Bug Fix, Manifest, Tests, Promote Script | `e4b7227` |
 | 54 | 2026-02-26 | feat: Gemini CLI platform support (complete) | `4b59007`, `f6e9eb1`, `653e86d`, `5f00905`, `94295c0`, `7b9699a` |
