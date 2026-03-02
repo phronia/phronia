@@ -1481,3 +1481,48 @@ Found by comparing with PR #47 — original implementation had zero tests.
 ### Next Steps
 
 - None - task complete
+
+
+## Session 58: 0.3.1 manifest + create-manifest slash command
+
+**Date**: 2026-03-02
+**Task**: 0.3.1 manifest + create-manifest slash command
+
+### Summary
+
+(Add summary)
+
+### Main Changes
+
+| Change | Description |
+|--------|-------------|
+| `0.3.1.json` | 新增 0.3.1 migration manifest，覆盖 PR #58 (spec template project-type, iflow path fix, dead code) 和 PR #59 (SessionStart reinject) |
+| `/trellis:create-manifest` | 新增 slash command，引导 AI 完成完整 manifest 创建流程（找 tag、收集变更、写 changelog、调脚本、修转义） |
+
+**Updated Files**:
+- `src/migrations/manifests/0.3.1.json` — 新版本 manifest
+- `.claude/commands/trellis/create-manifest.md` — Claude slash command
+- `.cursor/commands/trellis-create-manifest.md` — Cursor slash command
+
+**Notes**:
+- `create-manifest.js -y` 的 `\n` 会被 shell 双重转义为 `\\n`，command 文档中已标注需要手动修正
+
+
+### Git Commits
+
+| Hash | Message |
+|------|---------|
+| `de50b03` | (see git log) |
+| `044d4c8` | (see git log) |
+
+### Testing
+
+- [OK] (Add test results)
+
+### Status
+
+[OK] **Completed**
+
+### Next Steps
+
+- None - task complete
