@@ -8,7 +8,7 @@
 
 <!-- @@@auto:current-status -->
 - **Active File**: `journal-2.md`
-- **Total Sessions**: 62
+- **Total Sessions**: 63
 - **Last Active**: 2026-03-04
 <!-- @@@/auto:current-status -->
 
@@ -19,7 +19,7 @@
 <!-- @@@auto:active-documents -->
 | File | Lines | Status |
 |------|-------|--------|
-| `journal-2.md` | ~1701 | Active |
+| `journal-2.md` | ~1744 | Active |
 | `journal-1.md` | ~1998 | Archived |
 <!-- @@@/auto:active-documents -->
 
@@ -30,6 +30,7 @@
 <!-- @@@auto:session-history -->
 | # | Date | Title | Commits |
 |---|------|-------|---------|
+| 63 | 2026-03-04 | fix: 模板 fetch 倒计时显示 + 超时缩短 | `f66cd4c` |
 | 62 | 2026-03-04 | feat: init/update 网络体验优化 — 代理+超时+进度提示 | `b7c50b6`, `61bbba2`, `5e831cd` |
 | 61 | 2026-03-04 | feat: update 跳过 spec 目录 | `1beb64f`, `a9ed34a` |
 | 60 | 2026-03-03 | feat: record-session auto-commit + config.yaml | `d5ac365`, `8fa5771`, `7c4a829`, `f2370fe`, `1d5a84a` |
