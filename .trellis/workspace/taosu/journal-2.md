@@ -1742,3 +1742,35 @@ trellis update 不再触碰 .trellis/spec/ 下的任何文件，spec 是用户�
 ### Next Steps
 
 - None - task complete
+
+
+## Session 64: fix: record-session 模板去除 auto-commit 提示
+
+**Date**: 2026-03-04
+**Task**: fix: record-session 模板去除 auto-commit 提示
+
+### Summary
+
+从 8 个平台的 record-session 模板中删除 auto-commit 和 --no-commit 相关提示，避免 AI 误加 --no-commit 参数导致自动提交失效
+
+### Main Changes
+
+
+
+### Git Commits
+
+| Hash | Message |
+|------|---------|
+| `4c82869` | (see git log) |
+
+### Testing
+
+- [OK] (Add test results)
+
+### Status
+
+[OK] **Completed**
+
+### Next Steps
+
+- None - task complete
