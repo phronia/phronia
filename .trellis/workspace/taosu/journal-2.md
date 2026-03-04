@@ -1826,3 +1826,35 @@ Fixed Windows stdin UTF-8 encoding bug (garbled Chinese when piping via stdin), 
 ### Next Steps
 
 - None - task complete
+
+
+## Session 66: Skip user-customizable files during update
+
+**Date**: 2026-03-04
+**Task**: Skip user-customizable files during update
+
+### Summary
+
+workflow.md 和 workspace/index.md 从 update 模板收集中移除，只在 init 时创建。更新了 integration 测试使用 get_context.py 作为测试目标文件。
+
+### Main Changes
+
+
+
+### Git Commits
+
+| Hash | Message |
+|------|---------|
+| `bebf241` | (see git log) |
+
+### Testing
+
+- [OK] (Add test results)
+
+### Status
+
+[OK] **Completed**
+
+### Next Steps
+
+- None - task complete

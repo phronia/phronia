@@ -8,7 +8,7 @@
 
 <!-- @@@auto:current-status -->
 - **Active File**: `journal-2.md`
-- **Total Sessions**: 65
+- **Total Sessions**: 66
 - **Last Active**: 2026-03-04
 <!-- @@@/auto:current-status -->
 
@@ -19,7 +19,7 @@
 <!-- @@@auto:active-documents -->
 | File | Lines | Status |
 |------|-------|--------|
-| `journal-2.md` | ~1828 | Active |
+| `journal-2.md` | ~1860 | Active |
 | `journal-1.md` | ~1998 | Archived |
 <!-- @@@/auto:active-documents -->
 
@@ -30,6 +30,7 @@
 <!-- @@@auto:session-history -->
 | # | Date | Title | Commits |
 |---|------|-------|---------|
+| 66 | 2026-03-04 | Skip user-customizable files during update | `bebf241` |
 | 65 | 2026-03-04 | Windows stdin UTF-8 fix & record-session template cleanup | `6bd5d4d`, `cbd6b7f` |
 | 64 | 2026-03-04 | fix: record-session 模板去除 auto-commit 提示 | `4c82869` |
 | 63 | 2026-03-04 | fix: 模板 fetch 倒计时显示 + 超时缩短 | `f66cd4c` |
