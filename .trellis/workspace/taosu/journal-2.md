@@ -1774,3 +1774,55 @@ trellis update 不再触碰 .trellis/spec/ 下的任何文件，spec 是用户�
 ### Next Steps
 
 - None - task complete
+
+
+## Session 65: Windows stdin UTF-8 fix & record-session template cleanup
+
+**Date**: 2026-03-04
+**Task**: Windows stdin UTF-8 fix & record-session template cleanup
+
+### Summary
+
+Fixed Windows stdin UTF-8 encoding bug (garbled Chinese when piping via stdin), cleaned up record-session templates, and updated spec documentation
+
+### Main Changes
+
+| Change | Description |
+|--------|-------------|
+| **Windows stdin UTF-8 fix** | Added `sys.stdin` to `_configure_stream()` in `common/__init__.py` — fixes garbled Chinese text when piping via stdin on Windows PowerShell |
+| **Centralized encoding** | Removed inline encoding code from `add_session.py` and `git_context.py` — all streams now handled by `common/__init__.py` |
+| **record-session template cleanup** | Removed auto-commit details from all 8 platform templates to prevent AI misusing `--no-commit` flag |
+| **Spec update** | Updated `backend/script-conventions.md` — documented stdin encoding issue, centralized approach, and anti-patterns |
+
+**Updated Files**:
+- `src/templates/trellis/scripts/common/__init__.py` — added stdin to encoding fix
+- `.trellis/scripts/common/__init__.py` — local copy updated
+- `src/templates/trellis/scripts/add_session.py` — removed inline encoding
+- `.trellis/scripts/add_session.py` — local copy updated
+- `src/templates/trellis/scripts/common/git_context.py` — removed inline encoding
+- `.trellis/scripts/common/git_context.py` — local copy updated
+- `.trellis/spec/backend/script-conventions.md` — documented stdin encoding
+
+**PRs**:
+- PR #66: fix(templates): remove auto-commit details from record-session prompts
+- PR #67: fix(scripts): centralize Windows stdio UTF-8 encoding
+
+
+### Git Commits
+
+| Hash | Message |
+|------|---------|
+| `6bd5d4d` | (see git log) |
+| `cbd6b7f` | (see git log) |
+
+### Testing
+
+- [OK] (Add test results)
+
+### Status
+
+[OK] **Completed**
+
+### Next Steps
+
+- None - task complete
