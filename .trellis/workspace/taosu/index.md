@@ -7,8 +7,8 @@
 ## Current Status
 
 <!-- @@@auto:current-status -->
-- **Active File**: `journal-2.md`
-- **Total Sessions**: 68
+- **Active File**: `journal-3.md`
+- **Total Sessions**: 69
 - **Last Active**: 2026-03-05
 <!-- @@@/auto:current-status -->
 
@@ -19,7 +19,8 @@
 <!-- @@@auto:active-documents -->
 | File | Lines | Status |
 |------|-------|--------|
-| `journal-2.md` | ~1963 | Active |
+| `journal-3.md` | ~53 | Active |
+| `journal-2.md` | ~1963 | Archived |
 | `journal-1.md` | ~1998 | Archived |
 <!-- @@@/auto:active-documents -->
 
@@ -30,6 +31,7 @@
 <!-- @@@auto:session-history -->
 | # | Date | Title | Commits |
 |---|------|-------|---------|
+| 69 | 2026-03-05 | docs: improve record-session archive guidance | `b9a475f` |
 | 68 | 2026-03-05 | feat: task subtask support | `d1b4929`, `526e9de`, `920cbaf`, `d1768e1` |
 | 67 | 2026-03-04 | Fix nested Claude Code session error in multi-agent pipeline | `c220785` |
 | 66 | 2026-03-04 | Skip user-customizable files during update | `bebf241` |
