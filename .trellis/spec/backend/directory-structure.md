@@ -68,6 +68,7 @@ These directories are copied to `dist/` during build and used as templates:
 ├── scripts/             # Python scripts (dogfooded)
 │   ├── common/          # Shared utilities (paths.py, developer.py, etc.)
 │   ├── multi_agent/     # Pipeline scripts (start.py, status.py, etc.)
+│   ├── hooks/           # Lifecycle hook scripts (project-specific, NOT dogfooded)
 │   └── *.py             # Main scripts (task.py, get_context.py, etc.)
 ├── workspace/           # Developer progress tracking
 │   └── index.md         # Index template (dogfooded)

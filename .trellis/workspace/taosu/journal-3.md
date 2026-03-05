@@ -51,3 +51,104 @@ From `/trellis:break-loop` analysis — root cause was implicit assumption that 
 ### Next Steps
 
 - None - task complete
+
+
+## Session 70: Task lifecycle hooks + Linear sync
+
+**Date**: 2026-03-05
+**Task**: Task lifecycle hooks + Linear sync
+
+### Summary
+
+(Add summary)
+
+### Main Changes
+
+## What was done
+
+| Feature | Description |
+|---------|-------------|
+| YAML parser enhancement | Rewrote `parse_simple_yaml` with recursive `_parse_yaml_block` for nested dict support |
+| `get_hooks()` | New config.py function to read lifecycle hook commands from config.yaml |
+| `_run_hooks()` | Non-blocking hook execution in task.py with `TASK_JSON_PATH` env var |
+| 4 cmd integrations | after_create/start/finish/archive hooks in cmd_create/start/finish/archive |
+| Linear sync hook | `linear_sync.py` with create/start/archive/sync actions via linearis CLI |
+| Gitignored config | `hooks.local.json` for sensitive config (team, project, assignee map) |
+| Spec updates | script-conventions.md + directory-structure.md updated with hooks code-spec |
+
+## Key decisions
+
+- Only pass `TASK_JSON_PATH` env var (not individual fields) — simple, universal
+- Hook failures never block main operation (warn only)
+- Sensitive config in gitignored `hooks.local.json`, hook script itself is public
+- `sync` action for manually pushing prd.md to Linear description (not auto)
+
+## Linear integration
+
+- All active tasks linked to Linear issues (MIN-337~341)
+- Parent task auto-linking via `_resolve_parent_linear_issue()`
+- Auto-assign via ASSIGNEE_MAP in hooks.local.json
+
+**Updated files**:
+- `src/templates/trellis/scripts/common/worktree.py` — nested dict YAML parser
+- `src/templates/trellis/scripts/common/config.py` — get_hooks()
+- `src/templates/trellis/scripts/task.py` — _run_hooks() + 4 integrations
+- `src/templates/trellis/config.yaml` — hooks example (commented)
+- `.trellis/scripts/hooks/linear_sync.py` — Linear sync hook
+- `.trellis/spec/backend/script-conventions.md` — hooks code-spec
+- `.trellis/spec/backend/directory-structure.md` — hooks/ directory
+
+
+### Git Commits
+
+| Hash | Message |
+|------|---------|
+| `695a26d` | (see git log) |
+| `086483a` | (see git log) |
+| `9595d85` | (see git log) |
+| `aab2113` | (see git log) |
+| `8a5ed63` | (see git log) |
+
+### Testing
+
+- [OK] (Add test results)
+
+### Status
+
+[OK] **Completed**
+
+### Next Steps
+
+- None - task complete
+
+
+## Session 71: Record-session prompt fix: archive before PR
+
+**Date**: 2026-03-05
+**Task**: Record-session prompt fix: archive before PR
+
+### Summary
+
+Fixed record-session archive guidance across 12 platform templates — archive when code committed, don't wait for PR
+
+### Main Changes
+
+
+
+### Git Commits
+
+| Hash | Message |
+|------|---------|
+| `44f14af` | (see git log) |
+
+### Testing
+
+- [OK] (Add test results)
+
+### Status
+
+[OK] **Completed**
+
+### Next Steps
+
+- None - task complete
