@@ -226,3 +226,61 @@ Implemented `--registry` CLI flag allowing users to download spec templates from
 ### Next Steps
 
 - None - task complete
+
+
+## Session 73: v0.3.6 docs & release prep
+
+**Date**: 2026-03-06
+**Task**: v0.3.6 docs & release prep
+
+### Summary
+
+(Add summary)
+
+### Main Changes
+
+## Summary
+
+Prepared v0.3.6 release: migration manifest, README updates, and full docs site documentation for two new features (task lifecycle hooks and custom template registries).
+
+## Changes
+
+| Area | Description |
+|------|-------------|
+| **Migration manifest** | Created `src/migrations/manifests/0.3.6.json` covering 4 changes: --registry flag, lifecycle hooks, subtask support, record-session improvements |
+| **README** | Updated What's New in both `README.md` and `README_CN.md` with v0.3.5 entry; updated changelog links |
+| **Docs: v0.3.5 changelog** | Created `changelog/v0.3.5.mdx` (en + zh) — hotfix-only content; updated `docs.json` nav |
+| **Docs: lifecycle hooks** | Added section 6.6 to `ch06-task-management.mdx` (en + zh) — config.yaml format, 4 events, env vars, Linear sync example |
+| **Docs: remote spec templates** | Added section 2.5 to `ch02-quick-start.mdx` (en + zh) — marketplace, --registry flag, provider table, strategy flags, custom marketplace |
+| **Lint fix** | Added `<!-- markdownlint-disable MD024 MD001 -->` to ch02 files (pre-existing issue from Tabs bash comments) |
+
+## Key Decisions
+
+- v0.3.5 is hotfix-only; hooks/registry/subtasks are v0.3.6 features
+- Docs task tracked in docs repo (not Trellis repo)
+- Archived tmux-support task and cancelled Linear issue MIN-340
+
+## Repos Touched
+
+- **Trellis**: 2 commits (manifest + README)
+- **docs**: 3 commits (changelog + ch06 hooks + ch02 registry)
+
+
+### Git Commits
+
+| Hash | Message |
+|------|---------|
+| `6d89ee9` | (see git log) |
+| `bf9d210` | (see git log) |
+
+### Testing
+
+- [OK] (Add test results)
+
+### Status
+
+[OK] **Completed**
+
+### Next Steps
+
+- None - task complete
