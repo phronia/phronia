@@ -8,8 +8,8 @@
 
 <!-- @@@auto:current-status -->
 - **Active File**: `journal-3.md`
-- **Total Sessions**: 71
-- **Last Active**: 2026-03-05
+- **Total Sessions**: 72
+- **Last Active**: 2026-03-06
 <!-- @@@/auto:current-status -->
 
 ---
@@ -19,7 +19,7 @@
 <!-- @@@auto:active-documents -->
 | File | Lines | Status |
 |------|-------|--------|
-| `journal-3.md` | ~154 | Active |
+| `journal-3.md` | ~228 | Active |
 | `journal-2.md` | ~1963 | Archived |
 | `journal-1.md` | ~1998 | Archived |
 <!-- @@@/auto:active-documents -->
@@ -31,6 +31,7 @@
 <!-- @@@auto:session-history -->
 | # | Date | Title | Commits |
 |---|------|-------|---------|
+| 72 | 2026-03-06 | feat: --registry flag for custom spec template sources | `3208d64`, `d174493`, `ba66fe1` |
 | 71 | 2026-03-05 | Record-session prompt fix: archive before PR | `44f14af` |
 | 70 | 2026-03-05 | Task lifecycle hooks + Linear sync | `695a26d`, `086483a`, `9595d85`, `aab2113`, `8a5ed63` |
 | 69 | 2026-03-05 | docs: improve record-session archive guidance | `b9a475f` |
