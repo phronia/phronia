@@ -284,3 +284,70 @@ Prepared v0.3.6 release: migration manifest, README updates, and full docs site 
 ### Next Steps
 
 - None - task complete
+
+
+## Session 74: Hotfix: PreToolUse hook Task→Agent rename
+
+**Date**: 2026-03-06
+**Task**: Hotfix: PreToolUse hook Task→Agent rename
+
+### Summary
+
+(Add summary)
+
+### Main Changes
+
+## Summary
+
+发现并修复 CC v2.1.63 将 Task 工具改名为 Agent 导致 Trellis PreToolUse context injection hook 全面失效的问题。
+
+## Root Cause
+
+CC v2.1.63 将内部 Agent 工具从 `Task` 改名为 `Agent`（[anthropics/claude-code#29677](https://github.com/anthropics/claude-code/issues/29677)）。settings.json matcher 做了向后兼容（`"Task"` 仍能匹配），但 hook 脚本收到的 `tool_name` 变成了 `"Agent"`，导致 `if tool_name != "Task": sys.exit(0)` 直接退出。
+
+**影响**：所有 CC v2.1.63+ 的 Trellis 用户，implement/check/debug/research agent 的 code-spec context 注入全部失效。
+
+## Investigation
+
+- 通过 debug log 确认 hook 实际收到 `tool_name=Agent`
+- Exa 调研找到 CC issue #29677 精确描述了这个 undocumented breaking change
+- 确认 iFlow 未证实有相同改名，settings.json 不改但 hook 脚本做防御性兼容
+
+## Fix
+
+| File | Change |
+|------|--------|
+| `src/templates/claude/hooks/inject-subagent-context.py` | `"Task"` → `("Task", "Agent")` |
+| `src/templates/claude/settings.json` | 新增 `"Agent"` matcher |
+| `src/templates/iflow/hooks/inject-subagent-context.py` | `("Task", "Agent")` 防御性兼容 |
+| `.claude/` 本地文件 | 同步修复 |
+
+## Verification
+
+- Explore agent: 无 hook error，正常跳过
+- research agent: 成功收到注入 context（"Research Agent Task"、"Project Spec Directory Structure" 等）
+- 410 tests 全过
+
+## Other Work
+
+- 创建了 v0.3.7 parent task 和 hook-start-equiv 子任务
+- 调研了 SessionStart hook vs `/trellis:start` 等效性问题
+
+
+### Git Commits
+
+| Hash | Message |
+|------|---------|
+| `8cd1314` | (see git log) |
+
+### Testing
+
+- [OK] (Add test results)
+
+### Status
+
+[OK] **Completed**
+
+### Next Steps
+
+- None - task complete
