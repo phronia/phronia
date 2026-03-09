@@ -613,3 +613,49 @@ Restructured Trellis repo as a monorepo: moved CLI code to `packages/cli/`, adde
 ### Next Steps
 
 - None - task complete
+
+
+## Session 79: 提取 trellis-meta skill 到 marketplace/ + skills CLI 调研
+
+**Date**: 2026-03-09
+**Task**: 提取 trellis-meta skill 到 marketplace/ + skills CLI 调研
+**Package**: cli
+
+### Summary
+
+将 trellis-meta skill 从 docs-site 提取到主仓库 marketplace/skills/，调研 skills CLI 发现机制，设计统一 marketplace 架构
+
+### Main Changes
+
+| 工作项 | 说明 |
+|--------|------|
+| trellis-meta 提取 | 从 `docs-site/plugins/trellis-meta/skills/trellis-meta/` 提取到 `marketplace/skills/trellis-meta/`，扁平化结构，去掉 `plugin.json` 和 `.claude-plugin/` |
+| skills CLI 源码调研 | 阅读 `skills@1.4.4` 源码，确认 `findSkillDirs()` 递归扫描机制：maxDepth=5，SKIP_DIRS 不含 dotfiles |
+| 扫描污染问题发现 | 主仓库有 ~17 个 SKILL.md（.agents/ 14个、.claude/ 2个），直接扫会污染 |
+| 解决方案确认 | `npx skills add owner/repo/subpath` 子目录语法限制扫描范围，用 `mindfold-ai/Trellis/marketplace` |
+| PRD 更新 | 03-09-extract-repo-level-content PRD 加入调研结果、架构设计、扫描污染解决方案 |
+| 新 task 创建 | 03-09-update-template-source — 更新 template-fetcher 默认源（依赖 03-08） |
+
+**新增文件**:
+- `marketplace/skills/trellis-meta/SKILL.md` + `references/`（25 个文件）
+- `.trellis/tasks/03-09-extract-repo-level-content/prd.md`
+- `.trellis/tasks/03-09-update-template-source/prd.md`
+
+
+### Git Commits
+
+| Hash | Message |
+|------|---------|
+| `9195f89` | (see git log) |
+
+### Testing
+
+- [OK] (Add test results)
+
+### Status
+
+[OK] **Completed**
+
+### Next Steps
+
+- None - task complete
