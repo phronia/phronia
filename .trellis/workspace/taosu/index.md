@@ -8,8 +8,8 @@
 
 <!-- @@@auto:current-status -->
 - **Active File**: `journal-3.md`
-- **Total Sessions**: 74
-- **Last Active**: 2026-03-06
+- **Total Sessions**: 75
+- **Last Active**: 2026-03-09
 <!-- @@@/auto:current-status -->
 
 ---
@@ -19,7 +19,7 @@
 <!-- @@@auto:active-documents -->
 | File | Lines | Status |
 |------|-------|--------|
-| `journal-3.md` | ~353 | Active |
+| `journal-3.md` | ~420 | Active |
 | `journal-2.md` | ~1963 | Archived |
 | `journal-1.md` | ~1998 | Archived |
 <!-- @@@/auto:active-documents -->
@@ -31,6 +31,7 @@
 <!-- @@@auto:session-history -->
 | # | Date | Title | Commits |
 |---|------|-------|---------|
+| 75 | 2026-03-09 | Monorepo Restructuring — CLI to packages/cli + docs submodule | `320c303` |
 | 74 | 2026-03-06 | Hotfix: PreToolUse hook Task→Agent rename | `8cd1314` |
 | 73 | 2026-03-06 | v0.3.6 docs & release prep | `6d89ee9`, `bf9d210` |
 | 72 | 2026-03-06 | feat: --registry flag for custom spec template sources | `3208d64`, `d174493`, `ba66fe1` |

@@ -37,7 +37,9 @@
   "pr_url": null,
   "subtasks": [],
   "children": [
-    "03-06-hook-start-equiv"
+    "03-06-hook-start-equiv",
+    "03-06-update-skip-dirs",
+    "03-07-learn-openspec-prd"
   ],
   "parent": null,
   "relatedFiles": [],

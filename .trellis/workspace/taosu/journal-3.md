@@ -351,3 +351,70 @@ CC v2.1.63 将内部 Agent 工具从 `Task` 改名为 `Agent`（[anthropics/clau
 ### Next Steps
 
 - None - task complete
+
+
+## Session 75: Monorepo Restructuring — CLI to packages/cli + docs submodule
+
+**Date**: 2026-03-09
+**Task**: Monorepo Restructuring — CLI to packages/cli + docs submodule
+
+### Summary
+
+(Add summary)
+
+### Main Changes
+
+## Summary
+
+Restructured Trellis repo as a monorepo: moved CLI code to `packages/cli/`, added `mindfold-ai/docs` as git submodule at `docs-site/`.
+
+## Changes
+
+| Area | Change |
+|------|--------|
+| **Repo structure** | `src/`, `test/`, `bin/`, `scripts/`, configs → `packages/cli/` via `git mv` |
+| **Root package.json** | New private workspace root with husky + lint-staged |
+| **pnpm-workspace** | `packages: ["packages/*"]` |
+| **CI/CD** | `ci.yml` + `publish.yml` adapted for `packages/cli/` paths + path filters |
+| **Submodule** | `docs-site/` → `mindfold-ai/docs` |
+| **Cleanup** | `docs/` removed (6 md files), `doc/` + `third/` local-only deleted |
+| **GitHub** | Issue templates (bug, feature, question) + labels (`pkg:cli`, `pkg:docs`, `infra`) |
+| **lint-staged** | Fixed `eslint`/`prettier` spawn issue with `pnpm --filter` |
+| **linear_sync.py** | `cmd_start` now auto-calls `cmd_sync` to push PRD to Linear |
+
+## Key Decisions
+
+- `assets/` stays at root (README references)
+- `pyrightconfig.json` + `.lintstagedrc` stay at root (cross-package scope)
+- `docs-site/` at root, NOT under `packages/` (avoid pnpm workspace conflict)
+- git history: `git mv` for rename detection (simple + safe)
+- npm publish: `prepublishOnly` copies `README.md` + `LICENSE` from root
+
+## Subtask Created
+
+- `03-09-monorepo-spec-adapt` — Reorganize `.trellis/spec/` by package name (`cli/backend/` instead of flat `backend/`)
+
+## Verification
+
+- 410 tests passed (25 files)
+- Build + lint-staged + eslint + prettier all pass
+- `pnpm test` from root correctly filters to CLI package
+
+
+### Git Commits
+
+| Hash | Message |
+|------|---------|
+| `320c303` | (see git log) |
+
+### Testing
+
+- [OK] (Add test results)
+
+### Status
+
+[OK] **Completed**
+
+### Next Steps
+
+- None - task complete
