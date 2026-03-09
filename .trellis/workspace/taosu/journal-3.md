@@ -659,3 +659,73 @@ Restructured Trellis repo as a monorepo: moved CLI code to `packages/cli/`, adde
 ### Next Steps
 
 - None - task complete
+
+
+## Session 80: Marketplace 迁移至主仓库 + 模板源更新
+
+**Date**: 2026-03-09
+**Task**: Marketplace 迁移至主仓库 + 模板源更新
+**Package**: cli
+
+### Summary
+
+(Add summary)
+
+### Main Changes
+
+## 完成内容
+
+| 任务 | 描述 |
+|------|------|
+| 03-09-extract-repo-level-content | 将 trellis-meta skill 和 marketplace specs 从 docs-site 迁移到主仓库 |
+| 03-08-template-marketplace | 在主仓库建立 marketplace/ 目录，包含 index.json、specs、skills |
+| 03-09-update-template-source | 更新 template-fetcher.ts 中 TEMPLATE_INDEX_URL 和 TEMPLATE_REPO 常量 |
+
+## 关键变更
+
+- **trellis-meta skill 迁移**: 从 `docs-site/plugins/trellis-meta/` 移到 `marketplace/skills/trellis-meta/`
+- **marketplace specs 复制**: 50 个 electron-fullstack spec 文件从 docs-site 复制到 `marketplace/specs/`
+- **模板源常量更新**: `mindfold-ai/docs` → `mindfold-ai/Trellis`（template-fetcher.ts + spec 文档中的 giget 示例）
+- **全仓库 URL 清理**: 搜索并修复所有遗留的 `mindfold-ai/docs` 引用（marketplace README、docs-site 模板页、quick-start 页面）
+- **docs-site 清理**: 删除 `plugins/trellis-meta/`（28 文件）和 `.claude-plugin/`（2 文件），更新贡献指南
+- **安装命令统一**: 所有 `npx skills add` 命令使用 `mindfold-ai/Trellis/marketplace` 子路径（避免扫描 .agents 等内部 SKILL.md）
+
+## 技术决策
+
+- 使用 subpath 语法 `mindfold-ai/Trellis/marketplace` 解决扫描污染问题（主仓库有 ~17 个内部 SKILL.md）
+- 纯数据/文本变更不需要新增单测（符合 conventions.md 决策流程）
+- docs-site 子模块只 commit 不 push，主仓库已推送到 `feat/monorepo-submodule`
+
+**Updated Files**:
+- `packages/cli/src/utils/template-fetcher.ts` — 2 常量 + 注释头
+- `packages/cli/src/templates/markdown/spec/backend/directory-structure.md` — giget URL
+- `.trellis/spec/cli/backend/directory-structure.md` — giget URL
+- `marketplace/index.json` — 新增 trellis-meta 条目
+- `marketplace/README.md` — 安装命令
+- `marketplace/specs/electron-fullstack/` — 50 文件
+- `marketplace/skills/trellis-meta/SKILL.md` — 从 docs-site 迁移
+- `docs-site/` — 6+ 文件 URL 更新，plugins/ 和 .claude-plugin/ 删除
+
+
+### Git Commits
+
+| Hash | Message |
+|------|---------|
+| `9195f89` | (see git log) |
+| `21deaf4` | (see git log) |
+| `c0bdd0c` | (see git log) |
+| `5465d3d` | (see git log) |
+| `053a09b` | (see git log) |
+| `ccedf8c` | (see git log) |
+
+### Testing
+
+- [OK] (Add test results)
+
+### Status
+
+[OK] **Completed**
+
+### Next Steps
+
+- None - task complete

@@ -8,7 +8,7 @@
 
 <!-- @@@auto:current-status -->
 - **Active File**: `journal-3.md`
-- **Total Sessions**: 79
+- **Total Sessions**: 80
 - **Last Active**: 2026-03-09
 <!-- @@@/auto:current-status -->
 
@@ -19,7 +19,7 @@
 <!-- @@@auto:active-documents -->
 | File | Lines | Status |
 |------|-------|--------|
-| `journal-3.md` | ~661 | Active |
+| `journal-3.md` | ~731 | Active |
 | `journal-2.md` | ~1963 | Archived |
 | `journal-1.md` | ~1998 | Archived |
 <!-- @@@/auto:active-documents -->
@@ -31,6 +31,7 @@
 <!-- @@@auto:session-history -->
 | # | Date | Title | Commits |
 |---|------|-------|---------|
+| 80 | 2026-03-09 | Marketplace 迁移至主仓库 + 模板源更新 | `9195f89`, `21deaf4`, `c0bdd0c`, `5465d3d`, `053a09b`, `ccedf8c` |
 | 79 | 2026-03-09 | 提取 trellis-meta skill 到 marketplace/ + skills CLI 调研 | `9195f89` |
 | 78 | 2026-03-09 | Monorepo cleanup: stale specs, gitignore, add_session defaults | `1c38962` |
 | 77 | 2026-03-09 | Monorepo Workflow 全面适配 P8-P10 + 测试 | `404f703`, `b4b43a6`, `c6266be`, `57dee2d`, `92c66d9`, `0f69759`, `949d506`, `d4b3def` |
