@@ -497,3 +497,70 @@ Restructured Trellis repo as a monorepo: moved CLI code to `packages/cli/`, adde
 ### Next Steps
 
 - None - task complete
+
+
+## Session 77: Monorepo Workflow 全面适配 P8-P10 + 测试
+
+**Date**: 2026-03-09
+**Task**: Monorepo Workflow 全面适配 P8-P10 + 测试
+
+### Summary
+
+(Add summary)
+
+### Main Changes
+
+## 完成内容
+
+| Part | 描述 | 文件数 |
+|------|------|--------|
+| 旧命令清理 | 删除 before-backend-dev/before-frontend-dev/check-backend/check-frontend + migrate-specs | 17 deleted |
+| 新泛型命令 | 添加 before-dev, check, commit, contribute skill | 10 new |
+| config + scripts | config.py/git_context.py/task.py/add_session.py 动态发现 | 6 modified |
+| commands/agents/hooks 泛化 | 所有平台 md + hook 文件 spec 路径泛化 | 33 modified |
+| docs-site spec 迁移 | spec/docs-site/docs/ 7 文件 + submodule ref | 8 files |
+| P9 worktree submodule init | start.py 按 task.package 选择性 init submodule | 1 modified |
+| P10 create_pr.py submodule PR | 检测 submodule 变更，内部 commit/push/PR | 1 modified |
+| 集成测试 | pytest + tmp_path 真实 git repo，22 tests 全通过 | 4 new |
+| session-start.py fix | 修复旧 spec/frontend 路径为动态遍历 | 1 modified |
+| PRD 更新 | P8-P10 脚本改动明细 + 泛用性分析 | 1 modified |
+
+## 关键设计决策
+
+- **按需 submodule init**：不全量 init（用户可能有上百个 submodule），只 init task 目标 package
+- **config → scripts → md 数据流**：config.yaml 是 source of truth，md 引导 AI 调脚本
+- **测试方案**：pytest + tmp_path + 真实 git repo（不 mock git），测 worktree/submodule 真实行为
+
+## 修改的关键文件
+
+- `.trellis/scripts/common/config.py` — get_submodule_packages()
+- `.trellis/scripts/multi_agent/start.py` — 选择性 submodule init
+- `.trellis/scripts/multi_agent/create_pr.py` — submodule 感知 PR
+- `.claude/hooks/session-start.py` — 动态 spec 遍历
+- `test/scripts/` — 22 个集成测试
+
+
+### Git Commits
+
+| Hash | Message |
+|------|---------|
+| `404f703` | (see git log) |
+| `b4b43a6` | (see git log) |
+| `c6266be` | (see git log) |
+| `57dee2d` | (see git log) |
+| `92c66d9` | (see git log) |
+| `0f69759` | (see git log) |
+| `949d506` | (see git log) |
+| `d4b3def` | (see git log) |
+
+### Testing
+
+- [OK] (Add test results)
+
+### Status
+
+[OK] **Completed**
+
+### Next Steps
+
+- None - task complete
