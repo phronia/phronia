@@ -418,3 +418,82 @@ Restructured Trellis repo as a monorepo: moved CLI code to `packages/cli/`, adde
 ### Next Steps
 
 - None - task complete
+
+
+## Session 76: Monorepo Spec 目录重组 + Workflow 适配 PRD
+
+**Date**: 2026-03-09
+**Task**: Monorepo Spec 目录重组 + Workflow 适配 PRD
+
+### Summary
+
+(Add summary)
+
+### Main Changes
+
+## 完成内容
+
+### Phase 1: Spec 目录重组 + 路径替换（已完成）
+
+| 改动 | 详情 |
+|------|------|
+| Spec 目录移动 | `spec/backend/` → `spec/cli/backend/`, `spec/frontend/` → `spec/cli/frontend/`, `spec/unit-test/` → `spec/cli/unit-test/`, `guides/` 不动 |
+| 路径替换（~55 文件） | `.claude/` 18 文件, `.cursor/` 10 文件, `.agents/` 12 文件, `.opencode/` 14 文件, `.trellis/` 3 文件 |
+| init-context 适配 | `task.py` 中 `get_implement_backend/frontend()` 更新为 `spec/cli/` 路径 |
+| 测试验证 | 410 测试全部通过 |
+
+### Phase 2: PRD 设计（已记录，待实施）
+
+完整 PRD 在 `.trellis/tasks/03-09-monorepo-spec-adapt/prd.md`，包含 7 个 Part:
+
+| Part | 内容 | 泛用性 |
+|------|------|--------|
+| P1 | 合并 type-specific 命令 → 泛型 `before-dev`/`check` | 可泛用 → 模板 |
+| P2 | task.json `package` 字段 + `--package` 参数 | 可泛用 → 模板 |
+| P3 | `get_context.py` monorepo 检测 | 可泛用 → 模板 |
+| P4 | `start.md`/`workflow.md` 动态 spec 发现 | 可泛用 → 模板 |
+| P5 | docs-site submodule 迁移 | 项目特化 |
+| P6 | `add_session.py --package` 标记 | 可泛用 → 模板 |
+| P7 | 向前兼容（单仓库 fallback） | 可泛用 → 模板 |
+
+### 关键设计决策
+
+1. **Spec 自动发现**：泛型命令通过 `ls spec/*/index.md` 发现可用 spec，不硬编码路径
+2. **Spec 自管引导**：每个 `index.md` 自带 Pre-Dev Checklist 和 Quality Check section，命令只做分发
+3. **泛用性分析**：PRD 中明确标注了项目特化 vs 可泛用改动，后续产品化时可直接复用
+
+### docs-site 分析结论
+
+- hooks: 旧版本，根目录更新 → 删
+- 独有内容: 3 命令 + 1 skill + 7 spec 文件 → 迁移到根目录
+- 冗余配置: `.claude/`, `.cursor/` → 删
+
+**Updated Files** (主要):
+- `.trellis/spec/cli/backend/` (9 files, moved)
+- `.trellis/spec/cli/frontend/` (7 files, moved)
+- `.trellis/spec/cli/unit-test/` (4 files, moved)
+- `.claude/commands/trellis/*.md` (12 files)
+- `.cursor/commands/*.md` (10 files)
+- `.agents/skills/*/SKILL.md` (12 files)
+- `.opencode/commands/trellis/*.md` + agents + plugin (14 files)
+- `.trellis/workflow.md`, `scripts/task.py`, `scripts/create_bootstrap.py`
+- `.trellis/tasks/03-09-monorepo-spec-adapt/prd.md` (expanded)
+
+
+### Git Commits
+
+| Hash | Message |
+|------|---------|
+| `dbf076c` | (see git log) |
+
+### Testing
+
+- [OK] (Add test results)
+
+### Status
+
+[OK] **Completed**
+
+### Next Steps
+
+- None - task complete
