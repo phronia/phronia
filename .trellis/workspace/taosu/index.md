@@ -8,7 +8,7 @@
 
 <!-- @@@auto:current-status -->
 - **Active File**: `journal-3.md`
-- **Total Sessions**: 77
+- **Total Sessions**: 78
 - **Last Active**: 2026-03-09
 <!-- @@@/auto:current-status -->
 
@@ -19,7 +19,7 @@
 <!-- @@@auto:active-documents -->
 | File | Lines | Status |
 |------|-------|--------|
-| `journal-3.md` | ~566 | Active |
+| `journal-3.md` | ~615 | Active |
 | `journal-2.md` | ~1963 | Archived |
 | `journal-1.md` | ~1998 | Archived |
 <!-- @@@/auto:active-documents -->
@@ -31,6 +31,7 @@
 <!-- @@@auto:session-history -->
 | # | Date | Title | Commits |
 |---|------|-------|---------|
+| 78 | 2026-03-09 | Monorepo cleanup: stale specs, gitignore, add_session defaults | `1c38962` |
 | 77 | 2026-03-09 | Monorepo Workflow 全面适配 P8-P10 + 测试 | `404f703`, `b4b43a6`, `c6266be`, `57dee2d`, `92c66d9`, `0f69759`, `949d506`, `d4b3def` |
 | 76 | 2026-03-09 | Monorepo Spec 目录重组 + Workflow 适配 PRD | `dbf076c` |
 | 75 | 2026-03-09 | Monorepo Restructuring — CLI to packages/cli + docs submodule | `320c303` |

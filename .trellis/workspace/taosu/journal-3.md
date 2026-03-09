@@ -564,3 +564,52 @@ Restructured Trellis repo as a monorepo: moved CLI code to `packages/cli/`, adde
 ### Next Steps
 
 - None - task complete
+
+
+## Session 78: Monorepo cleanup: stale specs, gitignore, add_session defaults
+
+**Date**: 2026-03-09
+**Task**: Monorepo cleanup: stale specs, gitignore, add_session defaults
+**Package**: cli
+
+### Summary
+
+(Add summary)
+
+### Main Changes
+
+| Change | Description |
+|--------|-------------|
+| Delete `spec/cli/frontend/` | 7 empty template files, CLI project has no frontend |
+| Delete `database-guidelines.md` | Empty template, N/A for CLI project |
+| Update `directory-structure.md` | Fix spec/ tree: `frontend/` → `cli/` + `docs-site/` |
+| Update `index.md` | Remove "How to Fill" boilerplate, remove database ref |
+| `.gitignore` | Add `.pytest_cache/` |
+| `add_session.py` | Default `--package` to `config.yaml` `default_package` |
+
+**Context**: Post-monorepo-migration cleanup. Reviewed all 9 files in `spec/cli/backend/`, identified 3 with issues. Also confirmed `docs/` deletion was intentional (content migrated to docs-site submodule). Verified all acceptance criteria for monorepo migration are met (410 tests pass, lint/typecheck clean). Archived `03-09-monorepo-submodule` task.
+
+**Updated Files**:
+- `.trellis/spec/cli/backend/index.md`
+- `.trellis/spec/cli/backend/directory-structure.md`
+- `.trellis/scripts/add_session.py`
+- `.gitignore`
+
+
+### Git Commits
+
+| Hash | Message |
+|------|---------|
+| `1c38962` | (see git log) |
+
+### Testing
+
+- [OK] (Add test results)
+
+### Status
+
+[OK] **Completed**
+
+### Next Steps
+
+- None - task complete
