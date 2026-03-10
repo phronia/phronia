@@ -1036,3 +1036,57 @@ All files now byte-identical between template and dogfooded (verified via MD5).
 ### Next Steps
 
 - None - task complete
+
+
+## Session 87: S2: 命令合并 + Hook/Start 动态化
+
+**Date**: 2026-03-10
+**Task**: S2: 命令合并 + Hook/Start 动态化
+**Package**: cli
+
+### Summary
+
+(Add summary)
+
+### Main Changes
+
+## S2 Implementation Complete
+
+将 type-specific 命令合并为 generic 命令，所有模板和 Hook 改为动态 spec 发现。
+
+| 变更类别 | 说明 |
+|---------|------|
+| 命令合并 | before-backend-dev + before-frontend-dev → before-dev, check-backend + check-frontend → check (9 平台, 54 files) |
+| 动态 spec | start/parallel/workflow/agents 模板使用 `get_context.py --mode packages` 替代硬编码路径 (21 files) |
+| Hook/Script 同步 | inject-subagent-context.py 改用 pathlib + 动态 spec tree, task.py/cli_adapter.py 描述统一 (7 files) |
+| 文档/测试 | onboard/create-command 更新 generic 命令名, 9 个平台测试更新, PRD 更新 (28 files) |
+
+**Check Agent 修复**: 3 处重复行 (implement.md, research.md) + 1 处 markdown 格式 (cursor start.md)
+
+**Codex Cross-Review (gpt-5.4)**: 2 findings — P1 缺 migration manifest (release 阶段处理), P2 check.md untracked 场景 (beta 可接受)
+
+**模板 ↔ Dogfooded 同步**: session-start.py / inject-subagent-context.py / cli_adapter.py 全部 MD5 一致; task.py 仅 S3 scope (--package) 差异
+
+**测试**: 436/436 通过
+
+
+### Git Commits
+
+| Hash | Message |
+|------|---------|
+| `9aa3aa5` | (see git log) |
+| `c0c9c4d` | (see git log) |
+| `151d6e1` | (see git log) |
+| `ac311f3` | (see git log) |
+
+### Testing
+
+- [OK] (Add test results)
+
+### Status
+
+[OK] **Completed**
+
+### Next Steps
+
+- None - task complete
