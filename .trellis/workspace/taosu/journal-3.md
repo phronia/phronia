@@ -729,3 +729,58 @@ Restructured Trellis repo as a monorepo: moved CLI code to `packages/cli/`, adde
 ### Next Steps
 
 - None - task complete
+
+
+## Session 81: 合并 monorepo 分支 + cross-layer check 修复
+
+**Date**: 2026-03-10
+**Task**: 合并 monorepo 分支 + cross-layer check 修复
+**Package**: cli
+
+### Summary
+
+(Add summary)
+
+### Main Changes
+
+## 完成内容
+
+| 操作 | 描述 |
+|------|------|
+| 分支合并 | `feat/monorepo-submodule` fast-forward 合并到 `main` 并推送 |
+| docs-site 推送 | `feat/marketplace-migration` 推送后合并到 `main`，Mintlify 部署生效 |
+| 分支清理 | 删除本地+远程 `feat/monorepo-submodule` 和 `feat/marketplace-migration` |
+| Cross-layer check | 发现 `.claude/skills/contribute/SKILL.md` 引用已删除的 `plugins/` 结构 |
+| SKILL.md 修复 | 重写为双仓库贡献指南（docs vs Trellis marketplace） |
+| dist 重建 | `pnpm build` 清除编译产物中的旧 URL |
+| Task 创建 | `03-10-monorepo-compat`（CLI 双模式兼容 PRD，6 Phase） |
+| Task 创建 | `03-10-merge-monorepo-branch`（合并操作 checklist，已归档） |
+
+## 技术决策
+
+- 合并顺序：主仓库先于 docs-site（确保 marketplace URL 生效后再部署文档）
+- contribute SKILL.md 区分两个仓库的贡献路径（文档 → docs，skills/specs → Trellis/marketplace）
+- monorepo-compat PRD 设计为 forward-compatible：通过 config.yaml 有无 `packages:` 字段判定模式
+
+**Updated Files**:
+- `.claude/skills/contribute/SKILL.md` — 重写，删除 plugins 引用
+
+
+### Git Commits
+
+| Hash | Message |
+|------|---------|
+| `00a6614` | (see git log) |
+| `a7d786f` | (see git log) |
+
+### Testing
+
+- [OK] (Add test results)
+
+### Status
+
+[OK] **Completed**
+
+### Next Steps
+
+- None - task complete
