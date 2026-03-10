@@ -162,6 +162,8 @@ def get_spec_base(package: str | None = None) -> str:
 - `before-dev.md` — 运行时动态发现 `spec/*/index.md`（单仓）或 `spec/<package>/*/index.md`（monorepo），加载匹配当前任务类型的 spec
 - `check.md` — 同上，动态加载 check 规则
 
+**重要**: 命令描述必须明确说明 **index 不是目的**——AI 读 index 是为了从中找出本次任务涉及的具体 guideline 文件（如 `error-handling.md`、`conventions.md`、`mock-strategies.md`），然后去读那些文件获取开发规范。已在 v0.3.7 中修复了项目 dotfiles 的描述（`7de2916`），模板在 monorepo-compat 中统一。
+
 **迁移策略**: 新增 generic 命令，旧 type-specific 命令标记 deprecated 但保留一个版本周期后再删
 
 #### 3.2 `start.md` 动态 spec 发现

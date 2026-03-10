@@ -784,3 +784,158 @@ Restructured Trellis repo as a monorepo: moved CLI code to `packages/cli/`, adde
 ### Next Steps
 
 - None - task complete
+
+
+## Session 82: Hook Start Equiv: ready tag fix + path resolution + dogfood sync
+
+**Date**: 2026-03-10
+**Task**: Hook Start Equiv: ready tag fix + path resolution + dogfood sync
+**Package**: cli
+
+### Summary
+
+(Add summary)
+
+### Main Changes
+
+| Change | Description |
+|--------|-------------|
+| `<ready>` tag reword | Changed from "Report current state summary" to "Wait for user's first message, then follow instructions". Explicitly tells AI Steps 1-3 are already injected. |
+| Task path resolution fix | Fixed bug where `.current-task` storing project-relative paths (`.trellis/tasks/xxx`) caused double-path resolution in `_get_task_status()` |
+| Dogfood sync | Synced all hook-start-equiv changes to project's own `.claude/hooks/session-start.py`: task-status injection, dynamic spec discovery, ready tag, path fix |
+
+**Updated Files**:
+- `packages/cli/src/templates/claude/hooks/session-start.py`
+- `packages/cli/src/templates/iflow/hooks/session-start.py`
+- `packages/cli/src/templates/opencode/plugin/session-start.js`
+- `.claude/hooks/session-start.py`
+
+**Task archived**: `03-06-hook-start-equiv`
+
+
+### Git Commits
+
+| Hash | Message |
+|------|---------|
+| `be06afd` | (see git log) |
+| `700f4b7` | (see git log) |
+| `5a925e6` | (see git log) |
+
+### Testing
+
+- [OK] (Add test results)
+
+### Status
+
+[OK] **Completed**
+
+### Next Steps
+
+- None - task complete
+
+
+## Session 83: Start Flow: Brainstorm Enforcement + Index Navigation + Guidelines Note
+
+**Date**: 2026-03-10
+**Task**: Start Flow: Brainstorm Enforcement + Index Navigation + Guidelines Note
+**Package**: cli
+
+### Summary
+
+(Add summary)
+
+### Main Changes
+
+## Changes
+
+| Area | Description |
+|------|-------------|
+| Brainstorm enforcement | All 9 platforms: complex tasks must automatically trigger brainstorm — no skipping to implementation |
+| 4-way classification | Upgraded Gemini, Qoder, Kilo from 3-way to 4-way task classification (Question/Trivial/Simple/Complex) |
+| Index-is-navigation | All 9 platform start files: clarified that index files are navigation pointers, not the actual guidelines |
+| Session-start hooks | 3 hooks (claude, iflow, opencode): added Note in `<guidelines>` tag clarifying injected content is indexes |
+| Dogfooding sync | `.claude/hooks/session-start.py` synced with template changes |
+| PRD update | Recorded generic command description fix in monorepo-compat PRD |
+
+## Key Decisions
+- Cursor start file has different Step 3 structure — index-navigation note adapted to fit after its subsections
+- Antigravity has no own start file — inherits from Codex via `adaptSkillContentToWorkflow()`, verified changes propagate
+
+**Updated Files** (14 files):
+- 9× platform start files (`packages/cli/src/templates/*/`)
+- 3× session-start hooks (claude, iflow, opencode templates)
+- `.claude/hooks/session-start.py` (dogfooding)
+- `.trellis/tasks/03-10-monorepo-compat/prd.md`
+
+
+### Git Commits
+
+| Hash | Message |
+|------|---------|
+| `0d29b70` | (see git log) |
+| `7de2916` | (see git log) |
+| `7c42d80` | (see git log) |
+
+### Testing
+
+- [OK] (Add test results)
+
+### Status
+
+[OK] **Completed**
+
+### Next Steps
+
+- None - task complete
+
+
+## Session 84: Implement update.skip + user-deletion detection
+
+**Date**: 2026-03-10
+**Task**: Implement update.skip + user-deletion detection
+**Package**: cli
+
+### Summary
+
+(Add summary)
+
+### Main Changes
+
+## Changes
+
+| Area | Description |
+|------|-------------|
+| R1: User deletion detection | `analyzeChanges()` checks stored hash — if file was previously installed but deleted by user, it's preserved instead of re-added |
+| R2: config.yaml skip | `loadUpdateSkipPaths()` parses `update.skip` list from config.yaml (no YAML dependency), filters templates in `collectTemplateFiles()` |
+| UX: Summary display | New "Deleted by you (preserved)" section in update output |
+| Tests | 3 new integration tests (#15-#17): truly new file added, user-deleted preserved, skip config works |
+| Dogfooding | Configured `.trellis/config.yaml` with `update.skip` for 12 type-specific commands across 3 platforms |
+
+## Smoke Test
+- Fresh `trellis init` → delete `get_context.py` → `trellis update --dry-run` → shows "Deleted by you (preserved)" ✓
+- Add `update.skip` to config.yaml → files excluded from update output entirely ✓
+
+**Updated Files**:
+- `packages/cli/src/commands/update.ts` (R1 + R2 implementation)
+- `packages/cli/test/commands/update.integration.test.ts` (+3 tests, updated existing)
+- `.trellis/config.yaml` (skip config for monorepo)
+
+
+### Git Commits
+
+| Hash | Message |
+|------|---------|
+| `3ed892c` | (see git log) |
+| `7f1769e` | (see git log) |
+
+### Testing
+
+- [OK] (Add test results)
+
+### Status
+
+[OK] **Completed**
+
+### Next Steps
+
+- None - task complete
