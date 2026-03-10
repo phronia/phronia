@@ -970,3 +970,69 @@ Restructured Trellis repo as a monorepo: moved CLI code to `packages/cli/`, adde
 ### Next Steps
 
 - None - task complete
+
+
+## Session 86: S1 Monorepo Infrastructure + Python Sync + stdin Fix
+
+**Date**: 2026-03-10
+**Task**: S1 Monorepo Infrastructure + Python Sync + stdin Fix
+**Package**: cli
+
+### Summary
+
+Complete S1 monorepo detection, sync Python scripts template↔dogfooded, fix --stdin regression in record-session templates
+
+### Main Changes
+
+## S1 Monorepo Detection + Per-Package Spec (`f36d220`)
+| Feature | Description |
+|---------|-------------|
+| `detectMonorepo()` | Supports pnpm-workspace.yaml, package.json workspaces, Cargo.toml, go.work, pyproject.toml, .gitmodules |
+| Per-package spec | Each detected package gets spec dirs based on its ProjectType |
+| config.yaml patching | Non-destructive append of `packages:` section |
+| CLI flags | `--monorepo` / `--no-monorepo` |
+| templateStrategy fix | Hoisted declaration before monorepo block (was hard-coded "overwrite") |
+| Orphan guard | `&& !monorepoPackages` prevents root-level spec in monorepo mode |
+| Integration tests | 6 new monorepo init tests (#13-#18) |
+
+## Python Script Sync (`7ee15a7`)
+| File | Changes |
+|------|---------|
+| `config.py` | Merged type hints + value filtering + `is_monorepo()` + `get_spec_base()` |
+| `git_context.py` | Merged `_scan_spec_layers()` + `_get_packages_info()` + `_get_packages_section()` |
+| `paths.py` | Added `get_spec_dir()` + `get_package_path()` with lazy import |
+| `cli_adapter.py` | Synced docstring `'check'` → `'check-backend'` |
+All files now byte-identical between template and dogfooded (verified via MD5).
+
+## --stdin Fix (`ba633be`)
+- Root cause: `sys.stdin.isatty()` returns False in Cursor/CI subprocess → `stdin.read()` blocks
+- Fix: explicit `--stdin` flag — only reads stdin when caller opts in
+- Updated 15 record-session templates across all platforms (Claude, Cursor, Codex, iFlow, Kilo, Kiro, OpenCode, Gemini, Qoder)
+- Restored pipe usage docs in `add_session.py` docstring
+
+## Key Design Decisions
+- **`--stdin` is correct**: pipe needed for large session content (ARG_MAX limits), `isatty()` unreliable in non-interactive environments
+- **Template ↔ dogfooded merge**: took best from both sides, not one-way overwrite
+- **Remaining divergences** (add_session.py --package, hooks/, task.py) deferred to S2-S4
+
+
+### Git Commits
+
+| Hash | Message |
+|------|---------|
+| `f36d220` | (see git log) |
+| `7ee15a7` | (see git log) |
+| `ba633be` | (see git log) |
+| `346c12c` | (see git log) |
+
+### Testing
+
+- [OK] (Add test results)
+
+### Status
+
+[OK] **Completed**
+
+### Next Steps
+
+- None - task complete
