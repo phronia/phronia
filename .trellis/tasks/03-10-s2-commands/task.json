@@ -1,18 +1,19 @@
 {
-  "id": "v037",
-  "name": "v037",
-  "title": "Trellis v0.3.7",
+  "id": "s2-commands",
+  "name": "s2-commands",
+  "title": "S2: 命令合并 + Hook/Start 动态化",
   "description": "",
   "status": "planning",
+  "package": null,
   "dev_type": null,
   "scope": null,
-  "priority": "P2",
+  "priority": "P1",
   "creator": "taosu",
   "assignee": "taosu",
-  "createdAt": "2026-03-06",
+  "createdAt": "2026-03-10",
   "completedAt": null,
   "branch": null,
-  "base_branch": "main",
+  "base_branch": "feat/v0.4.0-beta",
   "worktree_path": null,
   "current_phase": 0,
   "next_action": [
@@ -37,10 +38,10 @@
   "pr_url": null,
   "subtasks": [],
   "children": [],
-  "parent": null,
+  "parent": "03-10-v040-beta1",
   "relatedFiles": [],
   "notes": "",
   "meta": {
-    "linear_issue": "MIN-342"
+    "linear_issue": "MIN-370"
   }
 }
