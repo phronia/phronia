@@ -939,3 +939,34 @@ Restructured Trellis repo as a monorepo: moved CLI code to `packages/cli/`, adde
 ### Next Steps
 
 - None - task complete
+
+
+## Session 85: fix: add_session.py stdin 阻塞修复
+
+**Date**: 2026-03-10
+**Task**: fix: add_session.py stdin 阻塞修复
+**Package**: cli
+
+### Summary
+
+修复 add_session.py 在非交互环境（如 Cursor Agent）下因隐式 stdin 读取导致阻塞的问题。将 sys.stdin.isatty() 自动检测改为显式 --stdin flag opt-in。同步更新了本项目实例和 CLI 模板。
+
+### Main Changes
+
+(Add details)
+
+### Git Commits
+
+(No commits - planning session)
+
+### Testing
+
+- [OK] (Add test results)
+
+### Status
+
+[OK] **Completed**
+
+### Next Steps
+
+- None - task complete
