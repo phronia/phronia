@@ -37,9 +37,7 @@
   "commit": null,
   "pr_url": null,
   "subtasks": [],
-  "children": [
-    "03-10-s4-worktree"
-  ],
+  "children": [],
   "parent": null,
   "relatedFiles": [],
   "notes": "",
