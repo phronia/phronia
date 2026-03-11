@@ -1152,3 +1152,76 @@ All files now byte-identical between template and dogfooded (verified via MD5).
 ### Next Steps
 
 - None - task complete
+
+
+## Session 89: S3 Batch 3A+3B: Hooks, Package Support, Safe-File-Delete
+
+**Date**: 2026-03-11
+**Task**: S3 Batch 3A+3B: Hooks, Package Support, Safe-File-Delete
+**Package**: cli
+
+### Summary
+
+(Add summary)
+
+### Main Changes
+
+## Summary
+
+Completed S3 Batch 3A (hooks + package support) and Batch 3B (safe-file-delete migration system) for the v0.4.0-beta.1 release.
+
+## Changes
+
+| Feature | Description |
+|---------|-------------|
+| spec_scope filtering | session-start hooks (Claude/iFlow) now filter spec injection by package's `spec_scope` field |
+| Legacy spec detection | Hooks detect old flat `.trellis/spec/backend/` layout and warn users to re-init |
+| task.py --package | `create`, `init-context`, `list` support `--package` flag for monorepo awareness |
+| add_session.py --package | Session recording supports package context |
+| create_bootstrap.py --package | Bootstrap script supports package filtering |
+| safe-file-delete type | New migration type that auto-deletes files only when content hash matches known templates |
+| 0.4.0-beta.1 manifest | 32 safe-file-delete entries across 8 platforms for deprecated S2 commands |
+| update.ts integration | collectSafeFileDeletes + executeSafeFileDeletes + PROTECTED_PATHS enforcement |
+| Shell injection fix | OpenCode session-start.js: execSync → execFileSync to prevent injection |
+| OpenCode manifest fix | Removed 4 OpenCode entries (no collectTemplates = can't write replacements) |
+
+## Key Decisions
+
+- **Version-independent execution**: safe-file-delete uses `getAllMigrations()` instead of version-filtered queries — hash match is the safety net
+- **Separated from --migrate flow**: safe-file-delete items filtered out of `classifyMigrations()` and processed in dedicated pipeline
+- **OpenCode excluded from manifest**: Codex cross-review caught that deleting old files without replacement capability would break users
+
+## Updated Files
+- `packages/cli/src/types/migration.ts` — added safe-file-delete type + allowed_hashes
+- `packages/cli/src/migrations/manifests/0.4.0-beta.1.json` — new manifest (32 entries)
+- `packages/cli/src/migrations/index.ts` — getMigrationSummary with safeFileDeletes
+- `packages/cli/src/commands/update.ts` — safe-file-delete collect/execute/summary
+- `packages/cli/src/templates/opencode/plugin/session-start.js` — shell injection fix
+- `packages/cli/src/templates/claude/hooks/session-start.py` — spec_scope + legacy detection
+- `packages/cli/src/templates/iflow/hooks/session-start.py` — spec_scope + legacy detection (synced)
+- `packages/cli/test/regression.test.ts` — safe-file-delete hash validation test
+- `packages/cli/test/migrations/index.test.ts` — updated for new type + summary field
+- `.trellis/scripts/task.py` — --package support
+- `.trellis/scripts/add_session.py` — --package support
+- `.trellis/scripts/common/cli_adapter.py` — package argument parsing
+
+
+### Git Commits
+
+| Hash | Message |
+|------|---------|
+| `7947de3` | (see git log) |
+| `0b78b86` | (see git log) |
+| `7a44d0f` | (see git log) |
+
+### Testing
+
+- [OK] (Add test results)
+
+### Status
+
+[OK] **Completed**
+
+### Next Steps
+
+- None - task complete
