@@ -8,7 +8,7 @@
 
 <!-- @@@auto:current-status -->
 - **Active File**: `journal-3.md`
-- **Total Sessions**: 89
+- **Total Sessions**: 90
 - **Last Active**: 2026-03-11
 <!-- @@@/auto:current-status -->
 
@@ -19,7 +19,7 @@
 <!-- @@@auto:active-documents -->
 | File | Lines | Status |
 |------|-------|--------|
-| `journal-3.md` | ~1227 | Active |
+| `journal-3.md` | ~1297 | Active |
 | `journal-2.md` | ~1963 | Archived |
 | `journal-1.md` | ~1998 | Archived |
 <!-- @@@/auto:active-documents -->
@@ -31,6 +31,7 @@
 <!-- @@@auto:session-history -->
 | # | Date | Title | Commits |
 |---|------|-------|---------|
+| 90 | 2026-03-11 | S4: Worktree submodule + PR awareness — review & tests | `8bda664` |
 | 89 | 2026-03-11 | S3 Batch 3A+3B: Hooks, Package Support, Safe-File-Delete | `7947de3`, `0b78b86`, `7a44d0f` |
 | 88 | 2026-03-11 | S3 PRD: 6 rounds Codex review + cross-layer check | `aff6b29`, `eeea19f` |
 | 87 | 2026-03-10 | S2: 命令合并 + Hook/Start 动态化 | `9aa3aa5`, `c0c9c4d`, `151d6e1`, `ac311f3` |

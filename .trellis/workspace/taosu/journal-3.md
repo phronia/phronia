@@ -1225,3 +1225,73 @@ Completed S3 Batch 3A (hooks + package support) and Batch 3B (safe-file-delete m
 ### Next Steps
 
 - None - task complete
+
+
+## Session 90: S4: Worktree submodule + PR awareness — review & tests
+
+**Date**: 2026-03-11
+**Task**: S4: Worktree submodule + PR awareness — review & tests
+**Package**: cli
+
+### Summary
+
+(Add summary)
+
+### Main Changes
+
+## Summary
+
+Completed S4 implementation: multi-agent pipeline now handles git submodules in worktree workflows.
+
+## Changes
+
+| Area | Description |
+|------|-------------|
+| `start.py` | Check submodule status prefix before init (prevents detached HEAD); auto-init uninitialized submodules |
+| `create_pr.py` | Detect submodule changes, create separate PRs, squash-merge warning marker, isinstance guard on `submodule_prs` |
+| `cleanup.py` | Warn about open submodule PRs before worktree cleanup |
+| `regression.test.ts` | 6 S4 regression tests (status prefix, imports, symbolic-ref, isinstance, squash-warning, cleanup calls) |
+| `update.integration.test.ts` | 3 S3-gap tests: safe-file-delete preserves modified files, handles missing files, respects update.skip |
+
+## Review Rounds (5 total)
+
+1. Check agent: 4 fixes (dead params, blockquote, `-C` flag, hook ordering)
+2. Codex cross-review: 3 findings (1 known limitation, 1 already fixed, 1 PRD design)
+3. Manual error handling: 1 fix (`isinstance` guard on `submodule_prs: null`)
+4. Manual edge cases: no new bugs
+5. Manual security: no vulnerabilities
+
+## Verification
+
+- Cross-layer check: all 5 dimensions passed
+- Code quality check: all spec guidelines verified
+- **446 tests** pass, lint clean, typecheck clean
+
+**Updated Files**:
+- `packages/cli/src/templates/trellis/scripts/multi_agent/start.py`
+- `packages/cli/src/templates/trellis/scripts/multi_agent/create_pr.py`
+- `packages/cli/src/templates/trellis/scripts/multi_agent/cleanup.py`
+- `.trellis/scripts/multi_agent/start.py` (dogfood sync)
+- `.trellis/scripts/multi_agent/create_pr.py` (dogfood sync)
+- `.trellis/scripts/multi_agent/cleanup.py` (dogfood sync)
+- `packages/cli/test/regression.test.ts`
+- `packages/cli/test/commands/update.integration.test.ts`
+
+
+### Git Commits
+
+| Hash | Message |
+|------|---------|
+| `8bda664` | (see git log) |
+
+### Testing
+
+- [OK] (Add test results)
+
+### Status
+
+[OK] **Completed**
+
+### Next Steps
+
+- None - task complete
