@@ -1810,3 +1810,61 @@ Fix scoped npm package names (e.g. `@zhubao/desktop`) creating nested `@scope/` 
 ### Next Steps
 
 - None - task complete
+
+
+## Session 99: Fix #87 #88 + release v0.3.10 + merge to beta
+
+**Date**: 2026-03-12
+**Task**: Fix #87 #88 + release v0.3.10 + merge to beta
+**Package**: cli
+
+### Summary
+
+(Add summary)
+
+### Main Changes
+
+## Summary
+
+Fixed two community-reported issues, released v0.3.10, and merged fixes into beta branch.
+
+## Changes
+
+| Area | Description |
+|------|-------------|
+| **#87 HTTPS registry URLs** | New `normalizeRegistrySource()` auto-converts `https://github.com/user/repo` → `gh:user/repo`. Supports GitHub/GitLab/Bitbucket, `/tree/branch/path`, `.git` suffix |
+| **#88 record-session wording** | Updated 9 platform templates: "AI must NOT execute git commit" → clarified that scripts handling `.trellis/` metadata commits are safe to run |
+| **v0.3.10 release** | Created manifest, EN+ZH changelogs, published to npm as `latest` |
+| **Beta merge** | Merged main into `feat/v0.4.0-beta`, resolved package.json version + docs-site submodule conflicts |
+
+## Tests
+- 14 new tests for `normalizeRegistrySource` + HTTPS URL integration
+- All 477 tests pass on beta branch (440 on main)
+
+## Key Files
+- `packages/cli/src/utils/template-fetcher.ts` — `normalizeRegistrySource()`
+- `packages/cli/src/templates/*/record-session.*` — 9 files updated
+- `packages/cli/src/migrations/manifests/0.3.10.json`
+
+
+### Git Commits
+
+| Hash | Message |
+|------|---------|
+| `73d7feb` | (see git log) |
+| `c515ced` | (see git log) |
+| `4800e14` | (see git log) |
+| `a8d7e37` | (see git log) |
+| `12dc664` | (see git log) |
+
+### Testing
+
+- [OK] (Add test results)
+
+### Status
+
+[OK] **Completed**
+
+### Next Steps
+
+- None - task complete
