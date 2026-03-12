@@ -1755,3 +1755,58 @@ Continuing refactoring task `03-12-refactor-python-scripts` Phase 2 (Type Safety
 ### Next Steps
 
 - None - task complete
+
+
+## Session 98: v0.4.0-beta.2: Fix scoped package names + release
+
+**Date**: 2026-03-12
+**Task**: v0.4.0-beta.2: Fix scoped package names + release
+**Package**: cli
+
+### Summary
+
+(Add summary)
+
+### Main Changes
+
+## Summary
+
+Fix scoped npm package names (e.g. `@zhubao/desktop`) creating nested `@scope/` directories in `.trellis/spec/` and `config.yaml`. Released as `v0.4.0-beta.2` hotfix.
+
+## Changes
+
+| Area | Description |
+|------|-------------|
+| **sanitizePkgName()** | New exported function in `project-detector.ts` — strips `@scope/` prefix from package names |
+| **init.ts** | 7 sites updated: filesystem paths, text path references, `remoteSpecPackages` identifiers, config.yaml YAML keys all use sanitized names; display-only usages keep original |
+| **workflow.ts** | `createSpecTemplates()` uses sanitized name for spec directory paths |
+| **Tests** | Updated init integration tests for sanitized keys; added 3 unit tests for `sanitizePkgName` |
+| **Release** | Created manifest `0.4.0-beta.2.json`, EN+ZH changelogs, published to npm |
+
+## Key Files
+- `packages/cli/src/utils/project-detector.ts` — `sanitizePkgName()`
+- `packages/cli/src/commands/init.ts` — path/identifier sanitization
+- `packages/cli/src/configurators/workflow.ts` — spec template path fix
+- `packages/cli/src/migrations/manifests/0.4.0-beta.2.json`
+- `docs-site/changelog/v0.4.0-beta.2.mdx` + `zh/` variant
+
+
+### Git Commits
+
+| Hash | Message |
+|------|---------|
+| `747a95e` | (see git log) |
+| `40c3845` | (see git log) |
+| `e6a72db` | (see git log) |
+
+### Testing
+
+- [OK] (Add test results)
+
+### Status
+
+[OK] **Completed**
+
+### Next Steps
+
+- None - task complete
