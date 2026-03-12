@@ -1396,3 +1396,60 @@ Fixed critical bug where Python's greedy `str.strip('"').strip("'")` destroyed n
 ### Next Steps
 
 - None - task complete
+
+
+## Session 93: Release 0.3.9 + create-manifest stdin mode + docs changelog
+
+**Date**: 2026-03-12
+**Task**: Release 0.3.9 + create-manifest stdin mode + docs changelog
+**Package**: cli
+
+### Summary
+
+(Add summary)
+
+### Main Changes
+
+## Summary
+
+Released 0.3.9 (iFlow hook matcher fix), added docs-site changelogs for both 0.3.8 and 0.3.9, and improved create-manifest script with stdin JSON mode.
+
+## What Was Done
+
+| Area | Description |
+|------|-------------|
+| **Release 0.3.9** | iFlow SessionStart hook matcher `compact` → `compress` to match Claude Code event name |
+| **Test fix** | Updated iflow.test.ts + regression.test.ts on both main and feat branches |
+| **Docs changelog** | Added v0.3.8 and v0.3.9 changelogs (en + zh) to docs-site, updated docs.json navigation |
+| **create-manifest.js** | Added stdin JSON mode — auto-detects piped input via `!process.stdin.isTTY`, no flag needed |
+| **create-manifest.md** | Updated command: use heredoc pipe instead of interactive mode, added docs-site changelog step, added "don't manually bump package.json" note |
+| **Merge** | Merged main (0.3.9) back into feat/v0.4.0-beta, all 459 tests pass |
+
+## Key Files Changed
+- `packages/cli/scripts/create-manifest.js` — stdin JSON mode + isTTY auto-detect
+- `.claude/commands/trellis/create-manifest.md` — updated workflow with docs-site step
+- `docs-site/changelog/v0.3.8.mdx` + `v0.3.9.mdx` — English changelogs
+- `docs-site/zh/changelog/v0.3.8.mdx` + `v0.3.9.mdx` — Chinese changelogs
+- `docs-site/docs.json` — navigation updated to v0.3.9
+
+
+### Git Commits
+
+| Hash | Message |
+|------|---------|
+| `c5bc9fa` | (see git log) |
+| `d73e945` | (see git log) |
+| `2861b03` | (see git log) |
+| `9b91d30` | (see git log) |
+
+### Testing
+
+- [OK] (Add test results)
+
+### Status
+
+[OK] **Completed**
+
+### Next Steps
+
+- None - task complete
