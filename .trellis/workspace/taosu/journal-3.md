@@ -1689,3 +1689,69 @@ Continuing refactoring task `03-12-refactor-python-scripts` Phase 2 (Type Safety
 ### Next Steps
 
 - None - task complete
+
+
+## Session 97: Refactor Python Scripts: Phase 3-4 + Spec Update
+
+**Date**: 2026-03-12
+**Task**: Refactor Python Scripts: Phase 3-4 + Spec Update
+**Package**: cli
+
+### Summary
+
+(Add summary)
+
+### Main Changes
+
+## Task: refactor-python-scripts (Phase 3-4, 已归档)
+
+完成 Python 脚本重构的 Phase 3（模块拆分）和 Phase 4（清理），并更新 spec 文档。
+
+### Phase 3: 模块拆分
+
+| 原文件 | 拆分结果 | 行数变化 |
+|--------|----------|----------|
+| `task.py` (970 行) | entry shim + `common/task_store.py` | 970 → ~80 shim + 534 store |
+| `git_context.py` (672 行) | entry shim + `session_context.py` + `packages_context.py` + `task_context.py` | 672 → ~30 shim + 3 模块 |
+| `status.py` (728 行) | entry shim + `status_display.py` + `status_monitor.py` | 728 → ~80 shim + 2 模块 |
+
+所有原入口路径保持不变（entry shim pattern）。
+
+### Phase 4: 清理
+
+| 改动 | 描述 |
+|------|------|
+| `phase.py` | 提取 `_total_phases`/`_phase_action`/`_phase_for_action` 内部 helper，消除重复文件读取（3→1 per call） |
+| `registry.py` | 新增 `_load_registry()` 合并文件解析+读取 |
+| `task.py` | 移除 Windows encoding 重复（`common/__init__.py` 已覆盖） |
+| `cli_adapter.py` | 提取 `_ALL_PLATFORM_CONFIG_DIRS` 常量 + `_has_other_platform_dir()` helper |
+
+### Spec 更新
+
+- `script-conventions.md`: 重写目录结构（20+ 模块注释）、新增 Shared Module API Reference、TaskInfo 设计决策、模块拆分模式
+- `code-reuse-thinking-guide.md`: 新增模板同步约定 + rsync gotcha
+
+### 错误教训
+
+- **误 rsync spec 到 markdown 模板目录**：`.trellis/spec/`（项目自身规范）和 `packages/cli/src/templates/markdown/spec/`（新项目空白模板）完全不相关，不能互相同步
+
+
+### Git Commits
+
+| Hash | Message |
+|------|---------|
+| `5649093` | (see git log) |
+| `6fc2fcb` | (see git log) |
+| `78449bc` | (see git log) |
+
+### Testing
+
+- [OK] (Add test results)
+
+### Status
+
+[OK] **Completed**
+
+### Next Steps
+
+- None - task complete
