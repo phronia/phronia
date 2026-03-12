@@ -1295,3 +1295,36 @@ Completed S4 implementation: multi-agent pipeline now handles git submodules in 
 ### Next Steps
 
 - None - task complete
+
+
+## Session 91: Bug analysis: parse_simple_yaml greedy quote strip
+
+**Date**: 2026-03-12
+**Task**: Bug analysis: parse_simple_yaml greedy quote strip
+**Package**: cli
+
+### Summary
+
+Discovered parse_simple_yaml uses .strip('"').strip("'") which greedily eats nested quotes. Full audit found 4 hand-rolled YAML parsers (1 critical, 2 minor, 1 correct). Created task 03-12-yaml-quote-strip-bug with PRD. Updated quality-guidelines.md with String Sanitization Patterns section.
+
+### Main Changes
+
+(Add details)
+
+### Git Commits
+
+| Hash | Message |
+|------|---------|
+| `8bda664` | (see git log) |
+
+### Testing
+
+- [OK] (Add test results)
+
+### Status
+
+[OK] **Completed**
+
+### Next Steps
+
+- None - task complete
