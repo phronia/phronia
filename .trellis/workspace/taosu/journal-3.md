@@ -1328,3 +1328,71 @@ Discovered parse_simple_yaml uses .strip('"').strip("'") which greedily eats nes
 ### Next Steps
 
 - None - task complete
+
+
+## Session 92: Hotfix: YAML quote strip bug (0.3.8)
+
+**Date**: 2026-03-12
+**Task**: Hotfix: YAML quote strip bug (0.3.8)
+**Package**: cli
+
+### Summary
+
+(Add summary)
+
+### Main Changes
+
+## Summary
+
+Fixed critical bug where Python's greedy `str.strip('"').strip("'")` destroyed nested quotes in YAML values (e.g., `"echo 'hello'"` → `echo 'hello`). Released as hotfix 0.3.8 and merged back into feat branch.
+
+## What Was Done
+
+| Area | Description |
+|------|-------------|
+| **Root Cause** | `parse_simple_yaml()` in worktree.py used `.strip('"').strip("'")` which removes ALL matching chars from both ends |
+| **Fix** | Added `_unquote()` helper that removes exactly one layer of matching surrounding quotes |
+| **Audit** | Checked all 4 YAML parser locations: worktree.py (critical), update.ts (minor fix), ralph-loop.py (deferred), project-detector.ts (correct) |
+| **Tests** | 13 new tests: 6 Python execution tests (subprocess), 3 content regression, 4 loadUpdateSkipPaths |
+| **S3 Tests** | 3 safe-file-delete integration tests added to update.integration.test.ts |
+| **Spec Update** | Added "String Sanitization Patterns" to quality-guidelines.md |
+| **Release** | Hotfix branch fix/yaml-quote-strip → PR #84 → merged to main → 0.3.8 release |
+| **Merge** | main merged back into feat/v0.4.0-beta, all 459 tests pass |
+
+## Key Files Changed
+- `packages/cli/src/templates/trellis/scripts/common/worktree.py` — `_unquote()` + parser fix
+- `.trellis/scripts/common/worktree.py` — synced dogfooded copy
+- `packages/cli/src/commands/update.ts` — `loadUpdateSkipPaths` quote stripping
+- `packages/cli/test/regression.test.ts` — 9 new regression tests (content + Python execution)
+- `packages/cli/test/commands/update-internals.test.ts` — 4 new loadUpdateSkipPaths tests
+- `packages/cli/test/commands/update.integration.test.ts` — 3 safe-file-delete tests
+- `packages/cli/src/migrations/manifests/0.3.8.json` — release manifest
+- `.trellis/spec/cli/backend/quality-guidelines.md` — string sanitization patterns
+
+## Break-Loop Analysis
+- **Root Cause Category**: E (Implicit Assumption) — Python `.strip()` semantics assumed single-pair removal
+- **Prevention**: Added forbidden pattern to spec, `_unquote()` as canonical safe alternative
+- **Remaining**: `ralph-loop.py:126` minor quote issue (deferred, low risk)
+
+
+### Git Commits
+
+| Hash | Message |
+|------|---------|
+| `c354c66` | (see git log) |
+| `aa739ee` | (see git log) |
+| `74c64b6` | (see git log) |
+| `c032fdd` | (see git log) |
+| `692aac8` | (see git log) |
+
+### Testing
+
+- [OK] (Add test results)
+
+### Status
+
+[OK] **Completed**
+
+### Next Steps
+
+- None - task complete

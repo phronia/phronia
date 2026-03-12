@@ -8,7 +8,7 @@
 
 <!-- @@@auto:current-status -->
 - **Active File**: `journal-3.md`
-- **Total Sessions**: 91
+- **Total Sessions**: 92
 - **Last Active**: 2026-03-12
 <!-- @@@/auto:current-status -->
 
@@ -19,7 +19,7 @@
 <!-- @@@auto:active-documents -->
 | File | Lines | Status |
 |------|-------|--------|
-| `journal-3.md` | ~1330 | Active |
+| `journal-3.md` | ~1398 | Active |
 | `journal-2.md` | ~1963 | Archived |
 | `journal-1.md` | ~1998 | Archived |
 <!-- @@@/auto:active-documents -->
@@ -31,6 +31,7 @@
 <!-- @@@auto:session-history -->
 | # | Date | Title | Commits |
 |---|------|-------|---------|
+| 92 | 2026-03-12 | Hotfix: YAML quote strip bug (0.3.8) | `c354c66`, `aa739ee`, `74c64b6`, `c032fdd`, `692aac8` |
 | 91 | 2026-03-12 | Bug analysis: parse_simple_yaml greedy quote strip | `8bda664` |
 | 90 | 2026-03-11 | S4: Worktree submodule + PR awareness — review & tests | `8bda664` |
 | 89 | 2026-03-11 | S3 Batch 3A+3B: Hooks, Package Support, Safe-File-Delete | `7947de3`, `0b78b86`, `7a44d0f` |
