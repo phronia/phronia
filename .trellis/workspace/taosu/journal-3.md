@@ -1540,3 +1540,86 @@ Released 0.3.9 (iFlow hook matcher fix), added docs-site changelogs for both 0.3
 ### Next Steps
 
 - None - task complete
+
+
+## Session 95: Python Design Skill + Phase 1 Refactor
+
+**Date**: 2026-03-12
+**Task**: Python Design Skill + Phase 1 Refactor
+**Package**: cli
+
+### Summary
+
+(Add summary)
+
+### Main Changes
+
+## Research: Python Design Skills
+
+Searched web for Python design pattern skills for Claude Code. Evaluated 4 candidates:
+
+| Skill | Source | Focus | Relevance |
+|-------|--------|-------|-----------|
+| python-best-practices | 0xbigboss | Type-first, dataclass, Protocol | High |
+| python-design-patterns | wshobson | KISS, SRP, Rule of Three | High |
+| software-design-philosophy | luoling8192 | Ousterhout's design philosophy | High |
+| modern-python | trailofbits | uv/ruff/ty tooling | Low |
+
+## Created: python-design Skill
+
+`.claude/skills/python-design/SKILL.md` — Fused best of 3 skills + tailored to CLI scripting:
+- Deep Modules, Information Hiding, Define Errors Out of Existence (Ousterhout)
+- Type-First Development: frozen dataclass, TypedDict, NewType, Protocol
+- KISS, SRP, Rule of Three
+- 14 Red Flags quick reference table
+- All examples use CLI/scripting domain (not web frameworks)
+
+## Codebase Analysis
+
+Research agent analyzed all 25 Python scripts. Key findings:
+- `_read_json_file` duplicated in **8 files**
+- `Colors` class duplicated in **6 files**
+- Task iteration logic duplicated **9 times**
+- 135 `.get()` calls with zero type safety
+- God modules: `task.py` (1452 lines), `git_context.py` (861 lines)
+
+## Task: 03-12-refactor-python-scripts
+
+Created 4-phase PRD with Codex cross-review (8 findings, 7 incorporated):
+- 2 CRITICAL: sys.path removal strategy, module split backward compat
+- 5 WARNING: golden tests, lossless round-trip, compatibility aliases
+
+## Phase 1 Implementation (P0 — Shared Infrastructure)
+
+**New modules created:**
+- `common/io.py` — `read_json` + `write_json`
+- `common/log.py` — `Colors` + `colored` + `log_*`
+- `common/git.py` — `run_git` (from `_run_git_command`)
+- `multi_agent/_bootstrap.py` — centralized sys.path setup
+
+**10 files migrated** to use shared imports. Net: **-263 lines** of duplicated code.
+
+All golden tests pass (stdout/stderr/exit code identical before/after).
+
+**Remaining**: Phase 2 (types), Phase 3 (module split), Phase 4 (cleanup).
+
+
+### Git Commits
+
+| Hash | Message |
+|------|---------|
+| `7fed74e` | (see git log) |
+| `efaae94` | (see git log) |
+| `c1c5e4a` | (see git log) |
+
+### Testing
+
+- [OK] (Add test results)
+
+### Status
+
+[OK] **Completed**
+
+### Next Steps
+
+- None - task complete
