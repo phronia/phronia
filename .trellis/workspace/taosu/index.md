@@ -8,7 +8,7 @@
 
 <!-- @@@auto:current-status -->
 - **Active File**: `journal-3.md`
-- **Total Sessions**: 93
+- **Total Sessions**: 94
 - **Last Active**: 2026-03-12
 <!-- @@@/auto:current-status -->
 
@@ -19,7 +19,7 @@
 <!-- @@@auto:active-documents -->
 | File | Lines | Status |
 |------|-------|--------|
-| `journal-3.md` | ~1455 | Active |
+| `journal-3.md` | ~1542 | Active |
 | `journal-2.md` | ~1963 | Archived |
 | `journal-1.md` | ~1998 | Archived |
 <!-- @@@/auto:active-documents -->
@@ -31,6 +31,7 @@
 <!-- @@@auto:session-history -->
 | # | Date | Title | Commits |
 |---|------|-------|---------|
+| 94 | 2026-03-12 | Codex Review Fixes (P0-P2) + Break-Loop Analysis | `596b958`, `f8dae62`, `0bb1df8`, `2314968` |
 | 93 | 2026-03-12 | Release 0.3.9 + create-manifest stdin mode + docs changelog | `c5bc9fa`, `d73e945`, `2861b03`, `9b91d30` |
 | 92 | 2026-03-12 | Hotfix: YAML quote strip bug (0.3.8) | `c354c66`, `aa739ee`, `74c64b6`, `c032fdd`, `692aac8` |
 | 91 | 2026-03-12 | Bug analysis: parse_simple_yaml greedy quote strip | `8bda664` |

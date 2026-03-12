@@ -1453,3 +1453,90 @@ Released 0.3.9 (iFlow hook matcher fix), added docs-site changelogs for both 0.3
 ### Next Steps
 
 - None - task complete
+
+
+## Session 94: Codex Review Fixes (P0-P2) + Break-Loop Analysis
+
+**Date**: 2026-03-12
+**Task**: Codex Review Fixes (P0-P2) + Break-Loop Analysis
+**Package**: cli
+
+### Summary
+
+(Add summary)
+
+### Main Changes
+
+## Codex Cross-Review Bug Fixes
+
+对 v0.4.0-beta 全量 diff 的 Codex cross-review 发现的 17 个问题进行人工验证和修复。
+
+### 验证结果
+
+| 判定 | 数量 | 编号 |
+|------|------|------|
+| 真问题已修复 | 5 | CR#2, CR#5, CR#8, CR#11, CR#15 |
+| 真问题延后 | 6 | CR#3, CR#9, CR#10, CR#12, CR#16, CR#17 |
+| 假问题/设计意图 | 6 | CR#1, CR#4, CR#6, CR#7, CR#13, CR#14 |
+
+### 修复内容
+
+| CR# | 优先级 | 修复 |
+|-----|--------|------|
+| CR#5 | P0 | 测试 #20 改用 hash 匹配的原始模板内容，真正测试 update.skip |
+| CR#15 | P0 | 新增测试 #21 验证 happy path（hash 匹配时文件被删除） |
+| CR#11 | P1 | start.py `.strip()` → `.rstrip("\n\r")` 保留 submodule status 前缀 |
+| CR#2 | P2 | rename/rename-dir 允许 target 为 protected path |
+| CR#8 | P2 | config 解析失败时 console.warn 提醒 |
+
+### Break-Loop 分析
+
+- **Tautological Input** 反模式：测试输入使被测代码路径不可达 → 更新 unit-test conventions
+- **Semantic Whitespace** 陷阱：`.strip()` 移除 git 输出的语义前缀 → 更新 script-conventions
+- **AI Review 假阳性模式**：信任边界混淆、设计注释忽略、变量误读 → 更新 guides/index
+
+### Spec 更新
+
+- `.trellis/spec/cli/unit-test/conventions.md` — 新增 Tautological Input 反模式
+- `.trellis/spec/cli/backend/script-conventions.md` — 新增 Parsing Structured Command Output
+- `.trellis/spec/guides/index.md` — 新增 AI cross-review 验证 checklist
+
+### 新建 Task
+
+- `03-12-spec-sync-after-s1s4` — S1-S4 全量 spec 更新
+- `03-12-improve-thinking-workflow` — Brainstorm/Break-Loop 流程改善
+
+### Codex 二次 Review
+
+修复后再次调用 Codex review，仅发现 1 个 WARNING（loadUpdateSkipPaths 手写 parser 对畸形 YAML 不 throw），归入 P3 延后。
+
+**Updated Files**:
+- `packages/cli/test/commands/update.integration.test.ts`
+- `packages/cli/src/commands/update.ts`
+- `.trellis/scripts/multi_agent/start.py`
+- `packages/cli/src/templates/trellis/scripts/multi_agent/start.py`
+- `.trellis/spec/cli/unit-test/conventions.md`
+- `.trellis/spec/cli/backend/script-conventions.md`
+- `.trellis/spec/guides/index.md`
+
+
+### Git Commits
+
+| Hash | Message |
+|------|---------|
+| `596b958` | (see git log) |
+| `f8dae62` | (see git log) |
+| `0bb1df8` | (see git log) |
+| `2314968` | (see git log) |
+
+### Testing
+
+- [OK] (Add test results)
+
+### Status
+
+[OK] **Completed**
+
+### Next Steps
+
+- None - task complete
