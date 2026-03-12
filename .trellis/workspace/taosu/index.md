@@ -8,7 +8,7 @@
 
 <!-- @@@auto:current-status -->
 - **Active File**: `journal-3.md`
-- **Total Sessions**: 95
+- **Total Sessions**: 96
 - **Last Active**: 2026-03-12
 <!-- @@@/auto:current-status -->
 
@@ -19,7 +19,7 @@
 <!-- @@@auto:active-documents -->
 | File | Lines | Status |
 |------|-------|--------|
-| `journal-3.md` | ~1625 | Active |
+| `journal-3.md` | ~1691 | Active |
 | `journal-2.md` | ~1963 | Archived |
 | `journal-1.md` | ~1998 | Archived |
 <!-- @@@/auto:active-documents -->
@@ -31,6 +31,7 @@
 <!-- @@@auto:session-history -->
 | # | Date | Title | Commits |
 |---|------|-------|---------|
+| 96 | 2026-03-12 | Phase 2: TaskInfo dataclass + shared task iteration | `cb948b4`, `f051de4` |
 | 95 | 2026-03-12 | Python Design Skill + Phase 1 Refactor | `7fed74e`, `efaae94`, `c1c5e4a` |
 | 94 | 2026-03-12 | Codex Review Fixes (P0-P2) + Break-Loop Analysis | `596b958`, `f8dae62`, `0bb1df8`, `2314968` |
 | 93 | 2026-03-12 | Release 0.3.9 + create-manifest stdin mode + docs changelog | `c5bc9fa`, `d73e945`, `2861b03`, `9b91d30` |

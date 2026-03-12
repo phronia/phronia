@@ -1623,3 +1623,69 @@ All golden tests pass (stdout/stderr/exit code identical before/after).
 ### Next Steps
 
 - None - task complete
+
+
+## Session 96: Phase 2: TaskInfo dataclass + shared task iteration
+
+**Date**: 2026-03-12
+**Task**: Phase 2: TaskInfo dataclass + shared task iteration
+**Package**: cli
+
+### Summary
+
+(Add summary)
+
+### Main Changes
+
+## Phase 2: Type Safety — TaskInfo & iter_active_tasks
+
+Continuing refactoring task `03-12-refactor-python-scripts` Phase 2 (Type Safety).
+
+### New Modules
+
+| File | Purpose |
+|------|---------|
+| `common/types.py` | `TaskData(TypedDict)` for task.json shape, `TaskInfo(frozen dataclass)` for loaded tasks, `AgentRecord(TypedDict)` for registry entries |
+| `common/tasks.py` | `load_task()`, `iter_active_tasks()`, `get_all_statuses()`, `children_progress()` — single source of truth for task iteration |
+
+### Migrated Files (6 files, -484 lines net)
+
+| File | What Changed |
+|------|-------------|
+| `common/git_context.py` | 8 iteration loops + ~30 `.get()` calls → `iter_active_tasks()` + `load_task()` + `children_progress()` |
+| `common/task_queue.py` | 3 iteration loops → `iter_active_tasks()` + `_task_to_dict()` |
+| `task.py` | `cmd_list` iteration + `_get_children_progress` → `iter_active_tasks()` + `children_progress()` |
+| `multi_agent/status.py` | 1 iteration loop → `iter_active_tasks()` |
+| `add_session.py` | Manual JSON parsing for package → `load_task()` |
+
+### Design Decisions
+- **TaskInfo is frozen dataclass**: immutable, safe to pass around, typed attribute access
+- **`raw` field preserves original dict**: writes go through `raw` to avoid losing unknown fields (lossless round-trip)
+- **`children` is `tuple[str, ...]`**: immutable, consistent with frozen dataclass
+- **Minor behavioral changes accepted**: task_queue sorting (unsorted → sorted), empty assignee default ("" → "-")
+
+### Verification
+- All 4 context modes pass golden test (text, record, json, packages)
+- `task.py list` output consistent
+- 460 unit tests pass
+- Templates synced (verified HEAD consistency before rsync)
+
+
+### Git Commits
+
+| Hash | Message |
+|------|---------|
+| `cb948b4` | (see git log) |
+| `f051de4` | (see git log) |
+
+### Testing
+
+- [OK] (Add test results)
+
+### Status
+
+[OK] **Completed**
+
+### Next Steps
+
+- None - task complete
