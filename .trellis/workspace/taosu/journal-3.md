@@ -1868,3 +1868,59 @@ Fixed two community-reported issues, released v0.3.10, and merged fixes into bet
 ### Next Steps
 
 - None - task complete
+
+
+## Session 100: fix: trellis update skips unregistered Python scripts
+
+**Date**: 2026-03-13
+**Task**: fix: trellis update skips unregistered Python scripts
+**Package**: cli
+
+### Summary
+
+(Add summary)
+
+### Main Changes
+
+## Bug Fix: `trellis update` 漏同步 11 个 Python 脚本
+
+用户报告 `trellis update` 跳过了新增的 Python 模块文件（common/ 下 9 个 + multi_agent/ 下 2 个）。
+
+### Root Cause
+`commands/update.ts` 的 `collectTemplateFiles()` 手动维护了一份脚本文件列表，与 `templates/trellis/index.ts` 的 `getAllScripts()` 不同步。init 用整目录拷贝没问题，但 update 依赖这份手动列表。
+
+### Fix (Architecture-level)
+| Change | Description |
+|--------|-------------|
+| **重构 update.ts** | 移除 30+ 行手动 import + files.set()，替换为 `for..of getAllScripts()` 单行循环 |
+| **回归测试** | 遍历 filesystem .py 文件，验证每个都在 `getAllScripts()` 中注册 |
+| **Spec 更新** | code-reuse-thinking-guide 更新为反映单一注册点架构 |
+
+### Break-Loop Analysis
+- **Category**: C — Change Propagation Failure（同一数据两个不同步的注册点）
+- **Prevention**: 消除重复列表（架构层面），+ 回归测试（安全网）
+
+**Updated Files**:
+- `packages/cli/src/commands/update.ts`
+- `packages/cli/test/regression.test.ts`
+- `.trellis/spec/guides/code-reuse-thinking-guide.md`
+
+
+### Git Commits
+
+| Hash | Message |
+|------|---------|
+| `8e3e465` | (see git log) |
+| `ca06ab5` | (see git log) |
+
+### Testing
+
+- [OK] (Add test results)
+
+### Status
+
+[OK] **Completed**
+
+### Next Steps
+
+- None - task complete
