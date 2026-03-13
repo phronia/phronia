@@ -7,8 +7,8 @@
 ## Current Status
 
 <!-- @@@auto:current-status -->
-- **Active File**: `journal-3.md`
-- **Total Sessions**: 101
+- **Active File**: `journal-4.md`
+- **Total Sessions**: 102
 - **Last Active**: 2026-03-13
 <!-- @@@/auto:current-status -->
 
@@ -19,7 +19,8 @@
 <!-- @@@auto:active-documents -->
 | File | Lines | Status |
 |------|-------|--------|
-| `journal-3.md` | ~1988 | Active |
+| `journal-4.md` | ~54 | Active |
+| `journal-3.md` | ~1988 | Archived |
 | `journal-2.md` | ~1963 | Archived |
 | `journal-1.md` | ~1998 | Archived |
 <!-- @@@/auto:active-documents -->
@@ -31,6 +32,7 @@
 <!-- @@@auto:session-history -->
 | # | Date | Title | Commits |
 |---|------|-------|---------|
+| 102 | 2026-03-13 | Publish-Skill Command & Docs-Site Sync | `d8d7dfb`, `b93ef30` |
 | 101 | 2026-03-13 | fix update script sync + release beta.3 + marketplace skill | `8e3e465`, `ca06ab5`, `8670adb`, `618176d` |
 | 100 | 2026-03-13 | fix: trellis update skips unregistered Python scripts | `8e3e465`, `ca06ab5` |
 | 99 | 2026-03-12 | Fix #87 #88 + release v0.3.10 + merge to beta | `73d7feb`, `c515ced`, `4800e14`, `a8d7e37`, `12dc664` |
