@@ -52,3 +52,36 @@
 ### Next Steps
 
 - None - task complete
+
+
+## Session 103: Rename empty templates to from scratch
+
+**Date**: 2026-03-16
+**Task**: Rename empty templates to from scratch
+**Package**: cli
+
+### Summary
+
+Renamed 'empty templates' label to 'from scratch' in trellis init template picker (3 files: init.ts, create_bootstrap.py, create-bootstrap.sh). Internal value 'blank' unchanged. Onboard templates not affected (different concept).
+
+### Main Changes
+
+(Add details)
+
+### Git Commits
+
+| Hash | Message |
+|------|---------|
+| `57a243d` | (see git log) |
+
+### Testing
+
+- [OK] (Add test results)
+
+### Status
+
+[OK] **Completed**
+
+### Next Steps
+
+- None - task complete
