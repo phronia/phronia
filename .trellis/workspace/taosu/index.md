@@ -7,9 +7,9 @@
 ## Current Status
 
 <!-- @@@auto:current-status -->
-- **Active File**: `journal-3.md`
-- **Total Sessions**: 84
-- **Last Active**: 2026-03-10
+- **Active File**: `journal-4.md`
+- **Total Sessions**: 103
+- **Last Active**: 2026-03-16
 <!-- @@@/auto:current-status -->
 
 ---
@@ -19,7 +19,8 @@
 <!-- @@@auto:active-documents -->
 | File | Lines | Status |
 |------|-------|--------|
-| `journal-3.md` | ~941 | Active |
+| `journal-4.md` | ~87 | Active |
+| `journal-3.md` | ~1988 | Archived |
 | `journal-2.md` | ~1963 | Archived |
 | `journal-1.md` | ~1998 | Archived |
 <!-- @@@/auto:active-documents -->
@@ -31,6 +32,25 @@
 <!-- @@@auto:session-history -->
 | # | Date | Title | Commits |
 |---|------|-------|---------|
+| 103 | 2026-03-16 | Rename empty templates to from scratch | `57a243d` |
+| 102 | 2026-03-13 | Publish-Skill Command & Docs-Site Sync | `d8d7dfb`, `b93ef30` |
+| 101 | 2026-03-13 | fix update script sync + release beta.3 + marketplace skill | `8e3e465`, `ca06ab5`, `8670adb`, `618176d` |
+| 100 | 2026-03-13 | fix: trellis update skips unregistered Python scripts | `8e3e465`, `ca06ab5` |
+| 99 | 2026-03-12 | Fix #87 #88 + release v0.3.10 + merge to beta | `73d7feb`, `c515ced`, `4800e14`, `a8d7e37`, `12dc664` |
+| 98 | 2026-03-12 | v0.4.0-beta.2: Fix scoped package names + release | `747a95e`, `40c3845`, `e6a72db` |
+| 97 | 2026-03-12 | Refactor Python Scripts: Phase 3-4 + Spec Update | `5649093`, `6fc2fcb`, `78449bc` |
+| 96 | 2026-03-12 | Phase 2: TaskInfo dataclass + shared task iteration | `cb948b4`, `f051de4` |
+| 95 | 2026-03-12 | Python Design Skill + Phase 1 Refactor | `7fed74e`, `efaae94`, `c1c5e4a` |
+| 94 | 2026-03-12 | Codex Review Fixes (P0-P2) + Break-Loop Analysis | `596b958`, `f8dae62`, `0bb1df8`, `2314968` |
+| 93 | 2026-03-12 | Release 0.3.9 + create-manifest stdin mode + docs changelog | `c5bc9fa`, `d73e945`, `2861b03`, `9b91d30` |
+| 92 | 2026-03-12 | Hotfix: YAML quote strip bug (0.3.8) | `c354c66`, `aa739ee`, `74c64b6`, `c032fdd`, `692aac8` |
+| 91 | 2026-03-12 | Bug analysis: parse_simple_yaml greedy quote strip | `8bda664` |
+| 90 | 2026-03-11 | S4: Worktree submodule + PR awareness — review & tests | `8bda664` |
+| 89 | 2026-03-11 | S3 Batch 3A+3B: Hooks, Package Support, Safe-File-Delete | `7947de3`, `0b78b86`, `7a44d0f` |
+| 88 | 2026-03-11 | S3 PRD: 6 rounds Codex review + cross-layer check | `aff6b29`, `eeea19f` |
+| 87 | 2026-03-10 | S2: 命令合并 + Hook/Start 动态化 | `9aa3aa5`, `c0c9c4d`, `151d6e1`, `ac311f3` |
+| 86 | 2026-03-10 | S1 Monorepo Infrastructure + Python Sync + stdin Fix | `f36d220`, `7ee15a7`, `ba633be`, `346c12c` |
+| 85 | 2026-03-10 | fix: add_session.py stdin 阻塞修复 | - |
 | 84 | 2026-03-10 | Implement update.skip + user-deletion detection | `3ed892c`, `7f1769e` |
 | 83 | 2026-03-10 | Start Flow: Brainstorm Enforcement + Index Navigation + Guidelines Note | `0d29b70`, `7de2916`, `7c42d80` |
 | 82 | 2026-03-10 | Hook Start Equiv: ready tag fix + path resolution + dogfood sync | `be06afd`, `700f4b7`, `5a925e6` |
