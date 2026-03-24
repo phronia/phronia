@@ -4,7 +4,7 @@
   "title": "brainstorm: .agents 共享目录归属与多 Agent CLI 适配",
   "description": "",
   "status": "planning",
-  "dev_type": null,
+  "dev_type": "backend",
   "scope": null,
   "package": "cli",
   "priority": "P2",
@@ -15,7 +15,7 @@
   "branch": null,
   "base_branch": "feat/v0.4.0-beta",
   "worktree_path": null,
-  "current_phase": 0,
+  "current_phase": 1,
   "next_action": [
     {
       "phase": 1,

@@ -77,11 +77,13 @@ Per research on `npx skills` (vercel-labs/skills, 11K+ stars) and official docs:
 - Update `index.test.ts`: isManagedPath for both directories
 - Add test: `.agents/skills/` alone does NOT detect as codex
 
-### R6: PR #112 Integration
-- Preserve from PR #112: `.codex/` support, agent TOML templates, new skills (improve-ut, parallel), test additions
-- Revert from PR #112: iFlow CLI adapter change (unrelated, possible regression)
-- Remove from PR #112: workspace files, task files
-- Replace from PR #112: `extraManagedPaths` → `supportsAgentSkills`
+### R6: PR #112 Post-Merge Cleanup
+PR #112 was squash-merged, losing our fix commit. These items must be fixed:
+- Revert iFlow CLI adapter in **template copy** (`packages/cli/src/templates/.../cli_adapter.py`) — live script is correct but template still has `--agent`
+- Revert iFlow regression test (`regression.test.ts:1010-1014`)
+- Remove workspace artifacts: `.trellis/workspace/codex-agent/`, `.trellis/tasks/03-23-add-latest-codex-support/`
+- Ensure both Python copies are identical after all changes
+- Replace `extraManagedPaths` → `supportsAgentSkills`
 
 ## Acceptance Criteria
 
