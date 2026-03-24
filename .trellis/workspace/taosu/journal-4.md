@@ -85,3 +85,69 @@ Renamed 'empty templates' label to 'from scratch' in trellis init template picke
 ### Next Steps
 
 - None - task complete
+
+
+## Session 104: Decouple .agents/skills as shared layer + Codex .codex support
+
+**Date**: 2026-03-24
+**Task**: Decouple .agents/skills as shared layer + Codex .codex support
+**Package**: cli
+**Branch**: `feat/v0.4.0-beta`
+
+### Summary
+
+Major architecture change: decoupled .agents/skills/ from Codex platform into shared Agent Skills layer, added full .codex/ directory support with hooks, skills, and agents
+
+### Main Changes
+
+## Changes
+
+| Area | Details |
+|------|---------|
+| Architecture | `.agents/skills/` decoupled from Codex, now shared (agentskills.io standard) |
+| Type System | `extraManagedPaths` → `supportsAgentSkills` flag, codex `configDir` → `.codex` |
+| Detection | Platform detection uses `.codex/` only, `.agents/skills/` alone ≠ codex |
+| `.codex/` | New: config.toml, agents/*.toml, skills/parallel/, hooks/session-start.py, hooks.json |
+| Python CLIAdapter | `config_dir_name` → `.codex`, `requires_agent_definition_file`, `supports_cli_agents` |
+| Migration | Legacy Codex auto-upgrade via template-hashes, safe-file-delete for old files |
+| Hooks | Codex SessionStart hook injecting full Trellis context (verified working) |
+| Agent TOML | Fixed format to `name` + `description` + `developer_instructions`, renamed to convention |
+| PR #112 | iFlow --agent regression fixed, workspace artifacts cleaned |
+| Cleanup | Removed unused test/scripts/ Python tests |
+
+## Key Decisions
+- `.agents/skills/` = shared layer (8+ CLIs use it)
+- `.codex/skills/` = Codex-specific skills (e.g. parallel with --platform codex)
+- SessionStart hook requires `codex_hooks = true` feature flag
+- `suppressOutput` not implemented in Codex TUI (experimental limitation)
+- Migration: detect legacy by template-hashes, not directory existence (avoids false positives)
+
+## Tests
+- 516 tests pass (26 files)
+- 3 rounds of Codex cross-review, all findings addressed
+- lint + typecheck clean
+- Python copies verified identical
+
+## Next
+- Create migration manifest for release
+- Update docs-site changelog
+- Release 0.4.0-beta.8
+
+
+### Git Commits
+
+| Hash | Message |
+|------|---------|
+| `ba75c30` | (see git log) |
+
+### Testing
+
+- [OK] (Add test results)
+
+### Status
+
+[OK] **Completed**
+
+### Next Steps
+
+- None - task complete

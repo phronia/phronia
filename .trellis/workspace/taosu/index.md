@@ -8,8 +8,8 @@
 
 <!-- @@@auto:current-status -->
 - **Active File**: `journal-4.md`
-- **Total Sessions**: 103
-- **Last Active**: 2026-03-16
+- **Total Sessions**: 104
+- **Last Active**: 2026-03-24
 <!-- @@@/auto:current-status -->
 
 ---
@@ -19,7 +19,7 @@
 <!-- @@@auto:active-documents -->
 | File | Lines | Status |
 |------|-------|--------|
-| `journal-4.md` | ~87 | Active |
+| `journal-4.md` | ~153 | Active |
 | `journal-3.md` | ~1988 | Archived |
 | `journal-2.md` | ~1963 | Archived |
 | `journal-1.md` | ~1998 | Archived |
@@ -30,8 +30,9 @@
 ## Session History
 
 <!-- @@@auto:session-history -->
-| # | Date | Title | Commits |
-|---|------|-------|---------|
+| # | Date | Title | Commits | Branch |
+|---|------|-------|---------|--------|
+| 104 | 2026-03-24 | Decouple .agents/skills as shared layer + Codex .codex support | `ba75c30` | `feat/v0.4.0-beta` |
 | 103 | 2026-03-16 | Rename empty templates to from scratch | `57a243d` |
 | 102 | 2026-03-13 | Publish-Skill Command & Docs-Site Sync | `d8d7dfb`, `b93ef30` |
 | 101 | 2026-03-13 | fix update script sync + release beta.3 + marketplace skill | `8e3e465`, `ca06ab5`, `8670adb`, `618176d` |
