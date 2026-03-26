@@ -8,8 +8,8 @@
 
 <!-- @@@auto:current-status -->
 - **Active File**: `journal-4.md`
-- **Total Sessions**: 104
-- **Last Active**: 2026-03-24
+- **Total Sessions**: 105
+- **Last Active**: 2026-03-26
 <!-- @@@/auto:current-status -->
 
 ---
@@ -19,7 +19,7 @@
 <!-- @@@auto:active-documents -->
 | File | Lines | Status |
 |------|-------|--------|
-| `journal-4.md` | ~153 | Active |
+| `journal-4.md` | ~187 | Active |
 | `journal-3.md` | ~1988 | Archived |
 | `journal-2.md` | ~1963 | Archived |
 | `journal-1.md` | ~1998 | Archived |
@@ -32,6 +32,7 @@
 <!-- @@@auto:session-history -->
 | # | Date | Title | Commits | Branch |
 |---|------|-------|---------|--------|
+| 105 | 2026-03-26 | StatusLine: 集成 Trellis 任务状态到 CC 状态栏 | `9e4411c` | `feat/v0.4.0-beta` |
 | 104 | 2026-03-24 | Decouple .agents/skills as shared layer + Codex .codex support | `ba75c30` | `feat/v0.4.0-beta` |
 | 103 | 2026-03-16 | Rename empty templates to from scratch | `57a243d` |
 | 102 | 2026-03-13 | Publish-Skill Command & Docs-Site Sync | `d8d7dfb`, `b93ef30` |

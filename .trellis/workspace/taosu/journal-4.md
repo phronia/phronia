@@ -151,3 +151,37 @@ Major architecture change: decoupled .agents/skills/ from Codex platform into sh
 ### Next Steps
 
 - None - task complete
+
+
+## Session 105: StatusLine: 集成 Trellis 任务状态到 CC 状态栏
+
+**Date**: 2026-03-26
+**Task**: StatusLine: 集成 Trellis 任务状态到 CC 状态栏
+**Package**: cli
+**Branch**: `feat/v0.4.0-beta`
+
+### Summary
+
+基于推文灵感，为 Trellis 添加项目级 statusLine。读取 CC stdin JSON + Trellis 任务数据，在状态栏显示当前任务、model/ctx/branch/duration、开发者和活跃任务数。无任务时 1 行，有任务时 2 行。
+
+### Main Changes
+
+(Add details)
+
+### Git Commits
+
+| Hash | Message |
+|------|---------|
+| `9e4411c` | (see git log) |
+
+### Testing
+
+- [OK] (Add test results)
+
+### Status
+
+[OK] **Completed**
+
+### Next Steps
+
+- None - task complete
