@@ -185,3 +185,55 @@ Major architecture change: decoupled .agents/skills/ from Codex platform into sh
 ### Next Steps
 
 - None - task complete
+
+
+## Session 106: fix: self-hosted GitLab + docs ABCoder link
+
+**Date**: 2026-03-27
+**Task**: fix: self-hosted GitLab + docs ABCoder link
+**Package**: cli
+**Branch**: `feat/v0.4.0-beta`
+
+### Summary
+
+(Add summary)
+
+### Main Changes
+
+## What was done
+
+1. **ABCoder link fix** — docs-site 中英文两个 mdx 文件的 ABCoder GitHub 链接从 `nicepkg/abcoder` 改为 `cloudwego/abcoder`；marketplace SKILL.md 中安装命令从 `npm install -g` 改为 `go install`
+2. **Self-hosted GitLab support** — `parseRegistrySource()` 现在支持自建 GitLab 的 HTTPS/SSH URL：
+   - SSH URL (`git@host:org/repo`) 自动检测公共 vs 自建
+   - `ssh://` 协议（带/不带端口）
+   - 未知 HTTPS 域名默认映射为 GitLab 格式
+   - 公共 SSH URL（`git@github.com`）正确映射到原生 provider
+   - `RegistrySource` 新增 `host` 字段，`rawBaseUrl` 和 giget 下载都指向正确 host
+3. **FP Review 发现并修复 3 个边界问题** — 公共 SSH 误判为自建、`ssh://` 协议不支持
+4. **Spec 更新** — `quality-guidelines.md` 新增 "User Input Parsing: Exhaustive Format Enumeration" 规则
+
+## Key files
+- `packages/cli/src/utils/template-fetcher.ts` — 核心解析逻辑
+- `packages/cli/test/utils/template-fetcher.test.ts` — 22 个新测试 (534 total)
+- `.trellis/spec/cli/backend/quality-guidelines.md` — 新增 spec 规则
+
+
+### Git Commits
+
+| Hash | Message |
+|------|---------|
+| `5e2eb10` | (see git log) |
+| `ce52f48` | (see git log) |
+| `137b8af` | (see git log) |
+
+### Testing
+
+- [OK] (Add test results)
+
+### Status
+
+[OK] **Completed**
+
+### Next Steps
+
+- None - task complete
