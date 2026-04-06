@@ -237,3 +237,70 @@ Major architecture change: decoupled .agents/skills/ from Codex platform into sh
 ### Next Steps
 
 - None - task complete
+
+
+## Session 107: PR triage, issue fixes, marketplace submodule migration
+
+**Date**: 2026-04-06
+**Task**: PR triage, issue fixes, marketplace submodule migration
+**Package**: cli
+**Branch**: `feat/v0.4.0-beta`
+
+### Summary
+
+(Add summary)
+
+### Main Changes
+
+## Summary
+
+Triaged open PRs and issues, reviewed and merged PRs, fixed bugs, and migrated marketplace to standalone repo.
+
+## PR Reviews
+
+| PR | Title | Action |
+|----|-------|--------|
+| #137 | feat(windsurf): add workflow support for Windsurf | Reviewed ✅, merged, pulled into branch |
+| #143 | feat: add GitHub Copilot platform support | Reviewed, request-changes → author fixed → ready to merge |
+
+## Issue Triage
+
+| Issue | Title | Result |
+|-------|-------|--------|
+| #141 | git worktree 不支持 | Not a bug — tested worktree, hooks work fine with tracked files |
+| #140 | slash commands 失效 | Noted, not investigated this session |
+| #139 | memory shared across platforms? | Noted |
+| #133 | record-session 不自动提交 | Root cause: Codex sandbox blocks git write. Fixed silent git-add failure |
+| #113 | Python 3.9 报错 | Decision: declare min Python 3.10, added version check in init |
+| #117 | marketplace 拆仓 | Done — migrated to mindfold-ai/marketplace submodule |
+
+## Code Changes
+
+| File | Change |
+|------|--------|
+| `packages/cli/src/utils/template-fetcher.ts` | Point TEMPLATE_INDEX_URL and TEMPLATE_REPO to mindfold-ai/marketplace |
+| `packages/cli/src/templates/trellis/scripts/add_session.py` | Check git-add return code, show error instead of false "no changes" |
+| `.trellis/scripts/add_session.py` | Same fix (dogfooded copy) |
+| `packages/cli/src/commands/init.ts` | getPythonCommand() now verifies Python >= 3.10 |
+| `README.md` / `README_CN.md` | Added Prerequisites section (Node.js >= 18, Python >= 3.10) |
+| `.gitmodules` + `marketplace` | Converted from tracked directory to git submodule |
+
+
+### Git Commits
+
+| Hash | Message |
+|------|---------|
+| `4a54d8c` | (see git log) |
+| `786cbdf` | (see git log) |
+
+### Testing
+
+- [OK] (Add test results)
+
+### Status
+
+[OK] **Completed**
+
+### Next Steps
+
+- None - task complete
