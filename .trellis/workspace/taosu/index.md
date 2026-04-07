@@ -8,8 +8,8 @@
 
 <!-- @@@auto:current-status -->
 - **Active File**: `journal-4.md`
-- **Total Sessions**: 107
-- **Last Active**: 2026-04-06
+- **Total Sessions**: 108
+- **Last Active**: 2026-04-07
 <!-- @@@/auto:current-status -->
 
 ---
@@ -19,7 +19,7 @@
 <!-- @@@auto:active-documents -->
 | File | Lines | Status |
 |------|-------|--------|
-| `journal-4.md` | ~306 | Active |
+| `journal-4.md` | ~340 | Active |
 | `journal-3.md` | ~1988 | Archived |
 | `journal-2.md` | ~1963 | Archived |
 | `journal-1.md` | ~1998 | Archived |
@@ -32,6 +32,7 @@
 <!-- @@@auto:session-history -->
 | # | Date | Title | Commits | Branch |
 |---|------|-------|---------|--------|
+| 108 | 2026-04-07 | Update task next_action template to 6-phase lifecycle | `b930880` | `feat/v0.4.0-beta` |
 | 107 | 2026-04-06 | PR triage, issue fixes, marketplace submodule migration | `4a54d8c`, `786cbdf` | `feat/v0.4.0-beta` |
 | 106 | 2026-03-27 | fix: self-hosted GitLab + docs ABCoder link | `5e2eb10`, `ce52f48`, `137b8af` | `feat/v0.4.0-beta` |
 | 105 | 2026-03-26 | StatusLine: 集成 Trellis 任务状态到 CC 状态栏 | `9e4411c` | `feat/v0.4.0-beta` |

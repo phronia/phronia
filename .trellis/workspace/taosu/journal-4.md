@@ -304,3 +304,37 @@ Triaged open PRs and issues, reviewed and merged PRs, fixed bugs, and migrated m
 ### Next Steps
 
 - None - task complete
+
+
+## Session 108: Update task next_action template to 6-phase lifecycle
+
+**Date**: 2026-04-07
+**Task**: Update task next_action template to 6-phase lifecycle
+**Package**: cli
+**Branch**: `feat/v0.4.0-beta`
+
+### Summary
+
+Updated task creation template: 4-phase pipeline (implement→check→finish→create-pr) replaced with 6-phase full lifecycle (brainstorm→research→implement→check→update-spec→record-session). Changed both local scripts and npm package templates.
+
+### Main Changes
+
+(Add details)
+
+### Git Commits
+
+| Hash | Message |
+|------|---------|
+| `b930880` | (see git log) |
+
+### Testing
+
+- [OK] (Add test results)
+
+### Status
+
+[OK] **Completed**
+
+### Next Steps
+
+- None - task complete
