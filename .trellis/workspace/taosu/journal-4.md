@@ -338,3 +338,99 @@ Updated task creation template: 4-phase pipeline (implement→check→finish→c
 ### Next Steps
 
 - None - task complete
+
+
+## Session 109: Reply to #154, merge fix PRs, document task start/finish lifecycle
+
+**Date**: 2026-04-09
+**Task**: Reply to #154, merge fix PRs, document task start/finish lifecycle
+**Package**: cli
+**Branch**: `feat/v0.4.0-beta`
+
+### Summary
+
+(Add summary)
+
+### Main Changes
+
+## Context
+
+External contributor @suyuan2022 filed issue #154 about SessionStart hook output (~30KB) exceeding Claude Code's additionalContext limit (~20KB), silently truncating task state. Plus two unrelated bug PRs (#152 ralph-loop field names, #153 .developer parsing) opened the same day.
+
+## What Was Done
+
+### 1. Answered prior question about copilot + .claude co-existence
+Researched whether VSCode Copilot auto-loads `.claude/` when both platforms are installed. **Answer: no.** Copilot's auto-discovered instruction sources are a closed list (`.github/copilot-instructions.md`, `.github/instructions/*`, `AGENTS.md`, `.vscode/settings.json` copilot keys, `.github/skills/`, `.github/chatmodes/`). No documentation or behavior treats `.claude/` as a recognized source. Only impact is `@workspace` indexing can surface `.claude/*.md` as ordinary file content — not as instructions. No Trellis-side mitigation needed.
+
+### 2. Local reproduction of issue #154
+Fresh `npx @mindfoldhq/trellis@beta init --claude` in `/tmp`, ran `session-start.py`:
+
+| Section | Bytes | KB | % |
+|---|---:|---:|---:|
+| `<workflow>` | 11,908 | 11.6 | 39.9% |
+| `<instructions>` (start.md) | 11,071 | 10.8 | 37.1% |
+| `<guidelines>` | 5,186 | 5.1 | 17.4% |
+| `<current-state>` | 1,018 | 1.0 | 3.4% |
+| **Total** | **29,847** | **29.1** | 100% |
+
+Matched contributor's numbers within 2KB. **This very session was also truncated** — system reminder showed "Output too large (34.4KB)" with fallback path. Confirmed the two big blocks (workflow + instructions) = 77% of payload.
+
+Simulated Approach B (drop start.md injection) on both projects: vanilla drops to 18.6KB (✓ under 20KB), but Trellis repo drops only to 24.7KB (✗ still truncates). Approach B alone is insufficient — `<guidelines>` keeps growing with spec count. A+B combined: 13.5KB on Trellis repo, ~6.5KB safety margin.
+
+### 3. Merged main into feat/v0.4.0-beta
+PRs #152 and #153 landed on main. `git merge origin/main --no-edit` merged cleanly (ort strategy, no conflicts). Touched files: `ralph-loop.py` (both mirrors), `update.ts`. Merge commit: `e0acefb`.
+
+### 4. Replied to issue #154
+Posted comprehensive comment at #154 confirming repro, answering contributor's three open questions, and endorsing A+B as the fix direction:
+- B first (zero risk, pure cleanup, symmetry with other slash commands)
+- A follow-up (addresses workflow.md growth)
+- Flagged `<guidelines>` as the third time bomb to watch
+- Suggested touching all 4 platform mirrors (claude/codex/iflow/copilot) for PR 1
+- Asked for size regression test in PR 2
+
+### 5. Found and fixed orthogonal workflow.md documentation gap
+While reviewing `task.py` for the issue, discovered `cmd_start` and `cmd_finish` exist and are wired into argparse, but **workflow.md never mentions them anywhere**. Task Development Flow was 5 steps with no mention of `.current-task` mechanism. This is why `## CURRENT TASK` is perpetually `(none)` — AI agents were never told to call `task.py start`.
+
+Fixed in commit `5139ae6`:
+- Commands list (Tasks section): added `task.py start <name>` and `task.py finish` with behavior notes
+- Task Development Flow: expanded from 5 → 7 steps, inserted Start as step 2 and Finish as step 7
+- Added "Current task mechanism" explanation paragraph tying `.current-task` to SessionStart hook injection
+- Mirrored across template (`packages/cli/src/templates/trellis/workflow.md`) and dogfood copy (`.trellis/workflow.md`)
+
+Tradeoff: `<workflow>` block grows by ~0.9KB, which runs counter to #154's direction. Justification: fixes a real bug (transparent mechanism bypass), +0.9KB is trivial vs the -10.8KB Approach B will save, and Approach A (workflow TOC) will fold this into section pointers anyway.
+
+## Updated Files
+
+- `packages/cli/src/templates/trellis/workflow.md` (+17 / -4)
+- `.trellis/workflow.md` (+17 / -4)
+
+## Commits
+
+- `e0acefb` — Merge main (brings in #152 ralph-loop field fix, #153 .developer parsing fix)
+- `5139ae6` — docs(workflow): document task start/finish lifecycle and .current-task
+
+## Open Items
+
+- Issue #154 is in contributor's court: waiting for him to turn Approach B into a PR
+- Two untracked workspace files (eng.md, reddit-harness-engineering-post.md, ai_smell_scan.py) from prior work — left untouched
+- Pre-existing `.trellis/.version` and marketplace submodule modifications not committed (not session scope)
+
+
+### Git Commits
+
+| Hash | Message |
+|------|---------|
+| `e0acefb` | (see git log) |
+| `5139ae6` | (see git log) |
+
+### Testing
+
+- [OK] (Add test results)
+
+### Status
+
+[OK] **Completed**
+
+### Next Steps
+
+- None - task complete
