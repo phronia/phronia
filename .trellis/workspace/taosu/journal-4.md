@@ -488,3 +488,87 @@ Fix bootstrap task re-creation bug and add re-init fast path for trellis init
 ### Next Steps
 
 - None - task complete
+
+
+## Session 111: Fix #154: lazy-load workflow.md in session-start, update spec
+
+**Date**: 2026-04-10
+**Task**: Fix #154: lazy-load workflow.md in session-start, update spec
+**Package**: cli
+**Branch**: `feat/v0.4.0-beta`
+
+### Summary
+
+(Add summary)
+
+### Main Changes
+
+## Context
+
+Continuation of issue #154 work. User community feedback (2 additional users on social media) confirmed the SessionStart hook size problem is widespread — not just the original reporter. Decided to implement the fix ourselves since the external contributor hadn't submitted a PR after 2 days.
+
+## What Was Done
+
+### 1. Implemented workflow.md lazy-load (commit e7b304b)
+
+Replaced `<workflow>` full content injection (11.6 KB) with a 2-line pointer in session-start.py. start.md Step 1 already tells the AI to `cat .trellis/workflow.md`, so the content is still accessed — just on-demand instead of pre-loaded.
+
+Added annotation in `<instructions>` block noting Steps 2-3 (context + guidelines) are already injected by the hook, directing AI to skip to Step 4.
+
+Updated `<ready>` block to match the new flow: "Start from Step 1, skip Steps 2-3, proceed to Step 4."
+
+**Changed files** (4 session-start.py mirrors):
+- `packages/cli/src/templates/claude/hooks/session-start.py`
+- `packages/cli/src/templates/codex/hooks/session-start.py`
+- `packages/cli/src/templates/iflow/hooks/session-start.py`
+- `.claude/hooks/session-start.py` (dogfood)
+
+**Copilot excluded** — has no start.md to replace workflow.md with.
+
+**Result**: vanilla 29.1 KB → 17.9 KB (under 20 KB threshold).
+
+### 2. Fixed `__pycache__` test crash (not committed separately)
+
+Running Python hooks locally left `__pycache__/` inside `src/templates/claude/hooks/`, causing `getAllHooks()` to crash with EISDIR (trying to readFileSync a directory). Cleaned up; documented in spec.
+
+### 3. Updated spec (commit 94c5af5)
+
+Added to `platform-integration.md`:
+- **SessionStart Hook: additionalContext Size Constraint** section — 20 KB limit, size budget table, "inject instructions not reference" design decision, guidelines growth risk warning
+- **`__pycache__` EISDIR crash** — new Common Mistakes entry
+
+### 4. Design decision rationale
+
+User rejected the "dynamic TOC" approach (Approach A from issue #154) because AI won't proactively read a TOC. Instead adopted "inject start.md, let it tell AI to read workflow.md" — the AI follows an explicit instruction rather than deciding on its own to read a reference.
+
+## Commits
+
+- `e7b304b` — fix(hooks): replace workflow.md full injection with lazy-load via start.md (#154)
+- `94c5af5` — docs(spec): add SessionStart size constraint and __pycache__ gotcha
+
+## Open Items
+
+- Issue #154 still open — contributor may submit additional PRs for further optimizations
+- `<guidelines>` block (5-11 KB) is the next growth risk — may need similar lazy-load treatment
+- Copilot session-start.py not touched (no start.md equivalent)
+- Release script `git diff-index --quiet HEAD` without `--cached` is fragile with dirty submodules — noted but not fixed
+
+
+### Git Commits
+
+| Hash | Message |
+|------|---------|
+| `e7b304b` | (see git log) |
+| `94c5af5` | (see git log) |
+
+### Testing
+
+- [OK] (Add test results)
+
+### Status
+
+[OK] **Completed**
+
+### Next Steps
+
+- None - task complete
