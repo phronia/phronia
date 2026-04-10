@@ -434,3 +434,57 @@ Tradeoff: `<workflow>` block grows by ~0.9KB, which runs counter to #154's direc
 ### Next Steps
 
 - None - task complete
+
+
+## Session 110: fix #157: init re-init fast path
+
+**Date**: 2026-04-10
+**Task**: fix #157: init re-init fast path
+**Package**: cli
+**Branch**: `feat/v0.4.0-beta`
+
+### Summary
+
+Fix bootstrap task re-creation bug and add re-init fast path for trellis init
+
+### Main Changes
+
+**Issue**: [#157](https://github.com/mindfold-ai/Trellis/issues/157) — `trellis init` 重复生成 bootstrap task + 多设备/加平台体验差
+
+**Changes**:
+
+| Commit | Type | Description |
+|--------|------|-------------|
+| `1b767f2` | fix | 用 `isFirstInit` 标记区分首次/重复 init，只在首次创建 bootstrap task |
+| `e988c79` | feat | 新增 `handleReinit()` 快速路径，re-init 时跳过完整交互流程 |
+
+**Re-init fast path behavior**:
+- `trellis init --codex` → 只配置 Codex
+- `trellis init -u name` → 只初始化 developer identity（新设备场景）
+- `trellis init`（裸调用）→ 三选一菜单：加平台 / 加开发者 / 完整重初始化
+- `--force` / `--skip-existing` → 跳过快速路径，走完整流程（向后兼容）
+
+**Updated Files**:
+- `packages/cli/src/commands/init.ts`
+
+**Quality**: lint ✓ typecheck ✓ 582 tests ✓
+
+
+### Git Commits
+
+| Hash | Message |
+|------|---------|
+| `1b767f2` | (see git log) |
+| `e988c79` | (see git log) |
+
+### Testing
+
+- [OK] (Add test results)
+
+### Status
+
+[OK] **Completed**
+
+### Next Steps
+
+- None - task complete
