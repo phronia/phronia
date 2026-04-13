@@ -8,8 +8,8 @@
 
 <!-- @@@auto:current-status -->
 - **Active File**: `journal-4.md`
-- **Total Sessions**: 106
-- **Last Active**: 2026-03-27
+- **Total Sessions**: 111
+- **Last Active**: 2026-04-10
 <!-- @@@/auto:current-status -->
 
 ---
@@ -19,7 +19,7 @@
 <!-- @@@auto:active-documents -->
 | File | Lines | Status |
 |------|-------|--------|
-| `journal-4.md` | ~239 | Active |
+| `journal-4.md` | ~574 | Active |
 | `journal-3.md` | ~1988 | Archived |
 | `journal-2.md` | ~1963 | Archived |
 | `journal-1.md` | ~1998 | Archived |
@@ -32,6 +32,11 @@
 <!-- @@@auto:session-history -->
 | # | Date | Title | Commits | Branch |
 |---|------|-------|---------|--------|
+| 111 | 2026-04-10 | Fix #154: lazy-load workflow.md in session-start, update spec | `e7b304b`, `94c5af5` | `feat/v0.4.0-beta` |
+| 110 | 2026-04-10 | fix #157: init re-init fast path | `1b767f2`, `e988c79` | `feat/v0.4.0-beta` |
+| 109 | 2026-04-09 | Reply to #154, merge fix PRs, document task start/finish lifecycle | `e0acefb`, `5139ae6` | `feat/v0.4.0-beta` |
+| 108 | 2026-04-07 | Update task next_action template to 6-phase lifecycle | `b930880` | `feat/v0.4.0-beta` |
+| 107 | 2026-04-06 | PR triage, issue fixes, marketplace submodule migration | `4a54d8c`, `786cbdf` | `feat/v0.4.0-beta` |
 | 106 | 2026-03-27 | fix: self-hosted GitLab + docs ABCoder link | `5e2eb10`, `ce52f48`, `137b8af` | `feat/v0.4.0-beta` |
 | 105 | 2026-03-26 | StatusLine: 集成 Trellis 任务状态到 CC 状态栏 | `9e4411c` | `feat/v0.4.0-beta` |
 | 104 | 2026-03-24 | Decouple .agents/skills as shared layer + Codex .codex support | `ba75c30` | `feat/v0.4.0-beta` |

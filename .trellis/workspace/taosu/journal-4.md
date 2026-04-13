@@ -237,3 +237,338 @@ Major architecture change: decoupled .agents/skills/ from Codex platform into sh
 ### Next Steps
 
 - None - task complete
+
+
+## Session 107: PR triage, issue fixes, marketplace submodule migration
+
+**Date**: 2026-04-06
+**Task**: PR triage, issue fixes, marketplace submodule migration
+**Package**: cli
+**Branch**: `feat/v0.4.0-beta`
+
+### Summary
+
+(Add summary)
+
+### Main Changes
+
+## Summary
+
+Triaged open PRs and issues, reviewed and merged PRs, fixed bugs, and migrated marketplace to standalone repo.
+
+## PR Reviews
+
+| PR | Title | Action |
+|----|-------|--------|
+| #137 | feat(windsurf): add workflow support for Windsurf | Reviewed ✅, merged, pulled into branch |
+| #143 | feat: add GitHub Copilot platform support | Reviewed, request-changes → author fixed → ready to merge |
+
+## Issue Triage
+
+| Issue | Title | Result |
+|-------|-------|--------|
+| #141 | git worktree 不支持 | Not a bug — tested worktree, hooks work fine with tracked files |
+| #140 | slash commands 失效 | Noted, not investigated this session |
+| #139 | memory shared across platforms? | Noted |
+| #133 | record-session 不自动提交 | Root cause: Codex sandbox blocks git write. Fixed silent git-add failure |
+| #113 | Python 3.9 报错 | Decision: declare min Python 3.10, added version check in init |
+| #117 | marketplace 拆仓 | Done — migrated to mindfold-ai/marketplace submodule |
+
+## Code Changes
+
+| File | Change |
+|------|--------|
+| `packages/cli/src/utils/template-fetcher.ts` | Point TEMPLATE_INDEX_URL and TEMPLATE_REPO to mindfold-ai/marketplace |
+| `packages/cli/src/templates/trellis/scripts/add_session.py` | Check git-add return code, show error instead of false "no changes" |
+| `.trellis/scripts/add_session.py` | Same fix (dogfooded copy) |
+| `packages/cli/src/commands/init.ts` | getPythonCommand() now verifies Python >= 3.10 |
+| `README.md` / `README_CN.md` | Added Prerequisites section (Node.js >= 18, Python >= 3.10) |
+| `.gitmodules` + `marketplace` | Converted from tracked directory to git submodule |
+
+
+### Git Commits
+
+| Hash | Message |
+|------|---------|
+| `4a54d8c` | (see git log) |
+| `786cbdf` | (see git log) |
+
+### Testing
+
+- [OK] (Add test results)
+
+### Status
+
+[OK] **Completed**
+
+### Next Steps
+
+- None - task complete
+
+
+## Session 108: Update task next_action template to 6-phase lifecycle
+
+**Date**: 2026-04-07
+**Task**: Update task next_action template to 6-phase lifecycle
+**Package**: cli
+**Branch**: `feat/v0.4.0-beta`
+
+### Summary
+
+Updated task creation template: 4-phase pipeline (implement→check→finish→create-pr) replaced with 6-phase full lifecycle (brainstorm→research→implement→check→update-spec→record-session). Changed both local scripts and npm package templates.
+
+### Main Changes
+
+(Add details)
+
+### Git Commits
+
+| Hash | Message |
+|------|---------|
+| `b930880` | (see git log) |
+
+### Testing
+
+- [OK] (Add test results)
+
+### Status
+
+[OK] **Completed**
+
+### Next Steps
+
+- None - task complete
+
+
+## Session 109: Reply to #154, merge fix PRs, document task start/finish lifecycle
+
+**Date**: 2026-04-09
+**Task**: Reply to #154, merge fix PRs, document task start/finish lifecycle
+**Package**: cli
+**Branch**: `feat/v0.4.0-beta`
+
+### Summary
+
+(Add summary)
+
+### Main Changes
+
+## Context
+
+External contributor @suyuan2022 filed issue #154 about SessionStart hook output (~30KB) exceeding Claude Code's additionalContext limit (~20KB), silently truncating task state. Plus two unrelated bug PRs (#152 ralph-loop field names, #153 .developer parsing) opened the same day.
+
+## What Was Done
+
+### 1. Answered prior question about copilot + .claude co-existence
+Researched whether VSCode Copilot auto-loads `.claude/` when both platforms are installed. **Answer: no.** Copilot's auto-discovered instruction sources are a closed list (`.github/copilot-instructions.md`, `.github/instructions/*`, `AGENTS.md`, `.vscode/settings.json` copilot keys, `.github/skills/`, `.github/chatmodes/`). No documentation or behavior treats `.claude/` as a recognized source. Only impact is `@workspace` indexing can surface `.claude/*.md` as ordinary file content — not as instructions. No Trellis-side mitigation needed.
+
+### 2. Local reproduction of issue #154
+Fresh `npx @mindfoldhq/trellis@beta init --claude` in `/tmp`, ran `session-start.py`:
+
+| Section | Bytes | KB | % |
+|---|---:|---:|---:|
+| `<workflow>` | 11,908 | 11.6 | 39.9% |
+| `<instructions>` (start.md) | 11,071 | 10.8 | 37.1% |
+| `<guidelines>` | 5,186 | 5.1 | 17.4% |
+| `<current-state>` | 1,018 | 1.0 | 3.4% |
+| **Total** | **29,847** | **29.1** | 100% |
+
+Matched contributor's numbers within 2KB. **This very session was also truncated** — system reminder showed "Output too large (34.4KB)" with fallback path. Confirmed the two big blocks (workflow + instructions) = 77% of payload.
+
+Simulated Approach B (drop start.md injection) on both projects: vanilla drops to 18.6KB (✓ under 20KB), but Trellis repo drops only to 24.7KB (✗ still truncates). Approach B alone is insufficient — `<guidelines>` keeps growing with spec count. A+B combined: 13.5KB on Trellis repo, ~6.5KB safety margin.
+
+### 3. Merged main into feat/v0.4.0-beta
+PRs #152 and #153 landed on main. `git merge origin/main --no-edit` merged cleanly (ort strategy, no conflicts). Touched files: `ralph-loop.py` (both mirrors), `update.ts`. Merge commit: `e0acefb`.
+
+### 4. Replied to issue #154
+Posted comprehensive comment at #154 confirming repro, answering contributor's three open questions, and endorsing A+B as the fix direction:
+- B first (zero risk, pure cleanup, symmetry with other slash commands)
+- A follow-up (addresses workflow.md growth)
+- Flagged `<guidelines>` as the third time bomb to watch
+- Suggested touching all 4 platform mirrors (claude/codex/iflow/copilot) for PR 1
+- Asked for size regression test in PR 2
+
+### 5. Found and fixed orthogonal workflow.md documentation gap
+While reviewing `task.py` for the issue, discovered `cmd_start` and `cmd_finish` exist and are wired into argparse, but **workflow.md never mentions them anywhere**. Task Development Flow was 5 steps with no mention of `.current-task` mechanism. This is why `## CURRENT TASK` is perpetually `(none)` — AI agents were never told to call `task.py start`.
+
+Fixed in commit `5139ae6`:
+- Commands list (Tasks section): added `task.py start <name>` and `task.py finish` with behavior notes
+- Task Development Flow: expanded from 5 → 7 steps, inserted Start as step 2 and Finish as step 7
+- Added "Current task mechanism" explanation paragraph tying `.current-task` to SessionStart hook injection
+- Mirrored across template (`packages/cli/src/templates/trellis/workflow.md`) and dogfood copy (`.trellis/workflow.md`)
+
+Tradeoff: `<workflow>` block grows by ~0.9KB, which runs counter to #154's direction. Justification: fixes a real bug (transparent mechanism bypass), +0.9KB is trivial vs the -10.8KB Approach B will save, and Approach A (workflow TOC) will fold this into section pointers anyway.
+
+## Updated Files
+
+- `packages/cli/src/templates/trellis/workflow.md` (+17 / -4)
+- `.trellis/workflow.md` (+17 / -4)
+
+## Commits
+
+- `e0acefb` — Merge main (brings in #152 ralph-loop field fix, #153 .developer parsing fix)
+- `5139ae6` — docs(workflow): document task start/finish lifecycle and .current-task
+
+## Open Items
+
+- Issue #154 is in contributor's court: waiting for him to turn Approach B into a PR
+- Two untracked workspace files (eng.md, reddit-harness-engineering-post.md, ai_smell_scan.py) from prior work — left untouched
+- Pre-existing `.trellis/.version` and marketplace submodule modifications not committed (not session scope)
+
+
+### Git Commits
+
+| Hash | Message |
+|------|---------|
+| `e0acefb` | (see git log) |
+| `5139ae6` | (see git log) |
+
+### Testing
+
+- [OK] (Add test results)
+
+### Status
+
+[OK] **Completed**
+
+### Next Steps
+
+- None - task complete
+
+
+## Session 110: fix #157: init re-init fast path
+
+**Date**: 2026-04-10
+**Task**: fix #157: init re-init fast path
+**Package**: cli
+**Branch**: `feat/v0.4.0-beta`
+
+### Summary
+
+Fix bootstrap task re-creation bug and add re-init fast path for trellis init
+
+### Main Changes
+
+**Issue**: [#157](https://github.com/mindfold-ai/Trellis/issues/157) — `trellis init` 重复生成 bootstrap task + 多设备/加平台体验差
+
+**Changes**:
+
+| Commit | Type | Description |
+|--------|------|-------------|
+| `1b767f2` | fix | 用 `isFirstInit` 标记区分首次/重复 init，只在首次创建 bootstrap task |
+| `e988c79` | feat | 新增 `handleReinit()` 快速路径，re-init 时跳过完整交互流程 |
+
+**Re-init fast path behavior**:
+- `trellis init --codex` → 只配置 Codex
+- `trellis init -u name` → 只初始化 developer identity（新设备场景）
+- `trellis init`（裸调用）→ 三选一菜单：加平台 / 加开发者 / 完整重初始化
+- `--force` / `--skip-existing` → 跳过快速路径，走完整流程（向后兼容）
+
+**Updated Files**:
+- `packages/cli/src/commands/init.ts`
+
+**Quality**: lint ✓ typecheck ✓ 582 tests ✓
+
+
+### Git Commits
+
+| Hash | Message |
+|------|---------|
+| `1b767f2` | (see git log) |
+| `e988c79` | (see git log) |
+
+### Testing
+
+- [OK] (Add test results)
+
+### Status
+
+[OK] **Completed**
+
+### Next Steps
+
+- None - task complete
+
+
+## Session 111: Fix #154: lazy-load workflow.md in session-start, update spec
+
+**Date**: 2026-04-10
+**Task**: Fix #154: lazy-load workflow.md in session-start, update spec
+**Package**: cli
+**Branch**: `feat/v0.4.0-beta`
+
+### Summary
+
+(Add summary)
+
+### Main Changes
+
+## Context
+
+Continuation of issue #154 work. User community feedback (2 additional users on social media) confirmed the SessionStart hook size problem is widespread — not just the original reporter. Decided to implement the fix ourselves since the external contributor hadn't submitted a PR after 2 days.
+
+## What Was Done
+
+### 1. Implemented workflow.md lazy-load (commit e7b304b)
+
+Replaced `<workflow>` full content injection (11.6 KB) with a 2-line pointer in session-start.py. start.md Step 1 already tells the AI to `cat .trellis/workflow.md`, so the content is still accessed — just on-demand instead of pre-loaded.
+
+Added annotation in `<instructions>` block noting Steps 2-3 (context + guidelines) are already injected by the hook, directing AI to skip to Step 4.
+
+Updated `<ready>` block to match the new flow: "Start from Step 1, skip Steps 2-3, proceed to Step 4."
+
+**Changed files** (4 session-start.py mirrors):
+- `packages/cli/src/templates/claude/hooks/session-start.py`
+- `packages/cli/src/templates/codex/hooks/session-start.py`
+- `packages/cli/src/templates/iflow/hooks/session-start.py`
+- `.claude/hooks/session-start.py` (dogfood)
+
+**Copilot excluded** — has no start.md to replace workflow.md with.
+
+**Result**: vanilla 29.1 KB → 17.9 KB (under 20 KB threshold).
+
+### 2. Fixed `__pycache__` test crash (not committed separately)
+
+Running Python hooks locally left `__pycache__/` inside `src/templates/claude/hooks/`, causing `getAllHooks()` to crash with EISDIR (trying to readFileSync a directory). Cleaned up; documented in spec.
+
+### 3. Updated spec (commit 94c5af5)
+
+Added to `platform-integration.md`:
+- **SessionStart Hook: additionalContext Size Constraint** section — 20 KB limit, size budget table, "inject instructions not reference" design decision, guidelines growth risk warning
+- **`__pycache__` EISDIR crash** — new Common Mistakes entry
+
+### 4. Design decision rationale
+
+User rejected the "dynamic TOC" approach (Approach A from issue #154) because AI won't proactively read a TOC. Instead adopted "inject start.md, let it tell AI to read workflow.md" — the AI follows an explicit instruction rather than deciding on its own to read a reference.
+
+## Commits
+
+- `e7b304b` — fix(hooks): replace workflow.md full injection with lazy-load via start.md (#154)
+- `94c5af5` — docs(spec): add SessionStart size constraint and __pycache__ gotcha
+
+## Open Items
+
+- Issue #154 still open — contributor may submit additional PRs for further optimizations
+- `<guidelines>` block (5-11 KB) is the next growth risk — may need similar lazy-load treatment
+- Copilot session-start.py not touched (no start.md equivalent)
+- Release script `git diff-index --quiet HEAD` without `--cached` is fragile with dirty submodules — noted but not fixed
+
+
+### Git Commits
+
+| Hash | Message |
+|------|---------|
+| `e7b304b` | (see git log) |
+| `94c5af5` | (see git log) |
+
+### Testing
+
+- [OK] (Add test results)
+
+### Status
+
+[OK] **Completed**
+
+### Next Steps
+
+- None - task complete
