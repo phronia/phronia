@@ -675,3 +675,37 @@ Complete skill-first refactor: placeholder engine, common template source, 14 pl
 ### Next Steps
 
 - None - task complete
+
+
+## Session 114: Platform upgrade + hooks/agent research
+
+**Date**: 2026-04-16
+**Task**: Platform upgrade + hooks/agent research
+**Package**: cli
+**Branch**: `feat/v0.5.0-beta`
+
+### Summary
+
+Upgraded 7 platforms to agent-capable (11/14 total). Researched hook+agent formats for all 7: Cursor/Kiro/Gemini use different event names/config files, Qoder/CodeBuddy/Droid near-identical to Claude Code, Kiro uses pure JSON agents. Created Qoder template draft. Written detailed handoff PRDs for both sub tasks.
+
+### Main Changes
+
+(Add details)
+
+### Git Commits
+
+| Hash | Message |
+|------|---------|
+| `2910c09` | (see git log) |
+
+### Testing
+
+- [OK] (Add test results)
+
+### Status
+
+[OK] **Completed**
+
+### Next Steps
+
+- None - task complete
