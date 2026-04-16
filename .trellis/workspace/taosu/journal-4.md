@@ -641,3 +641,37 @@ User rejected the "dynamic TOC" approach (Approach A from issue #154) because AI
 ### Next Steps
 
 - None - task complete
+
+
+## Session 113: Skill-First Template Refactor (v0.5.0-beta)
+
+**Date**: 2026-04-16
+**Task**: Skill-First Template Refactor (v0.5.0-beta)
+**Package**: cli
+**Branch**: `feat/v0.5.0-beta`
+
+### Summary
+
+Complete skill-first refactor: placeholder engine, common template source, 14 platform configurators unified, command pruning (13→8), skill output with trellis- prefix, dead code cleanup. Research: GSD/Superpowers/gstack/OpenSpec workflow enforcement patterns, 14 platform hook+agent capability audit. Draft: new workflow.md with Phase structure + continue mechanism + platform tags.
+
+### Main Changes
+
+(Add details)
+
+### Git Commits
+
+| Hash | Message |
+|------|---------|
+| `700e7d3` | (see git log) |
+
+### Testing
+
+- [OK] (Add test results)
+
+### Status
+
+[OK] **Completed**
+
+### Next Steps
+
+- None - task complete
