@@ -8,8 +8,8 @@
 
 <!-- @@@auto:current-status -->
 - **Active File**: `journal-4.md`
-- **Total Sessions**: 115
-- **Last Active**: 2026-04-16
+- **Total Sessions**: 116
+- **Last Active**: 2026-04-17
 <!-- @@@/auto:current-status -->
 
 ---
@@ -19,7 +19,7 @@
 <!-- @@@auto:active-documents -->
 | File | Lines | Status |
 |------|-------|--------|
-| `journal-4.md` | ~784 | Active |
+| `journal-4.md` | ~927 | Active |
 | `journal-3.md` | ~1988 | Archived |
 | `journal-2.md` | ~1963 | Archived |
 | `journal-1.md` | ~1998 | Archived |
@@ -32,6 +32,7 @@
 <!-- @@@auto:session-history -->
 | # | Date | Title | Commits | Branch |
 |---|------|-------|---------|--------|
+| 116 | 2026-04-17 | v0.5.0: hooks + agents for 7 platforms, major cleanup (detailed) | `efccf6f` | `feat/v0.5.0-beta` |
 | 115 | 2026-04-16 | v0.5.0: hooks + agents for 7 platforms, major cleanup | `efccf6f` | `feat/v0.5.0-beta` |
 | 114 | 2026-04-16 | Platform upgrade + hooks/agent research | `2910c09` | `feat/v0.5.0-beta` |
 | 113 | 2026-04-16 | Skill-First Template Refactor (v0.5.0-beta) | `700e7d3` | `feat/v0.5.0-beta` |

@@ -782,3 +782,146 @@ Major architecture changes for v0.5.0-beta: added hooks + agents support for 7 n
 ### Next Steps
 
 - None - task complete
+
+
+## Session 116: v0.5.0: hooks + agents for 7 platforms, major cleanup (detailed)
+
+**Date**: 2026-04-17
+**Task**: v0.5.0: hooks + agents for 7 platforms, major cleanup (detailed)
+**Package**: cli
+**Branch**: `feat/v0.5.0-beta`
+
+### Summary
+
+(Add summary)
+
+### Main Changes
+
+## Session Summary
+
+v0.5.0-beta 的核心 session：为 7 个新平台添加 hooks + agents 支持，同时大规模清理死代码和过时架构。
+
+---
+
+### 一、完成的工作
+
+#### 1. 全平台 Sub Agent 调研（已完成）
+
+通过 WebSearch + Exa 调研了所有 7 个新平台的 sub-agent hook 机制：
+
+| 平台 | Sub Agent 工具名 | PreToolUse 事件名 | Matcher 类型 |
+|------|-----------------|-------------------|-------------|
+| Cursor | `Task` | `preToolUse` (camelCase) | 精确匹配 |
+| Qoder | `Task` | `PreToolUse` (PascalCase) | 精确匹配 |
+| CodeBuddy | `Task` | `PreToolUse` | 精确匹配 |
+| Droid | `Task` | `PreToolUse` | 精确匹配（已知 block bug） |
+| Copilot CLI | `task` (小写) | `preToolUse` | 无 matcher |
+| Gemini CLI | 每个 agent 独立工具 | `BeforeTool` | 正则匹配 |
+| Kiro | `subagent` | 嵌入 agent JSON | 精确匹配 |
+
+Hook 语言限制调研：所有平台都支持 Python hooks（shell 子进程），唯一例外是 OpenCode（必须 TypeScript/Bun 插件）。
+
+#### 2. 共享 Hook 脚本（`shared-hooks/`）
+
+创建平台无关的 Python hook 脚本：
+- `inject-subagent-context.py` — 多平台 input 解析（`_parse_hook_input`）+ 多格式 output（Claude/Cursor/Gemini 格式合一）
+- `session-start.py` — 多平台 env var 检测（`should_skip_injection` + `project_dir` 查找）
+- `statusline.py` — 直接共享，无平台相关代码
+- `index.ts` — `getSharedHookScripts()` 导出
+
+关键设计：hook 脚本只读 `.trellis/` 路径下的 JSONL 文件（implement.jsonl、check.jsonl），不再有 hardcoded 的 command/skill 路径 fallback。
+
+#### 3. 7 个平台模板创建
+
+每个平台创建了：settings.json/hooks.json（平台特定格式）+ agents/*.md（或 Kiro JSON）+ index.ts
+
+- **Group A**（Qoder/CodeBuddy/Droid）：Claude-like format，`Task` matcher
+- **Group B**（Cursor/Gemini）：不同事件名和 matcher 格式
+- **Group C**（Kiro）：纯 JSON agent 定义，hooks 嵌入 agent 内
+
+#### 4. 共享模板基础设施
+
+- `template-utils.ts` — `createTemplateReader(import.meta.url)` 工厂函数，消除 6 个模板 index.ts 的重复样板
+- `shared.ts` — `writeSkills()`、`writeAgents()`、`writeSharedHooks()` 辅助函数，简化 configurator
+- 所有 configurator 重写，从 50-65 行缩减到 15-30 行
+
+#### 5. 大规模移除
+
+| 移除项 | 原因 |
+|--------|------|
+| iFlow 平台 | CLI 已死，不被官方维护 |
+| debug/plan/dispatch agents | 实际无人使用 |
+| Ralph Loop（SubagentStop hook） | 跨平台不可移植，实际用不上 |
+| parallel skill | 各 CLI/IDE 内置 worktree 支持 |
+| multi_agent pipeline（start.py/plan.py/status.py 等） | 同上 |
+| worktree.yaml + phase.py + registry.py + worktree.py | multi_agent 依赖，一并删除 |
+| scripts-shell-archive/ | 已废弃的 shell 脚本旧版 |
+| spec/tasks/ 误放目录 | 清理项目结构 |
+
+#### 6. Stale 引用清理
+
+通过 Simplify review + Codex review + 手动检查，清理了 40+ 处 stale 引用：
+- iFlow env vars / docstring / 平台列表
+- debug/dispatch agent 的注释、表格行、phase mapping
+- spec.jsonl/research.jsonl/finish.jsonl/cr.jsonl 引用
+- check-cross-layer 引用
+- SubagentStop/Ralph Loop 注释
+- skill 数量 7→5 跨 13 个 configurator
+
+#### 7. Spec 更新
+
+- `platform-integration.md` — 全面重写：13 平台架构、共享 hooks 模式、新模板模式、5 skills + 2 commands
+- `directory-structure.md` — 目录树更新
+- `script-conventions.md` — 移除 multi_agent 相关
+
+#### 8. Bug 修复
+
+- `template-utils.ts` 用 `fileURLToPath` 而非 `new URL().pathname`（Windows + 空格路径 bug，Codex review 发现）
+- Gemini settings.json 的 `dispatch` 残留 matcher
+- OpenCode 的 `inject-subagent-context.js` 去掉 debug agent 和 hardcoded 路径
+
+---
+
+### 二、未完成 / 后续 Task
+
+#### Task: `04-16-rewrite-workflow-full`（仍 active）
+- workflow.md 重写（Phase 1/2/3 + 平台标记）
+- /continue 命令 + get_context.py --mode phase
+- start/finish-work 调整（有 hook 平台去 start command）
+- session-start hook 更新（注入 workflow 概要）
+
+#### 已知技术债（待开 task）
+1. **Claude 旧 hooks 迁移** — claude/hooks/ 的 inject-subagent-context.py 和 session-start.py 仍是旧版，未用共享版。包含 debug agent 代码、spec.jsonl/finish.jsonl fallback、check-cross-layer 引用
+2. **Copilot/Codex 旧 hooks 迁移** — 同上
+3. **Copilot hooks.json 缺 preToolUse**（Codex review P1）— 当前只有 SessionStart，sub-agent 注入不生效
+4. **Kiro agentSpawn 输出协议**（Codex review P1）— stdout JSON 可能不被正确解析
+5. **OpenCode TS 插件更新** — JS 版仍有 hardcoded 路径和 debug 引用（部分已清理）
+6. **Hook 路径解析** — settings.json 用相对路径，CWD 不在项目根时 hook 找不到 .py 文件。`${CLAUDE_PROJECT_DIR:-.}` 方案有 Windows 兼容问题，`git rev-parse` 有 submodule 问题，暂未解决
+7. **`trellis update` 不清理已删除模板** — 升级的项目会保留旧文件（如 dispatch.md、parallel skill）
+
+---
+
+### 三、测试状态
+
+- 527 tests passed（21 test files）
+- TypeCheck: clean
+- Lint: clean（1 个 pre-existing OpenCode JS 警告）
+
+
+### Git Commits
+
+| Hash | Message |
+|------|---------|
+| `efccf6f` | (see git log) |
+
+### Testing
+
+- [OK] (Add test results)
+
+### Status
+
+[OK] **Completed**
+
+### Next Steps
+
+- None - task complete
