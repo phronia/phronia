@@ -709,3 +709,76 @@ Upgraded 7 platforms to agent-capable (11/14 total). Researched hook+agent forma
 ### Next Steps
 
 - None - task complete
+
+
+## Session 115: v0.5.0: hooks + agents for 7 platforms, major cleanup
+
+**Date**: 2026-04-16
+**Task**: v0.5.0: hooks + agents for 7 platforms, major cleanup
+**Package**: cli
+**Branch**: `feat/v0.5.0-beta`
+
+### Summary
+
+(Add summary)
+
+### Main Changes
+
+## Session Summary
+
+Major architecture changes for v0.5.0-beta: added hooks + agents support for 7 new platforms, removed dead features, and cleaned up stale references.
+
+### Platform Hooks + Agents (7 new platforms)
+| Platform | Hook Config | Agent Format | Sub-agent Tool |
+|----------|------------|--------------|----------------|
+| Qoder | settings.json (PascalCase) | .md | `Task` |
+| CodeBuddy | settings.json (PascalCase) | .md | `Task` |
+| Droid | settings.json (PascalCase) | droids/*.md | `Task` |
+| Cursor | hooks.json (camelCase) | .md | `Task` |
+| Gemini CLI | settings.json (BeforeTool regex) | .md | agent name |
+| Kiro | embedded in agent JSON | .json | `subagent` |
+| Copilot | hooks.json (no matcher) | .agent.md | `task` |
+
+### Shared Infrastructure
+- `shared-hooks/` — platform-independent Python hook scripts (inject-subagent-context, session-start, statusline)
+- `template-utils.ts` — `createTemplateReader()` factory eliminating boilerplate across 6 template modules
+- `shared.ts` — `writeSkills()`, `writeAgents()`, `writeSharedHooks()` helpers
+
+### Removed (dead features)
+- **iFlow** platform (CLI dead, not maintained)
+- **debug/plan/dispatch** agents (unused)
+- **Ralph Loop** (SubagentStop enforcement — not portable)
+- **parallel** skill + multi_agent pipeline + worktree.yaml + phase.py + registry.py
+- **shell-archive** directory
+- Hardcoded JSONL fallbacks (spec.jsonl, research.jsonl, finish.jsonl, cr.jsonl)
+
+### Spec Updates
+- `platform-integration.md` — 13-platform architecture, shared hooks pattern, new template patterns
+- `directory-structure.md` — updated trees, removed iflow/multi_agent/worktree
+- `script-conventions.md` — removed multi_agent bootstrap/phase/registry
+
+### Key Decisions
+- Hook scripts read ONLY from task JSONL files (implement.jsonl, check.jsonl) — no hardcoded command/skill path fallbacks
+- Multi-format hook output (Claude + Cursor + Gemini formats in one JSON) for cross-platform compatibility
+- `_parse_hook_input()` handles different platform stdin formats (Task/Agent, subagent, agent name, toolName)
+
+**Tests**: 527 passed (21 files). TypeCheck + Lint clean.
+
+
+### Git Commits
+
+| Hash | Message |
+|------|---------|
+| `efccf6f` | (see git log) |
+
+### Testing
+
+- [OK] (Add test results)
+
+### Status
+
+[OK] **Completed**
+
+### Next Steps
+
+- None - task complete
