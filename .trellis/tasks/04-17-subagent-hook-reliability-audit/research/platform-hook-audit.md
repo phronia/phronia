@@ -11,9 +11,9 @@
 | Platform | Trellis 现有配置 | 官方 subagent hook | 能改 sub-agent prompt? | 判定 |
 |---|---|---|---|---|
 | **Cursor** | `preToolUse` + matcher `Task` | `subagentStart`（只能 allow/deny） | ✅（2026-04-07 staff 确认修复） | **保持现状** |
-| **Gemini CLI** | `BeforeTool` + matcher `^(check\|implement\|research)$` | 无（sub-agent = tool，走 `BeforeTool`） | ⚠️（机制可行；上下文可见性 bug #18128 未修） | **保持现状**，接受限制 |
+| **Gemini CLI** | `BeforeTool` + matcher `^(check\|implement\|research)$` | 无（sub-agent = tool，走 `BeforeTool`） | ⚠️ 机制可行但 #18128 限 context 可见性 | **降级为 Pull-based**（稳定性优先） |
 | **Qoder** | `PreToolUse` + matcher `Task` | `SubagentStart/Stop`（无 prompt 字段） | ❌（文档上任何 hook 都不行） | **改为静态注入 / UserPromptSubmit** |
-| **CodeBuddy** | `PreToolUse` + matcher `Task` | `SubagentStop` only | ❌（继承 Claude Code #15897/#40580 bug） | **标为"不可靠"，需实测** |
+| **CodeBuddy** | `PreToolUse` + matcher `Task` | `SubagentStop` only | ✅（假定可用，基于 Claude Code 实测推断） | **保持现状** |
 | **Factory Droid** | `PreToolUse` + matcher `Task` | `SubagentStop` only | ✅（文档明确支持 `updatedInput.prompt`） | **保持现状** |
 
 ### 意外发现 + 实测验证：Claude Code hook 注入仍然工作
@@ -72,7 +72,7 @@
 - **Bug / 限制**：
   - #18128 未修：BeforeTool hook 在 sub-agent 场景下收不到主 agent 的 chain-of-thought/content（可以改 input，但判断依据受限）
   - `BeforeAgent` 不为 sub-agent fire
-- **建议**：**保持现状**（`BeforeTool` + `^(check|implement|research)$`），通过 `hookSpecificOutput.tool_input` 注入 prompt。注入逻辑只依赖 `tool_input` 和文件系统状态，不依赖主 agent 的 thought
+- **建议**：**降级为 Pull-based**（2026-04-17 决定）。理由：#18128 的 context 可见性限制让 hook 难以稳定推断要注入什么；改用 sub-agent definition 里的 system prompt 指示启动时 Read `.trellis/.current-task` + `prd.md` + jsonl 引用的 spec，跟 Qoder/Codex/Copilot 统一，实现更简单，可靠性更高
 - **版本**：main 分支 (2026-04-17)，关键 PR: #17996 merged, #21146 merged 2026-03-21, #19749 closed unmerged
 
 ---
@@ -117,7 +117,7 @@
   - PreToolUse output 支持 `hookSpecificOutput.permissionDecision` (allow/deny/ask) 和 `modifiedInput: { field: "new value" }`（partial field override）
   - Matcher 列表含 *"Task – Sub-agent tasks"*
 - **Trellis 现有配置**：`PreToolUse` + matcher `Task` → `inject-subagent-context.py`
-- **实际能改 sub-agent prompt 吗**：❌ **几乎可以肯定不行**。Hook 会 fire，但 `modifiedInput.prompt` 对 Task tool **被静默丢弃**——这是 CodeBuddy 继承自 Claude Code 的平台级 bug，未见修复记录
+- **实际能改 sub-agent prompt 吗**：✅ **假定可用**。CodeBuddy 是 Claude Code 协议深度派生，Claude Code 自己实测注入工作（2026-04-17，见顶部 Summary），CodeBuddy 大概率同机制同行为
 - **关键证据**：
   - [CodeBuddy Hooks](https://www.codebuddy.ai/docs/cli/hooks) — *"modifiedInput – Mutate tool arguments before execution (partial field override)"*；matcher 含 *"Task – Sub-agent tasks"*
   - [CodeBuddy Sub-Agents](https://www.codebuddy.ai/docs/cli/sub-agents) — Task tool input: `{ description, prompt, subagent_type, resume, run_in_background }`
@@ -165,20 +165,16 @@
 |---|---|---|
 | **Qoder** | `PreToolUse + Task` 在 Qoder 上无文档依据，很可能 hook 根本不 fire；UserPromptSubmit 因 Context Isolation 也到不了 sub-agent | 改 configurator：Qoder 上不再安装 `inject-subagent-context.py` hook。改为 **Pull-based**：在 `.qoder/agents/<name>.md` 的 system prompt 里指示 sub-agent 启动时 Read `.trellis/.current-task` → `prd.md` + `implement.jsonl` 引用的 spec。CodeBuddy 若实测失效可套用同方案 |
 
-### 优先级 P1（可靠性存疑，需实测）
-
-| 平台 | 问题 | 动作 |
-|---|---|---|
-| **CodeBuddy** | 继承 Claude Code Task tool bug (#15897/#40580)，`modifiedInput.prompt` 可能被静默丢弃 | 实测哨兵字符串。若失效：改为 `SessionStart` 写公共 context 文件 + sub-agent 定义文件读取 |
-| **Claude Code** | 官方 issue #15897/#40580 开放，Trellis 用的正是 `updatedInput.prompt` | ✅ **已实测（2026-04-17）** — 实际注入工作正常，3 canary + 4 frame 全部正确；issue 可能静默修复或场景不重叠 |
-
-### 优先级 P2（已知限制，接受即可）
+### 优先级 P1（已验证/假定可用，保持现状）
 
 | 平台 | 状态 | 动作 |
 |---|---|---|
-| **Cursor** | ✅ 2026-04-07 staff 确认修复 | 无动作。README 标注"需要 Cursor 2026-04-07 之后的版本" |
-| **Gemini CLI** | ⚠️ 能注入 prompt，但 #18128 限制 hook 看不到主 agent 上下文 | 无动作。注入逻辑不依赖 chain-of-thought |
+| **Claude Code** | ✅ 实测通过（2026-04-17，3 canary + 4 frame 全部正确） | 无动作 |
+| **CodeBuddy** | ✅ 假定可用（同源 Claude Code，推断工作） | 无动作；用户反馈失效再实测 |
+| **Cursor** | ✅ 2026-04-07 staff 确认修复 | 无动作；README 标注最低版本（2026-04-07 之后） |
 | **Factory Droid** | ✅ 文档明确支持 | 无动作 |
+| **Kiro** | ✅ per-agent `agentSpawn` hook | 无动作 |
+| **OpenCode** | ✅ JS plugin `tool.execute.before` | 无动作 |
 
 ### Registry 字段修正建议
 
@@ -186,10 +182,9 @@
 
 1. **拆分字段语义**：区分 `hasSessionStart`（是否有 session 启动注入机制）和 `subagentInjection`（sub-agent prompt 注入是否可靠）
 2. **`subagentInjection` 的枚举值**：
-   - `"reliable"` — claude-code (待实测验证), droid, cursor
-   - `"limited"` — gemini-cli (#18128 已知限制)
-   - `"unreliable"` — codebuddy (Claude Code bug 继承)
-   - `"none"` — qoder (hook 机制不支持), codex, copilot, kilo, antigravity, windsurf, opencode（需重新审视）
+   - `"hook-inject"` — claude-code (✅ 实测), codebuddy (同源推断), cursor (2026-04-07 修复), droid, kiro (agentSpawn), opencode (plugin 同效)
+   - `"pull-based"` — gemini-cli (#18128 降级), qoder, codex, copilot (hook 机制不支持/失效)
+   - `"none"` — kilo, antigravity, windsurf (没有 sub-agent 概念)
 
 ### 后续独立任务
 

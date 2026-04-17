@@ -10,6 +10,8 @@
     ".trellis/tasks/04-16-rewrite-workflow-full"
   ],
   "children": [
-    "04-17-subagent-hook-reliability-audit"
+    "04-17-subagent-hook-reliability-audit",
+    "04-17-pull-based-migration",
+    "04-17-workflow-enforcement-v2"
   ]
 }
