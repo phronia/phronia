@@ -13,20 +13,22 @@
 - **kiro**：agentSpawn hook 绑在 agent JSON 里，per-agent 设计
 - **opencode**：plugin `tool.execute.before` 拦截 task tool
 
-### B. 配了但可靠性存疑（5 个，本 task 要实测）
+### B. 配了但可靠性存疑（原计划 5 个，2 个已迁移到 pull-based，剩 3 个要实测）
 
-| 平台 | Trellis 现有配置 | 已知问题 | 实测重点 |
+| 平台 | Trellis 现有配置 | 已知问题 | 状态 |
 |---|---|---|---|
-| **cursor** | `preToolUse` + `matcher: "Task"` | Forum 2026-02: preToolUse 的 `updated_input` for Task tool **被 silently ignored** | 修改后的 prompt 有没有真的传给 sub-agent |
-| **gemini** | `BeforeTool` + `matcher: "^(check\|implement\|research)$"` | Issue #18128: sub-agent transcript 在 BeforeTool hook 里**没有 context** | hook 是否 fire、agent prompt 能否被修改 |
-| **qoder** | `PreToolUse` + `matcher: "Task"` | 官方有专用 `SubagentStart` event，Trellis 没用 | PreToolUse+Task 是否生效；是否需要切 SubagentStart |
-| **codebuddy** | `PreToolUse` + `matcher: "Task"` | 官方文档只列 `SubagentStop`（无 SubagentStart），可能继承 Claude Code Bug #34692 | PreToolUse+Task 是否给 sub-agent 注入 |
-| **droid** | `PreToolUse` + `matcher: "Task"` | 同上 | 同上 |
+| **cursor** | `preToolUse` + `matcher: "Task"` | Forum 2026-02: preToolUse 的 `updated_input` for Task tool **被 silently ignored**（staff 2026-04-07 确认 bug 修复） | ⚠️ 仍需实测 |
+| **codebuddy** | `PreToolUse` + `matcher: "Task"` | 官方文档只列 `SubagentStop`，可能继承 Claude Code Bug #34692 | ⚠️ 仍需实测 |
+| **droid** | `PreToolUse` + `matcher: "Task"` | 官方文档明确支持 `PreToolUse + Task + updatedInput.prompt` | ⚠️ 仍需实测 |
+| ~~**gemini**~~ | ~~BeforeTool~~ | ~~#18128~~ | ✅ 已迁移到 class-2 pull-based（commit `d2c6682`，不再依赖 hook） |
+| ~~**qoder**~~ | ~~PreToolUse+Task~~ | ~~sub-agent 不走 Task tool~~ | ✅ 已迁移到 class-2 pull-based（commit `d2c6682`） |
 
-### C. 确认不能注入（5 个，不需要实测）
-- **codex**：SessionStart only，sub-agent hook 是 Issue #15486 未实现
-- **copilot**：Bug #2392/#2540, preToolUse 本身都不 fire
-- **kilo / antigravity / windsurf**：无 hook
+### C. 确认不能注入（已迁移 pull-based 或无 hook）
+- **codex / copilot**：已迁移 class-2 pull-based（`d2c6682`）
+- **kilo / antigravity / windsurf**：无 hook（class-3，主 AI 自己走流程）
+
+### D. 待验证
+- **kiro**：agentSpawn hook 绑在 agent JSON 里，协议未验证（详见 `04-17-subagent-injection-per-platform`）
 
 ---
 
@@ -75,14 +77,14 @@
 
 **完成标志**：5 个独立项目目录准备好，每个都有 Trellis 配置。
 
-### Step 2 — 单平台实测 [必做，对 B 类 5 个平台各跑一次]
+### Step 2 — 单平台实测 [必做，对 B 类 3 个平台各跑一次]
 
 对每个平台：
 - [ ] **cursor**：启动 cursor CLI，在项目里 `Task` 调 implement sub-agent，观察 sub-agent 是否看到 canary
-- [ ] **gemini**：同上
-- [ ] **qoder**：同上
 - [ ] **codebuddy**：同上
 - [ ] **droid**：同上
+
+（原计划的 gemini / qoder 已迁移 pull-based，不再需要测 hook 注入）
 
 每次记录：
 - hook 是否 fire（看 stderr debug log）
@@ -135,10 +137,8 @@
 
 ## 前置依赖
 
-- 需要本地能跑 5 个平台的 CLI：cursor, gemini, qoder, codebuddy, droid
+- 需要本地能跑 3 个平台的 CLI：cursor, codebuddy, droid
   - cursor: 有 UI app
-  - gemini: `npm install -g @google/gemini-cli`
-  - qoder: 需要确认安装方式
   - codebuddy: 腾讯 CodeBuddy，安装方式待确认
   - droid: Factory Droid CLI
 - 如果某平台本地跑不起来，在 `results.md` 里标"无法实测"即可
