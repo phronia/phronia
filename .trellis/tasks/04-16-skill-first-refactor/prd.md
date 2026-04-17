@@ -139,7 +139,7 @@
 
 ---
 
-## 子 Task 状态 + 实际工作量（2026-04-17 深度 research 后）
+## 子 Task 状态 + 实际工作量（2026-04-17 深度 research + FP 简化后）
 
 | 子 Task | 优先级 | 工作量 | 状态 | 依据 |
 |---------|-------|-------|------|------|
@@ -147,27 +147,25 @@
 | `04-16-rewrite-workflow-full` | - | - | ✅ archived（`d2c6682`）| workflow.md + get_context 已落盘 |
 | `04-17-cc-hook-inject-test` | - | - | ✅ archived | — |
 | `04-17-pull-based-migration` | - | - | ✅ archived（`d2c6682`）| class-2 平台已迁 pull-based |
-| `04-17-update-cleanup-deleted-templates` | 🔴 P1 | **S** | planning | `safe-file-delete` + `allowed_hashes` 基础设施已有；只需写 `0.5.0.json` manifest |
-| `04-17-claude-hooks-migrate-to-shared` | 🟡 P2 | **S** | planning | 1435 行旧 hook，改 configurator 3 行 + 删目录 |
-| `04-17-hook-path-robustness` | 🟡 P2 | **M** | planning | 实测：8 平台 hook 全是裸相对路径，CWD 漂移必然失败 |
+| `04-17-update-cleanup-deleted-templates` | 🔴 P1 | - | ✅ completed（`4476844`）| `0.5.0.json` 125 条 `safe-file-delete` 已落盘 |
+| `04-17-claude-hooks-migrate-to-shared` | 🟡 P2 | - | ✅ completed（`4476844`）| 1435 行旧 hook 已删；configurator 改 3 行 |
+| `04-17-workflow-enforcement-v2` | 🔴 P1 | **S-M** | planning | **FP 简化后**：仅新 `inject-workflow-state.py`（~90 行）+ 9 平台接 UserPromptSubmit + OpenCode JS 等价 + `task_store.py` 宽容 legacy。无 schema 改 / 无新命令 / 无 skill 尾块 / 无 class-2 prelude Step 0 |
+| `04-17-hook-path-robustness` | 🟡 P2 → 🟢 P3 | - | 顺带解决 | 新 hook 用 `find_trellis_root()` 向上查找 `.trellis/`，CWD 漂移最小修复由 workflow-enforcement-v2 带走；完整跨平台（Windows）留 P3 |
 | `04-17-subagent-injection-per-platform` | 🟡 P2 | **S** | 大部分完成 | 只剩 Kiro agentSpawn 真实环境验证 |
 | `04-17-subagent-hook-reliability-audit` | 🟡 P2 | **M** | planning | cursor/codebuddy/droid 实测（gemini/qoder 已走 pull-based，无需测）|
-| `04-17-workflow-enforcement-v2` | 🔴 P1 | **XL** | planning | task.json schema 全迁（int→字符串）+ 5 条新 task.py 命令 + inject-workflow-state.py 新建 + 9 平台接 UserPromptSubmit + skills 尾块 + class-2 prelude Step 0；严格串行依赖 |
 
 ### 建议执行顺序
 
-**Sprint 1（快赢，~1 session）**：
-1. `update-cleanup-deleted-templates` — 写 `0.5.0.json`
-2. `claude-hooks-migrate-to-shared` — 删 1435 行 + configurator 改 3 行
+**Sprint 1（完成）** ✅：
+- ~~`update-cleanup-deleted-templates`~~（`4476844`）
+- ~~`claude-hooks-migrate-to-shared`~~（`4476844`）
 
-**Sprint 2（发布前必做）**：
-3. `hook-path-robustness` 最小修复
+**Sprint 2（下一步）** 🔴：
+- `workflow-enforcement-v2` — FP 简化后 S-M 工作量，1 个 session 可完成。顺带把 `hook-path-robustness` 最小修复（向上查找 `.trellis/`）带完
 
-**Sprint 3（独立会话，schema 大迁移）**：
-4. `workflow-enforcement-v2`
-
-**可延到 v0.5.0-beta 发布后**：
-5. Kiro 验证 / cursor-codebuddy-droid hook 实测
+**可延到 v0.5.0-beta 发布后** 🟡：
+- Kiro agentSpawn 真实环境验证（`subagent-injection-per-platform`）
+- cursor/codebuddy/droid sub-agent hook 实测（`subagent-hook-reliability-audit`）
 
 ---
 
