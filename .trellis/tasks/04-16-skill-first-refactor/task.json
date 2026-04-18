@@ -13,7 +13,6 @@
     "04-17-subagent-hook-reliability-audit",
     "04-17-workflow-enforcement-v2",
     "04-17-subagent-injection-per-platform",
-    "04-17-claude-hooks-migrate-to-shared",
     "04-17-hook-path-robustness"
   ]
 }
