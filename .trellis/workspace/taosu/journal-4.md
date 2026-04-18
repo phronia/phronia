@@ -960,3 +960,117 @@ Hook 语言限制调研：所有平台都支持 Python hooks（shell 子进程�
 ### Next Steps
 
 - None - task complete
+
+
+## Session 118: workflow-enforcement-v2 + slim workflow.md + SessionStart payload restructure
+
+**Date**: 2026-04-18
+**Task**: workflow-enforcement-v2 + slim workflow.md + SessionStart payload restructure
+**Package**: cli
+**Branch**: `feat/v0.5.0-beta`
+
+### Summary
+
+(Add summary)
+
+### Main Changes
+
+## Scope
+
+Delivered the last P1 blocker for v0.5.0-beta (workflow-enforcement-v2), plus a
+cascade of payload / content refactors that came out of reviewing what
+SessionStart + UserPromptSubmit actually inject into the AI.
+
+## Major Changes
+
+| Area | Change |
+|------|--------|
+| Sprint 1 (committed 4476844) | Claude hooks migrated to shared-hooks (deleted 1435 lines of per-platform drift); 0.5.0 migration manifest with 125 `safe-file-delete` entries covering dispatch/debug/plan agents, Ralph Loop, parallel skill, multi-agent pipeline, iFlow |
+| workflow-enforcement-v2 | New `inject-workflow-state.py` (shared) + OpenCode JS plugin equivalent. Reads workflow.md `[workflow-state:STATUS]` tag blocks as single source of truth (users customize flow by editing md, not Python). Covers 4 states: no_task / planning / in_progress / completed |
+| UserPromptSubmit wiring | 7 platforms auto-wire via collectSharedHooks; Codex gets explicit `configureCodex` integration with feature-flag warning (`features.codex_hooks = true` in ~/.codex/config.toml); Kiro downgraded — agentSpawn has no per-turn main-session equivalent |
+| Legacy cleanup (FP round 3) | task_store.py (dual source) stops writing `current_phase`/`next_action`; shared-hooks `inject-subagent-context.py` + OpenCode JS drop `update_current_phase()` — stops re-writing legacy fields on every sub-agent spawn |
+| `<guidelines>` block trimmed | 10.9 KB → 4.6 KB. `spec/guides/index.md` stays inlined (cross-package thinking guides, broadly useful); other `spec/<pkg>/<layer>/index.md` emit paths only. Rationale: sub-agents get their specific specs via jsonl injection, main agent doesn't need index content in context |
+| `<workflow>` block expanded | 2.7 KB → 9.5 KB. Now includes Phase 1/2/3 step bodies, not just TOC + Phase Index. AI gets full step-level how-to inline, no need to lazy-load via `get_context.py --mode phase --step X.Y` |
+| workflow.md slimmed | 17 KB → 14 KB (bilingual → English). Removed `What is Trellis`, File Structure tree, Best Practices (all duplicated elsewhere). Task System expanded from 5 → 16 subcommands per PR #169 pattern. Context Script dropped `--json` and `--mode record` (AI-facing flags only) |
+| start.md Step 4 | "No active task" branch now explicitly mentions trellis-brainstorm skill (agent-less platforms match hook platforms' breadcrumb guidance) |
+| Next-Action coverage | Was: SessionStart `<task-status>` has Next-Action for 5 states; UserPromptSubmit silent-exit on no_task (gap). Now: no_task breadcrumb in UserPromptSubmit hook emits reminder every turn |
+
+## SessionStart Payload Before vs After
+
+| Block | Was | Now |
+|-------|-----|-----|
+| `<workflow>` | 2.7 KB (TOC + Phase Index) | 9.5 KB (+ Phase 1/2/3 step bodies) |
+| `<guidelines>` | 10.9 KB (all indexes inlined) | 4.6 KB (guides inlined + paths only) |
+| **Total** | ~16.6 KB | **~16.7 KB** (slight net shift; quality up) |
+
+## Parent Task Subtasks
+
+- archived: `04-17-update-cleanup-deleted-templates` (0.5.0 manifest shipped)
+- archived: `04-17-claude-hooks-migrate-to-shared` (1435 lines deleted, unified with shared-hooks)
+- archived: `04-17-workflow-enforcement-v2` (UserPromptSubmit breadcrumb + legacy cleanup done)
+- downgraded P2 → P3: `04-17-hook-path-robustness` (minimal fix absorbed by new hook's find_trellis_root upward walk; full Windows coverage still open)
+- open P2 (post-beta): Kiro agentSpawn real-env validation; cursor/codebuddy/droid sub-agent hook real-env testing
+
+## Key Files
+
+```
+packages/cli/src/templates/shared-hooks/
+  inject-workflow-state.py         new — 200-line UserPromptSubmit hook
+  session-start.py                 _extract_range + workflow body expansion + guidelines paths-only
+  inject-subagent-context.py       removed update_current_phase()
+
+packages/cli/src/templates/opencode/plugins/
+  inject-workflow-state.js         new — JS equivalent
+  session-start.js                 same restructure
+  inject-subagent-context.js       removed updateCurrentPhase()
+
+packages/cli/src/templates/{claude,cursor,qoder,codebuddy,droid,gemini,copilot}/
+  settings.json / hooks.json       + UserPromptSubmit (or equivalent camelCase)
+
+packages/cli/src/configurators/codex.ts
+  configureCodex now calls writeSharedHooks with excludes; stderr warns about feature_codex_hooks flag
+
+packages/cli/src/templates/codex/
+  config.toml                      + feature_codex_hooks explanation comment
+  hooks/session-start.py           same restructure (guidelines paths-only + workflow body expansion)
+  hooks.json                       + UserPromptSubmit entry
+
+packages/cli/src/templates/copilot/hooks/session-start.py    same restructure
+
+packages/cli/src/migrations/manifests/0.5.0.json             125 safe-file-delete entries
+
+.trellis/workflow.md + packages/cli/src/templates/trellis/workflow.md
+  17 KB → 14 KB; English only; task.py 5 → 16 commands; + [workflow-state:STATUS] blocks
+
+.trellis/scripts/common/{task_store.py,workflow_phase.py} + template mirrors
+  cmd_create drops legacy fields; get_phase_index returns Phase Index + Phase 1/2/3 bodies
+
+packages/cli/test/regression.test.ts + registry-invariants.test.ts + templates/copilot.test.ts
+  +18 new tests (workflow-state 7 cases, no_task coverage, UserPromptSubmit platform wiring 9 invariants, legacy field regression, copilot hook event expansion)
+```
+
+## Other Notes
+
+- Vibe Island hooks in ~/.codex/hooks.json caused `exit 127` errors on `codex --yolo` startup — unrelated to Trellis; moved to `~/.codex/hooks.json.backup-vibe-island-20260418`, user config now empty `{"hooks": {}}`. Trellis project's own `.codex/` dogfood is stale (pre-v2 changes) — intentionally left to validate `trellis update --migrate` end-to-end on next test run.
+- 567 tests passing, lint + typecheck clean across the chain.
+- PRD files for all archived tasks updated with actual execution outcomes + Codex Cross-Review round 3 notes where applicable.
+
+
+### Git Commits
+
+| Hash | Message |
+|------|---------|
+| `4476844` | (see git log) |
+| `c5387df` | (see git log) |
+
+### Testing
+
+- [OK] (Add test results)
+
+### Status
+
+[OK] **Completed**
+
+### Next Steps
+
+- None - task complete
