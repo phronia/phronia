@@ -1146,3 +1146,93 @@ Finalized 0.5.0-beta.0 release readiness by dogfooding the 0.4.x → 0.5.0-beta.
 ### Next Steps
 
 - None - task complete
+
+
+## Session 120: v0.5.0-beta.5/6: trellis- prefix sub-agents, drop model:opus, fix codex read-only
+
+**Date**: 2026-04-20
+**Task**: v0.5.0-beta.5/6: trellis- prefix sub-agents, drop model:opus, fix codex read-only
+**Branch**: `feat/v0.5.0-beta`
+
+### Summary
+
+(Add summary)
+
+### Main Changes
+
+## Releases
+
+- **beta.5** — Sub-agent rename + `model: opus` purge
+- **beta.6** — Codex `trellis-check` workspace-write fix
+
+## beta.5 (commit 79801ed / tag e49975d... wait 66a1ae2)
+
+**Problem 1: agent name collision.** Generic `implement` / `check` / `research` names collided with user-defined agents and got picked up by main agent's description heuristics.
+
+**Problem 2: hardcoded `model: opus` burning Cursor users.** All 18 markdown agent frontmatters + 3 `Task()` examples in `copilot/prompts/start.prompt.md` shipped with `model: opus`. On Cursor this mapped to Claude Opus billing (~5x Sonnet). One tester reported "差点给我跑破产".
+
+**Fix**:
+- Renamed all agents to `trellis-implement` / `trellis-check` / `trellis-research` across 10 platforms (claude, cursor, opencode, codex, kiro, gemini, qoder, codebuddy, copilot, droid) — both filename AND `name:` frontmatter field
+- Removed `model: opus` from all 18 .md agents + 3 Task() examples
+- Updated hook constants (`AGENT_IMPLEMENT` etc.), `workflow.md`, `copilot/prompts/start.prompt.md`, `configurators/shared.ts::detectSubAgentType`
+- Tests: updated references in `regression.test.ts`, `platforms.test.ts`, `codex.test.ts`, `init.integration.test.ts`
+- 30-entry migration manifest (10 platforms × 3 agents), breaking + recommendMigrate=true (invokes beta.3 `update.skip` bypass)
+
+**Dogfood**: `/tmp/mt-repro` init beta.3 → `tl update --migrate --force` → all platforms migrated cleanly, idempotent on second run.
+
+## beta.6 (commits fe1d1ff + e49975d bump)
+
+**Problem**: `.codex/agents/trellis-check.toml` shipped with `sandbox_mode = "read-only"` and "Read-only Trellis reviewer" framing. Directly contradicts `workflow.md` Phase 2.2 ("Auto-fix issues it finds") and every other platform (Read/Write/Edit tools). Codex users got review findings but couldn't self-fix — broken workflow contract.
+
+**Fix**: `sandbox_mode = workspace-write`, rewrote developer_instructions to self-fix + re-run lint/type-check until green, with `Findings (fixed) / Findings (not fixed) / Verification` report format. Now behaviorally aligned with Claude Code / Cursor check agent.
+
+Pure content fix, no migrations. `trellis update` auto-updates for users who didn't customize; confirm prompt with diff if they did.
+
+## Migration Debug (ran on this repo during session)
+
+User reported `.cursor/agents/trellis-check.md` kept OLD content (`name: check`, `model: opus`) after beta.5 migration. Fresh `/tmp/mt-repro` test worked correctly — confirmed code is sound. This repo's state was half-migrated because:
+1. `.claude` + `.cursor` agents renamed OK, hash moved, but first `--migrate` run didn't finish writing new template content (content overwrite happens in "New files" bucket post-rename)
+2. `.opencode/agents/` entries had no hashes in `.template-hashes.json` → classified as "modified" → went to confirm bucket → user's prompt flow didn't complete overwrite
+
+Ran `tl update --migrate --force` a second time to complete. All 10 platforms now aligned.
+
+## Other observations
+
+- `grep -rn "^model\s*[:=]\|\"model\"\s*:" packages/cli/src/templates/` — confirmed NO remaining model hardcoding. Only `statusline.py:169` reads CC's `model.display_name` for status line display (not limiting).
+- User dogfooded beta.5 → beta.6 live; session ended clean
+
+**Updated Files**:
+- `packages/cli/src/templates/{claude,cursor,gemini,qoder,codebuddy,opencode,droid}/agents|droids/trellis-{implement,check,research}.md` (renamed, model: opus removed)
+- `packages/cli/src/templates/codex/agents/trellis-{implement,check,research}.toml` (renamed)
+- `packages/cli/src/templates/kiro/agents/trellis-{implement,check,research}.json` (renamed)
+- `packages/cli/src/templates/codex/agents/trellis-check.toml` (beta.6: workspace-write + self-fix)
+- `packages/cli/src/templates/trellis/workflow.md` (Agent type refs)
+- `packages/cli/src/templates/copilot/prompts/start.prompt.md` (subagent_type refs + model removed)
+- `packages/cli/src/templates/shared-hooks/inject-subagent-context.py` (AGENT_* constants)
+- `packages/cli/src/configurators/shared.ts` (detectSubAgentType)
+- `packages/cli/src/migrations/manifests/0.5.0-beta.5.json` (30 rename entries)
+- `packages/cli/src/migrations/manifests/0.5.0-beta.6.json` (no migrations)
+- `packages/cli/test/{regression,configurators/platforms,templates/codex,commands/init.integration}.test.ts`
+- `docs-site/{,zh/}changelog/v0.5.0-beta.{5,6}.mdx` + `docs-site/docs.json` (navbar + page lists)
+
+
+### Git Commits
+
+| Hash | Message |
+|------|---------|
+| `79801ed` | (see git log) |
+| `66a1ae2` | (see git log) |
+| `fe1d1ff` | (see git log) |
+| `e49975d` | (see git log) |
+
+### Testing
+
+- [OK] (Add test results)
+
+### Status
+
+[OK] **Completed**
+
+### Next Steps
+
+- None - task complete

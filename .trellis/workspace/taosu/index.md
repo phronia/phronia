@@ -8,7 +8,7 @@
 
 <!-- @@@auto:current-status -->
 - **Active File**: `journal-4.md`
-- **Total Sessions**: 119
+- **Total Sessions**: 120
 - **Last Active**: 2026-04-20
 <!-- @@@/auto:current-status -->
 
@@ -19,7 +19,7 @@
 <!-- @@@auto:active-documents -->
 | File | Lines | Status |
 |------|-------|--------|
-| `journal-4.md` | ~1148 | Active |
+| `journal-4.md` | ~1238 | Active |
 | `journal-3.md` | ~1988 | Archived |
 | `journal-2.md` | ~1963 | Archived |
 | `journal-1.md` | ~1998 | Archived |
@@ -32,6 +32,7 @@
 <!-- @@@auto:session-history -->
 | # | Date | Title | Commits | Branch |
 |---|------|-------|---------|--------|
+| 120 | 2026-04-20 | v0.5.0-beta.5/6: trellis- prefix sub-agents, drop model:opus, fix codex read-only | `79801ed`, `66a1ae2`, `fe1d1ff`, `e49975d` | `feat/v0.5.0-beta` |
 | 119 | 2026-04-20 | 0.5.0-beta.0 release-prep: breaking-change gate + full command→skill migration | `2374433`, `b284d81` | `feat/v0.5.0-beta` |
 | 118 | 2026-04-18 | workflow-enforcement-v2 + slim workflow.md + SessionStart payload restructure | `4476844`, `c5387df` | `feat/v0.5.0-beta` |
 | 117 | 2026-04-17 | Workflow rewrite + pull-based migration + enforcement v2 planning | `d2c6682`, `57d4ae1` | `feat/v0.5.0-beta` |
