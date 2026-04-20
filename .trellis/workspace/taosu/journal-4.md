@@ -1074,3 +1074,75 @@ packages/cli/test/regression.test.ts + registry-invariants.test.ts + templates/c
 ### Next Steps
 
 - None - task complete
+
+
+## Session 119: 0.5.0-beta.0 release-prep: breaking-change gate + full command→skill migration
+
+**Date**: 2026-04-20
+**Task**: 0.5.0-beta.0 release-prep: breaking-change gate + full command→skill migration
+**Package**: cli
+**Branch**: `feat/v0.5.0-beta`
+
+### Summary
+
+(Add summary)
+
+### Main Changes
+
+Finalized 0.5.0-beta.0 release readiness by dogfooding the 0.4.x → 0.5.0-beta.0 migration end-to-end in a tmp dir and closing every gap surfaced along the way.
+
+| Area | Change |
+|------|--------|
+| `update.ts` breaking-change gate | Exits 1 when manifest has `breaking + recommendMigrate` and `--migrate` missing. Previously silently bumped `.version` and left the project half-migrated (stale old paths next to new templates). `--dry-run` bypasses the gate so preview still works. |
+| Migration manifest (80 new entries) | +65 rename (13 platforms × 5 commands: before-dev/brainstorm/break-loop/check/update-spec) +3 rename for `finish-work` on skill-only layers (.kiro/.qoder/.agents shared) +10 safe-file-delete for old `start` (replaced by session-start hook) +2 safe-file-delete for legacy `improve-ut` |
+| `MigrationItem.reason?` | New field — per-entry version-specific context authored in the manifest instead of hardcoded hints in `update.ts`. Rendered inline in the confirm prompt. Applied to 6 entries where 0.4.0 had a hash-tracking gap. |
+| Confirm-prompt redesign | Shows manifest `description` + `reason` + per-option recommendation (Backup/Rename/Skip with consequences). Default changed `skip` → `backup-rename` so Enter never destroys edits or leaves orphan files. |
+| Backup worktree exclusion | `BACKUP_EXCLUDE_PATTERNS` adds `/worktrees/` and `/worktree/` — prevents `.claude/worktrees/`, `.cursor/worktrees/`, `.gemini/worktrees/` from bloating backups (could hit 100s of MB once in use). |
+| Build clean step | `package.json` build chain: `clean && tsc && copy-templates`. Prevents deleted `src/templates/` files from lingering in `dist/` and shipping to npm — previously caused a safe-file-delete ↔ re-write loop across consecutive `trellis update` runs. |
+| `continue.md` i18n | `[必做]` / `[一次]` tags → `[required]` / `[once]` to match `workflow.md`'s English convention. |
+| Changelog | 3 places updated (manifest `notes`, `docs-site/changelog/v0.5.0-beta.0.mdx`, zh counterpart). Added migration note: `/trellis:record-session` is gone — its journal-writing job is now Step 3 of `/trellis:finish-work`; users with aliases must swap. |
+
+**Key realizations / traps we hit:**
+
+- `rename` classification uses project-local `.trellis/.template-hashes.json`, NOT the manifest's `allowed_hashes` field (which is only consulted by safe-file-delete). Saved ~1 hour by not collecting 150 historical hashes needlessly.
+- 0.4.0 init has a bug: `.kiro/skills/update-spec/SKILL.md`, `.qoder/skills/update-spec/SKILL.md`, `.agents/skills/update-spec/SKILL.md` aren't written to `.template-hashes.json`, so pristine files show as "modified" during migration. Handled via per-entry `reason` field telling the user it's safe to accept.
+- The initial `createFullBackup` design bulked everything under managed dirs into a backup. Once the user starts running platform-native worktrees (`.claude/worktrees/feature-x/...`), each update snapshots every nested file. Exclusion pattern fixes this.
+- `dist/templates/` was never cleaned between builds — templates removed from `src/` lingered in `dist/` (e.g. `debug.md`, `dispatch.md`, `plan.md`), got init'd into user projects, then safe-file-delete'd on the next update → add/delete churn across consecutive updates.
+
+**Validation:**
+
+- `pnpm test` → 595 passing (23 new this session: 3 gate, 12 backup-exclude, 5 manifest-shape, 3 per-platform-path invariant)
+- `pnpm lint` + `pnpm typecheck` clean
+- Smoke test in `/tmp/trellis-smoke5` (full 13-platform 0.4.0 → 0.5.0-beta.0 migration): `Migration complete: 68 renamed` / `Cleaned up: 93 deprecated files` / idempotent on subsequent runs (`Already up to date!`)
+- Verified `.agents/skills/` and `.kiro/skills/` end up with only `trellis-*` prefixed directories (no 0.4.0 plain-name orphans)
+
+**Updated Files:**
+- `packages/cli/package.json` — version bump 0.4.0 → 0.5.0-beta.0 + `clean` script
+- `packages/cli/src/commands/update.ts` — gate + prompt redesign + export `shouldExcludeFromBackup`
+- `packages/cli/src/migrations/manifests/0.5.0-beta.0.json` — 126 → 206 entries
+- `packages/cli/src/types/migration.ts` — `reason?: string` field
+- `packages/cli/src/templates/common/commands/continue.md` — English-only tags
+- `packages/cli/test/commands/update-internals.test.ts` — 12 backup-exclude tests
+- `packages/cli/test/commands/update.integration.test.ts` — 3 gate tests
+- `packages/cli/test/regression.test.ts` — manifest shape regression block
+- `docs-site/changelog/v0.5.0-beta.0.mdx` + `docs-site/zh/changelog/v0.5.0-beta.0.mdx`
+
+
+### Git Commits
+
+| Hash | Message |
+|------|---------|
+| `2374433` | (see git log) |
+| `b284d81` | (see git log) |
+
+### Testing
+
+- [OK] (Add test results)
+
+### Status
+
+[OK] **Completed**
+
+### Next Steps
+
+- None - task complete
