@@ -39,15 +39,10 @@ Before implementing, read:
 
 ### 1. Understand Specs
 
-Discover packages and read relevant specs:
+Read relevant specs based on task type:
 
-```bash
-python3 ./.trellis/scripts/get_context.py --mode packages
-```
-
-Then read the spec index for the target package and layer:
-- `.trellis/spec/<package>/<layer>/index.md`
-- `.trellis/spec/guides/index.md` (shared guides)
+- Spec layers: `.trellis/spec/<package>/<layer>/`
+- Shared guides: `.trellis/spec/guides/`
 
 ### 2. Understand Requirements
 
