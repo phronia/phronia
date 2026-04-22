@@ -1352,3 +1352,38 @@ Qoder 从纯 skill-only 平台升级为 hybrid：session-boundary 命令（finis
 ### Next Steps
 
 - None - task complete
+
+
+## Session 123: Polyrepo detection: sibling .git scan + CLI↔runtime schema bridge
+
+**Date**: 2026-04-22
+**Task**: Polyrepo detection: sibling .git scan + CLI↔runtime schema bridge
+**Branch**: `feat/v0.5.0-beta`
+
+### Summary
+
+Added parsePolyrepo as a 7th parser in detectMonorepo() for layouts with multiple independent git repos in one directory. Scans up to 2 levels deep, fires only when all 6 workspace parsers miss and no submodules declared, so workspace configs always win. Found via brainstorm + FP analysis that the runtime side already half-supported polyrepo (get_git_packages, isGitRepo, '(git repo)' label) — the work was bridging the CLI schema gap, not building a new feature. Discarded --packages CLI flag and source: enum as redundant. DetectedPackage gains isGitRepo (mutually exclusive with isSubmodule); writeMonorepoConfig emits 'git: true'; --monorepo failure now prints a checklist + manual config.yaml example; init confirm prompt labels polyrepo packages with '(git repo)'. Spec at directory-structure.md updated with parsePolyrepo section, isGitRepo field, CLI↔Runtime Schema Parity table, and ADR-style 'no --packages flag' note. 609 tests (+9), typecheck/lint clean.
+
+### Main Changes
+
+(Add details)
+
+### Git Commits
+
+| Hash | Message |
+|------|---------|
+| `dc189b1` | (see git log) |
+| `3d1c25c` | (see git log) |
+| `6c34762` | (see git log) |
+
+### Testing
+
+- [OK] (Add test results)
+
+### Status
+
+[OK] **Completed**
+
+### Next Steps
+
+- None - task complete
