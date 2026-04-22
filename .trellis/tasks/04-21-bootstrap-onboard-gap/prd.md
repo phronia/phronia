@@ -6,12 +6,12 @@
 
 **缺口 1：已有项目里 `trellis init` 不给新开发者任何引导**
 
-`init.ts:619` 的判断：
+`init.ts:623` 的判断（行号在 `04-21-task-schema-unify` 合并后）：
 ```ts
 const isFirstInit = !fs.existsSync(path.join(cwd, DIR_NAMES.WORKFLOW));
 ```
 
-`init.ts:1343` 的分支：
+`init.ts:1347` 的分支：
 ```ts
 if (isFirstInit) {
   createBootstrapTask(cwd, developerName, projectType, monorepoPackages);
@@ -34,11 +34,12 @@ beta 版本删除后，这个能力**没有迁移到任何地方**：
 
 ### 现状 Bootstrap PRD 的覆盖
 
-看 `init.ts::getBootstrapPrdContent()`（`init.ts:104-256`）：
+看 `init.ts::getBootstrapPrdContent()`（`init.ts:152` 起）：
 
 | 章节 | 内容 | 性质 |
 |---|---|---|
 | Purpose | 介绍 spec 为什么重要 | ✅ |
+| Status | checklist 项（由 `getBootstrapChecklistItems` 动态渲染成 `- [ ]`，随 `04-21-task-schema-unify` 从 task.json 的结构化 subtasks 迁移而来） | ✅ |
 | Your Task | 按项目类型列出 spec 文件清单 | ✅ |
 | Step 0: Import from Existing Specs | 从 CLAUDE.md / .cursorrules 迁移 | ✅ |
 | Step 1: Analyze the Codebase | 让 AI 提炼模式 | ⚠️ 泛泛 |
@@ -67,7 +68,7 @@ beta 版本删除后，这个能力**没有迁移到任何地方**：
 
 ### 分支逻辑重构
 
-`init.ts:1343` 改为：
+`init.ts:1347` 改为：
 
 ```ts
 if (isFirstInit) {
@@ -176,12 +177,12 @@ function createJoinerOnboardingTask(cwd: string, developer: string): boolean {
 
 - [ ] `init.ts` 加 `isNewDeveloperForProject()` 判断
 - [ ] 在 `isFirstInit = false` 且新开发者时调用 `createJoinerOnboardingTask()`
-- [ ] Single source of truth 写 JSON + PRD 内容（避免 init.ts / create_bootstrap.py 双份）
+- [ ] ~~Single source of truth 写 JSON + PRD 内容（避免 init.ts / create_bootstrap.py 双份）~~ —— **已解决**：`04-21-task-schema-unify` 删除了 `create_bootstrap.py`，task.json 现在统一走 `utils/task-json.ts:emptyTaskJson` 工厂
 
 ### 2. Creator Bootstrap PRD 扩展
 
 - [ ] 在 `getBootstrapPrdContent()` 插入 "Step -1: Understand Your Project" 段
-- [ ] Python 版 `create_bootstrap.py` 同步（或消除重复）
+- [ ] ~~Python 版 `create_bootstrap.py` 同步（或消除重复）~~ —— **已 N/A**：`04-21-task-schema-unify` 删除 `create_bootstrap.py`，只剩 TS 单源
 
 ### 3. Joiner Onboarding Task 新建
 

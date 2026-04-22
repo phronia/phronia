@@ -32,6 +32,34 @@ Single source of truth for `task.json` shape. All three writers (normal create /
 4. **Keep the Python create canonical on runtime side**. Optional: extract the field list into `common/task_store.py` module-level constant `EMPTY_TASK_JSON_DEFAULTS` so a future `cmd_repair` could top up missing keys.
 5. **Remove `.trellis/scripts/common/phase.py`** at the same time — orphan code, no importers.
 
+## Refined decisions (2026-04-22)
+
+Locked in during brainstorm before execution — supersedes anything above in case of conflict:
+
+### D1. `subtasks` semantic collision → option C (drop bootstrap's structured checklist)
+
+Canonical `subtasks: string[]` (child task dir names, even if rarely used — matches `children`/`subtasks` twin design in `task_store.py`). Bootstrap's `{name, status}[]` checklist disappears from task.json and is rendered as markdown `- [ ]` items in prd.md instead — migration task already does this, so the two align. AI readers can still extract progress from prd.md.
+
+### D2. Cleanup scope expanded
+
+PRD originally only called out deleting `phase.py` from this repo. Execution must also:
+- Add `safe-file-delete` entry for `.trellis/scripts/common/phase.py` to the next migration manifest (e.g., `0.5.0-beta.9.json` or wherever this ships) — it wasn't in `0.5.0-beta.0`'s 138-entry cleanup (only `multi_agent/*` was), so existing users on early 0.5 betas still have the file.
+- Update `packages/cli/src/templates/markdown/spec/backend/script-conventions.md:24` directory-tree — still lists `phase.py` (template source, shipped to users).
+- Update `.trellis/spec/cli/backend/quality-guidelines.md:288` — uses `phase.py:get_current_phase` as a reader example; swap for a still-live reader.
+
+### D3. Factory location
+
+`packages/cli/src/utils/task-json.ts` (PRD's suggestion). Contains both `TaskJson` type and `emptyTaskJson` factory — function-carrying module belongs under `utils/`, not `types/`.
+
+### D4. Not doing
+
+- `EMPTY_TASK_JSON_DEFAULTS` Python constant (PRD's optional #4) — YAGNI; extract when `cmd_repair` is actually needed.
+- Auto-repair of existing task.json files in users' repos — `task.py` reads with `.get(key, null)` tolerance, no breakage.
+
+### Meta-note
+
+This task is the literal follow-through for the `quality-guidelines.md` spec lesson **"Schema Deprecation: Audit ALL Writers, Not Just the Creator"** (captured in 0.5.0-beta.0). `task_store.py cmd_create` got cleaned up for `current_phase`/`next_action`, but `update.ts`/`init.ts` were missed. Worth calling out in commit message.
+
 ## Out of scope
 
 - Auto-migrating existing tasks in users' repos to add missing keys. `task.py` already treats missing fields as null, so no user breaks; a future `trellis update` migration entry can normalize if desired.
@@ -39,10 +67,12 @@ Single source of truth for `task.json` shape. All three writers (normal create /
 
 ## Acceptance criteria
 
-- [ ] `packages/cli/src/utils/task-json.ts` (or equivalent) exports a single `TaskJson` type + `emptyTaskJson` factory.
-- [ ] `init.ts getBootstrapTaskJson` uses the factory; output has all 24 canonical fields.
+- [ ] `packages/cli/src/utils/task-json.ts` exports `TaskJson` type + `emptyTaskJson(overrides)` factory.
+- [ ] `init.ts getBootstrapTaskJson` uses the factory; output has all 24 canonical fields; structured `subtasks: [{name, status}]` removed from task.json and rendered in the bootstrap prd.md instead (D1).
 - [ ] `update.ts` migration task block uses the factory; output has all 24 canonical fields; `current_phase` / `next_action` removed.
-- [ ] `.trellis/scripts/common/phase.py` deleted (and removed from `trellis/index.ts` enumerator).
+- [ ] `.trellis/scripts/common/phase.py` deleted.
+- [ ] Next migration manifest gains a `safe-file-delete` entry for `common/phase.py` (D2) so users on early 0.5 betas get it cleaned up.
+- [ ] `templates/markdown/spec/backend/script-conventions.md` directory-tree + `.trellis/spec/cli/backend/quality-guidelines.md` `phase.py` reader example updated (D2).
 - [ ] `trellis init` on a fresh project still produces a working bootstrap task end-to-end.
 - [ ] `trellis update --migrate` across a breaking boundary still produces a working migration task end-to-end.
 - [ ] `docs-site/.../appendix-c.mdx` + `ch06-task-management.mdx` can be simplified (no "variant schemas" disclaimer needed).
