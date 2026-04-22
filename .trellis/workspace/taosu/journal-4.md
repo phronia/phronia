@@ -1459,3 +1459,88 @@ Fixed three orthogonal bugs in trellis update --migrate + init-context surfaced 
 ### Next Steps
 
 - None - task complete
+
+## Session 126: PEP 604 hook crash — break-loop analysis
+
+**Date**: 2026-04-22
+**Task**: (no task — ad-hoc user bug report + spec capture)
+**Branch**: `feat/v0.5.0-beta`
+**Commits**: `7e58432` (hook fix) + pending spec update
+
+### Summary
+
+A downstream user running an enterprise-forked Claude Code distribution reported `SessionStart hook error` with `TypeError: unsupported operand type(s) for |: 'type' and 'NoneType'` at `session-start.py:214` (the `def _check_legacy_spec(...) -> str | None:` line). User's terminal `python3 --version` returned 3.11.12 but the hook kept crashing on PEP 604 syntax — which cannot happen on Python 3.10+. Debug log comparison revealed the smoking gun: `statusline.py` (same `{{PYTHON_CMD}}` prefix, same CC invocation) succeeded on the same box, because it had `from __future__ import annotations` and `session-start.py` did not. Root cause: CC forks spawn hook subprocesses with a minimal PATH that resolves `python3` to `/usr/bin/python3` (macOS system 3.9) rather than the user's shell-configured 3.11. Fix: add the future import to `shared-hooks/session-start.py` and `shared-hooks/inject-subagent-context.py` (statusline and the copilot/codex copies already had it).
+
+### Bug Analysis
+
+#### 1. Root Cause Category
+
+- **Primary: E — Implicit Assumption.** Template code implicitly assumed the runtime Python would be whatever the *user's shell* `python3` resolves to. Distributed Python templates have no enforcement of that assumption — CI runs under one PATH, end-user hosts run under another, AI-CLI hook subprocesses run under a third.
+- **Secondary: C — Change Propagation Failure.** When `from __future__ import annotations` was added defensively to `statusline.py` and the `copilot/codex` copies of `session-start.py`, the canonical `shared-hooks/session-start.py` (which Claude Code / iFlow / Gemini all install from) was left behind. Nothing in the codebase enforced parity.
+
+#### 2. Debug Trail (why wrong hypotheses fired first)
+
+| Round | Hypothesis | Disproof |
+|---|---|---|
+| 1 | "User's Python is < 3.10; README says 3.10+ required" | User showed `python3 --version` → 3.11.12 in their CC bash |
+| 2 | "Shebang `#!/usr/bin/env python3` resolves to old system Python" | `settings.json` uses explicit `{{PYTHON_CMD}} .claude/hooks/session-start.py`, not shebang execution |
+| 3 | "Hook subprocess inherits different PATH than shell" | Plausible direction but lacked a clinching piece of evidence |
+| 4 | **Smoking gun — actually read the debug log** | Log showed `StatusLine [python3 .claude/hooks/statusline.py] completed with status 0` on the **same run** that crashed session-start. Same interpreter prefix. The only meaningful file-level diff: line 12 of `statusline.py` had `from __future__ import annotations`. |
+
+**Lesson**: when two scripts under the same invocation pattern behave differently, diff their **first 30 lines** before theorizing about env. Wasted 2 rounds on shell-PATH theories when a `head -12` on four files would have isolated the root cause in 30 seconds.
+
+#### 3. Prevention Mechanisms
+
+| Priority | Mechanism | Specific Action | Status |
+|---|---|---|---|
+| P0 | Documentation | Hard rule in `spec/cli/backend/script-conventions.md` → "CRITICAL: PEP 604 Annotations Require `from __future__ import annotations`" with failure-chain walkthrough + DO/DON'T + audit grep | DONE |
+| P0 | Code Review | One-line grep the spec provides — runs in ~1s against `packages/cli/src/templates/`, zero offenders now | DONE (dogfooded, 0 matches) |
+| P1 | Guide pointer | `spec/guides/cross-platform-thinking-guide.md` Rule 5: "don't assume AI CLI's python3 == your shell's python3" with pointer to the hard rule | DONE |
+| P2 | CI enforcement | Add the audit grep to pre-release check script (`check-docs-changelog.js` neighbor) so a template-level PEP 604 regression blocks release | TODO (defer — manual grep in spec is enough for now, revisit if regression repeats) |
+| P3 | Test matrix | Smoke-run hook scripts under Python 3.9 in CI to catch any newly introduced 3.10-only syntax (not just PEP 604 — `match/case`, `zip(strict=)`, etc.) | TODO (depends on whether we formally relax the 3.10 floor) |
+
+#### 4. Systematic Expansion
+
+- **Similar issues**:
+  - `match/case` statements (PEP 634, Python 3.10+) — `from __future__ import annotations` does NOT save you here; this is runtime syntax. Template-level use would reproduce the same class of crash. Currently 0 uses (audited); keep it that way.
+  - `tomllib` (3.11+), `ExceptionGroup` / `except*` (3.11+), `typing.Self` (3.11+), runtime `isinstance(x, A | B)` (3.10+) — all would crash similarly. All currently 0 uses.
+  - Non-Python: any distributed template that assumes a runtime environment feature without declaring the minimum version.
+- **Design flaw**: `trellis init` *soft-warns* if Python < 3.10 but does not block. Creates false confidence that the 3.10 floor is enforced. Templates are actually carefully written — only `typing.Literal/TypedDict` block < 3.8 — but PEP 604 sneaks past both the soft-warn and author attention.
+- **Process flaw**: Copy-paste drift between the 3 `session-start.py` copies (`shared-hooks/`, `copilot/hooks/`, `codex/hooks/`). Two got the future import, one didn't, no lint step enforcing header parity. Broader Trellis pattern: when a template file is duplicated across platform dirs, header conventions should be asserted in tests, not just hoped for.
+- **Knowledge gap**: Not previously clear that enterprise-forked Claude Code distributions spawn hooks with a minimal PATH unrelated to the user's shell. Host-specific behavior, not documented upstream by CC itself. Worth capturing for future debugging.
+
+#### 5. Knowledge Capture
+
+- [x] `spec/cli/backend/script-conventions.md` — added hard rule + audit grep + historical incident reference to commit `7e58432`
+- [x] `spec/guides/cross-platform-thinking-guide.md` — added Rule 5 thinking trigger
+- [ ] No dedicated task/ticket — this was one-round triage; if CI enforcement (P2) is wanted later, spin into `05-xx-template-python-version-audit`
+- [ ] Open question deferred: should we formally relax README's Python ≥ 3.10 to 3.9 since macOS ships 3.9 by default? Templates are technically 3.8-compatible except `typing.Literal/TypedDict` which need 3.8+. Re-evaluate next time we touch `commands/init.ts:getPythonCommand` version check.
+
+### Main Changes
+
+- `packages/cli/src/templates/shared-hooks/session-start.py` — `+from __future__ import annotations`
+- `packages/cli/src/templates/shared-hooks/inject-subagent-context.py` — `+from __future__ import annotations`
+- `.trellis/spec/cli/backend/script-conventions.md` — new section under Cross-Platform Compatibility
+- `.trellis/spec/guides/cross-platform-thinking-guide.md` — new Rule 5
+
+### Git Commits
+
+| Hash | Message |
+|------|---------|
+| `7e58432` | fix(hooks): add __future__ annotations to shared session-start + inject-subagent-context |
+| pending | docs(spec): capture PEP 604 + __future__ rule for distributed Python templates |
+
+### Testing
+
+- [OK] Audit grep (from new spec) against `templates/**/*.py` — 0 offenders after fix
+- [OK] `ast.parse` of patched file — syntax valid
+- [OK] Downstream user confirmed fix resolves `SessionStart hook error` on their host
+
+### Status
+
+[OK] **Completed**
+
+### Next Steps
+
+- Commit spec updates (optional, low urgency)
+- If the 3.10 → 3.9 relaxation question resurfaces, revisit `commands/init.ts` version floor
