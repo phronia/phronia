@@ -31,27 +31,25 @@ Qoder violates this: user-invoked session-boundary commands are buried in the sk
 
 On Qoder, deliver Trellis in the correct two-layer form:
 
-- **`.qoder/commands/trellis/*.md`** — session-boundary commands only: `start`, `finish-work`, `continue` (0.5) or `start`, `finish-work` (0.4)
-- **`.qoder/skills/trellis-*/SKILL.md`** — auto-trigger workflows only: `brainstorm`, `before-dev`, `check`, `update-spec`, `break-loop`
+- **`.qoder/commands/trellis-{name}.md`** (flat, YAML frontmatter) — session-boundary commands. Qoder is `agentCapable` so `start` is filtered out (session-start hook injects the workflow overview), leaving `finish-work` + `continue` as the 2 user-facing commands in 0.5.
+- **`.qoder/skills/trellis-{name}/SKILL.md`** — auto-trigger workflows only: `brainstorm`, `before-dev`, `check`, `update-spec`, `break-loop`.
 
-User types `/trellis:start` or `/trellis:finish-work` explicitly when they want session boundaries. AI matches skills for workflow-level triggers.
+User types `/trellis-finish-work` or `/trellis-continue` explicitly when they want session boundaries. AI matches skills for workflow-level triggers.
 
-## Proposed approach
+## Proposed approach (implemented)
 
-1. **Verify Qoder Custom Commands file format** — likely Markdown with optional YAML frontmatter, but confirm against `docs.qoder.com/zh/user-guide/commands`. Check whether `.qoder/commands/<namespace>/<name>.md` with nested namespace is supported (like Claude Code's `trellis/` subdir) or if flat naming is required (like Cursor's `trellis-start.md`).
-2. **Extend `qoder.ts` configurator**:
-   - Read the canonical templates from `packages/cli/src/templates/common/commands/` (start / finish-work / continue)
-   - Write them to `.qoder/commands/trellis/{name}.md` (or flat naming depending on step 1)
-3. **Remove session-boundary templates from Qoder skills output**:
-   - Drop `.qoder/skills/{start,finish-work,continue}/SKILL.md` from the generator — they stay as commands only.
-   - Keep `.qoder/skills/{brainstorm,before-dev,check,update-spec,break-loop}/SKILL.md` — auto-trigger workflows.
-4. **Migration manifest entry** for the upcoming release:
-   - `rename` the three skills to commands for existing projects, OR
-   - `safe-file-delete` the old skill files + write new commands (cleaner since the old skills trigger differently).
-5. **Update docs-site**:
-   - `ch13-multi-platform.mdx` §13.9 Qoder: commands table + skills list
-   - `ch02-quick-start.mdx` Platform Configuration: `.qoder/commands/`, `.qoder/skills/`
-   - `appendix-a.mdx` / `appendix-b.mdx`: add Qoder command rows
+1. **Verified Qoder Custom Commands format** against `docs.qoder.com/en/cli/user-guide/command.md`: `.qoder/commands/<name>.md` is **flat** (no documented nested-namespace support), YAML frontmatter with required `name` + `description` fields, filename must match `name`, triggered as `/<name>`.
+2. **Configurator** (`packages/cli/src/configurators/qoder.ts`):
+   - Writes `.qoder/commands/trellis-{name}.md` for each `resolveCommands(ctx)` result, wrapped via new `wrapWithCommandFrontmatter(...)` helper.
+   - Writes `.qoder/skills/trellis-{name}/SKILL.md` via `resolveSkills(ctx)` (5 auto-trigger skills only).
+   - Agents / hooks / settings unchanged.
+3. **Shared helper**: `wrapWithCommandFrontmatter` + new `COMMAND_DESCRIPTIONS` registry in `configurators/shared.ts`. Kept separate from `SKILL_DESCRIPTIONS` because skill descriptions are long auto-trigger prose (for the matcher), whereas command descriptions are short imperative one-liners (for the `/` palette).
+4. **Update tracking**: mirrored the same layout into `PLATFORM_FUNCTIONS.qoder.collectTemplates()` (`configurators/index.ts`) so `trellis update` hash-tracks the new command files.
+5. **Migration manifest** `packages/cli/src/migrations/manifests/0.5.0-beta.10.json`:
+   - `safe-file-delete` for `.qoder/skills/trellis-finish-work/SKILL.md` and `.qoder/skills/trellis-continue/SKILL.md`, with `allowed_hashes` covering both Unix (`python3`) and Windows (`python`) `{{PYTHON_CMD}}` variants of the current template content.
+   - New commands written by the standard configure step on `trellis update`.
+6. **Tests updated**: `test/commands/init.integration.test.ts` `#3g` asserts commands dir + filtered skill dirs; `test/configurators/platforms.test.ts` rewrites the Qoder check to verify both primitives and the split. 599/599 tests pass.
+7. **Docs-site** (TODO separately — not in this sprint): `ch13-multi-platform.mdx` §13.9 Qoder, `ch02-quick-start.mdx`, `appendix-a.mdx` / `appendix-b.mdx`.
 
 ## Out of scope
 
@@ -60,12 +58,12 @@ User types `/trellis:start` or `/trellis:finish-work` explicitly when they want 
 
 ## Acceptance criteria
 
-- [ ] `packages/cli/src/configurators/qoder.ts` writes both `.qoder/commands/trellis/` (3 session commands) and `.qoder/skills/` (5 workflow skills)
-- [ ] Running `trellis init --qoder` in a tmp dir produces the expected layout; file hashes match between fresh init and `trellis update`.
-- [ ] Typing `/trellis:start` in Qoder's Agent input invokes the start command (live test, not just unit test).
-- [ ] Migration manifest handles existing 0.5.0-beta.X installs (three skills → three commands) without leaving orphan skill dirs.
-- [ ] `docs-site` beta + release tracks updated; `trellis-meta` skills-market entry (if it lists Qoder capability matrix) updated.
-- [ ] Test `.qoder` directory under `.trellis/tasks/04-21-qoder-commands-skills-split/` (or a `tmp*` fixture) shows correct layout after dogfooding.
+- [x] `packages/cli/src/configurators/qoder.ts` writes both `.qoder/commands/` (2 session commands — `start` filtered by `agentCapable`) and `.qoder/skills/` (5 workflow skills).
+- [x] Running `trellis init --qoder` in `/tmp/qoder-migrate-test` produces the expected layout (verified); `collectTemplates()` entries match so `trellis update` tracks them.
+- [ ] Typing `/trellis-finish-work` in Qoder's Agent input invokes the command (requires a real Qoder session — done offline by the user when available).
+- [x] Migration manifest handles existing 0.5.0-beta.X installs: legacy `.qoder/skills/trellis-{finish-work,continue}/SKILL.md` hash-verified and deleted, new `.qoder/commands/trellis-{finish-work,continue}.md` written fresh. Verified end-to-end in `/tmp/qoder-migrate-test`.
+- [ ] `docs-site` beta + release tracks updated (deferred — separate doc task).
+- [x] Dogfood fixture: `/tmp/qoder-migrate-test/.qoder/` shows correct post-migration layout after `trellis update --migrate --force`.
 
 ## Notes
 
