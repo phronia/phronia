@@ -25,6 +25,7 @@
 **参考产品**：
 - [`research/serena-memory.md`](research/serena-memory.md) — Serena 的 memory 设计（本地 md + 5 tools + agent 主动召回）
 - [`research/supermemory.md`](research/supermemory.md) — Supermemory SaaS 形态
+- [`research/karpathy-llm-wiki.md`](research/karpathy-llm-wiki.md) — Karpathy Wiki LLM 4 原则 + 社区 12 天落地方案（llm_wiki / obsidian-ai-orange-book / wiki9 / Rowboat 等）
 
 **Trellis 现状**：
 - [`research/trellis-existing-extension-points.md`](research/trellis-existing-extension-points.md) — Trellis 现有 5 种 plugin-like 机制盘点
