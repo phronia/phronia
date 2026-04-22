@@ -1236,3 +1236,85 @@ Ran `tl update --migrate --force` a second time to complete. All 10 platforms no
 ### Next Steps
 
 - None - task complete
+
+
+## Session 121: Schema unification + orphan cleanup: full Audit-ALL-Writers follow-through
+
+**Date**: 2026-04-22
+**Task**: Schema unification + orphan cleanup: full Audit-ALL-Writers follow-through
+**Branch**: `feat/v0.5.0-beta`
+
+### Summary
+
+Delivered 04-21-task-schema-unify: shared TaskJson factory + unified TS writers; removed 4 extra drift sites beyond PRD (orphan phase.py / create_bootstrap.py ×2 / TaskData TypedDict); cleaned up 5 orphan .md files in templates/markdown/spec/ (~2-year-old leakage); added regression test + 2 spec sections (Audit-ALL-Writers case study + .md.txt-only convention). 5 commits, 599/599 tests, manifest 0.5.0-beta.9 ready.
+
+### Main Changes
+
+## Context
+
+Started by cleaning up the legacy `04-16-skill-first-refactor` parent task family (archived parent + 3 残留 planning children — `subagent-injection-per-platform`, `hook-path-robustness`, `subagent-hook-reliability-audit`), then picked up `04-21-task-schema-unify` to execute the "Audit ALL Writers" spec lesson that was captured in 0.5.0-beta.0 but only partially applied.
+
+## Work
+
+### Primary scope (from PRD)
+
+- **Shared factory**: Added `packages/cli/src/utils/task-json.ts` with canonical 24-field `TaskJson` + `emptyTaskJson(overrides)` factory mirroring `task_store.py cmd_create`.
+- **Unified TS writers**: `init.ts getBootstrapTaskJson` + `update.ts` migration task now both route through the factory. Bootstrap's checklist items moved from structured `subtasks: [{name, status}]` in task.json to markdown `- [ ]` in prd.md (D1 decision). `update.ts` dropped legacy `current_phase: 0` + `next_action: [...]` (Multi-Agent Pipeline residue).
+- **Orphan Python removed**: `.trellis/scripts/common/phase.py` (254 lines, no importers) and `.trellis/scripts/create_bootstrap.py` × 2 (298 lines each — runtime + template; a 4th task.json writer with divergent 13-field shape, replaced by TS in 0.4 but never deleted).
+- **Dead TypedDict fields**: `TaskData` TypedDict in `common/types.py` × 2 dropped `current_phase: int` + `next_action: list[dict]`.
+- **Migration manifest**: New `0.5.0-beta.9.json` with 2 `safe-file-delete` entries (phase.py + create_bootstrap.py), hash-verified, 1 and 3 historical hashes respectively.
+
+### Scope expansion during execution
+
+- **Option A on 4th writer**: Check agent found `create_bootstrap.py` as out-of-scope 4th writer. Decision: delete it entirely (fully closed the "Audit ALL Writers" loop) rather than defer to a future task.
+- **Template orphan fix**: Investigating bootstrap-onboard-gap PRD + reviewing `templates/markdown/spec/backend/script-conventions.md` revealed a ~2-year-old leakage bug — 5 orphan `.md` files in `templates/markdown/spec/` that are never imported by `markdown/index.ts` but ship to `dist/` as dead weight. Deleted all 5 (`spec/backend/{index,directory-structure,script-conventions}.md` + `spec/guides/{code-reuse,cross-platform}-thinking-guide.md`). Added regression test enforcing the `.md.txt`-only invariant.
+
+### Spec captures
+
+- `quality-guidelines.md` — Case Study subsection appended to "Audit ALL Writers": 4 drift modes found in this retroactive audit + 3 refined audit rules (cross-language grep, shipped-but-unused code counts, type declarations are writers too). Also swapped two stale examples (`create_bootstrap.py` → `emptyTaskJson`, `phase.py` → `tasks.py:load_task`).
+- `directory-structure.md` — new "Don't: Leak dogfood spec into templates/markdown/spec/" subsection documenting the `.md` vs `.md.txt` path-confusion bug with prevention checklist + audit command.
+- `script-conventions.md` — dir tree drops `create_bootstrap.py` (was already removed for `phase.py` by the implement agent).
+
+### Related task updated
+
+- `04-21-bootstrap-onboard-gap/prd.md` — refreshed line numbers in `init.ts` references (shifted by this task's changes), marked two `create_bootstrap.py`-related subtasks N/A, added note about the new `## Status` section in the PRD content table.
+
+## Verification
+
+- Lint clean, typecheck clean
+- 599/599 tests pass (added 1 regression test for the templates invariant)
+- Commit chain: 4eaa2b5 → b323e93 → c0f0806 → ef07e6c → f12b5c4 (plus auto-commit archiving this task)
+
+## Decisions locked in PRD
+
+- **D1** (subtasks semantic): canonical `string[]`; bootstrap checklist → prd.md markdown
+- **D2** (cleanup scope): manifest entry + both spec files updated in same PR
+- **D3** (factory location): `utils/task-json.ts`, not `types/`
+- **D4** (not doing): no `EMPTY_TASK_JSON_DEFAULTS` Python constant; no auto-repair of existing task.json files
+
+## Out of scope left untouched
+
+- `.opencode/*` plus a bunch of templates/shared-hooks/ modifications + the "Task → Package Binding Contract" addition in `.trellis/spec/cli/backend/script-conventions.md` — pre-existing uncommitted work from before this session. Left in working tree for user to review + commit separately.
+
+
+### Git Commits
+
+| Hash | Message |
+|------|---------|
+| `4eaa2b5` | (see git log) |
+| `b323e93` | (see git log) |
+| `c0f0806` | (see git log) |
+| `ef07e6c` | (see git log) |
+| `f12b5c4` | (see git log) |
+
+### Testing
+
+- [OK] (Add test results)
+
+### Status
+
+[OK] **Completed**
+
+### Next Steps
+
+- None - task complete
