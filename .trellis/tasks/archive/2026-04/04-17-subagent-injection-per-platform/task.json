@@ -1,9 +1,9 @@
 {
-  "id": "hook-path-robustness",
-  "name": "hook-path-robustness",
-  "title": "Hook 路径解析（monorepo submodule 兼容）",
+  "id": "subagent-injection-per-platform",
+  "name": "subagent-injection-per-platform",
+  "title": "修复各平台 sub-agent 上下文注入",
   "description": "",
-  "status": "planning",
+  "status": "completed",
   "dev_type": null,
   "scope": null,
   "package": "cli",
@@ -11,7 +11,7 @@
   "creator": "taosu",
   "assignee": "taosu",
   "createdAt": "2026-04-17",
-  "completedAt": null,
+  "completedAt": "2026-04-22",
   "branch": null,
   "base_branch": "feat/v0.5.0-beta",
   "worktree_path": null,
@@ -48,8 +48,8 @@
   "children": [],
   "parent": "04-16-skill-first-refactor",
   "relatedFiles": [],
-  "notes": "",
+  "notes": "Superseded by 0.5.0-beta.x work: Codex/Copilot/OpenCode injection covered by commits 4476844, 5fbf961, abc8514. Kiro agentSpawn 实测未单独验证——如需补可新开独立 task。",
   "meta": {
-    "linear_issue": "MIN-455"
+    "linear_issue": "MIN-453"
   }
 }
