@@ -8,7 +8,7 @@
 
 <!-- @@@auto:current-status -->
 - **Active File**: `journal-4.md`
-- **Total Sessions**: 123
+- **Total Sessions**: 124
 - **Last Active**: 2026-04-22
 <!-- @@@/auto:current-status -->
 
@@ -19,7 +19,7 @@
 <!-- @@@auto:active-documents -->
 | File | Lines | Status |
 |------|-------|--------|
-| `journal-4.md` | ~1389 | Active |
+| `journal-4.md` | ~1424 | Active |
 | `journal-3.md` | ~1988 | Archived |
 | `journal-2.md` | ~1963 | Archived |
 | `journal-1.md` | ~1998 | Archived |
@@ -32,6 +32,7 @@
 <!-- @@@auto:session-history -->
 | # | Date | Title | Commits | Branch |
 |---|------|-------|---------|--------|
+| 124 | 2026-04-22 | Bootstrap onboard gap: joiner task + AI-facing PRDs | `bbe6834`, `13cf30c`, `c04c19a` | `feat/v0.5.0-beta` |
 | 123 | 2026-04-22 | Polyrepo detection: sibling .git scan + CLI↔runtime schema bridge | `dc189b1`, `3d1c25c`, `6c34762` | `feat/v0.5.0-beta` |
 | 122 | 2026-04-22 | Qoder: split session-boundary commands from auto-trigger skills | `d949c37`, `5c8d87b` | `feat/v0.5.0-beta` |
 | 121 | 2026-04-22 | Schema unification + orphan cleanup: full Audit-ALL-Writers follow-through | `4eaa2b5`, `b323e93`, `c0f0806`, `ef07e6c`, `f12b5c4` | `feat/v0.5.0-beta` |

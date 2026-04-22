@@ -1387,3 +1387,38 @@ Added parsePolyrepo as a 7th parser in detectMonorepo() for layouts with multipl
 ### Next Steps
 
 - None - task complete
+
+
+## Session 124: Bootstrap onboard gap: joiner task + AI-facing PRDs
+
+**Date**: 2026-04-22
+**Task**: Bootstrap onboard gap: joiner task + AI-facing PRDs
+**Branch**: `feat/v0.5.0-beta`
+
+### Summary
+
+Added joiner onboarding task auto-generated on fresh clones (detected via gitignored .developer file). Three-branch init dispatch (creator / joiner / no-op) wired in both main dispatch and handleReinit fast-path. Rewrote both bootstrap and joiner PRDs as AI-facing instructions instead of user docs. Captured two reusable lessons in platform-integration spec: .developer as per-checkout signal, and the two-point wiring gotcha for init.ts triggers. Also fixed a real bug the initial implement agent missed: handleReinit was short-circuiting before joiner creation could fire on the default --user path.
+
+### Main Changes
+
+(Add details)
+
+### Git Commits
+
+| Hash | Message |
+|------|---------|
+| `bbe6834` | (see git log) |
+| `13cf30c` | (see git log) |
+| `c04c19a` | (see git log) |
+
+### Testing
+
+- [OK] (Add test results)
+
+### Status
+
+[OK] **Completed**
+
+### Next Steps
+
+- None - task complete
