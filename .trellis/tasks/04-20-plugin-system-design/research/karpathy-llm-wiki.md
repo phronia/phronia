@@ -34,6 +34,40 @@
 
 ## 二手：社区落地（Karpathy 推后 12 天内涌现）
 
+### @jakevin7 推文 + 评论区实战信号（2026-04-22 新增）
+
+- 主推：https://x.com/jakevin7/status/2046232019806704079（235 赞 / 27 RT）
+- 补推：https://x.com/jakevin7/status/2046233189178638564（Agent Team 形态）
+- `jakevin7` 即 jackwener 本人（t.co 评论链接解析回 jackwener/llm-wiki repo）
+
+**① 实时 wiki agent 作为 agent team 一员**（补推原话）：
+> "每一次我和 agent 讨论的任何设计或者任何代码改动。wiki agent 都会实时的摄取到 Wiki 里进行更新。"
+
+和主推第 1 点呼应："llm-wiki 的设计是有一个**负责 wiki 维护的 wiki agent 作为 agent team 的一部分**，实时的维护和摄入项目的设计和成果。两层架构（AGENTS.md + Skill）是这样设计理念下的产物。"
+
+→ **PRD 没想到的形态**：不是 session 结束手动 `/ingest`，而是常驻 wiki subagent 订阅主对话流实时摄取。Trellis 可做成 Claude Code subagent（`.claude/agents/wiki.md`）+ 挂 `Stop`/`SubagentStop` hook。
+
+**② 错误传播是最大痛点**（@LuckyCurveC 实测反馈）：
+> "ingest 犯蠢之后，后续的 query 都得完蛋 ... lint 指令当你的 wiki 大了也不好用。"
+> jakevin7 回："目前得配合 SOTA 模型搞，一旦犯了错误会引起更多错误。"
+
+→ 现有 lint 机制不足以处理错误传播。**Trellis Memory MVP 必须有可撤销机制**：每次 `/ingest` 作为一个独立 git commit，`wiki-log.md` 里带 commit SHA，`trellis memory revert <log-entry>` 原子回滚。比依赖 lint 纠错更靠谱。
+
+**③ 规模上限约 10 人团队**（@MacKFCBK 问几千个跨 7-8 年的公司 wiki）：
+> jakevin7："超大规模级别不合适，最多只能维护不到十人团队的 wiki。"
+
+→ 验证 PRD Out-of-Scope：Trellis Memory 服务**单项目单小组**，不做企业 wiki / 跨项目知识库。
+
+**④ 检索质量 > 写作质量**（@crypto_fyy 提问）：
+> "wiki 一旦变大，检索质量比写作更关键。你有做 chunk 粒度 / 标题层级 / 引用规范来稳住召回吗？"
+
+→ 当前 PRD 只靠 `_index.md` 路由 + BM25，**页面切分粒度和引用规范没硬规则**。建议从 skill 文件抄硬约束："Keep pages focused on a single topic. If a section grows too large, split into its own page."，并把 `## Related` 固定格式写进 Trellis Memory schema。
+
+**⑤ 外部源摄取天然搭配**（@chentao_007 用法）：
+> "用 llm-wiki + opencli 获取小宇宙转录文本来做"
+
+→ `/research` 命令可显式支持 MCP / 外部源工具（opencli / gstack / 飞书 minutes / 浏览器）抓取 → 存 `sources/` → ingest 三段式。
+
 ### llm_wiki（@nash_su，推特转述）
 
 - URL: https://x.com/i/status/2046393001140986216
@@ -48,6 +82,7 @@
 - 定位：**Agent-native persistent knowledge management — compile knowledge once, query forever**
 - Tech: TypeScript (ESM, Node 20+) + Commander.js + gray-matter + pg + tsup + Vitest
 - 关键论断：**The tool itself doesn't call LLMs**. 只提供 skill 文件，让任意 agent（Claude Code / Codex）操作 wiki；Obsidian 是人类界面（无自建 GUI）
+- **repo 状态更正**（2026-04-22 复核）：49⭐ / 2 forks / 最近 push 2026-04-20 / size 13.7KB。上文提到的 "llm_wiki 12 天 2k⭐" 是 @nash_su 另一个同名项目，**jackwener/llm-wiki 规模小但设计密度高**，当作参考实现而非成品
 
 **Vault 结构（Trellis Memory plugin 直接可抄）**：
 ```
@@ -90,6 +125,19 @@ my-wiki/
 - `sources/` 是 immutable，任何修改只能在 `wiki/`
 - **每次操作必须**：append 一行到 `wiki-log.md` + 跑 `llm-wiki sync`
 - 每次操作前读 `wiki-purpose.md` + `wiki-schema.md`（+ 可选 `wiki-agent.md`）
+
+**Skill 文件细读新增信号**（2026-04-22 复核 `skills/llm-wiki.md` 315 行）：
+
+- **`wiki-agent.md` 是可选覆盖层**（不是 bootstrap 必出）：存在时覆盖 `CLAUDE.md`/`AGENTS.md` 里的默认 MUST / MAY / NEVER ingest 标准；缺失时 fallback 到 bootstrap 里的默认值 → **对 Trellis 的启示**：每个项目可自定义 ingest filter，不需要改 skill 本体
+- **Incremental guard**（ingest step 1）：先看 source frontmatter 里的 `ingested` 字段。若存在且文件未改，报 "Source unchanged, skipping"；改过才走 re-ingest —— **省 token / 防重复 ingest**
+- **Ingest Filter**（ingest step 3，在读内容之前）：对照 MUST / MAY / NEVER 评估 source，NEVER 直接 drop（**不写 log**，silent skip），MUST 必收，MAY 用判断。Karpathy "Explicit" 原则的硬落地
+- **空 vault 禁止立刻写页**（ingest step 6）：强制先和用户讨论 organization rules（目录结构 / 子目录 / 语言 / 文件名格式），写入 `wiki-schema.md` 后才开始 ingest —— **避免早期结构锁死**
+- **Source 切分 = incremental re-ingest 基础**（step 7）：大 source 按 topic 或 date 拆分（`chat-2026-04-17.md` / `browser-timeout-discussion.md`），这是细粒度增量 re-ingest 的前提，不是 stylistic 建议
+- **一个 source 触达 5–15 个 wiki 页** 是官方预期（step 9）。低于这个密度可能 ingest 不充分
+- **`## Related` 段固定格式**：每页末尾 `- [[page-name]] — one-line relationship description` —— 强制结构化，机器可读
+- **Merge 语义 vs. overwrite 语义**（step 10）：更新已有页默认 merge，冲突时**双方都 cite** 并标注，不是选一个覆盖另一个
+- **`sources:` frontmatter 字段强制必填**：每条 claim 可追溯到 source，是 Explicit / Auditable 的底层保证
+- **`status:` 字段强制 machine-readable**：issue/bug 页的 `open`/`resolved`/`wontfix` 必须在 frontmatter，不能只写在正文
 
 **Frontmatter 规范**（wiki 页）：
 ```yaml
@@ -296,3 +344,7 @@ jackwener/llm-wiki 明确：**tool 不调 LLM，只做索引 / 搜索 / graph / 
    - `.trellis/memory/` = AI 维护的项目知识 wiki
    - 两者是**互补**，不是替代。Memory 可以 ingest spec 但不改 spec
 5. Claude Memory Tool `memory_20250818` 6 命令的对齐仍然保留（兼容 Anthropic 原生通道），但**vault 结构走 llm-wiki 风格**而不是 Claude 默认的扁平结构
+6. **新增（基于 @jakevin7 Agent Team 形态）**：Memory plugin 除 skill 外，还注册一个 `wiki` subagent（`.claude/agents/wiki.md`），订阅主对话 `Stop` / `SubagentStop` hook 做实时 ingest —— 不等用户手动 `/ingest`
+7. **新增（基于错误传播痛点）**：每次 ingest 原子化 commit，`wiki-log.md` 带 commit SHA，支持 `trellis memory revert`，不指望 lint 兜底
+8. **新增（基于 wiki-agent.md 模式）**：`.trellis/memory/wiki-agent.md` 作为项目级 ingest filter 覆盖层，缺失时 fallback 到 `CLAUDE.md` / `AGENTS.md` bootstrap 默认
+9. **新增（基于 incremental guard + source 切分）**：source 强制按 topic / date 拆分入 `sources/YYYY-MM-DD/`，frontmatter 带 `ingested:` + `wiki_pages:`，re-ingest 时按 mtime + SHA 跳未变化文件
