@@ -1318,3 +1318,37 @@ Started by cleaning up the legacy `04-16-skill-first-refactor` parent task famil
 ### Next Steps
 
 - None - task complete
+
+
+## Session 122: Qoder: split session-boundary commands from auto-trigger skills
+
+**Date**: 2026-04-22
+**Task**: Qoder: split session-boundary commands from auto-trigger skills
+**Branch**: `feat/v0.5.0-beta`
+
+### Summary
+
+Qoder 从纯 skill-only 平台升级为 hybrid：session-boundary 命令（finish-work、continue）走 .qoder/commands/trellis-{name}.md（flat + YAML frontmatter），5 个 auto-trigger workflow skills 保留。新增 COMMAND_DESCRIPTIONS + wrapWithCommandFrontmatter helper；扩展 collectBothTemplates 加 wrapCmd 参数；0.5.0-beta.10 migration manifest 用 safe-file-delete 清老 skill 文件（覆盖 Unix + Windows PYTHON_CMD 两种 hash）。docs-site EN + ZH 同步更新 10 个文件。
+
+### Main Changes
+
+(Add details)
+
+### Git Commits
+
+| Hash | Message |
+|------|---------|
+| `d949c37` | (see git log) |
+| `5c8d87b` | (see git log) |
+
+### Testing
+
+- [OK] (Add test results)
+
+### Status
+
+[OK] **Completed**
+
+### Next Steps
+
+- None - task complete
