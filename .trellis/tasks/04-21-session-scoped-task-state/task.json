@@ -22,5 +22,10 @@
   "parent": null,
   "relatedFiles": [],
   "notes": "",
-  "meta": {}
+  "meta": {},
+  "integrations": {
+    "feishu": {
+      "task_guid": "1bd8415f-a588-4edc-98f8-66280c5baaa8"
+    }
+  }
 }
