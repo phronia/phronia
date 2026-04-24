@@ -1595,3 +1595,37 @@ Removed task.py init-context; Phase 1.3 now AI-curated (task create seeds jsonl,
 ### Next Steps
 
 - None - task complete
+
+
+## Session 127: Fix Codex SessionStart workflow guidance
+
+**Date**: 2026-04-24
+**Task**: Fix Codex SessionStart workflow guidance
+**Branch**: `feat/v0.5.0-beta`
+
+### Summary
+
+Fixed Trellis SessionStart behavior for Codex/Copilot by reusing the shared Windows UTF-8 encoding helper, tightened READY and workflow-state guidance so agent-capable platforms dispatch trellis-implement and trellis-check instead of editing in the main session, updated platform integration spec, and recorded the session-start-hook-proof task context.
+
+### Main Changes
+
+(Add details)
+
+### Git Commits
+
+| Hash | Message |
+|------|---------|
+| `857b243` | (see git log) |
+| `80e8c83` | (see git log) |
+
+### Testing
+
+- [OK] (Add test results)
+
+### Status
+
+[OK] **Completed**
+
+### Next Steps
+
+- None - task complete
