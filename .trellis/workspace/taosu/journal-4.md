@@ -1629,3 +1629,38 @@ Fixed Trellis SessionStart behavior for Codex/Copilot by reusing the shared Wind
 ### Next Steps
 
 - None - task complete
+
+
+## Session 128: SessionStart visible injection notice
+
+**Date**: 2026-04-24
+**Task**: SessionStart visible injection notice
+**Branch**: `feat/v0.5.0-beta`
+
+### Summary
+
+Implemented a one-shot first-reply notice for model-visible SessionStart context on supported platforms, kept Copilot diagnostic-only, fixed statusline Windows stream typing, updated platform integration spec, verified tests/lint/typecheck, and archived the task.
+
+### Main Changes
+
+(Add details)
+
+### Git Commits
+
+| Hash | Message |
+|------|---------|
+| `192dabb` | (see git log) |
+| `b0ea242` | (see git log) |
+| `e23700a` | (see git log) |
+
+### Testing
+
+- [OK] (Add test results)
+
+### Status
+
+[OK] **Completed**
+
+### Next Steps
+
+- None - task complete
