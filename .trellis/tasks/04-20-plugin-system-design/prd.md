@@ -8,6 +8,28 @@
 1. **Memory plugin** — 类 Serena/Supermemory 的 AI 记忆能力
 2. **Trace plugin** — 对接 Cursor Agent Trace 开放规范 + 底层对话日志
 
+## Current Brainstorm Status
+
+本 task 仍处于 Phase 1 requirement exploration / design brainstorm。当前目标是讨论清楚 plugin 机制、Memory、Trace 之间的边界和 MVP 范围；尚未进入实现准备阶段。
+
+在以下问题收敛前，不创建 `implement.jsonl` / `check.jsonl`，也不派发实现或检查 agent：
+- Plugin 机制本身的抽象边界
+- Memory plugin 的最小闭环
+- Trace 与 Memory 的关系，以及 Trace 是否仍作为独立 plugin
+- 首批 MVP 的实际切入点
+
+## Current Design Candidate: Storage Ownership
+
+详细第一性原理分析见 [`fp-analysis.md`](fp-analysis.md)。
+
+当前更合理的方向是把“物理存储位置”和“逻辑查询 scope”分开：
+
+- **默认 user-global local store**：存 raw traces、session digest、personal memory、跨项目索引；不进 git，通过 metadata 支持 current-project / global / branch / task 过滤。
+- **可选 repo curated memory**：`.trellis/memory/` 只存经过显式 promote 的小型 markdown wiki / sources，用于团队 PR review 和共享；不存完整 raw transcript。
+- **后续 team server backend**：解决多人同步、权限、审计、集中搜索；不作为 MVP 默认要求，但 CLI/MCP API 需要为 backend provider 留接口。
+
+关键结论：当前项目搜索不要求数据物理放在当前项目目录。全局 store + project metadata filter 可以同时支持当前项目检索和跨项目个人记忆；repo 只承载团队愿意 review 的 curated knowledge。
+
 ## Research References
 
 所有详细调研沉淀在 `research/` 目录（12 份）：

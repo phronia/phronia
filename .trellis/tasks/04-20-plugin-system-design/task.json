@@ -22,7 +22,16 @@
   "parent": null,
   "relatedFiles": [],
   "notes": "",
-  "meta": {},
+  "meta": {
+    "fp_analysis": {
+      "completed": true,
+      "topic": "Memory / Trace storage ownership",
+      "axioms_count": 6,
+      "assumptions_challenged": 7,
+      "ground_truths_count": 5,
+      "validation_passed": true
+    }
+  },
   "integrations": {
     "feishu": {
       "task_guid": "766ef330-f6a1-44e5-bda2-a434fc9a15da"
