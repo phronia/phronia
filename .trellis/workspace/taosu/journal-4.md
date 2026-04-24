@@ -1697,3 +1697,37 @@ Added Pi Agent platform support, extension-backed Trellis context injection, sub
 ### Next Steps
 
 - None - task complete
+
+
+## Session 130: Fix AGENTS.md /trellis:start reference (issue #192)
+
+**Date**: 2026-04-24
+**Task**: Fix AGENTS.md /trellis:start reference (issue #192)
+**Branch**: `feat/v0.5.0-beta`
+
+### Summary
+
+AGENTS.md template referenced /trellis:start which filterCommands strips on agent-capable platforms. Rewrote template as platform-neutral pointer to .trellis/, synced repo-root + docs-site copies, bumped submodule. Also fixed same inaccuracy in docs-site custom-commands/install-and-first-task pages (EN+ZH). Scope kept minimal per PRD option A: no update.ts managed-block refresh, no migration.
+
+### Main Changes
+
+(Add details)
+
+### Git Commits
+
+| Hash | Message |
+|------|---------|
+| `7e3592f` | (see git log) |
+| `9366d86` | (see git log) |
+
+### Testing
+
+- [OK] (Add test results)
+
+### Status
+
+[OK] **Completed**
+
+### Next Steps
+
+- None - task complete
