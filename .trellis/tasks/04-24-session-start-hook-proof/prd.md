@@ -26,11 +26,11 @@ Make SessionStart injection visibly obvious to users across hook-capable platfor
 
 ## Acceptance Criteria
 
-* [ ] Shared Python `session-start.py` includes the first-reply notice instruction in injected context.
-* [ ] Codex `session-start.py` includes the same first-reply notice instruction.
-* [ ] Copilot/OpenCode behavior is handled honestly: either include only where context is actually injected, or document why host output is not reliable.
-* [ ] Tests assert the notice instruction appears in generated SessionStart context for supported implementations.
-* [ ] Lint and typecheck pass.
+* [x] Shared Python `session-start.py` includes the first-reply notice instruction in injected context.
+* [x] Codex `session-start.py` includes the same first-reply notice instruction.
+* [x] Copilot/OpenCode behavior is handled honestly: either include only where context is actually injected, or document why host output is not reliable.
+* [x] Tests assert the notice instruction appears in generated SessionStart context for supported implementations.
+* [x] Lint and typecheck pass.
 
 ## Definition of Done
 
