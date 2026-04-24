@@ -1664,3 +1664,36 @@ Implemented a one-shot first-reply notice for model-visible SessionStart context
 ### Next Steps
 
 - None - task complete
+
+
+## Session 129: Add Pi Agent support
+
+**Date**: 2026-04-24
+**Task**: Add Pi Agent support
+**Branch**: `feat/v0.5.0-beta`
+
+### Summary
+
+Added Pi Agent platform support, extension-backed Trellis context injection, subagent execution, and clean subagent output.
+
+### Main Changes
+
+(Add details)
+
+### Git Commits
+
+| Hash | Message |
+|------|---------|
+| `82a4464` | (see git log) |
+
+### Testing
+
+- [OK] (Add test results)
+
+### Status
+
+[OK] **Completed**
+
+### Next Steps
+
+- None - task complete
