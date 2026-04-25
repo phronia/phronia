@@ -25,10 +25,42 @@
 当前更合理的方向是把“物理存储位置”和“逻辑查询 scope”分开：
 
 - **默认 user-global local store**：存 raw traces、session digest、personal memory、跨项目索引；不进 git，通过 metadata 支持 current-project / global / branch / task 过滤。
-- **可选 repo curated memory**：`.trellis/memory/` 只存经过显式 promote 的小型 markdown wiki / sources，用于团队 PR review 和共享；不存完整 raw transcript。
+- **项目级共享知识默认复用现有 Trellis 文档面**：稳定规范进 `.trellis/spec/`，任务设计和调研进 `.trellis/tasks/<task>/`，时间线和会话总结进 `.trellis/workspace/<dev>/journal-*.md`；不默认新增 `.trellis/memory/wiki/` 这套 parallel wiki。
 - **后续 team server backend**：解决多人同步、权限、审计、集中搜索；不作为 MVP 默认要求，但 CLI/MCP API 需要为 backend provider 留接口。
 
-关键结论：当前项目搜索不要求数据物理放在当前项目目录。全局 store + project metadata filter 可以同时支持当前项目检索和跨项目个人记忆；repo 只承载团队愿意 review 的 curated knowledge。
+关键结论：当前项目搜索不要求数据物理放在当前项目目录。全局 store + project metadata filter 可以同时支持当前项目检索和跨项目个人记忆；项目级共享知识优先落到现有 spec / task / journal 体系，Memory 层负责索引、召回和 promote 建议，而不是复制一份新知识库。
+
+## Current Design Candidate: Memory Plugin Shape
+
+Memory plugin 不应该从“再存一份 raw session”开始，而应该从“统一索引各 IDE/CLI 已有会话 + 提炼可行动记忆”开始。
+
+核心产品判断：
+
+- Claude Code / Codex / OpenCode / Cursor 本身已经有原生 transcript 存储；Trellis 默认不复制完整 raw session，避免重复存储和磁盘膨胀。
+- Trellis 的价值在于跨工具、跨项目、跨时间的统一 catalog / search / digest / promote，而不是替代每个工具自己的历史记录。
+- GUI app 后续需要的不是一堆复制出来的 JSONL，而是一个统一的 session catalog：按项目、工具、时间、task、branch、文件、决策、错误类型检索和筛选。
+- Raw session 只在三种场景复制或 snapshot：用户显式导出、原生存储不可稳定访问、或需要团队共享/迁移到 server 时。
+
+建议的本地默认 store 更像 index/cache，而不是 source-of-truth：
+
+```text
+~/.trellis/memory/
+  catalog.sqlite              # sessions, projects, transcript pointers, hashes, indexing state
+  digests/                    # selected session / task summaries, markdown or JSON
+  notes/                      # personal durable memory entries
+  cache/                      # optional extracted chunks / embeddings / FTS cache
+```
+
+Memory plugin 的能力边界：
+
+- `discover`：扫描 Claude Code / Codex / OpenCode / Cursor 等原生 transcript，建立 catalog，不复制全文。
+- `search`：按 current project / global / task / branch 搜 native transcript、digests、repo docs。
+- `digest`：把高价值 session 提炼成结构化摘要，默认存在 user-global store。
+- `promote`：把 digest 中值得共享的知识建议写入 canonical home：`spec/`、`tasks/<task>/research`、`tasks/<task>/info.md` 或 `journal`。
+- `recall`：在 session start / user prompt 时召回少量相关 memory，注入当前 agent。
+- `prune`：清理 catalog/cache/digests；不删除原 IDE/CLI 的原生历史，除非用户显式授权。
+
+因此 raw session capture 不是 Memory MVP 的默认核心能力。默认核心是“索引 native raw + 生成 digest + promote 到现有 Trellis 知识面”。
 
 ## Research References
 
