@@ -1731,3 +1731,37 @@ AGENTS.md template referenced /trellis:start which filterCommands strips on agen
 ### Next Steps
 
 - None - task complete
+
+
+## Session 131: git-backed private registry init
+
+**Date**: 2026-04-27
+**Task**: git-backed private registry init
+**Branch**: `feat/v0.5.0-beta`
+
+### Summary
+
+实现 --registry 的 git-backed 探测和下载路径，让私有/自托管 GitLab marketplace 可复用本机 Git 凭据；补齐 mode detection、backend 传递、错误分类、测试覆盖，并归档任务。
+
+### Main Changes
+
+(Add details)
+
+### Git Commits
+
+| Hash | Message |
+|------|---------|
+| `f931aa3` | (see git log) |
+| `f968c5c` | (see git log) |
+
+### Testing
+
+- [OK] (Add test results)
+
+### Status
+
+[OK] **Completed**
+
+### Next Steps
+
+- None - task complete
