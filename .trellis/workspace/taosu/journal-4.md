@@ -1798,3 +1798,36 @@ Fix two correlated cross-platform bugs in template hash dictionary: OS-native pa
 ### Next Steps
 
 - None - task complete
+
+
+## Session 133: task.py archive input contract alignment
+
+**Date**: 2026-04-27
+**Task**: task.py archive input contract alignment
+**Branch**: `feat/v0.5.0-beta`
+
+### Summary
+
+Align task.py archive subcommand with other dir-style subcommands by routing through resolve_task_dir instead of find_task_by_name. Archive now accepts slug, relative path, and absolute path uniformly. Sync template mirror under packages/cli/src/templates/trellis/scripts/. Add regression test covering all three input forms.
+
+### Main Changes
+
+(Add details)
+
+### Git Commits
+
+| Hash | Message |
+|------|---------|
+| `431edbe` | (see git log) |
+
+### Testing
+
+- [OK] (Add test results)
+
+### Status
+
+[OK] **Completed**
+
+### Next Steps
+
+- None - task complete
