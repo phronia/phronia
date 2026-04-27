@@ -1765,3 +1765,36 @@ AGENTS.md template referenced /trellis:start which filterCommands strips on agen
 ### Next Steps
 
 - None - task complete
+
+
+## Session 132: Windows path normalization (#194 #198)
+
+**Date**: 2026-04-27
+**Task**: Windows path normalization (#194 #198)
+**Branch**: `feat/v0.5.0-beta`
+
+### Summary
+
+Fix two correlated cross-platform bugs in template hash dictionary: OS-native path separators in JSON keys (#198) and CRLF-vs-LF hash mismatch (#194). Add toPosix() utility, LF-normalize content before hashing, upgrade .template-hashes.json to a {__version: 2, hashes} envelope with safe legacy-discard migration. Wrap opencode collector + update.ts path.relative lookup at hash-key boundaries. Spec: extend cross-platform-thinking-guide.md with logical-key vs fs-path boundary, hash-time line-ending normalization, and __version schema sentinel pattern. 12 new tests, 750 pass / 5 baseline-fail.
+
+### Main Changes
+
+(Add details)
+
+### Git Commits
+
+| Hash | Message |
+|------|---------|
+| `ccfcbdf` | (see git log) |
+
+### Testing
+
+- [OK] (Add test results)
+
+### Status
+
+[OK] **Completed**
+
+### Next Steps
+
+- None - task complete
