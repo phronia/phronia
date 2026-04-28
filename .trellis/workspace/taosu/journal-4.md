@@ -1831,3 +1831,39 @@ Align task.py archive subcommand with other dir-style subcommands by routing thr
 ### Next Steps
 
 - None - task complete
+
+
+## Session 134: Pi subagent config and bundled meta skill
+
+**Date**: 2026-04-28
+**Task**: Pi subagent config and bundled meta skill
+**Branch**: `feat/v0.5.0-beta`
+
+### Summary
+
+Installed trellis-meta as a bundled built-in skill, hardened Pi subagent launch/config behavior, updated local subagent context wiring, and archived completed tasks.
+
+### Main Changes
+
+(Add details)
+
+### Git Commits
+
+| Hash | Message |
+|------|---------|
+| `f3a273b` | (see git log) |
+| `b37cb1b` | (see git log) |
+| `5dff2ad` | (see git log) |
+| `3fa969c` | (see git log) |
+
+### Testing
+
+- [OK] (Add test results)
+
+### Status
+
+[OK] **Completed**
+
+### Next Steps
+
+- None - task complete
