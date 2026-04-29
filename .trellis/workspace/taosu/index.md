@@ -8,8 +8,8 @@
 
 <!-- @@@auto:current-status -->
 - **Active File**: `journal-4.md`
-- **Total Sessions**: 112
-- **Last Active**: 2026-04-14
+- **Total Sessions**: 136
+- **Last Active**: 2026-04-29
 <!-- @@@/auto:current-status -->
 
 ---
@@ -19,7 +19,7 @@
 <!-- @@@auto:active-documents -->
 | File | Lines | Status |
 |------|-------|--------|
-| `journal-4.md` | ~643 | Active |
+| `journal-4.md` | ~1940 | Active |
 | `journal-3.md` | ~1988 | Archived |
 | `journal-2.md` | ~1963 | Archived |
 | `journal-1.md` | ~1998 | Archived |
@@ -32,6 +32,30 @@
 <!-- @@@auto:session-history -->
 | # | Date | Title | Commits | Branch |
 |---|------|-------|---------|--------|
+| 136 | 2026-04-29 | Redesign Phase 3.4 commit + /finish-work refocuses on record-session | `d2849f9`, `a97b649`, `ff07846`, `1aa2a13`, `446379e` | `feat/v0.5.0-beta` |
+| 135 | 2026-04-29 | Fix parent-child task progress regression on child archive | `e25d7db`, `4d550d0` | `feat/v0.5.0-beta` |
+| 134 | 2026-04-28 | Pi subagent config and bundled meta skill | `f3a273b`, `b37cb1b`, `5dff2ad`, `3fa969c` | `feat/v0.5.0-beta` |
+| 133 | 2026-04-27 | task.py archive input contract alignment | `431edbe` | `feat/v0.5.0-beta` |
+| 132 | 2026-04-27 | Windows path normalization (#194 #198) | `ccfcbdf` | `feat/v0.5.0-beta` |
+| 131 | 2026-04-27 | git-backed private registry init | `f931aa3`, `f968c5c` | `feat/v0.5.0-beta` |
+| 130 | 2026-04-24 | Fix AGENTS.md /trellis:start reference (issue #192) | `7e3592f`, `9366d86` | `feat/v0.5.0-beta` |
+| 129 | 2026-04-24 | Add Pi Agent support | `82a4464` | `feat/v0.5.0-beta` |
+| 128 | 2026-04-24 | SessionStart visible injection notice | `192dabb`, `b0ea242`, `e23700a` | `feat/v0.5.0-beta` |
+| 127 | 2026-04-24 | Fix Codex SessionStart workflow guidance | `857b243`, `80e8c83` | `feat/v0.5.0-beta` |
+| 126 | 2026-04-23 | init-context removal, session-start READY fix, release pipeline hardening → 0.5.0-beta.12 | `19374ff`, `9b92941`, `279b542`, `d0e04ab`, `bff5154`, `44233e1`, `ffeec47`, `de42883`, `c800da3`, `771d3dc`, `92ed240`, `b9cdd59`, `f72176e`, `2cea886`, `1414ecf`, `192cad0`, `c3690d0`, `dc79a01`, `83597dd` | `feat/v0.5.0-beta` |
+| 125 | 2026-04-22 | Migrate-flow-bugs + beta.10 hotfix + release docs guard | `a5e3285`, `8667520`, `f4df699`, `cd0c9f6`, `57651e8` | `feat/v0.5.0-beta` |
+| 124 | 2026-04-22 | Bootstrap onboard gap: joiner task + AI-facing PRDs | `bbe6834`, `13cf30c`, `c04c19a` | `feat/v0.5.0-beta` |
+| 123 | 2026-04-22 | Polyrepo detection: sibling .git scan + CLI↔runtime schema bridge | `dc189b1`, `3d1c25c`, `6c34762` | `feat/v0.5.0-beta` |
+| 122 | 2026-04-22 | Qoder: split session-boundary commands from auto-trigger skills | `d949c37`, `5c8d87b` | `feat/v0.5.0-beta` |
+| 121 | 2026-04-22 | Schema unification + orphan cleanup: full Audit-ALL-Writers follow-through | `4eaa2b5`, `b323e93`, `c0f0806`, `ef07e6c`, `f12b5c4` | `feat/v0.5.0-beta` |
+| 120 | 2026-04-20 | v0.5.0-beta.5/6: trellis- prefix sub-agents, drop model:opus, fix codex read-only | `79801ed`, `66a1ae2`, `fe1d1ff`, `e49975d` | `feat/v0.5.0-beta` |
+| 119 | 2026-04-20 | 0.5.0-beta.0 release-prep: breaking-change gate + full command→skill migration | `2374433`, `b284d81` | `feat/v0.5.0-beta` |
+| 118 | 2026-04-18 | workflow-enforcement-v2 + slim workflow.md + SessionStart payload restructure | `4476844`, `c5387df` | `feat/v0.5.0-beta` |
+| 117 | 2026-04-17 | Workflow rewrite + pull-based migration + enforcement v2 planning | `d2c6682`, `57d4ae1` | `feat/v0.5.0-beta` |
+| 116 | 2026-04-17 | v0.5.0: hooks + agents for 7 platforms, major cleanup (detailed) | `efccf6f` | `feat/v0.5.0-beta` |
+| 115 | 2026-04-16 | v0.5.0: hooks + agents for 7 platforms, major cleanup | `efccf6f` | `feat/v0.5.0-beta` |
+| 114 | 2026-04-16 | Platform upgrade + hooks/agent research | `2910c09` | `feat/v0.5.0-beta` |
+| 113 | 2026-04-16 | Skill-First Template Refactor (v0.5.0-beta) | `700e7d3` | `feat/v0.5.0-beta` |
 | 112 | 2026-04-14 | Factory Droid platform support + Codex shared-layer hint | `0015246`, `d7e9b13` | `feat/v0.4.0-beta` |
 | 111 | 2026-04-10 | Fix #154: lazy-load workflow.md in session-start, update spec | `e7b304b`, `94c5af5` | `feat/v0.4.0-beta` |
 | 110 | 2026-04-10 | fix #157: init re-init fast path | `1b767f2`, `e988c79` | `feat/v0.4.0-beta` |
