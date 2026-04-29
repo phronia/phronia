@@ -1867,3 +1867,37 @@ Installed trellis-meta as a bundled built-in skill, hardened Pi subagent launch/
 ### Next Steps
 
 - None - task complete
+
+
+## Session 135: Fix parent-child task progress regression on child archive
+
+**Date**: 2026-04-29
+**Task**: Fix parent-child task progress regression on child archive
+**Branch**: `feat/v0.5.0-beta`
+
+### Summary
+
+Children list was being pruned on archive, shrinking both numerator and denominator in children_progress and hiding completed work. Stop pruning; treat archived (missing-from-active) entries as done. Sync to template source. Document invariant in script-conventions spec.
+
+### Main Changes
+
+(Add details)
+
+### Git Commits
+
+| Hash | Message |
+|------|---------|
+| `e25d7db` | (see git log) |
+| `4d550d0` | (see git log) |
+
+### Testing
+
+- [OK] (Add test results)
+
+### Status
+
+[OK] **Completed**
+
+### Next Steps
+
+- None - task complete

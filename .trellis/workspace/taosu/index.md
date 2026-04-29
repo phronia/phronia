@@ -8,8 +8,8 @@
 
 <!-- @@@auto:current-status -->
 - **Active File**: `journal-4.md`
-- **Total Sessions**: 134
-- **Last Active**: 2026-04-28
+- **Total Sessions**: 135
+- **Last Active**: 2026-04-29
 <!-- @@@/auto:current-status -->
 
 ---
@@ -19,7 +19,7 @@
 <!-- @@@auto:active-documents -->
 | File | Lines | Status |
 |------|-------|--------|
-| `journal-4.md` | ~1869 | Active |
+| `journal-4.md` | ~1903 | Active |
 | `journal-3.md` | ~1988 | Archived |
 | `journal-2.md` | ~1963 | Archived |
 | `journal-1.md` | ~1998 | Archived |
@@ -32,6 +32,7 @@
 <!-- @@@auto:session-history -->
 | # | Date | Title | Commits | Branch |
 |---|------|-------|---------|--------|
+| 135 | 2026-04-29 | Fix parent-child task progress regression on child archive | `e25d7db`, `4d550d0` | `feat/v0.5.0-beta` |
 | 134 | 2026-04-28 | Pi subagent config and bundled meta skill | `f3a273b`, `b37cb1b`, `5dff2ad`, `3fa969c` | `feat/v0.5.0-beta` |
 | 133 | 2026-04-27 | task.py archive input contract alignment | `431edbe` | `feat/v0.5.0-beta` |
 | 132 | 2026-04-27 | Windows path normalization (#194 #198) | `ccfcbdf` | `feat/v0.5.0-beta` |

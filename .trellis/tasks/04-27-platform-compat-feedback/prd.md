@@ -61,7 +61,7 @@ Triage and resolve two user-reported platform-integration issues that landed dur
   ```
 - **Bad workaround observed**: the model can run `TRELLIS_CONTEXT_ID="test-session-$(date +%s)" python3 ... task.py start ...`, but that creates an arbitrary runtime session unrelated to the real OpenCode conversation.
 - **Root cause**: `opencode run` exposes `OPENCODE_RUN_ID` to Bash, but OpenCode TUI can omit that env var from the Bash tool. The plugin hook still receives `sessionID`.
-- **Required fix**: OpenCode `tool.execute.before` must inject `export TRELLIS_CONTEXT_ID=<context-key>;` into Bash commands before execution, using the same JS resolver as session-start and subagent prompt injection.
+- **Required fix**: OpenCode `tool.execute.before` must inject `TRELLIS_CONTEXT_ID` before Bash commands execute, using the same JS resolver as session-start and subagent prompt injection. The command prefix must be shell-aware: POSIX shells use `export TRELLIS_CONTEXT_ID=<context-key>;`, while Windows PowerShell uses `$env:TRELLIS_CONTEXT_ID = '<context-key>';`.
 
 ### Issue 5 — Cursor Bash cannot run `task.py start` after task creation
 
@@ -138,7 +138,7 @@ Research [opencode-skills-vs-commands.md](research/opencode-skills-vs-commands.m
 - [ ] Users have a documented, single-flag way to enable statusLine if they want it.
 - [ ] OpenCode no longer ships duplicate `/continue` + `continue`-skill pair when codex is also installed.
 - [ ] Claude Code AI-run Bash commands inherit `TRELLIS_CONTEXT_ID` after SessionStart, so `task.py start` works without manual env setup.
-- [ ] OpenCode AI-run Bash commands inherit `TRELLIS_CONTEXT_ID` from plugin session identity, so `task.py start` works without manual env setup.
+- [ ] OpenCode AI-run Bash commands inherit `TRELLIS_CONTEXT_ID` from plugin session identity on POSIX shells and Windows PowerShell, so `task.py start` works without manual env setup.
 - [ ] Cursor AI-run Bash commands get conversation-scoped task identity through `beforeShellExecution`, so `task.py start` works without manual env setup.
 - [ ] Pi Agent AI-run Bash commands inherit `TRELLIS_CONTEXT_ID` from extension session identity, so `task.py start` works without manual env setup.
 - [ ] Cursor sub-agent prompt injection runs for `Task` and `Subagent` tool names, and handles both string and native custom-subagent `subagent_type` payloads.

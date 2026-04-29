@@ -63,7 +63,7 @@ python3 ./.trellis/scripts/task.py start .trellis/tasks/<task>
 
 with "Cannot set active task without a session identity." The model can manually invent `TRELLIS_CONTEXT_ID=test-session-...`, but that creates an arbitrary runtime file unrelated to the real OpenCode session and should not be treated as a valid workflow.
 
-The correct OpenCode fix is plugin-side propagation: in `tool.execute.before`, when `input.tool` is Bash and `output.args.command` does not already set `TRELLIS_CONTEXT_ID`, prefix the command with `export TRELLIS_CONTEXT_ID=<ctx.getContextKey(input)>;`. This uses `OPENCODE_RUN_ID` for hosts that expose it and falls back to the plugin `sessionID` for TUI sessions. It must use `export` instead of a one-command assignment so compound Bash commands keep the same identity after `&&`, `;`, or pipelines.
+The correct OpenCode fix is plugin-side propagation: in `tool.execute.before`, when `input.tool` is Bash and `output.args.command` does not already set `TRELLIS_CONTEXT_ID`, prefix the command with a shell-aware assignment from `ctx.getContextKey(input)`. This uses `OPENCODE_RUN_ID` for hosts that expose it and falls back to the plugin `sessionID` for TUI sessions. POSIX shells use `export TRELLIS_CONTEXT_ID=<context-key>;`. On Windows, OpenCode's Bash tool can run through PowerShell, so the prefix must be `$env:TRELLIS_CONTEXT_ID = '<context-key>';`. The assignment must happen before the user command so compound commands keep the same identity after `&&`, `;`, or pipelines.
 
 ## Follow-up Finding: Cursor
 
