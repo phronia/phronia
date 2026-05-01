@@ -39,3 +39,36 @@ Converged the workflow-state breadcrumb subsystem to workflow.md as single sourc
 ### Next Steps
 
 - None - task complete
+
+
+## Session 139: fix opencode trellis-research persist (#211)
+
+**Date**: 2026-05-01
+**Task**: fix opencode trellis-research persist (#211)
+**Branch**: `feat/v0.5.0-rc`
+
+### Summary
+
+Rewrote opencode trellis-research agent template to grant write/edit permission and added the cursor/claude shared body (PERSIST + Workflow + Scope Limits). Extended the existing 'research agent persists findings' regression test to cover opencode (the missing platform that masked the drift). 789/789 vitest, lint, tsc clean. Closes #211.
+
+### Main Changes
+
+(Add details)
+
+### Git Commits
+
+| Hash | Message |
+|------|---------|
+| `fd32162` | (see git log) |
+
+### Testing
+
+- [OK] (Add test results)
+
+### Status
+
+[OK] **Completed**
+
+### Next Steps
+
+- None - task complete
