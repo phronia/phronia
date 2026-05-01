@@ -3,7 +3,7 @@
   "name": "opencode-session-start-js",
   "title": "修复 OpenCode session-start.js 命名导出导致插件无法加载",
   "description": "",
-  "status": "planning",
+  "status": "in_progress",
   "dev_type": null,
   "scope": null,
   "package": null,
