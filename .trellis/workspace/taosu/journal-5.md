@@ -105,3 +105,36 @@ Added regression test asserting every .opencode/plugins/*.js file has exactly on
 ### Next Steps
 
 - None - task complete
+
+
+## Session 141: trellis uninstall command (#221)
+
+**Date**: 2026-05-02
+**Task**: trellis uninstall command (#221)
+**Branch**: `feat/v0.5.0-rc`
+
+### Summary
+
+Added trellis uninstall: manifest-driven removal of all trellis assets + .trellis/ directory. Two-column listing (deleted/modified) + Continue? [Y/n] default Y; --yes / --dry-run options. Four scrubbers preserve user-added fields in 11 structured config files (claude/gemini/factory/codebuddy/qoder/codex/cursor/copilot/opencode/pi/codex-toml). Token-based command matching avoids substring false positives. Cleans up empty managed root dirs after file removal. 23 new tests; 830/830 total pass.
+
+### Main Changes
+
+(Add details)
+
+### Git Commits
+
+| Hash | Message |
+|------|---------|
+| `255d499` | (see git log) |
+
+### Testing
+
+- [OK] (Add test results)
+
+### Status
+
+[OK] **Completed**
+
+### Next Steps
+
+- None - task complete
