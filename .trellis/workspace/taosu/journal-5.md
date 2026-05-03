@@ -138,3 +138,36 @@ Added trellis uninstall: manifest-driven removal of all trellis assets + .trelli
 ### Next Steps
 
 - None - task complete
+
+
+## Session 142: Fix Gemini CLI 0.40.x template compat (#224)
+
+**Date**: 2026-05-03
+**Task**: Fix Gemini CLI 0.40.x template compat (#224)
+**Branch**: `feat/v0.5.0-rc`
+
+### Summary
+
+Three Gemini CLI 0.40.x bug fixes from issue #224: drop `tools:` line from agent frontmatter (inherit parent), rename hook event UserPromptSubmit→BeforeAgent in settings.json + platform-aware hookEventName branch in inject-workflow-state.py, move shared skills from .gemini/skills/ to .agents/skills/. Bundled `{{CMD_REF}}` neutralization (resolvePlaceholdersNeutral) so Codex+Gemini render byte-identical content in .agents/skills/. Side-fix: needsCodexUpgrade narrowed to Codex-only markers (was false-positive on Gemini's new .agents/skills/ writes). Spec updates: workflow-state-contract.md (platform-aware hookEventName), platform-integration.md (neutral-resolver rule). 847/847 tests.
+
+### Main Changes
+
+(Add details)
+
+### Git Commits
+
+| Hash | Message |
+|------|---------|
+| `9a4c53b` | (see git log) |
+
+### Testing
+
+- [OK] (Add test results)
+
+### Status
+
+[OK] **Completed**
+
+### Next Steps
+
+- None - task complete
