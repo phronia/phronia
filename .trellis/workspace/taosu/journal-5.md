@@ -171,3 +171,36 @@ Three Gemini CLI 0.40.x bug fixes from issue #224: drop `tools:` line from agent
 ### Next Steps
 
 - None - task complete
+
+
+## Session 143: Fix codex sub-agent missing active task (#225)
+
+**Date**: 2026-05-04
+**Task**: Fix codex sub-agent missing active task (#225)
+**Branch**: `feat/v0.5.0-rc`
+
+### Summary
+
+Class-2 platform sub-agents (codex/copilot/gemini/qoder) couldn't find the active task because they run in separate sessions with different session ids. Three-layer fix: prelude reads 'Active task: <path>' from dispatch prompt, workflow.md in_progress breadcrumb mandates the protocol per turn, and resolve_active_task adds single-session fallback (with new session-fallback source type). 856 tests passing.
+
+### Main Changes
+
+(Add details)
+
+### Git Commits
+
+| Hash | Message |
+|------|---------|
+| `8a39265` | (see git log) |
+
+### Testing
+
+- [OK] (Add test results)
+
+### Status
+
+[OK] **Completed**
+
+### Next Steps
+
+- None - task complete
