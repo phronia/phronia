@@ -8,8 +8,8 @@
 
 <!-- @@@auto:current-status -->
 - **Active File**: `journal-5.md`
-- **Total Sessions**: 143
-- **Last Active**: 2026-05-04
+- **Total Sessions**: 144
+- **Last Active**: 2026-05-06
 <!-- @@@/auto:current-status -->
 
 ---
@@ -19,7 +19,7 @@
 <!-- @@@auto:active-documents -->
 | File | Lines | Status |
 |------|-------|--------|
-| `journal-5.md` | ~206 | Active |
+| `journal-5.md` | ~334 | Active |
 | `journal-4.md` | ~1975 | Archived |
 | `journal-3.md` | ~1988 | Archived |
 | `journal-2.md` | ~1963 | Archived |
@@ -33,6 +33,7 @@
 <!-- @@@auto:session-history -->
 | # | Date | Title | Commits | Branch |
 |---|------|-------|---------|--------|
+| 144 | 2026-05-06 | Fix Codex sub-agent recursion (#234) + Cursor agent description format | `9768b08`, `0f3c706`, `d8efcbc`, `4cf0ab8` | `feat/v0.6.0-beta` |
 | 144 | 2026-05-04 | Integrate mem-poc into trellis CLI as 'trellis mem' subcommand | `e1b368d` | `feat/v0.6.0-beta` |
 | 143 | 2026-05-04 | Fix codex sub-agent missing active task (#225) | `8a39265` | `feat/v0.5.0-rc` |
 | 142 | 2026-05-03 | Fix Gemini CLI 0.40.x template compat (#224) | `9a4c53b` | `feat/v0.5.0-rc` |

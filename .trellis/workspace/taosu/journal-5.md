@@ -296,3 +296,39 @@ Created feat/v0.6.0-beta branch and ported the mem-poc chat-history.ts POC into 
 ### Next Steps
 
 - None - task complete
+
+
+## Session 144: Fix Codex sub-agent recursion (#234) + Cursor agent description format
+
+**Date**: 2026-05-06
+**Task**: Fix Codex sub-agent recursion (#234) + Cursor agent description format
+**Branch**: `feat/v0.6.0-beta`
+
+### Summary
+
+Two independent sub-agent template bugs fixed. (1) Codex multi_agent_v2: SessionStart hook indiscriminately injected 'dispatch trellis-implement' into every agent session, including spawned sub-agents — they re-read it and recursively spawned another same-name sub-agent, causing the outer wrapper to stay running forever and blocking wait_agent in the main session. Upstream openai/codex#16226 (no agent-identity field in SessionStart stdin) blocks the clean A-hard fix, so applied B + A-soft: Recursion guard at the top of trellis-implement.toml / trellis-check.toml developer_instructions, plus a Sub-agent self-exemption clause in both READY-state and <guidelines> blocks of codex/hooks/session-start.py and shared-hooks/session-start.py (Audit ALL Writers — covers Claude/Cursor/Gemini/Qoder/CodeBuddy/Droid/Kiro). (2) Cursor agent UI was leaving the Description field blank for trellis-research/implement/check because their .md frontmatters used YAML block scalar 'description: |' — Cursor's parser only recognizes inline literals; collapsed all three to single-line literals, body preserved verbatim. Tests: 3 keyword-assert tests in templates/codex.test.ts, 1 in shared-hooks.test.ts, new templates/cursor.test.ts (4 tests). 869/869 vitest green, lint clean. Research persisted to research/codex-sessionstart-subagent-signals.md documenting why A-hard isn't yet feasible.
+
+### Main Changes
+
+(Add details)
+
+### Git Commits
+
+| Hash | Message |
+|------|---------|
+| `9768b08` | (see git log) |
+| `0f3c706` | (see git log) |
+| `d8efcbc` | (see git log) |
+| `4cf0ab8` | (see git log) |
+
+### Testing
+
+- [OK] (Add test results)
+
+### Status
+
+[OK] **Completed**
+
+### Next Steps
+
+- None - task complete
