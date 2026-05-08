@@ -61,7 +61,7 @@ type SearchHit = z.infer<typeof SearchHitSchema>;
  * user themselves brought it up (user hits weighted ×3 because the user's own
  * words anchor "what they actually cared about", while assistant elaboration
  * is downstream noise). */
-function relevanceScore(h: SearchHit): number {
+export function relevanceScore(h: SearchHit): number {
   if (h.total_turns === 0) return 0;
   return (3 * h.user_count + h.asst_count) / h.total_turns;
 }
@@ -199,7 +199,7 @@ const OpenCodePartSchema = z
 
 // ---------- argv ----------
 
-function parseArgv(argv: readonly string[]): Argv {
+export function parseArgv(argv: readonly string[]): Argv {
   const cmd = argv[0] ?? "list";
   const positional: string[] = [];
   const flags: Record<string, string | boolean> = {};
@@ -222,7 +222,7 @@ function parseArgv(argv: readonly string[]): Argv {
   return ArgvSchema.parse({ cmd, positional, flags });
 }
 
-function buildFilter(flags: Argv["flags"]): Filter {
+export function buildFilter(flags: Argv["flags"]): Filter {
   const platformRaw =
     typeof flags.platform === "string" ? flags.platform : "all";
   const platformParsed = z
@@ -265,7 +265,7 @@ function die(msg: string): never {
 
 const HOME = os.homedir();
 
-function inRange(iso: string | undefined, f: Filter): boolean {
+export function inRange(iso: string | undefined, f: Filter): boolean {
   if (!iso) return true;
   const t = new Date(iso);
   if (Number.isNaN(+t)) return true;
@@ -274,7 +274,7 @@ function inRange(iso: string | undefined, f: Filter): boolean {
   return true;
 }
 
-function sameProject(
+export function sameProject(
   sessionCwd: string | undefined,
   target: string | undefined,
 ): boolean {
@@ -379,14 +379,17 @@ const INJECTION_TAGS: readonly string[] = [
  * INSTRUCTIONS preamble, etc.) and should be dropped wholesale rather than
  * partially cleaned. Detected after stripInjectionTags, so we look at what's
  * left after tag-stripping. */
-function isBootstrapTurn(cleaned: string, originalLength: number): boolean {
+export function isBootstrapTurn(
+  cleaned: string,
+  originalLength: number,
+): boolean {
   if (cleaned.startsWith("# AGENTS.md instructions for")) return true;
   // A turn that's mostly an INSTRUCTIONS block (Codex injects this as user role).
   if (originalLength > 4000 && /^<INSTRUCTIONS>/i.test(cleaned)) return true;
   return false;
 }
 
-function stripInjectionTags(text: string): string {
+export function stripInjectionTags(text: string): string {
   let out = text;
   for (const tag of INJECTION_TAGS) {
     const escaped = tag.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
@@ -408,7 +411,7 @@ function stripInjectionTags(text: string): string {
  * the contiguous text bounded by the nearest blank-line breaks (`\n\n`) on
  * either side. If the natural paragraph exceeds `maxChars`, fall back to a
  * centered char window — and report the truncation so callers can mark it. */
-function chunkAround(
+export function chunkAround(
   text: string,
   hitIdx: number,
   maxChars: number,
@@ -434,7 +437,7 @@ function chunkAround(
  * chunk start so adjacent hits inside the same paragraph collapse to one
  * chunk. User-role chunks are listed first (the user's own words anchor
  * topic intent more reliably than AI elaboration). */
-function searchInDialogue(
+export function searchInDialogue(
   turns: readonly DialogueTurn[],
   kw: string,
   maxExcerpts = 3,
@@ -542,7 +545,7 @@ function claudeProjectDirFromCwd(cwd: string): string {
   return path.join(CLAUDE_PROJECTS, cwd.replace(/[/_]/g, "-"));
 }
 
-function claudeListSessions(f: Filter): SessionInfo[] {
+export function claudeListSessions(f: Filter): SessionInfo[] {
   if (!fs.existsSync(CLAUDE_PROJECTS)) return [];
   const out: SessionInfo[] = [];
   const projectDirs: string[] = f.cwd
@@ -606,7 +609,7 @@ function claudeListSessions(f: Filter): SessionInfo[] {
   return out;
 }
 
-function claudeExtractDialogue(s: SessionInfo): DialogueTurn[] {
+export function claudeExtractDialogue(s: SessionInfo): DialogueTurn[] {
   // Mirrors session-insight/extract-session.py:
   //   - user: type=="user" + role=="user" + content is string (list = tool_result)
   //   - assistant: type=="assistant" + role=="assistant", keep only `text` blocks
@@ -666,7 +669,7 @@ function claudeExtractDialogue(s: SessionInfo): DialogueTurn[] {
   return turns;
 }
 
-function claudeSearch(s: SessionInfo, kw: string): SearchHit {
+export function claudeSearch(s: SessionInfo, kw: string): SearchHit {
   return searchInDialogue(claudeExtractDialogue(s), kw);
 }
 
@@ -694,7 +697,7 @@ function* walkDir(root: string): Generator<string> {
   }
 }
 
-function codexListSessions(f: Filter): SessionInfo[] {
+export function codexListSessions(f: Filter): SessionInfo[] {
   if (!fs.existsSync(CODEX_SESSIONS)) return [];
   const out: SessionInfo[] = [];
   for (const file of walkDir(CODEX_SESSIONS)) {
@@ -733,7 +736,7 @@ function codexListSessions(f: Filter): SessionInfo[] {
   return out;
 }
 
-function codexExtractDialogue(s: SessionInfo): DialogueTurn[] {
+export function codexExtractDialogue(s: SessionInfo): DialogueTurn[] {
   // Codex events: payload.type=="message" with role in {user, assistant, developer, system}.
   // Keep user/assistant only. Each content part is {type: "input_text"|"output_text", text}.
   // Codex inlines a lot of system prompt as the first user message (AGENTS.md, permission
@@ -790,7 +793,7 @@ function codexExtractDialogue(s: SessionInfo): DialogueTurn[] {
   return turns;
 }
 
-function codexSearch(s: SessionInfo, kw: string): SearchHit {
+export function codexSearch(s: SessionInfo, kw: string): SearchHit {
   return searchInDialogue(codexExtractDialogue(s), kw);
 }
 
@@ -801,7 +804,7 @@ const OC_SESSION_DIR = path.join(OC_ROOT, "session");
 const OC_MESSAGE_DIR = path.join(OC_ROOT, "message");
 const OC_PART_DIR = path.join(OC_ROOT, "part");
 
-function opencodeListSessions(f: Filter): SessionInfo[] {
+export function opencodeListSessions(f: Filter): SessionInfo[] {
   if (!fs.existsSync(OC_SESSION_DIR)) return [];
   const out: SessionInfo[] = [];
   for (const file of walkDir(OC_SESSION_DIR)) {
@@ -849,7 +852,7 @@ function opencodeListMessageFiles(messageDir: string): string[] {
   }
 }
 
-function opencodeExtractDialogue(s: SessionInfo): DialogueTurn[] {
+export function opencodeExtractDialogue(s: SessionInfo): DialogueTurn[] {
   // OpenCode: messages live at message/<sid>/msg_*.json, part bodies at part/<msgId>/prt_*.json.
   // Keep parts with type=="text" && synthetic !== true; group by message; dialogue role
   // comes from the message file's `role` field. Synthetic parts are platform-injected
@@ -996,12 +999,12 @@ function findSessionById(id: string, f: Filter): SessionInfo | undefined {
 
 // ---------- formatting ----------
 
-function shortDate(iso?: string): string {
+export function shortDate(iso?: string): string {
   if (!iso) return "         ";
   return iso.slice(0, 16).replace("T", " ");
 }
 
-function shortPath(p?: string): string {
+export function shortPath(p?: string): string {
   if (!p) return "(no cwd)";
   return p.replace(HOME, "~");
 }
