@@ -40,6 +40,7 @@ vi.mock("node:os", async () => {
 
 const {
   parseTaskPyCommand,
+  parseTaskPyCommandsAll,
   buildBrainstormWindows,
   collectClaudeTurnsAndEvents,
 } = await import("../../src/commands/mem.js");
@@ -169,6 +170,82 @@ function ev(
     ...extra,
   };
 }
+
+describe("parseTaskPyCommandsAll (dogfood-driven edge cases)", () => {
+  it("strips $(...) closing paren from --slug value", () => {
+    // Real pattern in scripted brainstorm: TASK_DIR=$(... --slug NAME)
+    const all = parseTaskPyCommandsAll(
+      'TASK_DIR=$(python3 ./.trellis/scripts/task.py create "fix: tl mem --since drops cross-day sessions" --slug mem-since-cross-day-filter)',
+    );
+    expect(all).toHaveLength(1);
+    expect(all[0]).toMatchObject({
+      action: "create",
+      slug: "mem-since-cross-day-filter",
+    });
+  });
+
+  it("captures BOTH task.py invocations in one Bash command", () => {
+    // SMOKE_TASK pattern: create + start in a single one-liner.
+    const cmd =
+      'SMOKE_TASK=$(python3 ./.trellis/scripts/task.py create "smoke" 2>&1); python3 ./.trellis/scripts/task.py start ".trellis/tasks/$SMOKE_TASK" 2>&1 | tail -3';
+    const all = parseTaskPyCommandsAll(cmd);
+    expect(all).toHaveLength(2);
+    expect(all[0]).toMatchObject({ action: "create" });
+    expect(all[1]).toMatchObject({ action: "start" });
+    if (all[1] && all[1].action === "start") {
+      // Quoted arg with $ var inside — should not be dropped.
+      expect(all[1].taskDir).toContain("$SMOKE_TASK");
+    }
+  });
+
+  it("rejects prose-embedded matches (heredoc / commit-message text)", () => {
+    // From a real commit message: "task.py start exits with hint to set X"
+    const cmd =
+      'git commit -m "Previous text said `.current-task` is a CLI fallback. Current code never writes that file — task.py start exits with hint to set TRELLIS_CONTEXT_ID."';
+    const all = parseTaskPyCommandsAll(cmd);
+    expect(all).toEqual([]);
+  });
+
+  it("rejects empty restRaw (no positional, just trailing whitespace)", () => {
+    const all = parseTaskPyCommandsAll("python3 ./scripts/task.py start  ");
+    expect(all).toEqual([]);
+  });
+
+  it("does not match action embedded in flag value (--something=task.py-create-foo)", () => {
+    expect(
+      parseTaskPyCommandsAll("foo --bar=task.py-create-baz xyz"),
+    ).toEqual([]);
+  });
+});
+
+describe("slugFromTaskDir (dogfood-driven)", () => {
+  // slugFromTaskDir is internal; we verify it via buildBrainstormWindows
+  // pairing: a `create --slug FOO` should match `start .trellis/tasks/05-08-FOO`
+  // (i.e., the MM-DD- prefix on the start side is stripped before comparison).
+  it("pairs --slug FOO with start .trellis/tasks/MM-DD-FOO via prefix strip", () => {
+    const events: TaskPyEvent[] = [
+      {
+        action: "create",
+        timestamp: "2026-05-08T00:00:05Z",
+        turnIndex: 5,
+        slug: "mem-fix",
+      },
+      {
+        action: "start",
+        timestamp: "2026-05-08T00:00:10Z",
+        turnIndex: 10,
+        taskDir: ".trellis/tasks/05-08-mem-fix",
+      },
+    ];
+    const ws = buildBrainstormWindows(events, 20);
+    expect(ws).toHaveLength(1);
+    expect(ws[0]).toMatchObject({
+      label: "mem-fix",
+      startTurn: 5,
+      endTurn: 10,
+    });
+  });
+});
 
 describe("buildBrainstormWindows", () => {
   it("returns [] when there are no events", () => {

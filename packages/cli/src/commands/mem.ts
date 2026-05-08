@@ -728,23 +728,81 @@ export function claudeSearch(s: SessionInfo, kw: string): SearchHit {
  *
  * For `start`, the task-dir path is captured as the first positional argument.
  */
-export function parseTaskPyCommand(
-  cmd: string,
-):
+export type ParsedTaskPyCommand =
   | { action: "create"; slug?: string; titleArg?: string }
-  | { action: "start"; taskDir?: string }
-  | null {
-  if (typeof cmd !== "string" || cmd.length === 0) return null;
-  // Anchor: task.py must be (start-of-string | whitespace | path separator)
-  // followed by (create|start). This rejects flag-value embedding like
-  // `--slug=task.py-create-foo`.
-  // Allow `task.py` itself; the leading boundary is enforced via lookbehind-free
-  // check by capturing a leading char.
-  const re = /(^|[\s/\\])task\.py\s+(create|start)(?:\s+(.*))?$/m;
-  const m = cmd.match(re);
-  if (!m) return null;
-  const action = m[2];
-  const restRaw = m[3] ?? "";
+  | { action: "start"; taskDir?: string };
+
+/** Find ALL `task.py create|start` invocations in a single Bash command
+ * string. A real Bash invocation can contain several (e.g.
+ * `SMOKE=$(task.py create …); task.py start "$SMOKE"; …`); the original
+ * single-match `parseTaskPyCommand` only saw the first one and silently
+ * dropped the rest, breaking pairing in any session that used such patterns.
+ *
+ * Returned in source order. Each entry's `restRaw` is bounded to the next
+ * `task.py` invocation or end-of-line, whichever comes first, so multi-action
+ * one-liners are split safely without leaking later args into earlier ones. */
+export function parseTaskPyCommandsAll(cmd: string): ParsedTaskPyCommand[] {
+  if (typeof cmd !== "string" || cmd.length === 0) return [];
+  // Find every `task.py (create|start)` occurrence with a left boundary of
+  // start-of-string, whitespace, or path separator (forward or backward
+  // slash). This rejects flag-value embedding like `--slug=task.py-create-foo`.
+  const all: ParsedTaskPyCommand[] = [];
+  const findRe = /(^|[\s/\\])task\.py\s+(create|start)(?:\s+|$)/g;
+  const matches: { action: "create" | "start"; bodyStart: number }[] = [];
+  for (const m of cmd.matchAll(findRe)) {
+    const action = m[2] as "create" | "start";
+    // bodyStart = right after the matched whitespace following the action verb
+    const bodyStart = m.index + m[0].length;
+    matches.push({ action, bodyStart });
+  }
+  for (let i = 0; i < matches.length; i++) {
+    const cur = matches[i];
+    if (!cur) continue;
+    const next = matches[i + 1];
+    // restRaw stops at the next `task.py` invocation (so we don't claim args
+    // from later commands), or end-of-string otherwise. Take only up to the
+    // first newline — multi-line scripts have one task.py per line as the
+    // dominant pattern.
+    const slice = cmd.slice(cur.bodyStart, next?.bodyStart ?? cmd.length);
+    const restRaw = (slice.split("\n")[0] ?? "").trim();
+    // Reject prose-embedded matches. The pattern is: a bare alphanumeric word
+    // followed by another all-letters word with a single space gap — that's
+    // English prose like "task.py start exits with hint", not a real
+    // invocation (CLI args after the action are typically quoted titles,
+    // dashed flags, paths starting with `.` `/` `~` `$`, or followed by shell
+    // metacharacters like `2>&1` / `|` / `;`). A real `create my-task`
+    // (single bare positional with no trailing English) is kept.
+    if (/^[A-Za-z][A-Za-z0-9_-]*\s+[A-Za-z]{2,}\b/.test(restRaw)) continue;
+    const parsed = parseRestOfTaskPyCommand(cur.action, restRaw);
+    // Drop entries with no extractable info — likely prose with quote-like
+    // punctuation but no real arg.
+    if (
+      cur.action === "create" &&
+      parsed.action === "create" &&
+      !parsed.slug &&
+      !parsed.titleArg
+    )
+      continue;
+    if (cur.action === "start" && parsed.action === "start" && !parsed.taskDir)
+      continue;
+    all.push(parsed);
+  }
+  return all;
+}
+
+/** Single-result wrapper for backwards compatibility (returns the first
+ * occurrence, or null if none). Existing tests that assume single-match
+ * semantics still pass via this helper; new code should call
+ * `parseTaskPyCommandsAll`. */
+export function parseTaskPyCommand(cmd: string): ParsedTaskPyCommand | null {
+  const all = parseTaskPyCommandsAll(cmd);
+  return all[0] ?? null;
+}
+
+function parseRestOfTaskPyCommand(
+  action: "create" | "start",
+  restRaw: string,
+): ParsedTaskPyCommand {
   if (action === "create") {
     const args = splitShellArgs(restRaw);
     // First positional arg (skip any flags). For `task.py create`, the title
@@ -779,13 +837,27 @@ export function parseTaskPyCommand(
   return { action: "start", taskDir };
 }
 
-/** Best-effort shell-arg splitter: respects `"…"` and `'…'` and unwraps a
- * single matching outer quote pair. Sufficient for parsing slugs/paths out of
- * `task.py create|start` invocations; not a full POSIX parser. */
+/** Best-effort shell-arg splitter: respects `"…"` and `'…'` quoting, splits on
+ * whitespace, treats shell metacharacters `;`, `|`, `&`, `(`, `)`, `>` as
+ * **token boundaries** (so `$(...)` substitution boundaries, command chains,
+ * and redirects don't leak into the next positional arg). Also strips any
+ * trailing shell-meta cruft from individual tokens — e.g. a `--slug` value
+ * captured inside `$(... --slug FOO)` gets the closing `)` lopped off.
+ * Sufficient for parsing slugs/paths out of `task.py create|start`
+ * invocations; not a full POSIX parser. */
 function splitShellArgs(s: string): string[] {
   const out: string[] = [];
   let cur = "";
   let quote: '"' | "'" | null = null;
+  const flush = (): void => {
+    if (!cur) return;
+    // Strip trailing shell metas that snuck in from $(...) substitution edges,
+    // command chains, redirects, etc. Keep leading chars (paths may start with
+    // `.` or `/`).
+    const cleaned = cur.replace(/[)};&|>]+$/, "");
+    if (cleaned) out.push(cleaned);
+    cur = "";
+  };
   for (const ch of s) {
     if (quote) {
       if (ch === quote) {
@@ -800,26 +872,35 @@ function splitShellArgs(s: string): string[] {
       continue;
     }
     if (/\s/.test(ch)) {
-      if (cur) {
-        out.push(cur);
-        cur = "";
-      }
+      flush();
+      continue;
+    }
+    // Hard token boundaries — these never belong inside a slug or path arg.
+    // Drop them (don't keep as standalone token; the caller never wants them).
+    if (ch === ";" || ch === "|" || ch === "&" || ch === "(" || ch === ")") {
+      flush();
       continue;
     }
     cur += ch;
   }
-  if (cur) out.push(cur);
+  flush();
   return out;
 }
 
 /** Derive a slug from a `start` task-dir path like
- * `.trellis/tasks/05-08-mem-phase-slice/` → `05-08-mem-phase-slice`. */
+ * `.trellis/tasks/05-08-mem-phase-slice/` → `mem-phase-slice` (the
+ * `MM-DD-` date prefix is stripped so this matches the slug supplied via
+ * `--slug` on the corresponding `task.py create` invocation). */
 function slugFromTaskDir(p: string | undefined): string | undefined {
   if (!p) return undefined;
-  // Normalize separators and trim trailing slash.
+  // Normalize separators and trim trailing slash + shell metas leaked from
+  // `$(...)` substitution / heredoc edges.
   const norm = p.replace(/\\+/g, "/").replace(/\/+$/g, "");
   const parts = norm.split("/").filter(Boolean);
-  return parts[parts.length - 1];
+  const last = parts[parts.length - 1];
+  if (last === undefined) return undefined;
+  // Strip leading `MM-DD-` (e.g. `05-08-`) added by task.py.
+  return last.replace(/^\d{2}-\d{2}-/, "");
 }
 
 export interface TaskPyEvent {
@@ -917,25 +998,30 @@ export function collectClaudeTurnsAndEvents(s: SessionInfo): {
           if (!inp || typeof inp !== "object") continue;
           const command = (inp as { command?: unknown }).command;
           if (typeof command !== "string") continue;
-          const parsed = parseTaskPyCommand(command);
-          if (!parsed) continue;
-          // turnIndex = current turns.length (the index this assistant turn
-          // WILL occupy if its text parts are non-empty; either way, it's
-          // the cut point for "everything before this Bash event"). For
-          // assistant messages where text comes BEFORE tool_use blocks, the
-          // assistant turn is appended AFTER this loop completes, so using
-          // turns.length here means the boundary lies just before that turn.
-          // We accept this small drift: brainstorm slicing is at granularity
-          // of full turns, not intra-turn substrings.
-          const ev: TaskPyEvent = {
-            action: parsed.action,
-            timestamp: obj.timestamp ?? "",
-            turnIndex: turns.length,
-            ...(parsed.action === "create"
-              ? { slug: parsed.slug }
-              : { taskDir: parsed.taskDir }),
-          };
-          events.push(ev);
+          // A Bash command may invoke task.py multiple times (e.g.
+          // `SMOKE=$(task.py create …); task.py start "$SMOKE"`). Capture
+          // every occurrence — the original single-match version dropped
+          // the second invocation and produced unpaired windows.
+          const parsedAll = parseTaskPyCommandsAll(command);
+          for (const parsed of parsedAll) {
+            // turnIndex = current turns.length (the index this assistant turn
+            // WILL occupy if its text parts are non-empty; either way, it's
+            // the cut point for "everything before this Bash event"). For
+            // assistant messages where text comes BEFORE tool_use blocks, the
+            // assistant turn is appended AFTER this loop completes, so using
+            // turns.length here means the boundary lies just before that turn.
+            // We accept this small drift: brainstorm slicing is at granularity
+            // of full turns, not intra-turn substrings.
+            const ev: TaskPyEvent = {
+              action: parsed.action,
+              timestamp: obj.timestamp ?? "",
+              turnIndex: turns.length,
+              ...(parsed.action === "create"
+                ? { slug: parsed.slug }
+                : { taskDir: parsed.taskDir }),
+            };
+            events.push(ev);
+          }
         }
       }
       if (parts.length)
@@ -1198,6 +1284,116 @@ export function codexExtractDialogue(s: SessionInfo): DialogueTurn[] {
 
 export function codexSearch(s: SessionInfo, kw: string): SearchHit {
   return searchInDialogue(codexExtractDialogue(s), kw);
+}
+
+/** Codex twin of `collectClaudeTurnsAndEvents`. Single pass over the rollout
+ * file; emits both the cleaned dialogue turns (semantically identical to
+ * `codexExtractDialogue`) AND the list of `task.py create|start` invocations
+ * found inside `function_call` events whose `name === "exec_command"` (Codex's
+ * stable shell tool). Compaction resets both turns AND events for the same
+ * reason as the Claude collector — pre-compact event indices stop pointing at
+ * real turns once history is replaced. */
+export function collectCodexTurnsAndEvents(s: SessionInfo): {
+  turns: DialogueTurn[];
+  events: TaskPyEvent[];
+} {
+  let turns: DialogueTurn[] = [];
+  let events: TaskPyEvent[] = [];
+
+  const buildTurnFromMessage = (
+    role: DialogueRole,
+    parts: { type?: string; text?: string }[] | undefined,
+  ): DialogueTurn | null => {
+    const collected: string[] = [];
+    let totalRaw = 0;
+    for (const c of parts ?? []) {
+      const txt = c.text;
+      if (typeof txt !== "string") continue;
+      if (c.type !== "input_text" && c.type !== "output_text") continue;
+      totalRaw += txt.length;
+      const cleaned = stripInjectionTags(txt);
+      if (cleaned) collected.push(cleaned);
+    }
+    if (!collected.length) return null;
+    const merged = collected.join("\n\n");
+    if (isBootstrapTurn(merged, totalRaw)) return null;
+    return { role, text: merged };
+  };
+
+  readJsonl(s.filePath, CodexEventSchema, (obj) => {
+    if (obj.type === "compacted") {
+      const rh = obj.payload?.replacement_history;
+      turns = [];
+      events = [];
+      if (!Array.isArray(rh)) return;
+      for (const item of rh) {
+        if (item.type !== "message") continue;
+        const r = DialogueRoleSchema.safeParse(item.role);
+        if (!r.success) continue;
+        const turn = buildTurnFromMessage(r.data, item.content);
+        if (turn)
+          turns.push({ role: turn.role, text: `[compact]\n${turn.text}` });
+      }
+      return;
+    }
+
+    const p = obj.payload;
+    if (!p) return;
+
+    // Function-call events (Codex's shell tool dispatch). The schema is loose
+    // so we read fields off the raw payload.
+    if ((p as { type?: unknown }).type === "function_call") {
+      const fnName = (p as { name?: unknown }).name;
+      if (fnName !== "exec_command" && fnName !== "shell") return;
+      const argsRaw = (p as { arguments?: unknown }).arguments;
+      let cmd: string | undefined;
+      if (typeof argsRaw === "string") {
+        try {
+          const parsed: unknown = JSON.parse(argsRaw);
+          if (parsed && typeof parsed === "object") {
+            const c = (parsed as { cmd?: unknown; command?: unknown }).cmd;
+            if (typeof c === "string") cmd = c;
+            else {
+              const c2 = (parsed as { command?: unknown }).command;
+              if (typeof c2 === "string") cmd = c2;
+            }
+          }
+        } catch {
+          // arguments not JSON (some Codex versions inline a string) — try as
+          // raw shell.
+          cmd = argsRaw;
+        }
+      }
+      if (!cmd) return;
+      const parsedAll = parseTaskPyCommandsAll(cmd);
+      for (const parsed of parsedAll) {
+        const ev: TaskPyEvent = {
+          action: parsed.action,
+          timestamp: obj.timestamp ?? "",
+          turnIndex: turns.length,
+          ...(parsed.action === "create"
+            ? { slug: parsed.slug }
+            : { taskDir: parsed.taskDir }),
+        };
+        events.push(ev);
+      }
+      return;
+    }
+
+    // Real conversational turn.
+    if ((p as { type?: unknown }).type !== "message") return;
+    const roleParsed = DialogueRoleSchema.safeParse(
+      (p as { role?: unknown }).role,
+    );
+    if (!roleParsed.success) return;
+    const turn = buildTurnFromMessage(
+      roleParsed.data,
+      (p as { content?: { type?: string; text?: string }[] }).content,
+    );
+    if (turn) turns.push(turn);
+  });
+
+  return { turns, events };
 }
 
 // ---------- opencode adapter ----------
@@ -1781,17 +1977,19 @@ interface PhaseSlice {
   warnings: string[];
 }
 
-/** Slice cleaned dialogue by phase. Claude is the only platform with native
- * boundary detection (via raw JSONL `task.py create|start` Bash tool_use
- * events). Codex / OpenCode degrade to "all turns + warning". */
+/** Slice cleaned dialogue by phase. Claude and Codex have native boundary
+ * detection (via raw JSONL `task.py create|start` invocations in tool_use /
+ * function_call events). OpenCode does not — its session storage doesn't
+ * expose Bash tool calls in a comparable shape, so it degrades to "all turns
+ * + warning". */
 function slicePhase(s: SessionInfo, phase: Phase): PhaseSlice {
   const warnings: string[] = [];
 
-  if (phase === "all" || s.platform !== "claude") {
-    if (phase !== "all" && s.platform !== "claude") {
+  if (phase === "all" || s.platform === "opencode") {
+    if (phase !== "all" && s.platform === "opencode") {
       warnings.push(
-        `--phase ${phase} on platform=${s.platform} is not yet supported; ` +
-          `returning full dialogue (Claude-only MVP).`,
+        `--phase ${phase} on platform=opencode is not yet supported; ` +
+          `returning full dialogue.`,
       );
     }
     const turns = extractDialogue(s);
@@ -1803,9 +2001,12 @@ function slicePhase(s: SessionInfo, phase: Phase): PhaseSlice {
     };
   }
 
-  // Claude path: collect turns + task.py events in one raw-JSONL pass, then
-  // build brainstorm windows.
-  const { turns, events } = collectClaudeTurnsAndEvents(s);
+  // Claude / Codex path: collect turns + task.py events in one raw-JSONL pass,
+  // then build brainstorm windows.
+  const { turns, events } =
+    s.platform === "claude"
+      ? collectClaudeTurnsAndEvents(s)
+      : collectCodexTurnsAndEvents(s);
   const windows = buildBrainstormWindows(events, turns.length);
 
   if (phase === "brainstorm") {
