@@ -545,3 +545,36 @@ Spawned 5 parallel trellis-implement agents to author commands-mem.md (634), com
 ### Next Steps
 
 - None - task complete
+
+
+## Session 152: feat: tl mem extract --phase brainstorm|implement|all (cross-day fix already in 0.6.0-beta.2)
+
+**Date**: 2026-05-08
+**Task**: feat: tl mem extract --phase brainstorm|implement|all (cross-day fix already in 0.6.0-beta.2)
+**Branch**: `feat/v0.6.0-beta`
+
+### Summary
+
+Added --phase flag to tl mem extract for slicing session into [task.py create, task.py start) brainstorm windows. Boundary signal: regex match on Bash tool_use commands with 6+ invoker variants (python/python3/py -3/no prefix, forward/backward/double-escaped slashes, abs/rel paths) and false-positive guards. Single-pass collector emits cleaned turns + task.py events with turnIndex (necessary because the cleaning pipeline drops tool_use). Multi-task pairing: slug match > FIFO; missing-pair fallbacks. Codex/OpenCode degrade to full dialogue + stderr warning. trellis-check caught a real bug (pre-compact task.py events not reset on compaction → stale turnIndex into collapsed [compact summary] surface) and pinned a regression test. Tests: 1046 → 1079 (+33). Spec: commands-mem.md adds ## Phase slicing (--phase) section. Local commit only — not pushed.
+
+### Main Changes
+
+(Add details)
+
+### Git Commits
+
+| Hash | Message |
+|------|---------|
+| `a16b8d9` | (see git log) |
+
+### Testing
+
+- [OK] (Add test results)
+
+### Status
+
+[OK] **Completed**
+
+### Next Steps
+
+- None - task complete
