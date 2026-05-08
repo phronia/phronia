@@ -578,3 +578,40 @@ Added --phase flag to tl mem extract for slicing session into [task.py create, t
 ### Next Steps
 
 - None - task complete
+
+
+## Session 153: fix(mem): OpenCode SQLite reader (1.2+ users restored, perf streaming, --phase dogfood fixes)
+
+**Date**: 2026-05-08
+**Task**: fix(mem): OpenCode SQLite reader (1.2+ users restored, perf streaming, --phase dogfood fixes)
+**Branch**: `feat/v0.6.0-beta`
+
+### Summary
+
+Major mem.ts overhaul on feat/v0.6.0-beta. (1) Batch E new spec files (commands-{mem,update,uninstall}.md, uninstall-scrubbers.md, configurator-shared.md, +index.md). (2) Added --phase brainstorm|implement|all to mem extract with task.py create/start boundary detection. (3) Dogfood-driven robustness: shell-arg $(...) closing-paren strip, multi-task.py-per-Bash-command, prose rejection, MM-DD- prefix strip; Codex collectCodexTurnsAndEvents. (4) perf: chunked sync streaming readJsonl + byte-prefix fast-reject — list 3.5s→0.67s (5x), extract 5.8s→0.73s (8x), heap from 36MB→256KB. (5) OpenCode SQLite reader replaces obsolete JSON-tree reader: 138 sessions visible (was 0), search 0.235s on 678 messages. better-sqlite3 added as deps with createRequire bridge for ESM, pnpm.onlyBuiltDependencies for native binding install, dynamic PRAGMA schema defense, soft-degrade if dep load fails. 1085 → 1087 tests. NOT pushed per user directive.
+
+### Main Changes
+
+(Add details)
+
+### Git Commits
+
+| Hash | Message |
+|------|---------|
+| `d7341cb` | (see git log) |
+| `a16b8d9` | (see git log) |
+| `a992325` | (see git log) |
+| `7e8f30c` | (see git log) |
+| `f26c5fd` | (see git log) |
+
+### Testing
+
+- [OK] (Add test results)
+
+### Status
+
+[OK] **Completed**
+
+### Next Steps
+
+- None - task complete

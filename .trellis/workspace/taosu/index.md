@@ -8,7 +8,7 @@
 
 <!-- @@@auto:current-status -->
 - **Active File**: `journal-5.md`
-- **Total Sessions**: 152
+- **Total Sessions**: 153
 - **Last Active**: 2026-05-08
 <!-- @@@/auto:current-status -->
 
@@ -19,7 +19,7 @@
 <!-- @@@auto:active-documents -->
 | File | Lines | Status |
 |------|-------|--------|
-| `journal-5.md` | ~580 | Active |
+| `journal-5.md` | ~617 | Active |
 | `journal-4.md` | ~1975 | Archived |
 | `journal-3.md` | ~1988 | Archived |
 | `journal-2.md` | ~1963 | Archived |
@@ -33,6 +33,7 @@
 <!-- @@@auto:session-history -->
 | # | Date | Title | Commits | Branch |
 |---|------|-------|---------|--------|
+| 153 | 2026-05-08 | fix(mem): OpenCode SQLite reader (1.2+ users restored, perf streaming, --phase dogfood fixes) | `d7341cb`, `a16b8d9`, `a992325`, `7e8f30c`, `f26c5fd` | `feat/v0.6.0-beta` |
 | 152 | 2026-05-08 | feat: tl mem extract --phase brainstorm|implement|all (cross-day fix already in 0.6.0-beta.2) | `a16b8d9` | `feat/v0.6.0-beta` |
 | 151 | 2026-05-08 | spec batch E: 5 new specs for uncovered modules + mem search-index-gap doc | `d7341cb` | `feat/v0.6.0-beta` |
 | 150 | 2026-05-08 | ship 0.5.9 + 0.6.0-beta.1; fix mem --since cross-day; spec audit batches A+B+C+D | `4b90152`, `89bb3a0` | `feat/v0.6.0-beta` |
