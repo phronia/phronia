@@ -478,3 +478,37 @@ Shipped 0.5.7 with Codex configurable dispatch mode (codex.dispatch_mode=sub-age
 ### Next Steps
 
 - None - task complete
+
+
+## Session 150: ship 0.5.9 + 0.6.0-beta.1; fix mem --since cross-day; spec audit batches A+B+C+D
+
+**Date**: 2026-05-08
+**Task**: ship 0.5.9 + 0.6.0-beta.1; fix mem --since cross-day; spec audit batches A+B+C+D
+**Branch**: `feat/v0.6.0-beta`
+
+### Summary
+
+Released 0.5.9 (main) and 0.6.0-beta.1 (feat/v0.6.0-beta) shipping the codex dispatch namespace fix + default inline. Restored 0.6.0-beta.0.json on main for manifest continuity. Fixed tl mem list/search --since to respect cross-day session activity (interval-overlap helper, +23 tests, 1023→1046). Ran full spec audit (48 findings); cleared all P0 + mechanical P1 (Batch A+B+C+D): script-conventions task_context init-context drop, workflow-state-contract writer-table line-number refresh, quality-guidelines + unit-test conventions init.ts:931→:1081, directory-structure tree refresh, docs-site architecture.mdx .current-task fallback claim corrected EN+ZH. Out of scope: Batch E new spec files (mem.md/update.md/uninstall.md/uninstall-scrubbers.md/configurator-shared-helpers.md), Batch F docs-site Mode taxonomy + ai-tools coverage decisions, codex perf one-sided f.until prune, readJsonlFirst streaming, residual MEMORY.md iflow notes.
+
+### Main Changes
+
+(Add details)
+
+### Git Commits
+
+| Hash | Message |
+|------|---------|
+| `4b90152` | (see git log) |
+| `89bb3a0` | (see git log) |
+
+### Testing
+
+- [OK] (Add test results)
+
+### Status
+
+[OK] **Completed**
+
+### Next Steps
+
+- None - task complete
