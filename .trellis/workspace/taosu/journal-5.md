@@ -512,3 +512,36 @@ Released 0.5.9 (main) and 0.6.0-beta.1 (feat/v0.6.0-beta) shipping the codex dis
 ### Next Steps
 
 - None - task complete
+
+
+## Session 151: spec batch E: 5 new specs for uncovered modules + mem search-index-gap doc
+
+**Date**: 2026-05-08
+**Task**: spec batch E: 5 new specs for uncovered modules + mem search-index-gap doc
+**Branch**: `feat/v0.6.0-beta`
+
+### Summary
+
+Spawned 5 parallel trellis-implement agents to author commands-mem.md (634), commands-update.md (383), commands-uninstall.md (306), uninstall-scrubbers.md (330), configurator-shared.md (309) — total 1962 lines new spec content. trellis-check single agent reviewed bundle: style consistency (all 5 mirror platform-integration.md), 10 sampled file.ts:symbolName refs all resolved, fixed 1 stale uninstall-scrubbers.md ref (performUninstall→uninstall), updated backend/index.md with 5 rows + 4 checklist lines. Added 'Search index gaps (known limitations)' section to commands-mem.md documenting that tool_use / thinking / tool_result fields are excluded from search index — users searching for tool/skill/agent names should use raw grep over JSONL. Code untouched, 1046/1046 tests pass. Local commit only — not pushed per user directive.
+
+### Main Changes
+
+(Add details)
+
+### Git Commits
+
+| Hash | Message |
+|------|---------|
+| `d7341cb` | (see git log) |
+
+### Testing
+
+- [OK] (Add test results)
+
+### Status
+
+[OK] **Completed**
+
+### Next Steps
+
+- None - task complete

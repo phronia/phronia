@@ -8,7 +8,7 @@
 
 <!-- @@@auto:current-status -->
 - **Active File**: `journal-5.md`
-- **Total Sessions**: 150
+- **Total Sessions**: 151
 - **Last Active**: 2026-05-08
 <!-- @@@/auto:current-status -->
 
@@ -19,7 +19,7 @@
 <!-- @@@auto:active-documents -->
 | File | Lines | Status |
 |------|-------|--------|
-| `journal-5.md` | ~514 | Active |
+| `journal-5.md` | ~547 | Active |
 | `journal-4.md` | ~1975 | Archived |
 | `journal-3.md` | ~1988 | Archived |
 | `journal-2.md` | ~1963 | Archived |
@@ -33,6 +33,7 @@
 <!-- @@@auto:session-history -->
 | # | Date | Title | Commits | Branch |
 |---|------|-------|---------|--------|
+| 151 | 2026-05-08 | spec batch E: 5 new specs for uncovered modules + mem search-index-gap doc | `d7341cb` | `feat/v0.6.0-beta` |
 | 150 | 2026-05-08 | ship 0.5.9 + 0.6.0-beta.1; fix mem --since cross-day; spec audit batches A+B+C+D | `4b90152`, `89bb3a0` | `feat/v0.6.0-beta` |
 | 149 | 2026-05-08 | 0.5.7 release + Codex dispatch mode + mem unit tests + 0.6 beta sync | `278b40a`, `b5b23fb`, `b02faf1`, `b829b14`, `1ac65c2`, `1222f36`, `c10ded7` | `feat/v0.6.0-beta` |
 | 148 | 2026-05-06 | Workflow-state recursion guard | `0db57e5`, `48f966e` | `feat/v0.6.0-beta` |
