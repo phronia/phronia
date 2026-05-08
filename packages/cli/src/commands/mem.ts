@@ -274,6 +274,40 @@ export function inRange(iso: string | undefined, f: Filter): boolean {
   return true;
 }
 
+/**
+ * Interval-overlap version of `inRange` for sessions with both start and end
+ * timestamps. A session is kept iff its lifetime `[start, end]` overlaps the
+ * query window `[f.since, f.until]`.
+ *
+ * Why this exists: long / cross-day sessions (created on day N, still updated
+ * on day N+M) were being dropped by `inRange(created, f)` when `--since` fell
+ * after `created`. Switching to interval overlap keeps sessions that were
+ * active inside the window even when they started before it.
+ *
+ * Degenerate inputs:
+ *   - both undefined → pass through (no timestamp = don't filter)
+ *   - one undefined → fall back to single-point semantics on the other end
+ *   - unparseable iso → defer to the parsable end (or pass through if both bad)
+ */
+export function inRangeOverlap(
+  start: string | undefined,
+  end: string | undefined,
+  f: Filter,
+): boolean {
+  const s = start ?? end;
+  const e = end ?? start;
+  if (!s && !e) return true;
+  if (f.since && e) {
+    const eT = new Date(e);
+    if (!Number.isNaN(+eT) && eT < f.since) return false;
+  }
+  if (f.until && s) {
+    const sT = new Date(s);
+    if (!Number.isNaN(+sT) && sT > f.until) return false;
+  }
+  return true;
+}
+
 export function sameProject(
   sessionCwd: string | undefined,
   target: string | undefined,
@@ -590,7 +624,11 @@ export function claudeListSessions(f: Filter): SessionInfo[] {
 
       const stat = fs.statSync(filePath);
       const updated = stat.mtime.toISOString();
-      if (!inRange(created ?? updated, f)) continue;
+      // Interval overlap: keep sessions whose lifetime [created, updated]
+      // intersects the query window. Cross-day sessions (created before
+      // --since but still active inside it) must survive — see PRD
+      // 05-08-mem-since-cross-day-filter.
+      if (!inRangeOverlap(created, updated, f)) continue;
       if (f.cwd && cwd && !sameProject(cwd, f.cwd)) continue;
 
       out.push(
@@ -711,7 +749,10 @@ export function codexListSessions(f: Filter): SessionInfo[] {
           m[1].replace(/T(\d{2})-(\d{2})-(\d{2})/, "T$1:$2:$3") + "Z",
         ).toISOString()
       : undefined;
-    if (tsFromName && !inRange(tsFromName, f)) continue;
+    // Note: we previously short-circuited on `!inRange(tsFromName, f)` here,
+    // but the filename ts is the session's creation time — a cross-day session
+    // that started before --since but was active inside it would be dropped.
+    // Filter at the same place as claude/opencode using interval overlap.
 
     const first = readJsonlFirst(file, CodexEventSchema);
     const meta = first?.payload;
@@ -720,7 +761,8 @@ export function codexListSessions(f: Filter): SessionInfo[] {
     const created = first?.timestamp ?? tsFromName ?? "";
 
     if (f.cwd && !sameProject(cwd, f.cwd)) continue;
-    if (!inRange(created, f)) continue;
+    const updated = fs.statSync(file).mtime.toISOString();
+    if (!inRangeOverlap(created, updated, f)) continue;
 
     out.push(
       SessionInfoSchema.parse({
@@ -728,7 +770,7 @@ export function codexListSessions(f: Filter): SessionInfo[] {
         id,
         cwd,
         created,
-        updated: fs.statSync(file).mtime.toISOString(),
+        updated,
         filePath: file,
       }),
     );
@@ -825,7 +867,7 @@ export function opencodeListSessions(f: Filter): SessionInfo[] {
     const cwd = info.directory;
 
     if (f.cwd && !sameProject(cwd, f.cwd)) continue;
-    if (!inRange(updated ?? created, f)) continue;
+    if (!inRangeOverlap(created, updated, f)) continue;
 
     out.push(
       SessionInfoSchema.parse({

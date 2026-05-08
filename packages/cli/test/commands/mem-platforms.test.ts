@@ -159,7 +159,7 @@ describe("claudeListSessions / claudeExtractDialogue", () => {
     expect(found?.cwd).toBe(projectCwd);
   });
 
-  it("filters by --since (excludes sessions older than the window)", () => {
+  it("filters by --since (excludes sessions whose entire lifetime predates the window)", () => {
     writeJsonl(sessionFile, [
       {
         type: "user",
@@ -168,6 +168,10 @@ describe("claudeListSessions / claudeExtractDialogue", () => {
         message: { role: "user", content: "old session" },
       },
     ]);
+    // mtime must also be old: list filter is interval-overlap, so a fresh
+    // mtime (test-run time) would otherwise keep the session in range.
+    const oldT = new Date("2026-01-01T00:00:00Z");
+    nodeFs.utimesSync(sessionFile, oldT, oldT);
     const r = claudeListSessions(
       buildFilter({ global: true, since: "2026-04-01" }),
     );
