@@ -14,7 +14,14 @@
 import * as fs from "node:fs";
 import * as path from "node:path";
 import * as os from "node:os";
+import { createRequire } from "node:module";
 import { z } from "zod";
+
+// ESM bundle (`"type": "module"` + `module: NodeNext`) needs an explicit
+// `require()` for the optional native `better-sqlite3` load (see
+// loadBetterSqlite3 below). `import.meta.url` resolves to this module's URL,
+// which lets createRequire resolve siblings the same way a CJS file would.
+const ocRequire = createRequire(import.meta.url);
 
 // ---------- schemas: domain types ----------
 
@@ -29,7 +36,6 @@ const SessionInfoSchema = z.object({
   created: z.string().optional(),
   updated: z.string().optional(),
   filePath: z.string(),
-  messageDir: z.string().optional(),
   parent_id: z.string().optional(), // OpenCode only: parent session id (sub-agent chain)
 });
 type SessionInfo = z.infer<typeof SessionInfoSchema>;
@@ -161,35 +167,37 @@ const CodexEventSchema = z
   })
   .loose();
 
-// OpenCode session/message/part files.
+// OpenCode SQLite-row schemas (1.2+).
+// OpenCode 1.2 migrated from JSON tree under ~/.local/share/opencode/storage/
+// to a single SQLite database at ~/.local/share/opencode/opencode.db. Schema
+// (drizzle, observed on opencode 1.14.30):
+//
+//   CREATE TABLE session (
+//     id text PRIMARY KEY, project_id text NOT NULL, parent_id text,
+//     slug text NOT NULL, directory text NOT NULL, title text NOT NULL,
+//     version text NOT NULL, share_url text, summary_* ..., revert text,
+//     permission text, time_created integer NOT NULL, time_updated integer NOT NULL,
+//     time_compacting integer, time_archived integer, workspace_id text, path text
+//   );
+//   CREATE TABLE message (
+//     id text PRIMARY KEY, session_id text NOT NULL,
+//     time_created integer NOT NULL, time_updated integer NOT NULL,
+//     data text NOT NULL  -- JSON: { role, time: { created }, agent, ... }
+//   );
+//   CREATE TABLE part (
+//     id text PRIMARY KEY, message_id text NOT NULL, session_id text NOT NULL,
+//     time_created integer NOT NULL, time_updated integer NOT NULL,
+//     data text NOT NULL  -- JSON: { type: text|tool|reasoning|step-*|patch, text, ... }
+//   );
 
-const OpenCodeSessionSchema = z
+const OpenCodeMessageDataSchema = z
   .object({
-    id: z.string(),
-    title: z.string().optional(),
-    directory: z.string().optional(),
-    parentID: z.string().optional(),
-    time: z
-      .object({
-        created: z.number().optional(),
-        updated: z.number().optional(),
-      })
-      .loose()
-      .optional(),
-  })
-  .loose();
-type OpenCodeSession = z.infer<typeof OpenCodeSessionSchema>;
-
-const OpenCodeMessageSchema = z
-  .object({
-    id: z.string(),
     role: z.string().optional(),
     time: z.object({ created: z.number().optional() }).loose().optional(),
   })
   .loose();
-type OpenCodeMessage = z.infer<typeof OpenCodeMessageSchema>;
 
-const OpenCodePartSchema = z
+const OpenCodePartDataSchema = z
   .object({
     type: z.string().optional(),
     text: z.string().optional(),
@@ -1454,117 +1462,278 @@ export function collectCodexTurnsAndEvents(s: SessionInfo): {
   return { turns, events };
 }
 
-// ---------- opencode adapter ----------
+// ---------- opencode adapter (SQLite, opencode 1.2+) ----------
+//
+// OpenCode 1.2+ stores all sessions in a single SQLite database. Pre-1.2 used
+// a JSON tree under ~/.local/share/opencode/storage/. The JSON path was
+// dropped here when most users migrated; users on 1.1.x are out of scope (1.2
+// has been GA for several months — small remaining cohort, low ROI to maintain
+// two parsers).
+//
+// Schema discovery (PRAGMA): we probe `session / message / part` columns at
+// first use, cache the result, and degrade with a stderr warning if essential
+// columns are missing rather than crashing on a future schema rev.
+//
+// Soft-degrade: `better-sqlite3` is a native dep. If it fails to load (rare —
+// prebuilds cover Win/macOS/Linux × Node 18/20/22), we emit one stderr line
+// and return empty results from every opencode-platform call.
+//
+// SessionInfo.filePath: there's no per-session file in this layout, so all
+// OpenCode sessions report `filePath = OC_DB_PATH`. Consumers of `mem` only
+// use `filePath` for display (Codex/Claude grep helpers) and don't dispatch
+// on it.
 
-const OC_ROOT = path.join(HOME, ".local", "share", "opencode", "storage");
-const OC_SESSION_DIR = path.join(OC_ROOT, "session");
-const OC_MESSAGE_DIR = path.join(OC_ROOT, "message");
-const OC_PART_DIR = path.join(OC_ROOT, "part");
+const OC_DB_PATH = path.join(
+  HOME,
+  ".local",
+  "share",
+  "opencode",
+  "opencode.db",
+);
 
-export function opencodeListSessions(f: Filter): SessionInfo[] {
-  if (!fs.existsSync(OC_SESSION_DIR)) return [];
-  const out: SessionInfo[] = [];
-  for (const file of walkDir(OC_SESSION_DIR)) {
-    if (!file.endsWith(".json")) continue;
-    const info: OpenCodeSession | undefined = readJsonFile(
-      file,
-      OpenCodeSessionSchema,
-    );
-    if (!info) continue;
-    const created =
-      info.time?.created !== undefined
-        ? new Date(info.time.created).toISOString()
-        : undefined;
-    const updated =
-      info.time?.updated !== undefined
-        ? new Date(info.time.updated).toISOString()
-        : undefined;
-    const cwd = info.directory;
+// Avoid better-sqlite3 type leaks (it's an optional native dep). We only need
+// the surface we actually call.
+interface OcDb {
+  prepare(sql: string): {
+    all(...params: unknown[]): unknown[];
+    get(...params: unknown[]): unknown;
+  };
+  close(): void;
+}
+type OcDbCtor = new (
+  file: string,
+  opts: { readonly: true; fileMustExist: true },
+) => OcDb;
 
-    if (f.cwd && !sameProject(cwd, f.cwd)) continue;
-    if (!inRangeOverlap(created, updated, f)) continue;
+let bsqliteCtor: OcDbCtor | undefined;
+let bsqliteWarned = false;
+let bsqliteResolved = false;
 
-    out.push(
-      SessionInfoSchema.parse({
-        platform: "opencode",
-        id: info.id,
-        title: info.title,
-        cwd,
-        created,
-        updated,
-        filePath: file,
-        messageDir: path.join(OC_MESSAGE_DIR, info.id),
-        parent_id: info.parentID,
-      }),
-    );
+function loadBetterSqlite3(): OcDbCtor | undefined {
+  if (bsqliteResolved) return bsqliteCtor;
+  bsqliteResolved = true;
+  try {
+    const mod = ocRequire("better-sqlite3") as unknown;
+    bsqliteCtor =
+      typeof mod === "function"
+        ? (mod as OcDbCtor)
+        : ((mod as { default: OcDbCtor }).default ?? undefined);
+    return bsqliteCtor;
+  } catch {
+    if (!bsqliteWarned) {
+      bsqliteWarned = true;
+      process.stderr.write(
+        "tl mem: better-sqlite3 failed to load; OpenCode platform skipped.\n" +
+          "         To enable: reinstall trellis (or `npm rebuild better-sqlite3`).\n",
+      );
+    }
+    return undefined;
   }
-  return out;
 }
 
-function opencodeListMessageFiles(messageDir: string): string[] {
+interface OcSchema {
+  sessionCols: Set<string>;
+  messageCols: Set<string>;
+  partCols: Set<string>;
+  /** True iff session has id + directory + time_created + time_updated; otherwise the adapter degrades to empty results. */
+  ok: boolean;
+}
+
+function discoverColumns(db: OcDb, table: string): Set<string> {
   try {
-    return fs.readdirSync(messageDir).filter((n) => n.endsWith(".json"));
+    // PRAGMA table_info(<name>); table is a literal identifier — not a user
+    // input — so embedding it is safe. better-sqlite3 doesn't bind identifiers.
+    const rows = db.prepare(`PRAGMA table_info(${table})`).all() as {
+      name?: string;
+    }[];
+    return new Set(rows.map((r) => r.name).filter((n): n is string => !!n));
   } catch {
-    return [];
+    return new Set();
   }
+}
+
+let ocSchemaWarned = false;
+function probeSchema(db: OcDb): OcSchema {
+  const sessionCols = discoverColumns(db, "session");
+  const messageCols = discoverColumns(db, "message");
+  const partCols = discoverColumns(db, "part");
+  const need = [
+    [sessionCols, ["id", "directory", "time_created", "time_updated"]],
+    [messageCols, ["id", "session_id", "data"]],
+    [partCols, ["message_id", "data"]],
+  ] as const;
+  const missing: string[] = [];
+  for (const [cols, required] of need) {
+    for (const c of required) {
+      if (!cols.has(c)) missing.push(c);
+    }
+  }
+  const ok = missing.length === 0;
+  if (!ok && !ocSchemaWarned) {
+    ocSchemaWarned = true;
+    process.stderr.write(
+      `tl mem: OpenCode SQLite schema missing required columns (${missing.join(", ")}); platform skipped.\n`,
+    );
+  }
+  return { sessionCols, messageCols, partCols, ok };
+}
+
+interface OcContext {
+  db: OcDb;
+  schema: OcSchema;
+}
+
+function openOcDb(): OcContext | undefined {
+  if (!fs.existsSync(OC_DB_PATH)) return undefined;
+  const Ctor = loadBetterSqlite3();
+  if (!Ctor) return undefined;
+  let db: OcDb;
+  try {
+    db = new Ctor(OC_DB_PATH, { readonly: true, fileMustExist: true });
+  } catch {
+    return undefined;
+  }
+  const schema = probeSchema(db);
+  if (!schema.ok) {
+    db.close();
+    return undefined;
+  }
+  return { db, schema };
+}
+
+interface OcSessionRow {
+  id: string;
+  directory?: string | null;
+  title?: string | null;
+  parent_id?: string | null;
+  time_created: number;
+  time_updated: number;
+}
+
+export function opencodeListSessions(f: Filter): SessionInfo[] {
+  const ctx = openOcDb();
+  if (!ctx) return [];
+  try {
+    const cols = ctx.schema.sessionCols;
+    const select = [
+      "id",
+      cols.has("directory") ? "directory" : "NULL AS directory",
+      cols.has("title") ? "title" : "NULL AS title",
+      cols.has("parent_id") ? "parent_id" : "NULL AS parent_id",
+      "time_created",
+      "time_updated",
+    ].join(", ");
+    const rows = ctx.db
+      .prepare(`SELECT ${select} FROM session ORDER BY time_updated DESC`)
+      .all() as OcSessionRow[];
+    const out: SessionInfo[] = [];
+    for (const r of rows) {
+      const created = r.time_created
+        ? new Date(r.time_created).toISOString()
+        : undefined;
+      const updated = r.time_updated
+        ? new Date(r.time_updated).toISOString()
+        : undefined;
+      const cwd = r.directory ?? undefined;
+      if (f.cwd && !sameProject(cwd, f.cwd)) continue;
+      if (!inRangeOverlap(created, updated, f)) continue;
+      out.push(
+        SessionInfoSchema.parse({
+          platform: "opencode",
+          id: r.id,
+          title: r.title ?? undefined,
+          cwd,
+          created,
+          updated,
+          filePath: OC_DB_PATH,
+          parent_id: r.parent_id ?? undefined,
+        }),
+      );
+    }
+    return out;
+  } finally {
+    ctx.db.close();
+  }
+}
+
+interface OcMessageRow {
+  id: string;
+  data: string;
+  time_created: number;
+}
+
+interface OcPartRow {
+  message_id: string;
+  data: string;
 }
 
 export function opencodeExtractDialogue(s: SessionInfo): DialogueTurn[] {
-  // OpenCode: messages live at message/<sid>/msg_*.json, part bodies at part/<msgId>/prt_*.json.
-  // Keep parts with type=="text" && synthetic !== true; group by message; dialogue role
-  // comes from the message file's `role` field. Synthetic parts are platform-injected
-  // preamble (mode prompts, agent boilerplate) and are dropped as noise.
-  const turns: DialogueTurn[] = [];
-  if (!s.messageDir || !fs.existsSync(s.messageDir)) return turns;
-
-  interface Ordered {
-    msg: OpenCodeMessage;
-    created: number;
-  }
-  const ordered: Ordered[] = [];
-  for (const mf of opencodeListMessageFiles(s.messageDir)) {
-    const msg = readJsonFile(
-      path.join(s.messageDir, mf),
-      OpenCodeMessageSchema,
-    );
-    if (msg) ordered.push({ msg, created: msg.time?.created ?? 0 });
-  }
-  ordered.sort((a, b) => a.created - b.created);
-
-  for (const { msg } of ordered) {
-    const roleParsed = DialogueRoleSchema.safeParse(msg.role);
-    if (!roleParsed.success) continue;
-    const partDir = path.join(OC_PART_DIR, msg.id);
-    if (!fs.existsSync(partDir)) continue;
-    let parts: string[];
-    try {
-      parts = fs.readdirSync(partDir).filter((n) => n.endsWith(".json"));
-    } catch {
-      continue;
+  const ctx = openOcDb();
+  if (!ctx) return [];
+  try {
+    const messages = ctx.db
+      .prepare(
+        "SELECT id, data, time_created FROM message WHERE session_id = ? ORDER BY time_created ASC, id ASC",
+      )
+      .all(s.id) as OcMessageRow[];
+    if (messages.length === 0) return [];
+    const parts = ctx.db
+      .prepare(
+        "SELECT message_id, data FROM part WHERE session_id = ? ORDER BY message_id ASC, id ASC",
+      )
+      .all(s.id) as OcPartRow[];
+    // Group parts by message_id, preserving SQL order (id ASC).
+    const partsByMsg = new Map<string, OcPartRow[]>();
+    for (const p of parts) {
+      const list = partsByMsg.get(p.message_id);
+      if (list) list.push(p);
+      else partsByMsg.set(p.message_id, [p]);
     }
-    const collected: string[] = [];
-    let totalRaw = 0;
-    for (const pf of parts) {
-      const part = readJsonFile(path.join(partDir, pf), OpenCodePartSchema);
-      if (!part) continue;
-      if (part.type !== "text" || part.synthetic) continue;
-      if (typeof part.text !== "string") continue;
-      totalRaw += part.text.length;
-      const cleaned = stripInjectionTags(part.text);
-      if (cleaned) collected.push(cleaned);
+
+    const turns: DialogueTurn[] = [];
+    for (const m of messages) {
+      const mdata = safeJsonParse(m.data, OpenCodeMessageDataSchema);
+      if (!mdata) continue;
+      const roleParsed = DialogueRoleSchema.safeParse(mdata.role);
+      if (!roleParsed.success) continue;
+      const msgParts = partsByMsg.get(m.id) ?? [];
+      const collected: string[] = [];
+      let totalRaw = 0;
+      for (const p of msgParts) {
+        const pdata = safeJsonParse(p.data, OpenCodePartDataSchema);
+        if (!pdata) continue;
+        if (pdata.type !== "text" || pdata.synthetic) continue;
+        if (typeof pdata.text !== "string") continue;
+        totalRaw += pdata.text.length;
+        const cleaned = stripInjectionTags(pdata.text);
+        if (cleaned) collected.push(cleaned);
+      }
+      if (!collected.length) continue;
+      const merged = collected.join("\n\n");
+      if (isBootstrapTurn(merged, totalRaw)) continue;
+      turns.push({ role: roleParsed.data, text: merged });
     }
-    if (!collected.length) continue;
-    const merged = collected.join("\n\n");
-    if (isBootstrapTurn(merged, totalRaw)) continue;
-    turns.push({ role: roleParsed.data, text: merged });
+    return turns;
+  } finally {
+    ctx.db.close();
   }
-  return turns;
 }
 
 function opencodeSearch(s: SessionInfo, kw: string): SearchHit {
   const turns = opencodeExtractDialogue(s);
   if (s.title) turns.unshift({ role: "user", text: s.title });
   return searchInDialogue(turns, kw);
+}
+
+function safeJsonParse<T>(raw: string, schema: z.ZodType<T>): T | undefined {
+  let parsed: unknown;
+  try {
+    parsed = JSON.parse(raw);
+  } catch {
+    return undefined;
+  }
+  const r = schema.safeParse(parsed);
+  return r.success ? r.data : undefined;
 }
 
 // ---------- dispatch ----------

@@ -63,14 +63,59 @@ const {
 
 const CLAUDE_PROJECTS = nodePath.join(fakeHome, ".claude", "projects");
 const CODEX_SESSIONS = nodePath.join(fakeHome, ".codex", "sessions");
-const OC_SESSION_DIR = nodePath.join(
-  fakeHome,
-  ".local",
-  "share",
-  "opencode",
-  "storage",
-  "session",
-);
+const OC_DIR = nodePath.join(fakeHome, ".local", "share", "opencode");
+const OC_DB_PATH = nodePath.join(OC_DIR, "opencode.db");
+
+// eslint-disable-next-line @typescript-eslint/no-require-imports
+const Database = require("better-sqlite3") as new (
+  file: string,
+) => {
+  exec(sql: string): void;
+  prepare(sql: string): { run(...params: unknown[]): { changes: number } };
+  close(): void;
+};
+
+function seedOcSession(opts: {
+  id: string;
+  directory: string;
+  time_created: number;
+  time_updated: number;
+}): void {
+  nodeFs.mkdirSync(OC_DIR, { recursive: true });
+  const fresh = !nodeFs.existsSync(OC_DB_PATH);
+  const db = new Database(OC_DB_PATH);
+  if (fresh) {
+    db.exec(`
+      CREATE TABLE session (
+        id TEXT PRIMARY KEY,
+        parent_id TEXT,
+        directory TEXT,
+        title TEXT,
+        time_created INTEGER NOT NULL,
+        time_updated INTEGER NOT NULL
+      );
+      CREATE TABLE message (
+        id TEXT PRIMARY KEY,
+        session_id TEXT NOT NULL,
+        time_created INTEGER NOT NULL,
+        time_updated INTEGER NOT NULL,
+        data TEXT NOT NULL
+      );
+      CREATE TABLE part (
+        id TEXT PRIMARY KEY,
+        message_id TEXT NOT NULL,
+        session_id TEXT NOT NULL,
+        time_created INTEGER NOT NULL,
+        time_updated INTEGER NOT NULL,
+        data TEXT NOT NULL
+      );
+    `);
+  }
+  db.prepare(
+    "INSERT INTO session (id, directory, title, time_created, time_updated) VALUES (?, ?, '', ?, ?)",
+  ).run(opts.id, opts.directory, opts.time_created, opts.time_updated);
+  db.close();
+}
 
 function writeJsonl(file: string, lines: readonly unknown[]): void {
   nodeFs.mkdirSync(nodePath.dirname(file), { recursive: true });
@@ -78,11 +123,6 @@ function writeJsonl(file: string, lines: readonly unknown[]): void {
     file,
     lines.map((l) => JSON.stringify(l)).join("\n") + "\n",
   );
-}
-
-function writeJson(file: string, obj: unknown): void {
-  nodeFs.mkdirSync(nodePath.dirname(file), { recursive: true });
-  nodeFs.writeFileSync(file, JSON.stringify(obj));
 }
 
 function setMtime(file: string, iso: string): void {
@@ -302,12 +342,8 @@ describe("codexListSessions interval-overlap filter", () => {
 // OpenCode
 // =============================================================================
 
-describe("opencodeListSessions interval-overlap filter", () => {
+describe("opencodeListSessions interval-overlap filter (SQLite)", () => {
   const projectCwd = "/tmp/cross-day-opencode";
-
-  beforeEach(() => {
-    nodeFs.mkdirSync(OC_SESSION_DIR, { recursive: true });
-  });
 
   afterEach(() => {
     rimraf(nodePath.join(fakeHome, ".local"));
@@ -316,14 +352,11 @@ describe("opencodeListSessions interval-overlap filter", () => {
   for (const c of CASES) {
     it(c.name, () => {
       const sessionId = `oc-${c.name.split(" ")[0].slice(1)}`;
-      const sessionFile = nodePath.join(OC_SESSION_DIR, `${sessionId}.json`);
-      writeJson(sessionFile, {
+      seedOcSession({
         id: sessionId,
         directory: projectCwd,
-        time: {
-          created: new Date(c.start).getTime(),
-          updated: new Date(c.end).getTime(),
-        },
+        time_created: new Date(c.start).getTime(),
+        time_updated: new Date(c.end).getTime(),
       });
 
       const r = opencodeListSessions(

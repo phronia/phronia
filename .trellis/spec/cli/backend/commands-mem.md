@@ -15,7 +15,7 @@ CLIs already drop on disk:
 |----------|--------------|
 | Claude Code | `~/.claude/projects/<sanitized-cwd>/<id>.jsonl` |
 | Codex | `~/.codex/sessions/**/rollout-<ts>-<id>.jsonl` |
-| OpenCode | `~/.local/share/opencode/storage/{session,message,part}/**` |
+| OpenCode (1.2+) | `~/.local/share/opencode/opencode.db` (single SQLite file) |
 
 For every session, `mem` can: list metadata (id / cwd / time), grep cleaned
 dialogue across all of them, drill into a single session for a token-budgeted
@@ -133,24 +133,59 @@ and `commands/mem.ts:searchSession` dispatch on `s.platform`.
     becomes a synthetic `[compact]\n<text>` turn, and prior turns are
     discarded.
 
-### OpenCode
+### OpenCode (SQLite, 1.2+)
 
-- **Layout** (three-store):
-  - Session metadata: `~/.local/share/opencode/storage/session/**/<sid>.json`
-  - Message index: `message/<sid>/msg_*.json`
-  - Part bodies: `part/<msgId>/prt_*.json`
-- **Metadata**: `OpenCodeSessionSchema` exposes `id / title / directory /
-  parentID / time.{created,updated}`. Numeric ms timestamps are converted to
-  ISO via `new Date(ms).toISOString()`.
-- **Sub-agent chain**: `parentID` is the only native parent linkage across the
-  three platforms. `commands/mem.ts:buildChildIndex` flattens it transitively
-  for `--include-children`.
+OpenCode 1.2 migrated from a JSON tree under
+`~/.local/share/opencode/storage/{session,message,part}/**` to a single SQLite
+database at `~/.local/share/opencode/opencode.db`. Trellis reads the SQLite
+database directly via `better-sqlite3`. The pre-1.2 JSON tree is no longer
+supported (1.2 has been GA for several months; the remaining 1.1.x cohort is
+small and the dual-track maintenance cost was not justified).
+
+- **Native dep**: `better-sqlite3` is a `dependencies` entry, not optional.
+  Prebuilds cover Win/macOS/Linux × Node 18/20/22. If the load still fails on
+  a user machine, `commands/mem.ts:loadBetterSqlite3` emits one stderr line
+  and `opencodeListSessions / opencodeExtractDialogue / opencodeSearch` all
+  return empty results — other platforms keep working.
+- **Read mode**: the database is opened with
+  `new Database(path, { readonly: true, fileMustExist: true })`. `mem` never
+  writes to the OpenCode store.
+- **Schema (drizzle, observed on 1.14.30)**:
+  - `session(id, parent_id, directory, title, time_created, time_updated, ...)`
+  - `message(id, session_id, time_created, time_updated, data)` — `data` is a
+    JSON blob containing `{ role, time: { created }, agent, ... }`.
+  - `part(id, message_id, session_id, time_created, time_updated, data)` —
+    `data` is a JSON blob keyed on `type` (`text` / `tool` / `reasoning` /
+    `step-start` / `step-finish` / `patch`); only `type === "text"` parts are
+    kept by `extractDialogue`.
+- **Schema discovery (PRAGMA)**: at every adapter call, `commands/mem.ts:probeSchema`
+  runs `PRAGMA table_info(session) / table_info(message) / table_info(part)`
+  and verifies the columns Trellis depends on (`session.id / directory /
+  time_created / time_updated`, `message.id / session_id / data`,
+  `part.message_id / data`). If any required column is missing, the adapter
+  emits one stderr warning and returns empty — defensively forward-compatible
+  with future OpenCode schema changes.
+- **`SessionInfo.filePath`**: there is no per-session file in this layout, so
+  every OpenCode `SessionInfo` reports `filePath = OC_DB_PATH`. Consumers of
+  `mem` only use `filePath` for display and for Codex/Claude grep helpers, so
+  sharing the DB path across all OpenCode sessions is safe.
+- **Sub-agent chain**: `session.parent_id` is the only native parent linkage
+  across the three platforms; `commands/mem.ts:buildChildIndex` flattens it
+  transitively for `--include-children`.
 - **Cleaning** (`commands/mem.ts:opencodeExtractDialogue`):
-  - Iterate messages sorted by `time.created` ascending.
-  - For each message, read every `prt_*.json` body; keep parts where
-    `type === "text"` AND `synthetic !== true`. Synthetic parts are
-    platform-injected mode prompts / agent boilerplate.
-  - Concatenate kept parts with `\n\n`.
+  - `SELECT id, data FROM message WHERE session_id = ? ORDER BY time_created ASC, id ASC`
+  - `SELECT message_id, data FROM part WHERE session_id = ? ORDER BY message_id, id`
+  - Group parts by `message_id`. For each message: parse role from
+    `data.role` (drop everything that isn't `user` / `assistant`), keep parts
+    where `type === "text"` AND `synthetic !== true`, run each kept part
+    through `stripInjectionTags`, drop the entire turn if `isBootstrapTurn`
+    fires, otherwise concatenate parts with `\n\n`.
+- **Phase slicing (`--phase`)**: OpenCode currently degrades to "all turns +
+  stderr warning" for `--phase brainstorm` / `implement`. OpenCode part data
+  *does* expose Bash tool invocations (we see `task.py create / start` in
+  `part.data` blobs of `type === "tool"`), so a future enhancement can add
+  native boundary detection mirroring the Claude/Codex implementation. This
+  was deferred from the SQLite migration to keep MVP scope tight.
 
 ### `SessionInfo` contract
 
@@ -163,10 +198,9 @@ Every list function emits items conforming to `commands/mem.ts:SessionInfoSchema
 | `title` | optional | Claude index `title`, OpenCode `title`; Codex has no title |
 | `cwd` | optional | OpenCode `directory`, Claude index/event `cwd`, Codex first-event `payload.cwd` |
 | `created` | optional ISO | first-event timestamp; Codex falls back to filename timestamp |
-| `updated` | optional ISO | `fs.statSync(file).mtime` for Claude/Codex; OpenCode `time.updated` |
-| `filePath` | yes | absolute path to the session's primary file |
-| `messageDir` | OpenCode only | `OC_MESSAGE_DIR/<sid>` for downstream extraction |
-| `parent_id` | OpenCode only | sub-agent linkage |
+| `updated` | optional ISO | `fs.statSync(file).mtime` for Claude/Codex; OpenCode `session.time_updated` |
+| `filePath` | yes | absolute path to the session's primary file (OpenCode: shared `opencode.db`) |
+| `parent_id` | OpenCode only | sub-agent linkage from `session.parent_id` |
 
 ---
 
@@ -318,7 +352,8 @@ collapse to one chunk.
 ## Sub-agent merging (`--include-children`)
 
 OpenCode is the only platform with a native parent-child link
-(`parentID` on `OpenCodeSessionSchema`). When `--include-children` is set:
+(the `parent_id` column on the SQLite `session` table). When
+`--include-children` is set:
 
 1. `commands/mem.ts:buildChildIndex` walks the candidate list and builds a
    `Map<parent_id, descendants[]>` with **transitive flattening** — a parent
@@ -350,10 +385,12 @@ never absorb children.
 - **No write path**: `mem` never modifies session files, indexes, or any other
   state. It is a strict reader.
 - **No remote/cloud sync**: OpenCode's optional cloud sync is invisible here;
-  only the local store under `~/.local/share/opencode/storage` is parsed.
+  only the local SQLite database at `~/.local/share/opencode/opencode.db` is
+  parsed.
 - **No transitive dependency on Trellis runtime**: `mem.ts` does not import
   from `configurators/`, `migrations/`, `templates/`, or `.trellis/scripts`.
-  It uses `node:fs / node:path / node:os / zod` only.
+  It uses `node:fs / node:path / node:os / node:module / zod` plus the
+  optional native dep `better-sqlite3` (OpenCode platform only).
 - **No OpenCode-style sub-agent linkage outside OpenCode**: even if a future
   Codex / Claude release exposes parent-child IDs, the current
   `buildChildIndex` only consults `s.parent_id`, which only OpenCode emits.
@@ -618,7 +655,7 @@ production session has hit a problematic size yet so the simpler synchronous
 path stayed.
 
 ### Mock `node:os` BEFORE importing `mem.ts`
-Module-load constants `HOME`, `CLAUDE_PROJECTS`, `CODEX_SESSIONS`, `OC_*`
+Module-load constants `HOME`, `CLAUDE_PROJECTS`, `CODEX_SESSIONS`, `OC_DB_PATH`
 capture `os.homedir()` once. Tests must mock `node:os` via `vi.hoisted` and
 `vi.mock("node:os", ...)` *before* `await import("../../src/commands/mem.js")`.
 See `test/commands/mem-platforms.test.ts` for the canonical pattern.
@@ -659,7 +696,7 @@ rather than crashing the run.
 | `commands/mem.ts:ClaudeBlockSchema` / `ClaudeMessageSchema` / `ClaudeEventSchema` | Claude JSONL events |
 | `commands/mem.ts:ClaudeIndexEntrySchema` / `ClaudeIndexSchema` | Claude `sessions-index.json` |
 | `commands/mem.ts:CodexContentPartSchema` / `CodexCompactedItemSchema` / `CodexPayloadSchema` / `CodexEventSchema` | Codex rollout JSONL |
-| `commands/mem.ts:OpenCodeSessionSchema` / `OpenCodeMessageSchema` / `OpenCodePartSchema` | OpenCode three-store |
+| `commands/mem.ts:OpenCodeMessageDataSchema` / `OpenCodePartDataSchema` | OpenCode SQLite `data` column JSON blobs |
 
 ### Schema evolution rules
 
@@ -721,8 +758,10 @@ test:
    override `homedir`.
 3. **`await import("../../src/commands/mem.js")`** *after* the mock is set up.
 4. **Per-test fixture seeding**: write minimal JSONL / JSON files into
-   `<fakeHome>/.claude/projects/...`, `<fakeHome>/.codex/sessions/...`, or
-   `<fakeHome>/.local/share/opencode/storage/...`.
+   `<fakeHome>/.claude/projects/...` or `<fakeHome>/.codex/sessions/...`. For
+   OpenCode, build a synthetic SQLite database with `better-sqlite3` at
+   `<fakeHome>/.local/share/opencode/opencode.db` (CREATE TABLE session /
+   message / part with the columns Trellis reads, then INSERT fixture rows).
 5. **`utimesSync`** is the canonical way to anchor `mtime` for `updated`
    assertions — `fs.statSync(file).mtime` is what `mem.ts` reads.
 6. **`afterEach`** cleans up its own fixture files; tests must be isolated

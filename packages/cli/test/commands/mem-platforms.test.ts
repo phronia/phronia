@@ -61,16 +61,8 @@ const {
 
 const CLAUDE_PROJECTS = nodePath.join(fakeHome, ".claude", "projects");
 const CODEX_SESSIONS = nodePath.join(fakeHome, ".codex", "sessions");
-const OC_ROOT = nodePath.join(
-  fakeHome,
-  ".local",
-  "share",
-  "opencode",
-  "storage",
-);
-const OC_SESSION_DIR = nodePath.join(OC_ROOT, "session");
-const OC_MESSAGE_DIR = nodePath.join(OC_ROOT, "message");
-const OC_PART_DIR = nodePath.join(OC_ROOT, "part");
+const OC_DIR = nodePath.join(fakeHome, ".local", "share", "opencode");
+const OC_DB_PATH = nodePath.join(OC_DIR, "opencode.db");
 
 function writeJsonl(file: string, lines: readonly unknown[]): void {
   nodeFs.mkdirSync(nodePath.dirname(file), { recursive: true });
@@ -630,36 +622,149 @@ describe("codexListSessions / codexExtractDialogue", () => {
 });
 
 // =============================================================================
-// OpenCode adapter
+// OpenCode adapter (SQLite, opencode 1.2+)
 // =============================================================================
 
-describe("opencodeListSessions / opencodeExtractDialogue", () => {
+// eslint-disable-next-line @typescript-eslint/no-require-imports
+const Database = require("better-sqlite3") as new (
+  file: string,
+  opts?: { readonly?: boolean; fileMustExist?: boolean },
+) => {
+  exec(sql: string): void;
+  prepare(sql: string): {
+    run(...params: unknown[]): { changes: number };
+  };
+  close(): void;
+};
+
+interface OcSeedSession {
+  id: string;
+  directory?: string | null;
+  title?: string;
+  parent_id?: string | null;
+  time_created: number;
+  time_updated: number;
+}
+
+interface OcSeedMessage {
+  id: string;
+  session_id: string;
+  time_created: number;
+  data: object;
+}
+
+interface OcSeedPart {
+  id: string;
+  message_id: string;
+  session_id: string;
+  data: object;
+}
+
+function seedOcDb(opts: {
+  sessions: readonly OcSeedSession[];
+  messages?: readonly OcSeedMessage[];
+  parts?: readonly OcSeedPart[];
+}): void {
+  nodeFs.mkdirSync(OC_DIR, { recursive: true });
+  // Match real schema as closely as needed for the queries we run.
+  const db = new Database(OC_DB_PATH);
+  db.exec(`
+    CREATE TABLE session (
+      id TEXT PRIMARY KEY,
+      project_id TEXT,
+      parent_id TEXT,
+      slug TEXT,
+      directory TEXT,
+      title TEXT,
+      time_created INTEGER NOT NULL,
+      time_updated INTEGER NOT NULL
+    );
+    CREATE TABLE message (
+      id TEXT PRIMARY KEY,
+      session_id TEXT NOT NULL,
+      time_created INTEGER NOT NULL,
+      time_updated INTEGER NOT NULL,
+      data TEXT NOT NULL
+    );
+    CREATE TABLE part (
+      id TEXT PRIMARY KEY,
+      message_id TEXT NOT NULL,
+      session_id TEXT NOT NULL,
+      time_created INTEGER NOT NULL,
+      time_updated INTEGER NOT NULL,
+      data TEXT NOT NULL
+    );
+  `);
+  const insSession = db.prepare(
+    "INSERT INTO session (id, parent_id, directory, title, time_created, time_updated) VALUES (?, ?, ?, ?, ?, ?)",
+  );
+  for (const s of opts.sessions) {
+    insSession.run(
+      s.id,
+      s.parent_id ?? null,
+      s.directory ?? null,
+      s.title ?? "",
+      s.time_created,
+      s.time_updated,
+    );
+  }
+  const insMessage = db.prepare(
+    "INSERT INTO message (id, session_id, time_created, time_updated, data) VALUES (?, ?, ?, ?, ?)",
+  );
+  for (const m of opts.messages ?? []) {
+    insMessage.run(
+      m.id,
+      m.session_id,
+      m.time_created,
+      m.time_created,
+      JSON.stringify(m.data),
+    );
+  }
+  const insPart = db.prepare(
+    "INSERT INTO part (id, message_id, session_id, time_created, time_updated, data) VALUES (?, ?, ?, ?, ?, ?)",
+  );
+  for (const p of opts.parts ?? []) {
+    insPart.run(
+      p.id,
+      p.message_id,
+      p.session_id,
+      0,
+      0,
+      JSON.stringify(p.data),
+    );
+  }
+  db.close();
+}
+
+describe("opencodeListSessions / opencodeExtractDialogue (SQLite)", () => {
   const sessionId = "ses_opencode_1";
   const projectCwd = "/tmp/oc-project";
-  const sessionFile = nodePath.join(OC_SESSION_DIR, `${sessionId}.json`);
-  const messageDir = nodePath.join(OC_MESSAGE_DIR, sessionId);
 
   beforeEach(() => {
-    nodeFs.mkdirSync(OC_SESSION_DIR, { recursive: true });
-    nodeFs.mkdirSync(messageDir, { recursive: true });
+    nodeFs.mkdirSync(OC_DIR, { recursive: true });
   });
 
   afterEach(() => {
-    rimraf(OC_ROOT);
+    rimraf(OC_DIR);
   });
 
-  it("returns no sessions when storage dir doesn't exist", () => {
-    rimraf(OC_ROOT);
+  it("returns no sessions when DB doesn't exist", () => {
+    rimraf(OC_DIR);
     expect(opencodeListSessions(buildFilter({ global: true }))).toEqual([]);
   });
 
-  it("lists a session and reads title/cwd/parentID", () => {
-    writeJson(sessionFile, {
-      id: sessionId,
-      title: "debug memory leak",
-      directory: projectCwd,
-      parentID: "ses_parent_1",
-      time: { created: 1_700_000_000_000, updated: 1_700_000_001_000 },
+  it("lists a session and reads title/cwd/parent_id", () => {
+    seedOcDb({
+      sessions: [
+        {
+          id: sessionId,
+          title: "debug memory leak",
+          directory: projectCwd,
+          parent_id: "ses_parent_1",
+          time_created: 1_700_000_000_000,
+          time_updated: 1_700_000_001_000,
+        },
+      ],
     });
     const r = opencodeListSessions(buildFilter({ global: true }));
     const s = r.find((x) => x.id === sessionId);
@@ -667,65 +772,86 @@ describe("opencodeListSessions / opencodeExtractDialogue", () => {
     expect(s?.title).toBe("debug memory leak");
     expect(s?.cwd).toBe(projectCwd);
     expect(s?.parent_id).toBe("ses_parent_1");
+    expect(s?.filePath).toBe(OC_DB_PATH);
   });
 
   it("filters opencode sessions by --cwd (and excludes other-project sessions)", () => {
-    writeJson(sessionFile, {
-      id: sessionId,
-      directory: projectCwd,
-      time: { created: 1_700_000_000_000, updated: 1_700_000_001_000 },
-    });
-    const otherId = "ses_opencode_2";
-    writeJson(nodePath.join(OC_SESSION_DIR, `${otherId}.json`), {
-      id: otherId,
-      directory: "/elsewhere",
-      time: { created: 1_700_000_000_000, updated: 1_700_000_001_000 },
+    seedOcDb({
+      sessions: [
+        {
+          id: sessionId,
+          directory: projectCwd,
+          time_created: 1_700_000_000_000,
+          time_updated: 1_700_000_001_000,
+        },
+        {
+          id: "ses_opencode_2",
+          directory: "/elsewhere",
+          time_created: 1_700_000_000_000,
+          time_updated: 1_700_000_001_000,
+        },
+      ],
     });
     const r = opencodeListSessions(buildFilter({ cwd: projectCwd }));
     const ids = r.map((s) => s.id);
     expect(ids).toContain(sessionId);
-    expect(ids).not.toContain(otherId);
+    expect(ids).not.toContain("ses_opencode_2");
   });
 
-  it("extractDialogue groups parts by message and skips synthetic parts", () => {
-    writeJson(sessionFile, {
-      id: sessionId,
-      directory: projectCwd,
-      time: { created: 1_700_000_000_000, updated: 1_700_000_001_000 },
-    });
-    // Two messages: one user, one assistant.
+  it("extractDialogue groups parts by message, drops synthetic + non-text parts", () => {
     const msgUser = "msg_user_1";
     const msgAsst = "msg_asst_1";
-    writeJson(nodePath.join(messageDir, `${msgUser}.json`), {
-      id: msgUser,
-      role: "user",
-      time: { created: 1_700_000_000_001 },
-    });
-    writeJson(nodePath.join(messageDir, `${msgAsst}.json`), {
-      id: msgAsst,
-      role: "assistant",
-      time: { created: 1_700_000_000_002 },
-    });
-    // User parts: one real text + one synthetic preamble (must be dropped).
-    const userPartDir = nodePath.join(OC_PART_DIR, msgUser);
-    writeJson(nodePath.join(userPartDir, "prt_1.json"), {
-      type: "text",
-      text: "synthetic preamble",
-      synthetic: true,
-    });
-    writeJson(nodePath.join(userPartDir, "prt_2.json"), {
-      type: "text",
-      text: "real question",
-    });
-    // Assistant parts: text + tool_use (only text kept).
-    const asstPartDir = nodePath.join(OC_PART_DIR, msgAsst);
-    writeJson(nodePath.join(asstPartDir, "prt_1.json"), {
-      type: "tool_use",
-      text: "should be skipped",
-    });
-    writeJson(nodePath.join(asstPartDir, "prt_2.json"), {
-      type: "text",
-      text: "real answer",
+    seedOcDb({
+      sessions: [
+        {
+          id: sessionId,
+          directory: projectCwd,
+          time_created: 1_700_000_000_000,
+          time_updated: 1_700_000_001_000,
+        },
+      ],
+      messages: [
+        {
+          id: msgUser,
+          session_id: sessionId,
+          time_created: 1_700_000_000_001,
+          data: { role: "user", time: { created: 1_700_000_000_001 } },
+        },
+        {
+          id: msgAsst,
+          session_id: sessionId,
+          time_created: 1_700_000_000_002,
+          data: { role: "assistant", time: { created: 1_700_000_000_002 } },
+        },
+      ],
+      parts: [
+        // user: synthetic preamble + real text
+        {
+          id: "prt_u1",
+          message_id: msgUser,
+          session_id: sessionId,
+          data: { type: "text", text: "synthetic preamble", synthetic: true },
+        },
+        {
+          id: "prt_u2",
+          message_id: msgUser,
+          session_id: sessionId,
+          data: { type: "text", text: "real question" },
+        },
+        // assistant: tool_use (skipped) + text
+        {
+          id: "prt_a1",
+          message_id: msgAsst,
+          session_id: sessionId,
+          data: { type: "tool", text: "should be skipped" },
+        },
+        {
+          id: "prt_a2",
+          message_id: msgAsst,
+          session_id: sessionId,
+          data: { type: "text", text: "real answer" },
+        },
+      ],
     });
 
     const s = opencodeListSessions(buildFilter({ global: true })).find(
@@ -741,45 +867,106 @@ describe("opencodeListSessions / opencodeExtractDialogue", () => {
   });
 
   it("extractDialogue strips injection tags from text parts", () => {
-    writeJson(sessionFile, {
-      id: sessionId,
-      directory: projectCwd,
-      time: { created: 1_700_000_000_000, updated: 1_700_000_001_000 },
-    });
     const msgId = "msg_1";
-    writeJson(nodePath.join(messageDir, `${msgId}.json`), {
-      id: msgId,
-      role: "user",
-      time: { created: 1_700_000_000_001 },
+    seedOcDb({
+      sessions: [
+        {
+          id: sessionId,
+          directory: projectCwd,
+          time_created: 1_700_000_000_000,
+          time_updated: 1_700_000_001_000,
+        },
+      ],
+      messages: [
+        {
+          id: msgId,
+          session_id: sessionId,
+          time_created: 1_700_000_000_001,
+          data: { role: "user", time: { created: 1_700_000_000_001 } },
+        },
+      ],
+      parts: [
+        {
+          id: "prt_1",
+          message_id: msgId,
+          session_id: sessionId,
+          data: {
+            type: "text",
+            text: "before<system-reminder>x</system-reminder>after",
+          },
+        },
+      ],
     });
-    const partDir = nodePath.join(OC_PART_DIR, msgId);
-    writeJson(nodePath.join(partDir, "prt_1.json"), {
-      type: "text",
-      text: "before<system-reminder>x</system-reminder>after",
-    });
-
     const s = opencodeListSessions(buildFilter({ global: true })).find(
       (x) => x.id === sessionId,
     );
     expect(s).toBeDefined();
     if (!s) return;
-    const turns = opencodeExtractDialogue(s);
-    expect(turns).toEqual([{ role: "user", text: "beforeafter" }]);
+    expect(opencodeExtractDialogue(s)).toEqual([
+      { role: "user", text: "beforeafter" },
+    ]);
   });
 
-  it("returns empty turns for a session with no message dir", () => {
-    writeJson(sessionFile, {
-      id: sessionId,
-      directory: projectCwd,
-      time: { created: 1_700_000_000_000, updated: 1_700_000_001_000 },
+  it("returns empty turns for a session with no messages", () => {
+    seedOcDb({
+      sessions: [
+        {
+          id: sessionId,
+          directory: projectCwd,
+          time_created: 1_700_000_000_000,
+          time_updated: 1_700_000_001_000,
+        },
+      ],
     });
-    rimraf(messageDir);
     const s = opencodeListSessions(buildFilter({ global: true })).find(
       (x) => x.id === sessionId,
     );
     expect(s).toBeDefined();
     if (!s) return;
     expect(opencodeExtractDialogue(s)).toEqual([]);
+  });
+
+  it("degrades to [] when required schema columns are missing", () => {
+    nodeFs.mkdirSync(OC_DIR, { recursive: true });
+    const db = new Database(OC_DB_PATH);
+    // Missing `directory` and `time_*`: schema check fails and adapter degrades.
+    db.exec(
+      `CREATE TABLE session (id TEXT PRIMARY KEY); CREATE TABLE message (id TEXT); CREATE TABLE part (id TEXT);`,
+    );
+    db.close();
+    // Capture stderr without polluting test output.
+    const errSpy = vi
+      .spyOn(process.stderr, "write")
+      .mockImplementation(() => true);
+    try {
+      expect(opencodeListSessions(buildFilter({ global: true }))).toEqual([]);
+      expect(errSpy).toHaveBeenCalled();
+    } finally {
+      errSpy.mockRestore();
+    }
+  });
+
+  it("preserves parent_id for sub-agent chains", () => {
+    seedOcDb({
+      sessions: [
+        {
+          id: "ses_parent",
+          directory: projectCwd,
+          time_created: 1_700_000_000_000,
+          time_updated: 1_700_000_002_000,
+        },
+        {
+          id: "ses_child",
+          directory: projectCwd,
+          parent_id: "ses_parent",
+          time_created: 1_700_000_001_000,
+          time_updated: 1_700_000_001_500,
+        },
+      ],
+    });
+    const r = opencodeListSessions(buildFilter({ global: true }));
+    const child = r.find((x) => x.id === "ses_child");
+    expect(child?.parent_id).toBe("ses_parent");
   });
 });
 
