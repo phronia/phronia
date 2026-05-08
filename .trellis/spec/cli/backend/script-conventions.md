@@ -27,9 +27,11 @@ All workflow scripts target **Python 3.9+** for cross-platform compatibility (ma
 │   ├── active_task.py    # Session-scoped active task resolver
 │   ├── task_utils.py     # resolve_task_dir(), run_task_hooks()
 │   ├── task_store.py     # Task CRUD (create, archive, set-branch, etc.)
-│   ├── task_context.py   # JSONL context management (init-context, add-context)
+│   ├── task_context.py   # JSONL context management (add-context, validate, list-context)
 │   ├── task_queue.py     # Task queue CRUD
 │   ├── config.py         # Config reader (config.yaml, hooks)
+│   ├── trellis_config.py # Standalone .trellis/config.yaml reader (no task/repo deps)
+│   ├── workflow_phase.py # Extract Phase Index / step sections from .trellis/workflow.md (with platform filter)
 │   ├── cli_adapter.py    # Multi-platform CLI abstraction
 │   ├── git_context.py    # Entry shim → session_context + packages_context
 │   ├── session_context.py    # Session context generation (text/json/record)

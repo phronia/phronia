@@ -863,7 +863,7 @@ Multi-entry dispatch is a structural force-multiplier for bugs: every entry path
 
 ### Case Study (2026-04-30): issue #204 `--yes` + bootstrap recovery
 
-The first commit (`346003d`) added a `tasksEmpty` fallback only in `init()`'s main dispatch. It made the `--yes` log line correct, made `--force --yes` recover bootstrap, and added a passing test (`#2b` with `force: true`). It did NOT fix the user's literal reported command — `trellis init -u <name> --codex --yes` — because that command goes through `handleReinit` at `init.ts:931`, which short-circuits before reaching the patched dispatch. Caught by `trellis-check` sub-agent doing a live CLI repro on the dist build. Fixed in `589f753` by adding `!tasksEmptyEarly` to the reinit guard, plus splitting the test into `#2b` (no force, reported case) and `#2c` (with force, parity check).
+The first commit (`346003d`) added a `tasksEmpty` fallback only in `init()`'s main dispatch. It made the `--yes` log line correct, made `--force --yes` recover bootstrap, and added a passing test (`#2b` with `force: true`). It did NOT fix the user's literal reported command — `trellis init -u <name> --codex --yes` — because that command goes through `handleReinit` (defined at `init.ts:740`, called at `init.ts:1081`), which short-circuits before reaching the patched dispatch. Caught by `trellis-check` sub-agent doing a live CLI repro on the dist build. Fixed in `589f753` by adding `!tasksEmptyEarly` to the reinit guard, plus splitting the test into `#2b` (no force, reported case) and `#2c` (with force, parity check).
 
 ---
 

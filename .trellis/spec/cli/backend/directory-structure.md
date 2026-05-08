@@ -16,11 +16,14 @@ This project is a **TypeScript CLI tool** using ES modules. The source code foll
 src/
 ├── cli/                 # CLI entry point and argument parsing
 │   └── index.ts         # Main CLI entry (Commander.js setup)
-├── commands/            # Command implementations
-│   └── init.ts          # Each command in its own file
+├── commands/            # Command implementations (one file per command)
+│   ├── init.ts          # `trellis init` — bootstrap / joiner / reinit flows
+│   ├── update.ts        # `trellis update` — template hash refresh + migrations
+│   ├── uninstall.ts     # `trellis uninstall` — manifest scan + scrubber dispatch
+│   └── mem.ts           # `trellis mem` — multi-platform session indexing (list/search/context/extract/projects)
 ├── configurators/       # Configuration generators
 │   ├── index.ts         # Platform registry (PLATFORM_FUNCTIONS, derived helpers)
-│   ├── shared.ts        # Shared utilities (resolvePlaceholders, writeSkills, writeAgents, writeSharedHooks)
+│   ├── shared.ts        # Shared utilities (resolvePlaceholders, writeSkills, writeAgents, writeSharedHooks, pull-prelude builders)
 │   ├── antigravity.ts   # Antigravity configurator
 │   ├── claude.ts        # Claude Code configurator
 │   ├── codebuddy.ts     # CodeBuddy configurator
@@ -32,6 +35,7 @@ src/
 │   ├── kilo.ts          # Kilo configurator
 │   ├── kiro.ts          # Kiro configurator
 │   ├── opencode.ts      # OpenCode configurator
+│   ├── pi.ts            # Pi Agent configurator (TS extension pattern)
 │   ├── qoder.ts         # Qoder configurator
 │   ├── windsurf.ts      # Windsurf configurator
 │   └── workflow.ts      # Creates .trellis/ structure
@@ -43,7 +47,8 @@ src/
 │   ├── common/          # Single source of truth for commands + skills
 │   │   ├── commands/    # Slash commands (start.md, finish-work.md)
 │   │   ├── skills/      # Auto-triggered skills (before-dev, brainstorm, check, break-loop, update-spec)
-│   │   └── index.ts     # getCommandTemplates(), getSkillTemplates()
+│   │   ├── bundled-skills/ # Multi-file bundled skills (e.g. trellis-meta/)
+│   │   └── index.ts     # getCommandTemplates(), getSkillTemplates(), getBundledSkillTemplates()
 │   ├── shared-hooks/    # Platform-independent Python hook scripts
 │   │   ├── index.ts     # getSharedHookScripts()
 │   │   ├── session-start.py
@@ -59,20 +64,31 @@ src/
 │   ├── gemini/          # Gemini templates (agents, settings)
 │   ├── kiro/            # Kiro templates (agents as JSON)
 │   ├── opencode/        # OpenCode templates (agents, plugin, lib)
-│   ├── qoder/           # Qoder templates (agents, settings)
+│   ├── pi/              # Pi Agent templates (agents, extensions, settings.json)
+│   ├── qoder/           # Qoder templates (skills, settings)
 │   ├── markdown/        # Generic markdown templates
 │   │   ├── spec/        # Spec templates (*.md.txt)
 │   │   ├── agents.md    # Project root file template
+│   │   ├── gitignore.txt # .gitignore template
+│   │   ├── workspace-index.md # Workspace index template
+│   │   ├── worktree.yaml.txt  # Legacy worktree template — orphaned (not exported by markdown/index.ts; left in tree but never written)
 │   │   └── index.ts     # Template exports
 │   └── trellis/         # .trellis/ workflow templates (scripts, workflow.md)
+│
+│   Note: Kilo, Antigravity, Windsurf have no template dir — content is generated
+│   at runtime by their configurators.
 ├── types/               # TypeScript type definitions
 │   └── ai-tools.ts      # AI tool types and registry
 ├── utils/               # Shared utility functions
 │   ├── compare-versions.ts # Semver comparison with prerelease support
-│   ├── file-writer.ts   # File writing with conflict handling
-│   ├── project-detector.ts # Project type detection
+│   ├── file-writer.ts   # File writing with conflict handling (WriteMode = ask|force|skip|append)
+│   ├── posix.ts         # toPosix() — normalize Windows paths for cross-platform string compare
+│   ├── project-detector.ts # Project type detection (monorepo aware)
+│   ├── proxy.ts         # HTTPS_PROXY / NO_PROXY support for remote template fetch
+│   ├── task-json.ts     # Canonical TaskJson factory (emptyTaskJson) — single TS source of truth
 │   ├── template-fetcher.ts # Remote template download from GitHub
-│   └── template-hash.ts # Template hash tracking for update detection
+│   ├── template-hash.ts # Template hash tracking for update detection
+│   └── uninstall-scrubbers.ts # Per-format scrubbers (settings.json, hooks.json, config.toml, package.json) used by `trellis uninstall`
 └── index.ts             # Package entry point (exports public API)
 ```
 
