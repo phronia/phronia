@@ -41,6 +41,11 @@ function nextVersion(current, type) {
     if (m) return `${m[1]}-beta.${parseInt(m[2], 10) + 1}`;
     const rcM = current.match(/^(\d+\.\d+\.\d+)-rc\.(\d+)$/);
     if (rcM) return `${rcM[1]}-beta.0`; // switching track
+    // Initial-prerelease seed format X.Y.Z-N (e.g. 0.6.0-0): used to start
+    // a new minor's beta cycle from a stable line. `pnpm version
+    // prerelease --preid beta` lifts X.Y.Z-N to X.Y.Z-beta.0.
+    const seedM = current.match(/^(\d+\.\d+\.\d+)-(\d+)$/);
+    if (seedM) return `${seedM[1]}-beta.0`;
     const stableM = current.match(/^(\d+)\.(\d+)\.(\d+)$/);
     if (stableM) {
       const [, maj, min, patch] = stableM;
