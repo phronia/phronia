@@ -12,6 +12,7 @@ import {
   resolvePlaceholders,
   resolveAllAsSkillsNeutral,
   resolveBundledSkills,
+  resolveCodexTrellisStartSkill,
   applyPullBasedPreludeToml,
   writeSkills,
   writeSharedHooks,
@@ -37,6 +38,26 @@ export async function configureCodex(cwd: string): Promise<void> {
     resolveAllAsSkillsNeutral(AI_TOOLS.codex.templateContext),
     resolveBundledSkills(AI_TOOLS.codex.templateContext),
   );
+
+  // Additionally write `trellis-start` to .agents/skills/ — Codex-specific.
+  // The SessionStart hook was removed in 0.5.5 (de-recursion); inject-workflow-state.py
+  // injects a `<trellis-bootstrap>` block on no_task turns instructing the AI to
+  // invoke `$trellis-start` to load workflow context. Without this skill, that
+  // invocation has nothing to resolve. Other agent-capable platforms keep their
+  // working SessionStart hooks and don't need this.
+  // Must stay in sync with `collectPlatformTemplates.codex.collectTemplates`
+  // (configurators/index.ts) — both share `resolveCodexTrellisStartSkill`.
+  const trellisStart = resolveCodexTrellisStartSkill(
+    AI_TOOLS.codex.templateContext,
+  );
+  if (trellisStart) {
+    const trellisStartDir = path.join(sharedSkillsRoot, trellisStart.name);
+    ensureDir(trellisStartDir);
+    await writeFile(
+      path.join(trellisStartDir, "SKILL.md"),
+      trellisStart.content,
+    );
+  }
 
   const codexRoot = path.join(cwd, ".codex");
 
@@ -89,15 +110,22 @@ export async function configureCodex(cwd: string): Promise<void> {
     resolvePlaceholders(getHooksConfig()),
   );
 
-  // NOTE: Codex hooks require `features.codex_hooks = true` in the user's
-  // ~/.codex/config.toml. Without this flag the hooks.json is ignored and
-  // inject-workflow-state.py will never fire. This prerequisite is documented
-  // in spec/cli/backend/platform-integration.md.
+  // NOTE: Codex hooks require `features.hooks = true` in the user's
+  // ~/.codex/config.toml (Codex 0.129+). The legacy `features.codex_hooks = true`
+  // still works on 0.129+ but emits a deprecation warning; pre-0.129 only
+  // accepts `codex_hooks`. Without this flag the hooks.json is ignored and
+  // inject-workflow-state.py will never fire. Codex 0.129+ also gates each
+  // installed hook behind a one-time `/hooks` review — until the user approves
+  // it the workflow breadcrumb won't auto-inject (the trellis-bootstrap
+  // fallback in inject-workflow-state.py covers this case). Documented in
+  // spec/cli/backend/platform-integration.md.
   if (!process.env.VITEST && !process.env.TRELLIS_QUIET) {
     process.stderr.write(
-      "⚠️  Codex hooks require `features.codex_hooks = true` in your " +
-        "~/.codex/config.toml. Without it the Trellis workflow breadcrumb " +
-        "won't fire. See Trellis docs for details.\n",
+      "⚠️  Codex hooks require `features.hooks = true` in your " +
+        "~/.codex/config.toml (Codex 0.129+; older versions: `codex_hooks = true`). " +
+        "On Codex 0.129+ also run `/hooks` once to approve the Trellis " +
+        "UserPromptSubmit hook. Without these the Trellis workflow breadcrumb " +
+        "won't auto-inject. See Trellis docs for details.\n",
     );
   }
 

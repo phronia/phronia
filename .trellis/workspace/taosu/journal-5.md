@@ -405,3 +405,37 @@ Hotfix on top of 0.5.2 addressing two related Windows + Claude Code failure mode
 ### Next Steps
 
 - None - task complete
+
+
+## Session 148: Workflow-state recursion guard
+
+**Date**: 2026-05-06
+**Task**: Workflow-state recursion guard
+**Branch**: `feat/v0.6.0-beta`
+
+### Summary
+
+Hardened workflow-state and implement/check agent prompts against recursive Trellis sub-agent dispatch; updated multi-platform templates, specs, and regression tests.
+
+### Main Changes
+
+(Add details)
+
+### Git Commits
+
+| Hash | Message |
+|------|---------|
+| `0db57e5` | (see git log) |
+| `48f966e` | (see git log) |
+
+### Testing
+
+- [OK] (Add test results)
+
+### Status
+
+[OK] **Completed**
+
+### Next Steps
+
+- None - task complete

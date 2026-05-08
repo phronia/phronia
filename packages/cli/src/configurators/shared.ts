@@ -8,31 +8,66 @@
 import type { TemplateContext } from "../types/ai-tools.js";
 
 /**
- * Get the Python command based on platform.
- * Windows uses 'python', macOS/Linux use 'python3'.
+ * Module-level resolved Python command, set by the init flow after probing.
+ *
+ * Windows commonly has Python under one of: `python`, `python3`, `py -3` —
+ * which one works varies by installer (python.org / Microsoft Store / py
+ * launcher). `init.ts` detects which is available, then calls
+ * `setResolvedPythonCommand` so all subsequent template / configurator writes
+ * use the resolved value instead of the platform default.
+ *
+ * If unset (e.g. unit tests bypass init), `getPythonCommandForPlatform` falls
+ * back to the static platform default (`python` on Windows, `python3`
+ * elsewhere) — preserving legacy behavior.
  */
-export function getPythonCommandForPlatform(
-  platform: NodeJS.Platform = process.platform,
-): "python" | "python3" {
-  return platform === "win32" ? "python" : "python3";
+let resolvedPythonCommand: string | null = null;
+
+export function setResolvedPythonCommand(cmd: string): void {
+  const trimmed = cmd.trim();
+  resolvedPythonCommand = trimmed || null;
+}
+
+/** Test helper — clear the resolved cache between unit tests. */
+export function resetResolvedPythonCommand(): void {
+  resolvedPythonCommand = null;
 }
 
 /**
- * Replace literal `python3` with `python` on Windows, excluding shebang lines.
+ * Get the Python command for the host platform.
  *
- * Applied at init/update write time so that all file types (including .py, .md,
- * .toml, .json) get the correct command for the host platform without needing
- * template-level changes or runtime detection code.
+ * Returns the resolved command if `setResolvedPythonCommand` has been called;
+ * otherwise the static platform default — Windows: `python`, others:
+ * `python3`. Pass an explicit `platform` arg only for unit tests (it bypasses
+ * the resolved cache).
+ */
+export function getPythonCommandForPlatform(
+  platform?: NodeJS.Platform,
+): string {
+  if (platform === undefined && resolvedPythonCommand) {
+    return resolvedPythonCommand;
+  }
+  const target = platform ?? process.platform;
+  return target === "win32" ? "python" : "python3";
+}
+
+/**
+ * Replace literal `python3` with the resolved Python command, excluding
+ * shebang lines.
  *
- * On non-Windows platforms this is a no-op (returns content unchanged).
- * The replacement is idempotent: running it twice produces the same result.
+ * Applied at init/update write time so that all file types (including .py,
+ * .md, .toml, .json) get the correct command for the host platform without
+ * template-level changes.
+ *
+ * No-op when the resolved command is `python3` (the template default).
+ * Idempotent: running it twice produces the same result.
  */
 export function replacePythonCommandLiterals(content: string): string {
-  if (process.platform !== "win32") return content;
+  const target = getPythonCommandForPlatform();
+  if (target === "python3") return content;
   return content
     .split("\n")
     .map((line) =>
-      line.startsWith("#!") ? line : line.replaceAll("python3", "python"),
+      line.startsWith("#!") ? line : line.replaceAll("python3", target),
     )
     .join("\n");
 }
@@ -381,6 +416,38 @@ export function resolveAllAsSkillsNeutral(
       resolvePlaceholdersNeutral(tmpl.content, ctx),
     ),
   }));
+}
+
+/**
+ * Codex needs a `trellis-start` skill in `.agents/skills/` so the
+ * `<trellis-bootstrap>` notice from `inject-workflow-state.py` resolves
+ * to an actual skill file (the bootstrap notice tells the AI to invoke
+ * `$trellis-start` once on the first `no_task` turn — added in 0.5.5
+ * after the Codex SessionStart hook was removed for de-recursion).
+ *
+ * Built from `common/commands/start.md` + skill frontmatter; renders
+ * neutrally so init and update produce byte-identical output. Returns
+ * `null` if the template is missing (defensive — should never happen).
+ *
+ * Used by both `configureCodex()` (init path, file write) and
+ * `collectPlatformTemplates.codex` (update path, manifest map). Both
+ * paths must agree, otherwise upgraded users miss the file (which broke
+ * 0.4.x → 0.5.5/0.5.6 upgrades — see #247-style symptom: AI reports
+ * "no .agents/skills/trellis-start/SKILL.md" because update only ran
+ * `collectTemplates` and never wrote the file).
+ */
+export function resolveCodexTrellisStartSkill(
+  ctx: TemplateContext,
+): ResolvedTemplate | null {
+  const startTemplate = getCommandTemplates().find((t) => t.name === "start");
+  if (!startTemplate) return null;
+  return {
+    name: "trellis-start",
+    content: wrapWithSkillFrontmatter(
+      "trellis-start",
+      resolvePlaceholdersNeutral(startTemplate.content, ctx),
+    ),
+  };
 }
 
 /**
