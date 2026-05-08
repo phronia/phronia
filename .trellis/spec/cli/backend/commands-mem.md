@@ -418,6 +418,162 @@ relevance quality on the conversational path.
 
 ---
 
+## Phase slicing (`--phase`)
+
+`tl mem extract <id> --phase <brainstorm|implement|all>` slices the cleaned
+dialogue by Trellis brainstorm windows, allowing the high-density discussion
+turns (user thinking, AI proposals being rejected, decision rationale) to be
+extracted independently from implementation work.
+
+### Three values
+
+| `--phase` | Behavior |
+|-----------|----------|
+| `all` (default) | Pre-existing behavior — full cleaned dialogue, unchanged. |
+| `brainstorm` | Returns only turns inside `[task.py create, task.py start)` windows. |
+| `implement` | Returns turns OUTSIDE every brainstorm window (i.e., turns the user spent doing the actual work, plus session warm-up before the first `create`). |
+
+### Boundary signal
+
+A brainstorm window is bounded by `task.py` invocations recovered from raw
+Claude JSONL `tool_use` blocks (which `claudeExtractDialogue` discards):
+
+- **Window start**: assistant `tool_use` block with `name === "Bash"` whose
+  `input.command` matches `task.py create`.
+- **Window end**: the next `task.py start` Bash invocation in the same
+  session.
+
+The detection is performed by
+`commands/mem.ts:collectClaudeTurnsAndEvents` — a single pass that produces
+both the cleaned `DialogueTurn[]` (semantically identical to
+`claudeExtractDialogue`) AND a list of `task.py` events with their
+`turnIndex` (the cleaned-turn index AT THE TIME the tool_use was seen).
+
+### Regex compatibility
+
+`commands/mem.ts:parseTaskPyCommand` parses individual Bash commands. It must
+cover every shape Trellis users actually write:
+
+```
+\b(?:python3?|py(?:\s+-3)?)?\s*\S*[/\\]?task\.py\s+(create|start)\b
+```
+
+Concretely supported invokers + path forms:
+
+- `python ./.trellis/scripts/task.py create "title"`
+- `python3 ./.trellis/scripts/task.py create my-task`
+- `py -3 .trellis/scripts/task.py create ...` (Windows launcher)
+- `python3 .trellis\\scripts\\task.py start ...` (JSONL-double-escaped backslash)
+- `python3 .trellis\scripts\task.py start ...` (single backslash)
+- `task.py start <task-dir>` (PATH + chmod +x, no invoker prefix)
+- `python3 /Users/.../task.py create ...` (absolute path)
+
+The parser also captures `--slug FOO` / `--slug=FOO` for create events and the
+positional task-dir for start events. False-positive guard: `task.py` must
+appear at the start of the command, after whitespace, or after a path
+separator — never embedded inside a flag value like `--slug=task.py-create-x`.
+
+### Pairing strategy (multi-task sessions)
+
+A single Claude session often contains N `[create, start)` pairs as the user
+moves through several tasks. Pairing in
+`commands/mem.ts:buildBrainstormWindows`:
+
+1. **Slug match wins**: any create with an explicit `--slug` is paired with
+   the first unmatched start whose `taskDir`'s last segment equals that slug,
+   regardless of position.
+2. **FIFO fallback**: remaining creates pair with the next unmatched start
+   appearing AFTER them in event order.
+3. **Output order**: windows are sorted by `startTurn` ascending (so output
+   reflects chronological session flow).
+
+Each window emits a label: the explicit slug if known, else
+`slugFromTaskDir(start.taskDir)`, else `window-N`.
+
+### Multi-window output format
+
+`--phase brainstorm` with multiple windows emits a separator before each
+group:
+
+```
+--- task: <slug-or-label> ---
+
+## Human
+
+...
+```
+
+In `--json` mode, the output adds:
+
+```json
+{
+  "phase": "brainstorm",
+  "windows": [{ "label": "demo", "startTurn": 1, "endTurn": 3 }, ...],
+  "total_turns": 5,
+  "groups": [{ "label": "demo", "turns": [...] }, ...],
+  "turns": [...]   // flat concatenation of all groups, for legacy parsers
+}
+```
+
+`groups` is the structured form (one entry per window). `turns` is a flat
+concatenation kept for backwards compatibility with consumers that parsed the
+pre-`--phase` output.
+
+### Fallback matrix
+
+| Condition | `--phase brainstorm` | `--phase implement` |
+|-----------|---------------------|---------------------|
+| Both `create` and `start` found, paired | Slice `[start, end)` of each window | Turns NOT in any window |
+| `create` found, no following `start` | `[create, totalTurns)` (window kept open to session end) | Turns before any `create` |
+| `start` found, no preceding `create` (task created in earlier session) | `[0, start)` | Turns at or after `start` |
+| Neither found | Full dialogue + stderr warning | Empty + stderr warning |
+| `start.turnIndex < create.turnIndex` (event interleave anomaly) | Window discarded | (no impact) |
+
+Warnings are emitted to stderr (`console.error`) so they don't pollute the
+machine-readable stdout used by `--json` consumers.
+
+### Platform coverage
+
+| Platform | `--phase brainstorm` / `implement` |
+|----------|------------------------------------|
+| Claude | Native — boundary detection runs on raw JSONL |
+| Codex | Degraded: emits stderr warning, returns full dialogue (no slicing) |
+| OpenCode | Degraded: emits stderr warning, returns full dialogue (no slicing) |
+
+This is by design (PRD MVP scope) — Codex/OpenCode equivalents to Claude's
+`tool_use` block are different shapes and are deferred to a follow-up.
+
+### Combining with `--grep`
+
+`--phase` runs FIRST, then `--grep` filters turns within the resulting slice.
+Order matters: `--grep KW --phase brainstorm` searches only inside the
+brainstorm windows, not the entire session.
+
+### Common pitfall: tool_use is dropped during cleaning
+
+`claudeExtractDialogue` (and the per-platform analogs) discard `tool_use`
+blocks because their text is not user/assistant dialogue. Boundary signals
+live in those blocks, so phase slicing CANNOT post-filter cleaned turns —
+the signals would already be gone. The implementation does its own raw
+JSONL pass that builds turns and tracks tool_use events together. When
+adding new boundary signals (e.g., for Codex / OpenCode), follow this
+pattern: read raw events, do not consume the cleaned `DialogueTurn[]`.
+
+### Compaction resets task.py event list, not just turns
+
+`collectClaudeTurnsAndEvents` resets BOTH `turns` AND `events` when an
+`isCompactSummary` event is encountered. Pre-compact `task.py` events
+anchor to `turnIndex` values that index into the now-collapsed dialogue
+(replaced by a single `[compact summary]` synthetic turn). Carrying them
+forward and pairing with post-compact `start` events would emit a window
+referencing dialogue that no longer exists. Symptom (if forgotten): a
+window with `startTurn` deep inside the post-compact region but labeled
+with a stale slug from the pre-compact task. Fix: any new boundary
+detector that mutates a `turns` accumulator on compaction must also
+reset its event accumulator.
+
+---
+
 ## Common pitfalls
 
 When extending or refactoring `mem.ts`:
@@ -614,6 +770,7 @@ For consumers (currently only `tl` Commander wire and tests):
 | `claudeListSessions`, `claudeExtractDialogue`, `claudeSearch` | Claude adapter — tested via `mem-platforms.test.ts` |
 | `codexListSessions`, `codexExtractDialogue`, `codexSearch` | Codex adapter — same |
 | `opencodeListSessions`, `opencodeExtractDialogue` | OpenCode adapter — same |
+| `parseTaskPyCommand`, `buildBrainstormWindows`, `collectClaudeTurnsAndEvents` | Phase slicing — tested via `mem-phase-slice.test.ts` |
 
 `opencodeSearch` is intentionally file-private; the dispatcher
 `commands/mem.ts:searchSession` is what tests should use to exercise OpenCode
@@ -630,5 +787,8 @@ the unexported function.
 - `packages/cli/test/commands/mem-platforms.test.ts` — per-platform fixture tests
 - `packages/cli/test/commands/mem-since-cross-day.test.ts` — cross-day regression
 - `packages/cli/test/commands/mem-integration.test.ts` — end-to-end
+- `packages/cli/test/commands/mem-phase-slice.test.ts` — phase slicing tests
 - `.trellis/tasks/05-08-mem-since-cross-day-filter/` — historical context for
   the `inRangeOverlap` switch
+- `.trellis/tasks/05-08-mem-phase-slice/` — historical context for the
+  `--phase` flag and `[task.py create, start)` boundary signal

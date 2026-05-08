@@ -711,6 +711,367 @@ export function claudeSearch(s: SessionInfo, kw: string): SearchHit {
   return searchInDialogue(claudeExtractDialogue(s), kw);
 }
 
+// ---------- phase slicing (brainstorm windows) ----------
+
+/**
+ * Parse a Bash command string and extract `task.py create|start` invocations.
+ *
+ * Returns null if the command does not invoke `task.py`. The detection is
+ * intentionally lenient on invoker prefix — covers `python` / `python3` /
+ * `py -3` / no-prefix (PATH + chmod +x) — and on path separator (`/`, `\`,
+ * `\\` from JSONL re-escape). False-positive guard: `task.py` MUST be at the
+ * start of the command, after a path separator, or preceded by whitespace —
+ * never embedded inside a flag value like `--slug task.py-create-foo`.
+ *
+ * For `create`, the slug / title arg is captured as the first positional
+ * argument after the verb (best-effort; not used to gate the match).
+ *
+ * For `start`, the task-dir path is captured as the first positional argument.
+ */
+export function parseTaskPyCommand(
+  cmd: string,
+):
+  | { action: "create"; slug?: string; titleArg?: string }
+  | { action: "start"; taskDir?: string }
+  | null {
+  if (typeof cmd !== "string" || cmd.length === 0) return null;
+  // Anchor: task.py must be (start-of-string | whitespace | path separator)
+  // followed by (create|start). This rejects flag-value embedding like
+  // `--slug=task.py-create-foo`.
+  // Allow `task.py` itself; the leading boundary is enforced via lookbehind-free
+  // check by capturing a leading char.
+  const re = /(^|[\s/\\])task\.py\s+(create|start)(?:\s+(.*))?$/m;
+  const m = cmd.match(re);
+  if (!m) return null;
+  const action = m[2];
+  const restRaw = m[3] ?? "";
+  if (action === "create") {
+    const args = splitShellArgs(restRaw);
+    // First positional arg (skip any flags). For `task.py create`, the title
+    // is typically the first quoted positional; --slug FOO appears as a flag.
+    let slug: string | undefined;
+    let titleArg: string | undefined;
+    for (let i = 0; i < args.length; i++) {
+      const a = args[i];
+      if (a === undefined) continue;
+      if (a === "--slug" || a === "-s") {
+        slug = args[i + 1];
+        i++;
+        continue;
+      }
+      if (a.startsWith("--slug=")) {
+        slug = a.slice("--slug=".length);
+        continue;
+      }
+      if (a.startsWith("-")) continue;
+      titleArg ??= a;
+    }
+    return { action: "create", slug, titleArg };
+  }
+  // start
+  const args = splitShellArgs(restRaw);
+  let taskDir: string | undefined;
+  for (const a of args) {
+    if (a.startsWith("-")) continue;
+    taskDir = a;
+    break;
+  }
+  return { action: "start", taskDir };
+}
+
+/** Best-effort shell-arg splitter: respects `"…"` and `'…'` and unwraps a
+ * single matching outer quote pair. Sufficient for parsing slugs/paths out of
+ * `task.py create|start` invocations; not a full POSIX parser. */
+function splitShellArgs(s: string): string[] {
+  const out: string[] = [];
+  let cur = "";
+  let quote: '"' | "'" | null = null;
+  for (const ch of s) {
+    if (quote) {
+      if (ch === quote) {
+        quote = null;
+        continue;
+      }
+      cur += ch;
+      continue;
+    }
+    if (ch === '"' || ch === "'") {
+      quote = ch;
+      continue;
+    }
+    if (/\s/.test(ch)) {
+      if (cur) {
+        out.push(cur);
+        cur = "";
+      }
+      continue;
+    }
+    cur += ch;
+  }
+  if (cur) out.push(cur);
+  return out;
+}
+
+/** Derive a slug from a `start` task-dir path like
+ * `.trellis/tasks/05-08-mem-phase-slice/` → `05-08-mem-phase-slice`. */
+function slugFromTaskDir(p: string | undefined): string | undefined {
+  if (!p) return undefined;
+  // Normalize separators and trim trailing slash.
+  const norm = p.replace(/\\+/g, "/").replace(/\/+$/g, "");
+  const parts = norm.split("/").filter(Boolean);
+  return parts[parts.length - 1];
+}
+
+export interface TaskPyEvent {
+  action: "create" | "start";
+  timestamp: string;
+  /** Index into the cleaned DialogueTurn[] array — points to the next turn
+   * that would be appended after this Bash tool_use event was emitted. */
+  turnIndex: number;
+  slug?: string;
+  taskDir?: string;
+}
+
+/**
+ * Single-pass scan of a Claude JSONL file that produces both:
+ *   1. the cleaned dialogue turns (semantically identical to
+ *      `claudeExtractDialogue`)
+ *   2. the list of `task.py create|start` Bash tool_use events with their
+ *      `turnIndex` (= turns.length AT THE TIME the tool_use was seen).
+ *
+ * Why one pass: we need the turnIndex to align with `claudeExtractDialogue`'s
+ * output exactly, including compaction-reset behavior. A second pass would
+ * have to re-derive turn indices from timestamps, which is fragile when
+ * timestamps repeat or are missing.
+ *
+ * For non-Claude platforms this returns turns + an empty event list; callers
+ * are expected to handle Codex/OpenCode boundary detection separately (or
+ * gracefully degrade — see PRD MVP scope).
+ */
+export function collectClaudeTurnsAndEvents(s: SessionInfo): {
+  turns: DialogueTurn[];
+  events: TaskPyEvent[];
+} {
+  let turns: DialogueTurn[] = [];
+  let events: TaskPyEvent[] = [];
+
+  readJsonl(s.filePath, ClaudeEventSchema, (obj) => {
+    const t = obj.type;
+    const msg = obj.message;
+    if (!msg) return;
+    const content = msg.content;
+
+    if (t === "user" && obj.isCompactSummary === true) {
+      let summary = "";
+      if (typeof content === "string") {
+        summary = stripInjectionTags(content);
+      } else if (Array.isArray(content)) {
+        const parts: string[] = [];
+        for (const block of content) {
+          if (block.type === "text" && typeof block.text === "string") {
+            const cleaned = stripInjectionTags(block.text);
+            if (cleaned) parts.push(cleaned);
+          }
+        }
+        summary = parts.join("\n\n");
+      }
+      turns = summary
+        ? [{ role: "user", text: `[compact summary]\n${summary}` }]
+        : [];
+      // Reset events too: pre-compact task.py events anchor to turnIndex
+      // values that no longer correspond to real turns (the underlying
+      // dialogue is collapsed into a single synthetic [compact summary]).
+      // Pairing pre-compact events to post-compact turns would produce
+      // incoherent windows.
+      events = [];
+      return;
+    }
+
+    if (t === "user" && msg.role === "user") {
+      if (typeof content === "string") {
+        const text = stripInjectionTags(content);
+        if (text && !isBootstrapTurn(text, content.length)) {
+          turns.push({ role: "user", text });
+        }
+      }
+      return;
+    }
+
+    if (
+      t === "assistant" &&
+      msg.role === "assistant" &&
+      Array.isArray(content)
+    ) {
+      // Walk blocks: text blocks contribute to the eventual cleaned turn;
+      // tool_use blocks with name="Bash" are scanned for task.py invocations.
+      const parts: string[] = [];
+      for (const block of content) {
+        if (block.type === "text" && typeof block.text === "string") {
+          const cleaned = stripInjectionTags(block.text);
+          if (cleaned) parts.push(cleaned);
+        } else if (block.type === "tool_use") {
+          // Schema is loose so we read fields off the block directly.
+          const b = block as { name?: unknown; input?: unknown };
+          if (b.name !== "Bash") continue;
+          const inp = b.input;
+          if (!inp || typeof inp !== "object") continue;
+          const command = (inp as { command?: unknown }).command;
+          if (typeof command !== "string") continue;
+          const parsed = parseTaskPyCommand(command);
+          if (!parsed) continue;
+          // turnIndex = current turns.length (the index this assistant turn
+          // WILL occupy if its text parts are non-empty; either way, it's
+          // the cut point for "everything before this Bash event"). For
+          // assistant messages where text comes BEFORE tool_use blocks, the
+          // assistant turn is appended AFTER this loop completes, so using
+          // turns.length here means the boundary lies just before that turn.
+          // We accept this small drift: brainstorm slicing is at granularity
+          // of full turns, not intra-turn substrings.
+          const ev: TaskPyEvent = {
+            action: parsed.action,
+            timestamp: obj.timestamp ?? "",
+            turnIndex: turns.length,
+            ...(parsed.action === "create"
+              ? { slug: parsed.slug }
+              : { taskDir: parsed.taskDir }),
+          };
+          events.push(ev);
+        }
+      }
+      if (parts.length)
+        turns.push({ role: "assistant", text: parts.join("\n\n") });
+    }
+  });
+
+  return { turns, events };
+}
+
+export interface BrainstormWindow {
+  label: string;
+  /** inclusive */
+  startTurn: number;
+  /** exclusive */
+  endTurn: number;
+}
+
+/**
+ * Pair `create` → `start` events into brainstorm windows.
+ *
+ * Pairing strategy:
+ *   1. Walk events in order.
+ *   2. For each `create`, find the next unmatched `start` whose slug matches
+ *      (slug derived from `start` taskDir's last path segment) — slug match
+ *      wins regardless of position.
+ *   3. If no slug match: pair with the next unmatched `start` by position
+ *      (FIFO).
+ *   4. Unmatched `create` (no following `start`): window = [create, totalTurns).
+ *   5. Unmatched `start` (no preceding `create`): window = [0, start).
+ *
+ * Window labels: `<slug>` if known, else `window-N`.
+ */
+export function buildBrainstormWindows(
+  events: readonly TaskPyEvent[],
+  totalTurns: number,
+): BrainstormWindow[] {
+  const creates = events
+    .map((e, i) => ({ e, i }))
+    .filter(({ e }) => e.action === "create");
+  const starts = events
+    .map((e, i) => ({ e, i }))
+    .filter(({ e }) => e.action === "start");
+
+  const usedStartIdx = new Set<number>();
+  const windows: BrainstormWindow[] = [];
+  let windowCounter = 0;
+
+  const usedCreateIdx = new Set<number>();
+
+  // Pass 1: pair by slug match (slug present on the `create`, matches the
+  // last segment of the `start` taskDir). Slug match wins over position.
+  for (const { e: createEv, i: ci } of creates) {
+    if (!createEv.slug) continue;
+    const matchIdx = starts.findIndex(
+      ({ e, i }) =>
+        !usedStartIdx.has(i) && slugFromTaskDir(e.taskDir) === createEv.slug,
+    );
+    if (matchIdx === -1) continue;
+    const startEntry = starts[matchIdx];
+    if (!startEntry) continue;
+    usedStartIdx.add(startEntry.i);
+    usedCreateIdx.add(ci);
+    pushWindow(
+      windows,
+      createEv.turnIndex,
+      startEntry.e.turnIndex,
+      createEv.slug,
+      ++windowCounter,
+    );
+  }
+
+  // Pass 2: FIFO pair remaining creates with remaining starts that appear
+  // AFTER the create (by event order).
+  for (const { e: createEv, i: ci } of creates) {
+    if (usedCreateIdx.has(ci)) continue;
+    const pairedStart = starts.find(({ i }) => !usedStartIdx.has(i) && i > ci);
+    if (pairedStart) {
+      usedStartIdx.add(pairedStart.i);
+      usedCreateIdx.add(ci);
+      const slug = createEv.slug ?? slugFromTaskDir(pairedStart.e.taskDir);
+      pushWindow(
+        windows,
+        createEv.turnIndex,
+        pairedStart.e.turnIndex,
+        slug,
+        ++windowCounter,
+      );
+    } else {
+      // Fallback A: create with no start → [create, end).
+      usedCreateIdx.add(ci);
+      pushWindow(
+        windows,
+        createEv.turnIndex,
+        totalTurns,
+        createEv.slug,
+        ++windowCounter,
+      );
+    }
+  }
+
+  // Pass 3: unmatched starts (start with no preceding create) → [0, start).
+  // Fallback B: task was created in an earlier session.
+  for (const { e: startEv, i } of starts) {
+    if (usedStartIdx.has(i)) continue;
+    pushWindow(
+      windows,
+      0,
+      startEv.turnIndex,
+      slugFromTaskDir(startEv.taskDir),
+      ++windowCounter,
+    );
+  }
+
+  // Sort windows by startTurn for stable output ordering.
+  windows.sort((a, b) => a.startTurn - b.startTurn);
+  return windows;
+}
+
+function pushWindow(
+  windows: BrainstormWindow[],
+  startTurn: number,
+  endTurn: number,
+  slug: string | undefined,
+  counter: number,
+): void {
+  // Guard: if start > end (e.g., start before create due to event interleave),
+  // skip the malformed window rather than emit an empty / negative slice.
+  if (endTurn < startTurn) return;
+  windows.push({
+    label: slug ?? `window-${counter}`,
+    startTurn,
+    endTurn,
+  });
+}
+
 // ---------- codex adapter ----------
 
 const CODEX_SESSIONS = path.join(HOME, ".codex", "sessions");
@@ -1401,24 +1762,139 @@ function cmdContext(argv: Argv): void {
   }
 }
 
+type Phase = "brainstorm" | "implement" | "all";
+
+function parsePhaseFlag(raw: unknown): Phase {
+  if (raw === undefined || raw === false) return "all";
+  if (raw === "brainstorm" || raw === "implement" || raw === "all") return raw;
+  die(`unknown --phase: ${String(raw)} (expected brainstorm|implement|all)`);
+}
+
+interface PhaseSlice {
+  /** Output rendered as separated windows (brainstorm) or contiguous turns
+   * (implement / all). For brainstorm we emit per-window labeled groups. */
+  groups: { label: string | null; turns: DialogueTurn[] }[];
+  windows: BrainstormWindow[];
+  /** Total turns in the underlying cleaned dialogue (for JSON metadata). */
+  totalTurns: number;
+  /** Stderr warnings (non-fatal: degraded output for non-Claude / no-boundary). */
+  warnings: string[];
+}
+
+/** Slice cleaned dialogue by phase. Claude is the only platform with native
+ * boundary detection (via raw JSONL `task.py create|start` Bash tool_use
+ * events). Codex / OpenCode degrade to "all turns + warning". */
+function slicePhase(s: SessionInfo, phase: Phase): PhaseSlice {
+  const warnings: string[] = [];
+
+  if (phase === "all" || s.platform !== "claude") {
+    if (phase !== "all" && s.platform !== "claude") {
+      warnings.push(
+        `--phase ${phase} on platform=${s.platform} is not yet supported; ` +
+          `returning full dialogue (Claude-only MVP).`,
+      );
+    }
+    const turns = extractDialogue(s);
+    return {
+      groups: [{ label: null, turns }],
+      windows: [],
+      totalTurns: turns.length,
+      warnings,
+    };
+  }
+
+  // Claude path: collect turns + task.py events in one raw-JSONL pass, then
+  // build brainstorm windows.
+  const { turns, events } = collectClaudeTurnsAndEvents(s);
+  const windows = buildBrainstormWindows(events, turns.length);
+
+  if (phase === "brainstorm") {
+    if (windows.length === 0) {
+      warnings.push(
+        `no task.py create/start boundary found in session — returning full dialogue.`,
+      );
+      return {
+        groups: [{ label: null, turns }],
+        windows: [],
+        totalTurns: turns.length,
+        warnings,
+      };
+    }
+    const groups = windows.map((w) => ({
+      label: w.label,
+      turns: turns.slice(w.startTurn, w.endTurn),
+    }));
+    return { groups, windows, totalTurns: turns.length, warnings };
+  }
+
+  // phase === "implement": all turns NOT inside any brainstorm window.
+  if (windows.length === 0) {
+    warnings.push(
+      `no task.py create/start boundary found in session — implement phase is empty.`,
+    );
+    return {
+      groups: [{ label: null, turns: [] }],
+      windows: [],
+      totalTurns: turns.length,
+      warnings,
+    };
+  }
+  // Build set of indices covered by any brainstorm window.
+  const covered = new Set<number>();
+  for (const w of windows) {
+    for (let i = w.startTurn; i < w.endTurn; i++) covered.add(i);
+  }
+  const implementTurns: DialogueTurn[] = [];
+  for (let i = 0; i < turns.length; i++) {
+    if (!covered.has(i)) {
+      const t = turns[i];
+      if (t) implementTurns.push(t);
+    }
+  }
+  return {
+    groups: [{ label: null, turns: implementTurns }],
+    windows,
+    totalTurns: turns.length,
+    warnings,
+  };
+}
+
 function cmdExtract(argv: Argv): void {
   const id = argv.positional[0];
   if (!id) die("usage: extract <session-id>");
   const f = buildFilter(argv.flags);
   const s = findSessionById(id, f);
   if (!s) die(`session not found: ${id}`);
-  const turns = extractDialogue(s);
+
+  const phase = parsePhaseFlag(argv.flags.phase);
+  const slice = slicePhase(s, phase);
+  for (const w of slice.warnings) console.error(`warning: ${w}`);
+
   const grepRaw = argv.flags.grep;
   const grep = typeof grepRaw === "string" ? grepRaw.toLowerCase() : undefined;
 
+  // Apply --grep AFTER phase slicing.
+  const filterTurns = (turns: DialogueTurn[]): DialogueTurn[] =>
+    grep ? turns.filter((t) => t.text.toLowerCase().includes(grep)) : turns;
+
   if (argv.flags.json) {
+    const groups = slice.groups.map((g) => ({
+      label: g.label,
+      turns: filterTurns(g.turns),
+    }));
+    // For backwards compat when phase=all (single unlabeled group), expose
+    // a flat `turns` field too. New `groups` / `windows` fields are added
+    // unconditionally so AI consumers can rely on them.
+    const flat = groups.flatMap((g) => g.turns);
     console.log(
       JSON.stringify(
         {
           session: s,
-          turns: grep
-            ? turns.filter((t) => t.text.toLowerCase().includes(grep))
-            : turns,
+          phase,
+          windows: slice.windows,
+          total_turns: slice.totalTurns,
+          groups,
+          turns: flat,
         },
         null,
         2,
@@ -1426,19 +1902,28 @@ function cmdExtract(argv: Argv): void {
     );
     return;
   }
+
   console.log(`# session: [${s.platform}] ${s.id}`);
   if (s.title) console.log(`# title: ${s.title}`);
   if (s.cwd) console.log(`# cwd:   ${shortPath(s.cwd)}`);
   if (s.created) console.log(`# date:  ${shortDate(s.created)}`);
+  const totalShown = slice.groups.reduce(
+    (n, g) => n + filterTurns(g.turns).length,
+    0,
+  );
   console.log(
-    `# turns: ${turns.length}${grep ? ` (filtered by /${grep}/)` : ""}`,
+    `# phase: ${phase}  turns: ${totalShown}/${slice.totalTurns}` +
+      (grep ? ` (filtered by /${grep}/)` : "") +
+      (slice.windows.length > 0 ? `  windows: ${slice.windows.length}` : ""),
   );
   console.log("");
-  for (const t of turns) {
-    if (grep && !t.text.toLowerCase().includes(grep)) continue;
-    console.log(`## ${t.role === "user" ? "Human" : "Assistant"}\n`);
-    console.log(t.text);
-    console.log("\n---\n");
+  for (const g of slice.groups) {
+    if (g.label !== null) console.log(`--- task: ${g.label} ---\n`);
+    for (const t of filterTurns(g.turns)) {
+      console.log(`## ${t.role === "user" ? "Human" : "Assistant"}\n`);
+      console.log(t.text);
+      console.log("\n---\n");
+    }
   }
 }
 
@@ -1462,6 +1947,9 @@ flags:
   --cwd <path>                           override the project cwd
   --limit N                              cap output (default 50)
   --grep KW                              extract / context: filter turns by keyword (multi-token AND)
+  --phase brainstorm|implement|all       extract: slice by Trellis brainstorm windows
+                                         (default all; brainstorm = [task.py create, task.py start);
+                                         Claude-only — Codex/OpenCode warn + return all)
   --turns N                              context: number of hit turns to return (default 3)
   --around N                             context: turns of surrounding context per hit (default 1)
   --max-chars N                          context: total char budget (default 6000, ~1500 tokens)
@@ -1474,6 +1962,7 @@ examples:
   trellis mem list --global --platform claude --since 2026-04-01
   trellis mem search "session insight" --global
   trellis mem extract 5842592d --grep memory
+  trellis mem extract 5842592d --phase brainstorm
 `);
 }
 

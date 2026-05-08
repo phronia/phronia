@@ -258,6 +258,226 @@ describe("runMem subcommand integration", () => {
     expect(joined).not.toContain("debug a memory leak");
   });
 
+  // ---------- extract --phase (brainstorm slicing) ----------
+
+  // The base seedClaudeSession() fixture has no task.py boundary signals, so
+  // it exercises the no-boundary fallback. We seed an extra session with
+  // explicit create/start markers for the happy path.
+  const phaseSessionId = "ph45e51ce-0000-1111-2222-333344445555";
+  const phaseSessionFile = nodePath.join(
+    projectDir,
+    `${phaseSessionId}.jsonl`,
+  );
+  function seedPhaseSession(): void {
+    writeJsonl(phaseSessionFile, [
+      // turn 0: brainstorm starts
+      {
+        type: "user",
+        cwd: projectCwd,
+        timestamp: "2026-04-15T11:00:00Z",
+        message: { role: "user", content: "brainstorm-content-X" },
+      },
+      // turn 1: assistant runs `task.py create` mid-message
+      {
+        type: "assistant",
+        timestamp: "2026-04-15T11:00:01Z",
+        message: {
+          role: "assistant",
+          content: [
+            { type: "text", text: "creating task" },
+            {
+              type: "tool_use",
+              name: "Bash",
+              input: {
+                command:
+                  "python3 ./.trellis/scripts/task.py create --slug demo",
+              },
+            },
+          ],
+        },
+      },
+      // turn 2: brainstorm continues
+      {
+        type: "user",
+        timestamp: "2026-04-15T11:00:02Z",
+        message: { role: "user", content: "brainstorm-content-Y" },
+      },
+      // turn 3: assistant runs `task.py start` (transition to implement)
+      {
+        type: "assistant",
+        timestamp: "2026-04-15T11:00:03Z",
+        message: {
+          role: "assistant",
+          content: [
+            { type: "text", text: "starting" },
+            {
+              type: "tool_use",
+              name: "Bash",
+              input: {
+                command:
+                  "python3 ./.trellis/scripts/task.py start .trellis/tasks/demo",
+              },
+            },
+          ],
+        },
+      },
+      // turn 4: implement starts here
+      {
+        type: "user",
+        timestamp: "2026-04-15T11:00:04Z",
+        message: { role: "user", content: "implement-content-Z" },
+      },
+    ]);
+  }
+
+  it("extract --phase brainstorm: returns only [create, start) turns", () => {
+    seedPhaseSession();
+    runMem([
+      "extract",
+      phaseSessionId,
+      "--cwd",
+      projectCwd,
+      "--phase",
+      "brainstorm",
+    ]);
+    const joined = logs.join("\n");
+    // Brainstorm window should include the assistant "creating task" turn
+    // (index 1) and the user "brainstorm-content-Y" turn (index 2).
+    expect(joined).toContain("brainstorm-content-Y");
+    expect(joined).toContain("creating task");
+    // Turn 0 ("brainstorm-content-X") is BEFORE create — outside [1,3) window.
+    // Make sure phase=brainstorm does not accidentally include warm-up turns.
+    expect(joined).not.toContain("brainstorm-content-X");
+    // Implement turn must NOT appear in brainstorm output.
+    expect(joined).not.toContain("implement-content-Z");
+    // Window separator with the slug label.
+    expect(joined).toContain("--- task: demo ---");
+    // Header reflects phase + window count.
+    expect(joined).toContain("# phase: brainstorm");
+  });
+
+  it("extract --phase implement: returns turns OUTSIDE every brainstorm window", () => {
+    seedPhaseSession();
+    runMem([
+      "extract",
+      phaseSessionId,
+      "--cwd",
+      projectCwd,
+      "--phase",
+      "implement",
+    ]);
+    const joined = logs.join("\n");
+    // Post-window: turn 4 ("implement-content-Z") survives.
+    expect(joined).toContain("implement-content-Z");
+    // Pre-window: turn 0 ("brainstorm-content-X") is BEFORE create at turn 1,
+    // so it is OUTSIDE the [1,3) window and must appear under implement.
+    expect(joined).toContain("brainstorm-content-X");
+    // In-window turn must NOT appear.
+    expect(joined).not.toContain("brainstorm-content-Y");
+  });
+
+  it("extract --phase brainstorm --json: emits windows + groups + total_turns", () => {
+    seedPhaseSession();
+    runMem([
+      "extract",
+      phaseSessionId,
+      "--cwd",
+      projectCwd,
+      "--phase",
+      "brainstorm",
+      "--json",
+    ]);
+    const parsed = JSON.parse(logs.join("\n")) as {
+      session: { id: string };
+      phase: string;
+      windows: { label: string; startTurn: number; endTurn: number }[];
+      total_turns: number;
+      groups: { label: string; turns: { role: string; text: string }[] }[];
+      turns: { role: string; text: string }[];
+    };
+    expect(parsed.phase).toBe("brainstorm");
+    expect(parsed.windows).toEqual([
+      { label: "demo", startTurn: 1, endTurn: 3 },
+    ]);
+    expect(parsed.total_turns).toBe(5);
+    expect(parsed.groups).toHaveLength(1);
+    expect(parsed.groups[0]?.label).toBe("demo");
+    expect(parsed.groups[0]?.turns.map((t) => t.text)).toEqual([
+      "creating task",
+      "brainstorm-content-Y",
+    ]);
+  });
+
+  it("extract --phase brainstorm with no boundary signals: warns + returns full dialogue", () => {
+    // Default seeded session has no task.py events.
+    runMem([
+      "extract",
+      sessionId,
+      "--cwd",
+      projectCwd,
+      "--phase",
+      "brainstorm",
+    ]);
+    const errsJoined = errs.join("\n");
+    expect(errsJoined).toMatch(/no task\.py create\/start boundary/);
+    const joined = logs.join("\n");
+    expect(joined).toContain("memory leak");
+  });
+
+  it("extract --phase implement with no boundary signals: warns + returns empty", () => {
+    runMem([
+      "extract",
+      sessionId,
+      "--cwd",
+      projectCwd,
+      "--phase",
+      "implement",
+      "--json",
+    ]);
+    const errsJoined = errs.join("\n");
+    expect(errsJoined).toMatch(/no task\.py create\/start boundary/);
+    const parsed = JSON.parse(logs.join("\n")) as {
+      turns: unknown[];
+      windows: unknown[];
+    };
+    expect(parsed.turns).toEqual([]);
+    expect(parsed.windows).toEqual([]);
+  });
+
+  it("extract --phase brainstorm + --grep: phase-slice runs first, grep filters within", () => {
+    seedPhaseSession();
+    runMem([
+      "extract",
+      phaseSessionId,
+      "--cwd",
+      projectCwd,
+      "--phase",
+      "brainstorm",
+      "--grep",
+      "brainstorm-content",
+    ]);
+    const joined = logs.join("\n");
+    expect(joined).toContain("brainstorm-content-Y");
+    // "creating task" doesn't contain "brainstorm-content" → filtered out.
+    expect(joined).not.toContain("creating task");
+    // Implement turn definitely not present.
+    expect(joined).not.toContain("implement-content-Z");
+  });
+
+  it("extract --phase: rejects unknown value via die()", () => {
+    expect(() =>
+      runMem([
+        "extract",
+        sessionId,
+        "--cwd",
+        projectCwd,
+        "--phase",
+        "garbage",
+      ]),
+    ).toThrow(/__exit__:2/);
+    expect(errs.join("\n")).toContain("unknown --phase: garbage");
+  });
+
   // ---------- projects ----------
 
   it("projects: lists distinct cwds with session counts", () => {
