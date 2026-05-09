@@ -648,3 +648,37 @@ Updated marketplace/skills/mem-recall/SKILL.md to match 0.6.0-beta.3: prereq bum
 ### Next Steps
 
 - None - task complete
+
+
+## Session 155: 0.6.0-beta.4 emergency revert: drop better-sqlite3 (Windows install fix)
+
+**Date**: 2026-05-09
+**Task**: 0.6.0-beta.4 emergency revert: drop better-sqlite3 (Windows install fix)
+**Branch**: `feat/v0.6.0-beta`
+
+### Summary
+
+0.6.0-beta.3 added better-sqlite3 dep for OpenCode SQLite reader. Windows + China-network users hit prebuild-install timeouts; node-gyp fallback needed VS2017+ (most users don't have) → Trellis itself failed to install. Emergency revert: drop the dep, OpenCode adapters return [] + one-shot stderr warning, Claude/Codex unaffected. Synced marketplace mem-recall skill + commands-mem.md spec to match. mem.ts -279 lines, package.json deps cleaned, pnpm-lock -217 lines, tests 1095→1078. Released as 0.6.0-beta.4.
+
+### Main Changes
+
+(Add details)
+
+### Git Commits
+
+| Hash | Message |
+|------|---------|
+| `300b729` | (see git log) |
+| `daba04d` | (see git log) |
+
+### Testing
+
+- [OK] (Add test results)
+
+### Status
+
+[OK] **Completed**
+
+### Next Steps
+
+- None - task complete

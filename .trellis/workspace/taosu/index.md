@@ -8,7 +8,7 @@
 
 <!-- @@@auto:current-status -->
 - **Active File**: `journal-5.md`
-- **Total Sessions**: 154
+- **Total Sessions**: 155
 - **Last Active**: 2026-05-09
 <!-- @@@/auto:current-status -->
 
@@ -19,7 +19,7 @@
 <!-- @@@auto:active-documents -->
 | File | Lines | Status |
 |------|-------|--------|
-| `journal-5.md` | ~650 | Active |
+| `journal-5.md` | ~684 | Active |
 | `journal-4.md` | ~1975 | Archived |
 | `journal-3.md` | ~1988 | Archived |
 | `journal-2.md` | ~1963 | Archived |
@@ -33,6 +33,7 @@
 <!-- @@@auto:session-history -->
 | # | Date | Title | Commits | Branch |
 |---|------|-------|---------|--------|
+| 155 | 2026-05-09 | 0.6.0-beta.4 emergency revert: drop better-sqlite3 (Windows install fix) | `300b729`, `daba04d` | `feat/v0.6.0-beta` |
 | 154 | 2026-05-09 | marketplace mem-recall: add --phase brainstorm + symlink user local | `b397638` | `feat/v0.6.0-beta` |
 | 153 | 2026-05-08 | fix(mem): OpenCode SQLite reader (1.2+ users restored, perf streaming, --phase dogfood fixes) | `d7341cb`, `a16b8d9`, `a992325`, `7e8f30c`, `f26c5fd` | `feat/v0.6.0-beta` |
 | 152 | 2026-05-08 | feat: tl mem extract --phase brainstorm|implement|all (cross-day fix already in 0.6.0-beta.2) | `a16b8d9` | `feat/v0.6.0-beta` |
