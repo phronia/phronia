@@ -439,3 +439,38 @@ Hardened workflow-state and implement/check agent prompts against recursive Trel
 ### Next Steps
 
 - None - task complete
+
+
+## Session 149: v0.5.10: git-add-f prevention + Pi workflow-state injection (#249) + Pi pi-subagents isolation (#246)
+
+**Date**: 2026-05-09
+**Task**: v0.5.10: git-add-f prevention + Pi workflow-state injection (#249) + Pi pi-subagents isolation (#246)
+**Branch**: `main`
+
+### Summary
+
+Stable patch on top of 0.5.9. (1) safe_commit.py helper centralizes git-add path scope + auto -f only on 'ignored by' stderr + explicit anti- warning. add_session.py + task.py archive both go through it. Real user lost 83474 lines to git add -f, this prevents recurrence. (2) Pi extension now injects [workflow-state] / <session-overview> / subagent promptSnippet with Active task: dispatch protocol — Pi sessions previously skipped Trellis flow entirely. (3) PR #246 RenaLio: project-level packages override prevents global npm:pi-subagents from polluting current project. 939→947 tests. v0.5.10 released.
+
+### Main Changes
+
+(Add details)
+
+### Git Commits
+
+| Hash | Message |
+|------|---------|
+| `5a5e5db` | (see git log) |
+| `04af444` | (see git log) |
+| `f6a53b1` | (see git log) |
+
+### Testing
+
+- [OK] (Add test results)
+
+### Status
+
+[OK] **Completed**
+
+### Next Steps
+
+- None - task complete
