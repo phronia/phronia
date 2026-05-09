@@ -615,3 +615,36 @@ Major mem.ts overhaul on feat/v0.6.0-beta. (1) Batch E new spec files (commands-
 ### Next Steps
 
 - None - task complete
+
+
+## Session 154: marketplace mem-recall: add --phase brainstorm + symlink user local
+
+**Date**: 2026-05-09
+**Task**: marketplace mem-recall: add --phase brainstorm + symlink user local
+**Branch**: `feat/v0.6.0-beta`
+
+### Summary
+
+Updated marketplace/skills/mem-recall/SKILL.md to match 0.6.0-beta.3: prereq bump, 6 new brainstorm-rationale trigger phrases, new --phase brainstorm section with 5 examples, OpenCode row → SQLite, parent_id rename. Replaced user local ~/.claude/skills/chat-history-recall (old TS POC) with symlink to marketplace mem-recall. trellis-check caught 3 Codex-as-degraded mistakes (Codex actually supports phase), fixed. commands-mem.md spec also has same stale Codex degradation table — out of scope, follow-up.
+
+### Main Changes
+
+(Add details)
+
+### Git Commits
+
+| Hash | Message |
+|------|---------|
+| `b397638` | (see git log) |
+
+### Testing
+
+- [OK] (Add test results)
+
+### Status
+
+[OK] **Completed**
+
+### Next Steps
+
+- None - task complete
