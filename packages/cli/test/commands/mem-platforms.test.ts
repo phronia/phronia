@@ -43,6 +43,10 @@ vi.mock("node:os", async () => {
 });
 
 // Import AFTER the mock is set up. mem.ts now sees fakeHome as $HOME.
+//
+// OpenCode adapter is exercised inside its own describe block via dynamic
+// re-import (so the module-level `opencodeWarned` flag resets per test) —
+// hence not destructured here.
 const {
   claudeListSessions,
   claudeExtractDialogue,
@@ -50,8 +54,6 @@ const {
   codexListSessions,
   codexExtractDialogue,
   codexSearch,
-  opencodeListSessions,
-  opencodeExtractDialogue,
   buildFilter,
 } = await import("../../src/commands/mem.js");
 
@@ -61,8 +63,16 @@ const {
 
 const CLAUDE_PROJECTS = nodePath.join(fakeHome, ".claude", "projects");
 const CODEX_SESSIONS = nodePath.join(fakeHome, ".codex", "sessions");
-const OC_DIR = nodePath.join(fakeHome, ".local", "share", "opencode");
-const OC_DB_PATH = nodePath.join(OC_DIR, "opencode.db");
+// OpenCode SQLite path — kept for the degraded-adapter tests, which still
+// surface this in SessionInfo.filePath shape assertions even though the
+// adapter no longer touches the DB (see "opencode adapter (degraded)" below).
+const OC_DB_PATH = nodePath.join(
+  fakeHome,
+  ".local",
+  "share",
+  "opencode",
+  "opencode.db",
+);
 
 function writeJsonl(file: string, lines: readonly unknown[]): void {
   nodeFs.mkdirSync(nodePath.dirname(file), { recursive: true });
@@ -622,351 +632,97 @@ describe("codexListSessions / codexExtractDialogue", () => {
 });
 
 // =============================================================================
-// OpenCode adapter (SQLite, opencode 1.2+)
+// OpenCode adapter (degraded — SQLite reader reverted in 0.6.0-beta.4)
 // =============================================================================
+//
+// 0.6.0-beta.3 introduced a `better-sqlite3`-backed reader for OpenCode 1.2+'s
+// SQLite session storage. 0.6.0-beta.4 reverted the native dep because the
+// prebuild-tarball + node-gyp fallback chain was breaking `npm install` on
+// Windows + China network (see PRD 05-09-revert-opencode-sqlite-emergency).
+// The three exported adapter functions are kept (callers in dispatch /
+// slicePhase rely on them) but degraded to no-ops with a one-shot stderr
+// warning. These tests pin that degraded contract.
 
-// eslint-disable-next-line @typescript-eslint/no-require-imports
-const Database = require("better-sqlite3") as new (
-  file: string,
-  opts?: { readonly?: boolean; fileMustExist?: boolean },
-) => {
-  exec(sql: string): void;
-  prepare(sql: string): {
-    run(...params: unknown[]): { changes: number };
-  };
-  close(): void;
-};
-
-interface OcSeedSession {
-  id: string;
-  directory?: string | null;
-  title?: string;
-  parent_id?: string | null;
-  time_created: number;
-  time_updated: number;
-}
-
-interface OcSeedMessage {
-  id: string;
-  session_id: string;
-  time_created: number;
-  data: object;
-}
-
-interface OcSeedPart {
-  id: string;
-  message_id: string;
-  session_id: string;
-  data: object;
-}
-
-function seedOcDb(opts: {
-  sessions: readonly OcSeedSession[];
-  messages?: readonly OcSeedMessage[];
-  parts?: readonly OcSeedPart[];
-}): void {
-  nodeFs.mkdirSync(OC_DIR, { recursive: true });
-  // Match real schema as closely as needed for the queries we run.
-  const db = new Database(OC_DB_PATH);
-  db.exec(`
-    CREATE TABLE session (
-      id TEXT PRIMARY KEY,
-      project_id TEXT,
-      parent_id TEXT,
-      slug TEXT,
-      directory TEXT,
-      title TEXT,
-      time_created INTEGER NOT NULL,
-      time_updated INTEGER NOT NULL
-    );
-    CREATE TABLE message (
-      id TEXT PRIMARY KEY,
-      session_id TEXT NOT NULL,
-      time_created INTEGER NOT NULL,
-      time_updated INTEGER NOT NULL,
-      data TEXT NOT NULL
-    );
-    CREATE TABLE part (
-      id TEXT PRIMARY KEY,
-      message_id TEXT NOT NULL,
-      session_id TEXT NOT NULL,
-      time_created INTEGER NOT NULL,
-      time_updated INTEGER NOT NULL,
-      data TEXT NOT NULL
-    );
-  `);
-  const insSession = db.prepare(
-    "INSERT INTO session (id, parent_id, directory, title, time_created, time_updated) VALUES (?, ?, ?, ?, ?, ?)",
-  );
-  for (const s of opts.sessions) {
-    insSession.run(
-      s.id,
-      s.parent_id ?? null,
-      s.directory ?? null,
-      s.title ?? "",
-      s.time_created,
-      s.time_updated,
-    );
-  }
-  const insMessage = db.prepare(
-    "INSERT INTO message (id, session_id, time_created, time_updated, data) VALUES (?, ?, ?, ?, ?)",
-  );
-  for (const m of opts.messages ?? []) {
-    insMessage.run(
-      m.id,
-      m.session_id,
-      m.time_created,
-      m.time_created,
-      JSON.stringify(m.data),
-    );
-  }
-  const insPart = db.prepare(
-    "INSERT INTO part (id, message_id, session_id, time_created, time_updated, data) VALUES (?, ?, ?, ?, ?, ?)",
-  );
-  for (const p of opts.parts ?? []) {
-    insPart.run(
-      p.id,
-      p.message_id,
-      p.session_id,
-      0,
-      0,
-      JSON.stringify(p.data),
-    );
-  }
-  db.close();
-}
-
-describe("opencodeListSessions / opencodeExtractDialogue (SQLite)", () => {
-  const sessionId = "ses_opencode_1";
-  const projectCwd = "/tmp/oc-project";
+describe("opencode adapter (degraded — SQLite reader reverted)", () => {
+  let errSpy: ReturnType<typeof vi.spyOn>;
 
   beforeEach(() => {
-    nodeFs.mkdirSync(OC_DIR, { recursive: true });
+    errSpy = vi.spyOn(process.stderr, "write").mockImplementation(() => true);
   });
 
   afterEach(() => {
-    rimraf(OC_DIR);
+    errSpy.mockRestore();
+    vi.resetModules();
   });
 
-  it("returns no sessions when DB doesn't exist", () => {
-    rimraf(OC_DIR);
-    expect(opencodeListSessions(buildFilter({ global: true }))).toEqual([]);
+  it("opencodeListSessions returns []", async () => {
+    // Re-import inside the test so the module-level `opencodeWarned` flag
+    // is fresh and we can observe the one-shot warning fire.
+    vi.resetModules();
+    const mod = await import("../../src/commands/mem.js");
+    expect(mod.opencodeListSessions(buildFilter({ global: true }))).toEqual([]);
   });
 
-  it("lists a session and reads title/cwd/parent_id", () => {
-    seedOcDb({
-      sessions: [
-        {
-          id: sessionId,
-          title: "debug memory leak",
-          directory: projectCwd,
-          parent_id: "ses_parent_1",
-          time_created: 1_700_000_000_000,
-          time_updated: 1_700_000_001_000,
-        },
-      ],
+  it("opencodeExtractDialogue returns [] for any session", async () => {
+    vi.resetModules();
+    const mod = await import("../../src/commands/mem.js");
+    const fakeSession = {
+      platform: "opencode" as const,
+      id: "ses_x",
+      filePath: OC_DB_PATH,
+    };
+    expect(mod.opencodeExtractDialogue(fakeSession)).toEqual([]);
+  });
+
+  it("warning fires only once across multiple opencode adapter calls", async () => {
+    vi.resetModules();
+    const mod = await import("../../src/commands/mem.js");
+    mod.opencodeListSessions(buildFilter({ global: true }));
+    mod.opencodeListSessions(buildFilter({ global: true }));
+    mod.opencodeExtractDialogue({
+      platform: "opencode",
+      id: "ses_x",
+      filePath: OC_DB_PATH,
     });
-    const r = opencodeListSessions(buildFilter({ global: true }));
-    const s = r.find((x) => x.id === sessionId);
-    expect(s).toBeDefined();
-    expect(s?.title).toBe("debug memory leak");
-    expect(s?.cwd).toBe(projectCwd);
-    expect(s?.parent_id).toBe("ses_parent_1");
-    expect(s?.filePath).toBe(OC_DB_PATH);
+    // Each warning write call passes a single string arg; we expect exactly one.
+    expect(errSpy).toHaveBeenCalledTimes(1);
+    const firstCallArg = errSpy.mock.calls[0]?.[0];
+    expect(typeof firstCallArg).toBe("string");
+    expect(firstCallArg as string).toMatch(/temporarily unavailable/i);
   });
 
-  it("filters opencode sessions by --cwd (and excludes other-project sessions)", () => {
-    seedOcDb({
-      sessions: [
-        {
-          id: sessionId,
-          directory: projectCwd,
-          time_created: 1_700_000_000_000,
-          time_updated: 1_700_000_001_000,
-        },
-        {
-          id: "ses_opencode_2",
-          directory: "/elsewhere",
-          time_created: 1_700_000_000_000,
-          time_updated: 1_700_000_001_000,
-        },
-      ],
-    });
-    const r = opencodeListSessions(buildFilter({ cwd: projectCwd }));
-    const ids = r.map((s) => s.id);
-    expect(ids).toContain(sessionId);
-    expect(ids).not.toContain("ses_opencode_2");
-  });
-
-  it("extractDialogue groups parts by message, drops synthetic + non-text parts", () => {
-    const msgUser = "msg_user_1";
-    const msgAsst = "msg_asst_1";
-    seedOcDb({
-      sessions: [
-        {
-          id: sessionId,
-          directory: projectCwd,
-          time_created: 1_700_000_000_000,
-          time_updated: 1_700_000_001_000,
-        },
-      ],
-      messages: [
-        {
-          id: msgUser,
-          session_id: sessionId,
-          time_created: 1_700_000_000_001,
-          data: { role: "user", time: { created: 1_700_000_000_001 } },
-        },
-        {
-          id: msgAsst,
-          session_id: sessionId,
-          time_created: 1_700_000_000_002,
-          data: { role: "assistant", time: { created: 1_700_000_000_002 } },
-        },
-      ],
-      parts: [
-        // user: synthetic preamble + real text
-        {
-          id: "prt_u1",
-          message_id: msgUser,
-          session_id: sessionId,
-          data: { type: "text", text: "synthetic preamble", synthetic: true },
-        },
-        {
-          id: "prt_u2",
-          message_id: msgUser,
-          session_id: sessionId,
-          data: { type: "text", text: "real question" },
-        },
-        // assistant: tool_use (skipped) + text
-        {
-          id: "prt_a1",
-          message_id: msgAsst,
-          session_id: sessionId,
-          data: { type: "tool", text: "should be skipped" },
-        },
-        {
-          id: "prt_a2",
-          message_id: msgAsst,
-          session_id: sessionId,
-          data: { type: "text", text: "real answer" },
-        },
-      ],
-    });
-
-    const s = opencodeListSessions(buildFilter({ global: true })).find(
-      (x) => x.id === sessionId,
+  it("--platform opencode does not break dispatch for other platforms", async () => {
+    // Seed a Claude session so `--platform all` produces non-empty output.
+    const claudeProjectCwd = "/tmp/oc-degrade-mixed";
+    const encodedCwd = claudeProjectCwd.replace(/[/_]/g, "-");
+    const claudeProjectDir = nodePath.join(CLAUDE_PROJECTS, encodedCwd);
+    const claudeSessionId = "33333333-3333-3333-3333-333333333333";
+    const claudeSessionFile = nodePath.join(
+      claudeProjectDir,
+      `${claudeSessionId}.jsonl`,
     );
-    expect(s).toBeDefined();
-    if (!s) return;
-    const turns = opencodeExtractDialogue(s);
-    expect(turns).toEqual([
-      { role: "user", text: "real question" },
-      { role: "assistant", text: "real answer" },
+    writeJsonl(claudeSessionFile, [
+      {
+        type: "user",
+        cwd: claudeProjectCwd,
+        timestamp: "2026-04-15T10:00:00Z",
+        message: { role: "user", content: "alive" },
+      },
     ]);
-  });
 
-  it("extractDialogue strips injection tags from text parts", () => {
-    const msgId = "msg_1";
-    seedOcDb({
-      sessions: [
-        {
-          id: sessionId,
-          directory: projectCwd,
-          time_created: 1_700_000_000_000,
-          time_updated: 1_700_000_001_000,
-        },
-      ],
-      messages: [
-        {
-          id: msgId,
-          session_id: sessionId,
-          time_created: 1_700_000_000_001,
-          data: { role: "user", time: { created: 1_700_000_000_001 } },
-        },
-      ],
-      parts: [
-        {
-          id: "prt_1",
-          message_id: msgId,
-          session_id: sessionId,
-          data: {
-            type: "text",
-            text: "before<system-reminder>x</system-reminder>after",
-          },
-        },
-      ],
-    });
-    const s = opencodeListSessions(buildFilter({ global: true })).find(
-      (x) => x.id === sessionId,
+    vi.resetModules();
+    const mod = await import("../../src/commands/mem.js");
+
+    // OpenCode list returns [] but doesn't throw / doesn't drop other platforms.
+    expect(
+      mod.opencodeListSessions(buildFilter({ global: true })),
+    ).toEqual([]);
+    const claudeSessions = mod.claudeListSessions(
+      buildFilter({ global: true }),
     );
-    expect(s).toBeDefined();
-    if (!s) return;
-    expect(opencodeExtractDialogue(s)).toEqual([
-      { role: "user", text: "beforeafter" },
-    ]);
-  });
+    expect(claudeSessions.find((s) => s.id === claudeSessionId)).toBeDefined();
 
-  it("returns empty turns for a session with no messages", () => {
-    seedOcDb({
-      sessions: [
-        {
-          id: sessionId,
-          directory: projectCwd,
-          time_created: 1_700_000_000_000,
-          time_updated: 1_700_000_001_000,
-        },
-      ],
-    });
-    const s = opencodeListSessions(buildFilter({ global: true })).find(
-      (x) => x.id === sessionId,
-    );
-    expect(s).toBeDefined();
-    if (!s) return;
-    expect(opencodeExtractDialogue(s)).toEqual([]);
-  });
-
-  it("degrades to [] when required schema columns are missing", () => {
-    nodeFs.mkdirSync(OC_DIR, { recursive: true });
-    const db = new Database(OC_DB_PATH);
-    // Missing `directory` and `time_*`: schema check fails and adapter degrades.
-    db.exec(
-      `CREATE TABLE session (id TEXT PRIMARY KEY); CREATE TABLE message (id TEXT); CREATE TABLE part (id TEXT);`,
-    );
-    db.close();
-    // Capture stderr without polluting test output.
-    const errSpy = vi
-      .spyOn(process.stderr, "write")
-      .mockImplementation(() => true);
-    try {
-      expect(opencodeListSessions(buildFilter({ global: true }))).toEqual([]);
-      expect(errSpy).toHaveBeenCalled();
-    } finally {
-      errSpy.mockRestore();
-    }
-  });
-
-  it("preserves parent_id for sub-agent chains", () => {
-    seedOcDb({
-      sessions: [
-        {
-          id: "ses_parent",
-          directory: projectCwd,
-          time_created: 1_700_000_000_000,
-          time_updated: 1_700_000_002_000,
-        },
-        {
-          id: "ses_child",
-          directory: projectCwd,
-          parent_id: "ses_parent",
-          time_created: 1_700_000_001_000,
-          time_updated: 1_700_000_001_500,
-        },
-      ],
-    });
-    const r = opencodeListSessions(buildFilter({ global: true }));
-    const child = r.find((x) => x.id === "ses_child");
-    expect(child?.parent_id).toBe("ses_parent");
+    rimraf(claudeProjectDir);
   });
 });
 

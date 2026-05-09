@@ -52,7 +52,6 @@ vi.mock("node:os", async () => {
 const {
   claudeListSessions,
   codexListSessions,
-  opencodeListSessions,
   buildFilter,
   inRangeOverlap,
 } = await import("../../src/commands/mem.js");
@@ -63,59 +62,11 @@ const {
 
 const CLAUDE_PROJECTS = nodePath.join(fakeHome, ".claude", "projects");
 const CODEX_SESSIONS = nodePath.join(fakeHome, ".codex", "sessions");
-const OC_DIR = nodePath.join(fakeHome, ".local", "share", "opencode");
-const OC_DB_PATH = nodePath.join(OC_DIR, "opencode.db");
 
-// eslint-disable-next-line @typescript-eslint/no-require-imports
-const Database = require("better-sqlite3") as new (
-  file: string,
-) => {
-  exec(sql: string): void;
-  prepare(sql: string): { run(...params: unknown[]): { changes: number } };
-  close(): void;
-};
-
-function seedOcSession(opts: {
-  id: string;
-  directory: string;
-  time_created: number;
-  time_updated: number;
-}): void {
-  nodeFs.mkdirSync(OC_DIR, { recursive: true });
-  const fresh = !nodeFs.existsSync(OC_DB_PATH);
-  const db = new Database(OC_DB_PATH);
-  if (fresh) {
-    db.exec(`
-      CREATE TABLE session (
-        id TEXT PRIMARY KEY,
-        parent_id TEXT,
-        directory TEXT,
-        title TEXT,
-        time_created INTEGER NOT NULL,
-        time_updated INTEGER NOT NULL
-      );
-      CREATE TABLE message (
-        id TEXT PRIMARY KEY,
-        session_id TEXT NOT NULL,
-        time_created INTEGER NOT NULL,
-        time_updated INTEGER NOT NULL,
-        data TEXT NOT NULL
-      );
-      CREATE TABLE part (
-        id TEXT PRIMARY KEY,
-        message_id TEXT NOT NULL,
-        session_id TEXT NOT NULL,
-        time_created INTEGER NOT NULL,
-        time_updated INTEGER NOT NULL,
-        data TEXT NOT NULL
-      );
-    `);
-  }
-  db.prepare(
-    "INSERT INTO session (id, directory, title, time_created, time_updated) VALUES (?, ?, '', ?, ?)",
-  ).run(opts.id, opts.directory, opts.time_created, opts.time_updated);
-  db.close();
-}
+// OpenCode interval-overlap coverage was removed in 0.6.0-beta.4: the SQLite
+// reader was reverted (PRD 05-09-revert-opencode-sqlite-emergency) and the
+// adapter now always returns []. inRangeOverlap is still exercised against
+// Claude / Codex below, which use the same shared helper.
 
 function writeJsonl(file: string, lines: readonly unknown[]): void {
   nodeFs.mkdirSync(nodePath.dirname(file), { recursive: true });
@@ -339,31 +290,5 @@ describe("codexListSessions interval-overlap filter", () => {
 });
 
 // =============================================================================
-// OpenCode
+// OpenCode — coverage dropped in 0.6.0-beta.4 (adapter degraded; see header).
 // =============================================================================
-
-describe("opencodeListSessions interval-overlap filter (SQLite)", () => {
-  const projectCwd = "/tmp/cross-day-opencode";
-
-  afterEach(() => {
-    rimraf(nodePath.join(fakeHome, ".local"));
-  });
-
-  for (const c of CASES) {
-    it(c.name, () => {
-      const sessionId = `oc-${c.name.split(" ")[0].slice(1)}`;
-      seedOcSession({
-        id: sessionId,
-        directory: projectCwd,
-        time_created: new Date(c.start).getTime(),
-        time_updated: new Date(c.end).getTime(),
-      });
-
-      const r = opencodeListSessions(
-        buildFilter({ global: true, since: c.since, until: c.until }),
-      );
-      const found = r.some((s) => s.id === sessionId);
-      expect(found).toBe(c.expectIncluded);
-    });
-  }
-});
