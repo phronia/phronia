@@ -682,3 +682,36 @@ Updated marketplace/skills/mem-recall/SKILL.md to match 0.6.0-beta.3: prereq bum
 ### Next Steps
 
 - None - task complete
+
+
+## Session 156: Task artifact routing gates
+
+**Date**: 2026-05-10
+**Task**: Task artifact routing gates
+**Branch**: `feat/v0.6.0-beta`
+
+### Summary
+
+Implemented task artifact contracts, task-creation consent gates, compact SessionStart context, cross-platform artifact loading, and matching CLI regression coverage.
+
+### Main Changes
+
+(Add details)
+
+### Git Commits
+
+| Hash | Message |
+|------|---------|
+| `f01c772` | (see git log) |
+
+### Testing
+
+- [OK] (Add test results)
+
+### Status
+
+[OK] **Completed**
+
+### Next Steps
+
+- None - task complete
