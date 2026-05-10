@@ -615,7 +615,8 @@ function buildTrellisContext(
   }
 
   const prd = readText(join(taskDir, "prd.md"));
-  const info = readText(join(taskDir, "info.md"));
+  const design = readText(join(taskDir, "design.md"));
+  const implementPlan = readText(join(taskDir, "implement.md"));
   const jsonlName = TRELLIS_AGENT_JSONL[agent] ?? "";
   const specContext = jsonlName
     ? readJsonlFiles(projectRoot, taskDir, jsonlName)
@@ -627,7 +628,8 @@ function buildTrellisContext(
     "",
     "### prd.md",
     prd || "(missing)",
-    info ? "\n### info.md\n" + info : "",
+    design ? "\n### design.md\n" + design : "",
+    implementPlan ? "\n### implement.md\n" + implementPlan : "",
     specContext ? "\n### Curated Spec / Research Context\n" + specContext : "",
   ].join("\n");
 }
@@ -690,15 +692,15 @@ function buildWorkflowStateBreadcrumb(
   let header: string;
   let lookupKey: string;
   if (!taskDir) {
-    header = "Status: no_task\nSource: session";
+    header = "Status: no_task";
     lookupKey = "no_task";
   } else {
     const info = readActiveTaskStatus(projectRoot, taskDir);
     if (!info) {
-      header = "Status: no_task\nSource: session";
+      header = "Status: no_task";
       lookupKey = "no_task";
     } else {
-      header = `Task: ${info.taskId} (${info.status})\nSource: session`;
+      header = `Task: ${info.taskId} (${info.status})`;
       lookupKey = info.status;
     }
   }

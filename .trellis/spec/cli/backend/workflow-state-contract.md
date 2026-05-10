@@ -16,9 +16,9 @@ breadcrumb inside sub-agent turns, though, and hooks do not currently expose a
 stable main-vs-sub-agent identity signal. Therefore: **every `[required · once]`
 step that the workflow-walkthrough mandates for a given phase must also be
 mentioned in that phase's breadcrumb tag block, and breadcrumb text must be
-safe when read by a sub-agent.** If required steps are absent, the AI in the
-main session will silently skip them. Two production bugs (Phase 1.3 jsonl
-curation skip, Phase 3.4 commit skip) hit exactly this failure mode.
+safe when read by a sub-agent.** If required gates are absent, the AI in the
+main session will silently skip them. Prior bugs around planning gates and
+Phase 3.4 commit reminders hit exactly this failure mode.
 
 This document is the source of truth for the runtime mechanics. The user-facing
 breadcrumb body lives in `.trellis/workflow.md`; this spec covers everything
@@ -75,10 +75,13 @@ Both regexes MUST use the `\1` backreference variant — `[workflow-state:([A-Za
 4. Otherwise it reads `task.json.status` from the resolved task directory.
 5. It opens `.trellis/workflow.md` and parses every `[workflow-state:STATUS]`
    block.
-6. It looks up the current status in the parsed map. If found → emits the
+6. Codex may map `planning` / `in_progress` to `planning-inline` /
+   `in_progress-inline` based on `codex.dispatch_mode`; all other platforms
+   use the plain status.
+7. It looks up the current status in the parsed map. If found → emits the
    block body in `<workflow-state>...</workflow-state>`. If not found →
    emits the generic line `Refer to workflow.md for current step.`
-7. The output JSON has shape:
+8. The output JSON has shape:
 
    ```json
    {"hookSpecificOutput": {
@@ -192,18 +195,21 @@ Which breadcrumbs actually fire in normal flow:
 | Status | Reachability | Notes |
 |--------|--------------|-------|
 | `no_task` | ✅ reachable | Pseudo-status; emitted when `resolve_active_task()` returns no pointer. |
-| `planning` | ✅ reachable | After `cmd_create` (which now auto-sets the session pointer when available) and before `cmd_start`. Pre-R7 (v0.5.0-beta.19 and earlier), `cmd_create` did NOT set the pointer, so the breadcrumb stayed at `no_task` until `cmd_start`. R7 made `planning` actually reachable. |
-| `in_progress` | ✅ reachable | After `cmd_start`, until `cmd_archive`. |
+| `planning` | ✅ reachable | After `cmd_create` (which now auto-sets the session pointer when available) and before `cmd_start`. `planning-inline` is the Codex inline-mode breadcrumb body for the same task status. |
+| `in_progress` | ✅ reachable | After `cmd_start`, until `cmd_archive`. `in_progress-inline` is the Codex inline-mode breadcrumb body for the same task status. |
 | `completed` | ❌ DEAD in normal flow | `cmd_archive` writes `status="completed"` and immediately moves the task dir to `archive/`. The session-pointer cleanup in `clear_task_from_sessions` runs before the move, so the resolver loses the pointer in the same call. The block body in workflow.md is preserved for a future status-transition redesign (e.g. an explicit `in_progress → completed` command) but no current code path produces it. |
 | `stale_<source_type>` | ✅ reachable (rare) | Synthesized when the session pointer references a deleted task directory. Emits the generic body via `build_breadcrumb` because no `stale_*` tag is shipped. |
 
-**Test invariant** (`test/regression.test.ts`): for every step marked
-`[required · once]` in the workflow.md walkthrough body, the corresponding
-phase's `[workflow-state:*]` block must mention it. This is the contract
-that prevents Phase-1.3 / Phase-3.4 style drift from re-occurring. See:
+**Test invariant** (`test/regression.test.ts`): workflow-state blocks must
+preserve the runtime gates that cannot be recovered from model memory:
+`no_task` triages and asks for task-creation consent; planning distinguishes
+lightweight PRD-only tasks from complex tasks requiring `prd.md`, `design.md`,
+and `implement.md`; in-progress keeps the commit step reachable before
+`/trellis:finish-work`. See:
 
 - `test that workflow.md [workflow-state:in_progress] mentions commit (Phase 3.4)`
-- `test that workflow.md [workflow-state:planning] mentions Phase 1.3 jsonl curation`
+- `test that workflow.md [workflow-state:planning] mentions planning artifact gate`
+- `test that workflow.md [workflow-state:no_task] asks for task-creation consent`
 
 ---
 
@@ -231,7 +237,7 @@ rely on categorical breadcrumb invisibility inside sub-agents.
 | Channel | Main session | Hook-inject sub-agent | Pull-prelude sub-agent | Extension-backed sub-agent |
 |---------|:------------:|:---------------------:|:----------------------:|:--------------------------:|
 | `<workflow-state>` per-turn breadcrumb | ✅ | ⚠️ possible host-dependent exposure | ⚠️ possible host-dependent exposure | ⚠️ possible host-dependent exposure |
-| `inject-subagent-context` (`implement.jsonl`/`check.jsonl` injection) | ❌ | ✅ | ❌ | ❌ |
+| `inject-subagent-context` (`implement.jsonl`/`check.jsonl` + task artifact injection) | ❌ | ✅ | ❌ | ❌ |
 | Pull-based prelude (`shared.ts:buildPullBasedPrelude`) | N/A | N/A | ✅ | fallback |
 
 Hook-inject platforms: claude, cursor, codebuddy, droid, kiro (`agentSpawn`), opencode (JS plugin).
@@ -242,10 +248,12 @@ Hookless: kilo, antigravity, windsurf.
 **Implication**: sub-agent-required guidance must still be propagated through
 `inject-subagent-context` for hook-inject platforms, `buildPullBasedPrelude` for
 pull-prelude platforms, or the Pi extension's prompt builder for
-extension-backed platforms. Breadcrumb text must additionally be safe if a
-sub-agent sees it: main-session dispatch guidance must self-exempt
-`trellis-implement` / `trellis-check` readers so they implement or check
-directly instead of spawning nested Trellis sub-agents.
+extension-backed platforms. All paths must use the same task artifact order:
+jsonl entries -> `prd.md` -> `design.md if present` -> `implement.md if
+present`. Breadcrumb text must additionally be safe if a sub-agent sees it:
+main-session dispatch guidance must self-exempt `trellis-implement` /
+`trellis-check` readers so they implement or check directly instead of spawning
+nested Trellis sub-agents.
 
 ---
 

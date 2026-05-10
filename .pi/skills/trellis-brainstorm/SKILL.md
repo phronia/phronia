@@ -1,9 +1,17 @@
 ---
 name: trellis-brainstorm
-description: "Guides collaborative requirements discovery before implementation. Creates task directory, seeds PRD, asks high-value questions one at a time, researches technical choices, and converges on MVP scope. Use when requirements are unclear, there are multiple valid approaches, or the user describes a new feature or complex task."
+description: "Guides collaborative requirements discovery before implementation. Creates task directory, updates PRD, asks high-value questions one at a time, researches technical choices, and converges on MVP scope. Use when requirements are unclear, there are multiple valid approaches, or the user describes a new feature or complex task."
 ---
 
 # Brainstorm - Requirements Discovery (AI Coding Enhanced)
+
+**CoreRule**: Interview me relentlessly about every aspect of this plan until we reach a shared understanding. Walk down each branch of the design tree, resolving dependencies between decisions one-by-one. For each question, provide your recommended answer.
+
+Ask the questions one at a time.
+
+If a question can be answered by exploring the codebase, explore the codebase instead.
+
+---
 
 Guide AI through collaborative requirements discovery **before implementation**, optimized for AI coding workflows:
 
@@ -16,7 +24,7 @@ Guide AI through collaborative requirements discovery **before implementation**,
 
 ## When to Use
 
-Triggered from /trellis-start when the user describes a development task, especially when:
+Triggered from {{CMD_REF:start}} when the user describes a development task, especially when:
 
 * requirements are unclear or evolving
 * there are multiple valid implementation paths
@@ -65,7 +73,7 @@ TASK_DIR=$(python3 ./.trellis/scripts/task.py create "brainstorm: <short goal>" 
 Use a slug without a date prefix. `task.py create` adds the `MM-DD-`
 directory prefix automatically.
 
-Create/seed `prd.md` immediately with what you know:
+`task.py create` already created a default `prd.md`. Immediately update it with what you know:
 
 ```markdown
 # brainstorm: <short goal>
@@ -74,7 +82,7 @@ Create/seed `prd.md` immediately with what you know:
 
 <one paragraph: what + why>
 
-## What I already know
+## Background / Known Context
 
 * <facts from user message>
 * <facts discovered from repo/docs>
@@ -87,11 +95,11 @@ Create/seed `prd.md` immediately with what you know:
 
 * <ONLY Blocking / Preference questions; keep list short>
 
-## Requirements (evolving)
+## Requirements
 
 * <start with what is known>
 
-## Acceptance Criteria (evolving)
+## Acceptance Criteria
 
 * [ ] <testable criterion>
 
@@ -106,10 +114,39 @@ Create/seed `prd.md` immediately with what you know:
 
 * <what we will not do in this task>
 
-## Technical Notes
+## Research References
 
-* <files inspected, constraints, links, references>
-* <research notes summary if applicable>
+* <links to research/*.md or external references>
+```
+
+For complex tasks, also create/update:
+
+```markdown
+# design.md
+
+## Technical Design
+
+<boundaries, contracts, data flow, compatibility, tradeoffs>
+
+## Rollout / Rollback
+
+<operational notes if relevant>
+```
+
+```markdown
+# implement.md
+
+## Implementation Checklist
+
+- [ ] <ordered implementation step>
+
+## Validation
+
+- <lint/typecheck/test command>
+
+## Review Gates
+
+- <human or technical checkpoint before start/finish>
 ```
 
 ---
@@ -132,8 +169,8 @@ Before asking questions like "what does the code look like?", gather context you
 
 Write findings into PRD:
 
-* Add to `What I already know`
-* Add constraints/links to `Technical Notes`
+* Add user-visible facts to `Background / Known Context`
+* Write technical findings to `research/*.md`, `design.md`, or `implement.md` as appropriate
 
 ---
 
@@ -201,6 +238,8 @@ Why:
 - It persists findings to `{TASK_DIR}/research/<topic>.md` (the contract — see `workflow.md` Phase 1.2)
 - It returns only `{file path, one-line summary}` to the main agent
 - Independent topics can be **parallelized** — spawn multiple sub-agents in one tool call
+
+> **Codex exception**: on Codex CLI, do NOT dispatch `trellis-research` for research-first mode — do the research inline (WebFetch / WebSearch in the main session) and write findings to `{TASK_DIR}/research/<topic>.md` yourself. Reason: Codex `spawn_agent` runs sub-agents with `fork_turns="none"` (isolated context, no parent session inheritance), so the research sub-agent cannot resolve the active task path via `task.py current` and silently aborts without producing files. Inline research on Codex avoids this failure mode. The 3+ inline research calls limit (B rule in `workflow.md`) is relaxed for Codex specifically.
 
 Agent type: `trellis-research`
 Task description template: "Research <specific question>; persist findings to `{TASK_DIR}/research/<topic-slug>.md`."
@@ -397,7 +436,7 @@ Record the outcome in PRD as an ADR-lite section:
 
 ---
 
-## Step 8: Final Confirmation + Implementation Plan
+## Step 8: Final Confirmation + Planning Artifacts
 
 When open questions are resolved, confirm complete requirements with a structured summary:
 
@@ -426,16 +465,13 @@ Here's my understanding of the complete requirements:
 
 * ...
 
-**Technical Approach**:
-<brief summary + key decisions>
+**Artifact status**:
 
-**Implementation Plan (small PRs)**:
+* prd.md: <ready / needs update>
+* design.md: <not needed for lightweight / ready / missing>
+* implement.md: <not needed for lightweight / ready / missing>
 
-* PR1: <scaffolding + tests + minimal plumbing>
-* PR2: <core behavior>
-* PR3: <edge cases + docs + cleanup>
-
-Does this look correct? If yes, I'll proceed with implementation.
+Does this look correct? If yes, the next step is planning review before `task.py start`.
 ```
 
 ### Subtask Decomposition (Complex Tasks)
@@ -472,25 +508,13 @@ python3 ./.trellis/scripts/task.py add-subtask "$TASK_DIR" "$CHILD_DIR"
 
 * [ ] ...
 
-## Definition of Done
-
-* ...
-
-## Technical Approach
-
-<key design + decisions>
-
-## Decision (ADR-lite)
-
-Context / Decision / Consequences
-
 ## Out of Scope
 
 * ...
 
-## Technical Notes
+## Research References
 
-<constraints, references, files, research notes>
+* <links to research/*.md or external references>
 ```
 
 ---
@@ -507,25 +531,25 @@ Context / Decision / Consequences
 
 ## Integration with Start Workflow
 
-After brainstorm completes (Step 8 confirmation approved), the flow continues to the Task Workflow's **Phase 2: Prepare for Implementation**:
+After brainstorm completes (Step 8 confirmation approved), the flow continues to the Task Workflow planning review gate:
 
 ```text
 Brainstorm
-  Step 0: Create task directory + seed PRD
+  Step 0: Create task directory + update PRD
   Step 1–7: Discover requirements, research, converge
-  Step 8: Final confirmation → user approves
+  Step 8: Final confirmation → user approves planning artifacts
   ↓
-Task Workflow Phase 2 (Prepare for Implementation)
-  Code-Spec Depth Check (if applicable)
-  → Research codebase (based on confirmed PRD)
-  → Configure code-spec context (jsonl files)
-  → Activate task
+Task Workflow Phase 1 (Plan)
+  Lightweight task → PRD-only may be enough
+  Complex task → design.md + implement.md required
+  Sub-agent platforms → curate implement.jsonl / check.jsonl manifests
+  → Review gate → task.py start
   ↓
-Task Workflow Phase 3 (Execute)
+Task Workflow Phase 2 (Execute)
   Implement → Check → Complete
 ```
 
-The task directory and PRD already exist from brainstorm, so Phase 1 of the Task Workflow is skipped entirely.
+The task directory and PRD already exist from brainstorm, but Phase 1 is not skipped; it owns artifact review and the `task.py start` gate.
 
 ---
 
@@ -533,6 +557,6 @@ The task directory and PRD already exist from brainstorm, so Phase 1 of the Task
 
 | Command | When to Use |
 |---------|-------------|
-| `/trellis-start` | Entry point that triggers brainstorm |
-| `/trellis-finish-work` | After implementation is complete |
-| `/trellis-update-spec` | If new patterns emerge during work |
+| `{{CMD_REF:start}}` | Entry point that triggers brainstorm |
+| `{{CMD_REF:finish-work}}` | After implementation is complete |
+| `{{CMD_REF:update-spec}}` | If new patterns emerge during work |

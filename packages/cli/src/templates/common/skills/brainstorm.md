@@ -68,7 +68,7 @@ TASK_DIR=$(python3 ./.trellis/scripts/task.py create "brainstorm: <short goal>" 
 Use a slug without a date prefix. `task.py create` adds the `MM-DD-`
 directory prefix automatically.
 
-Create/seed `prd.md` immediately with what you know:
+`task.py create` already created a default `prd.md`. Immediately update it with what you know:
 
 ```markdown
 # brainstorm: <short goal>
@@ -77,7 +77,7 @@ Create/seed `prd.md` immediately with what you know:
 
 <one paragraph: what + why>
 
-## What I already know
+## Background / Known Context
 
 * <facts from user message>
 * <facts discovered from repo/docs>
@@ -90,11 +90,11 @@ Create/seed `prd.md` immediately with what you know:
 
 * <ONLY Blocking / Preference questions; keep list short>
 
-## Requirements (evolving)
+## Requirements
 
 * <start with what is known>
 
-## Acceptance Criteria (evolving)
+## Acceptance Criteria
 
 * [ ] <testable criterion>
 
@@ -109,10 +109,39 @@ Create/seed `prd.md` immediately with what you know:
 
 * <what we will not do in this task>
 
-## Technical Notes
+## Research References
 
-* <files inspected, constraints, links, references>
-* <research notes summary if applicable>
+* <links to research/*.md or external references>
+```
+
+For complex tasks, also create/update:
+
+```markdown
+# design.md
+
+## Technical Design
+
+<boundaries, contracts, data flow, compatibility, tradeoffs>
+
+## Rollout / Rollback
+
+<operational notes if relevant>
+```
+
+```markdown
+# implement.md
+
+## Implementation Checklist
+
+- [ ] <ordered implementation step>
+
+## Validation
+
+- <lint/typecheck/test command>
+
+## Review Gates
+
+- <human or technical checkpoint before start/finish>
 ```
 
 ---
@@ -135,8 +164,8 @@ Before asking questions like "what does the code look like?", gather context you
 
 Write findings into PRD:
 
-* Add to `What I already know`
-* Add constraints/links to `Technical Notes`
+* Add user-visible facts to `Background / Known Context`
+* Write technical findings to `research/*.md`, `design.md`, or `implement.md` as appropriate
 
 ---
 
@@ -402,7 +431,7 @@ Record the outcome in PRD as an ADR-lite section:
 
 ---
 
-## Step 8: Final Confirmation + Implementation Plan
+## Step 8: Final Confirmation + Planning Artifacts
 
 When open questions are resolved, confirm complete requirements with a structured summary:
 
@@ -431,16 +460,13 @@ Here's my understanding of the complete requirements:
 
 * ...
 
-**Technical Approach**:
-<brief summary + key decisions>
+**Artifact status**:
 
-**Implementation Plan (small PRs)**:
+* prd.md: <ready / needs update>
+* design.md: <not needed for lightweight / ready / missing>
+* implement.md: <not needed for lightweight / ready / missing>
 
-* PR1: <scaffolding + tests + minimal plumbing>
-* PR2: <core behavior>
-* PR3: <edge cases + docs + cleanup>
-
-Does this look correct? If yes, I'll proceed with implementation.
+Does this look correct? If yes, the next step is planning review before `task.py start`.
 ```
 
 ### Subtask Decomposition (Complex Tasks)
@@ -477,25 +503,13 @@ python3 ./.trellis/scripts/task.py add-subtask "$TASK_DIR" "$CHILD_DIR"
 
 * [ ] ...
 
-## Definition of Done
-
-* ...
-
-## Technical Approach
-
-<key design + decisions>
-
-## Decision (ADR-lite)
-
-Context / Decision / Consequences
-
 ## Out of Scope
 
 * ...
 
-## Technical Notes
+## Research References
 
-<constraints, references, files, research notes>
+* <links to research/*.md or external references>
 ```
 
 ---
@@ -512,25 +526,25 @@ Context / Decision / Consequences
 
 ## Integration with Start Workflow
 
-After brainstorm completes (Step 8 confirmation approved), the flow continues to the Task Workflow's **Phase 2: Prepare for Implementation**:
+After brainstorm completes (Step 8 confirmation approved), the flow continues to the Task Workflow planning review gate:
 
 ```text
 Brainstorm
-  Step 0: Create task directory + seed PRD
+  Step 0: Create task directory + update PRD
   Step 1–7: Discover requirements, research, converge
-  Step 8: Final confirmation → user approves
+  Step 8: Final confirmation → user approves planning artifacts
   ↓
-Task Workflow Phase 2 (Prepare for Implementation)
-  Code-Spec Depth Check (if applicable)
-  → Research codebase (based on confirmed PRD)
-  → Configure code-spec context (jsonl files)
-  → Activate task
+Task Workflow Phase 1 (Plan)
+  Lightweight task → PRD-only may be enough
+  Complex task → design.md + implement.md required
+  Sub-agent platforms → curate implement.jsonl / check.jsonl manifests
+  → Review gate → task.py start
   ↓
-Task Workflow Phase 3 (Execute)
+Task Workflow Phase 2 (Execute)
   Implement → Check → Complete
 ```
 
-The task directory and PRD already exist from brainstorm, so Phase 1 of the Task Workflow is skipped entirely.
+The task directory and PRD already exist from brainstorm, but Phase 1 is not skipped; it owns artifact review and the `task.py start` gate.
 
 ---
 
