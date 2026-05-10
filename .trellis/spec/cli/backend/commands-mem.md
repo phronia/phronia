@@ -133,13 +133,17 @@ and `commands/mem.ts:searchSession` dispatch on `s.platform`.
     becomes a synthetic `[compact]\n<text>` turn, and prior turns are
     discarded.
 
-### OpenCode (reader unavailable in 0.6.0-beta.4)
+### OpenCode (reader unavailable as of 0.6.0-beta.4+)
 
 In 0.6.0-beta.3 a SQLite-backed reader was added for OpenCode 1.2+
 (which migrated from JSON tree to `~/.local/share/opencode/opencode.db`).
 That release relied on a `better-sqlite3` native dependency that broke
-installation on Windows + unstable GitHub-releases access. 0.6.0-beta.4
-reverted that dependency.
+installation on Windows + restricted networks (China, corporate
+firewalls): `prebuild-install` timed out fetching binaries, the fallback
+`node-gyp` rebuild required VS2017+ build tools, and `trellis` failed to
+install at all on machines that did not have a C toolchain. 0.6.0-beta.4
+reverted the dependency. See `quality-guidelines.md` "Native dependency
+policy" for the broader rule.
 
 Current behavior:
 
@@ -149,9 +153,20 @@ Current behavior:
 - All three call `warnOpencodeUnavailable()` which writes one stderr line
   per process (cached via module-level flag).
 
-Re-enabling OpenCode requires either an install-resilient backend
-(`sql.js` WASM, shell-out to system `sqlite3`, or `node:sqlite` once it
-graduates from experimental) or an opt-in optionalDependency model.
+Re-enabling OpenCode requires an install-resilient backend. Acceptable
+options, ordered by preference:
+
+1. **Pure-JS / WASM** — `sql.js` bundled WASM. No native build, identical
+   bytes on every platform, slightly higher memory cost.
+2. **Shell-out** — invoke the user's system `sqlite3` CLI when present;
+   skip OpenCode with a clear message when absent. No native build, zero
+   bundle cost, depends on host.
+3. **`node:sqlite`** — once it graduates from experimental in Node LTS.
+   Native but ships with the runtime, no install-time compile.
+4. **`optionalDependencies` + soft-degrade** — only as a last resort, and
+   only if the soft-degrade path matches today's "empty list + one-shot
+   warning" UX exactly so a missing dep does not regress install reliability.
+
 See follow-up task notes.
 
 ### `SessionInfo` contract
@@ -439,19 +454,24 @@ extracted independently from implementation work.
 
 ### Boundary signal
 
-A brainstorm window is bounded by `task.py` invocations recovered from raw
-Claude JSONL `tool_use` blocks (which `claudeExtractDialogue` discards):
+A brainstorm window is bounded by `task.py` invocations recovered from
+platform-native shell-call events (which the dialogue cleaners discard):
 
-- **Window start**: assistant `tool_use` block with `name === "Bash"` whose
-  `input.command` matches `task.py create`.
-- **Window end**: the next `task.py start` Bash invocation in the same
-  session.
+- **Window start**: a Bash-equivalent shell call whose command matches
+  `task.py create`.
+  - Claude: assistant `tool_use` block with `name === "Bash"`,
+    `input.command` is the command string.
+  - Codex: top-level `function_call` event with `name` ∈ `{"exec_command",
+    "shell"}`, command is read from `arguments.command` /
+    `arguments.cmd` (string or `argv[]` joined with spaces).
+- **Window end**: the next `task.py start` shell call in the same session.
 
-The detection is performed by
-`commands/mem.ts:collectClaudeTurnsAndEvents` — a single pass that produces
-both the cleaned `DialogueTurn[]` (semantically identical to
-`claudeExtractDialogue`) AND a list of `task.py` events with their
-`turnIndex` (the cleaned-turn index AT THE TIME the tool_use was seen).
+The detection is performed by `commands/mem.ts:collectClaudeTurnsAndEvents`
+(Claude) and `commands/mem.ts:collectCodexTurnsAndEvents` (Codex) — each is a
+single pass that produces both the cleaned `DialogueTurn[]` (semantically
+identical to the platform's `*ExtractDialogue`) AND a list of `task.py`
+events with their `turnIndex` (the cleaned-turn index AT THE TIME the shell
+call was seen).
 
 ### Regex compatibility
 
@@ -476,6 +496,43 @@ The parser also captures `--slug FOO` / `--slug=FOO` for create events and the
 positional task-dir for start events. False-positive guard: `task.py` must
 appear at the start of the command, after whitespace, or after a path
 separator — never embedded inside a flag value like `--slug=task.py-create-x`.
+
+### Shell-arg parsing in `task.py` boundary detection
+
+Boundary detection runs against real Bash command strings copy-pasted by the
+AI from a shell prompt, not against a synthesized argv. The parser stack —
+`commands/mem.ts:parseTaskPyCommandsAll` → `parseTaskPyCommand` →
+`splitShellArgs` → `slugFromTaskDir` — has to absorb several real-world
+Bash idioms that surface in dogfood JSONL streams.
+
+| Pattern (real-world) | Edge | Required handling |
+|---|---|---|
+| `SMOKE=$(python3 task.py create demo --slug demo)` | trailing `)` glued onto last arg | `splitShellArgs` strips trailing `;|&()` from each token before yielding |
+| `SMOKE=$(task.py create …); task.py start "$SMOKE"` | TWO `task.py` calls in one Bash command | `parseTaskPyCommandsAll` returns ALL matches, not just the first |
+| `EOF\nWith --slug, task.py start runs after create…` (heredoc commit message body containing the literal phrase) | prose, not a command | False-positive guard: token after `task.py` must be a known subcommand at a word boundary; surrounding context must look like an invocation, not a sentence |
+| `python3 .trellis/scripts/task.py start .trellis/tasks/05-08-foo` | task-dir has `MM-DD-` prefix from `task.py create` | `slugFromTaskDir` strips a leading `MM-DD-` so a `create --slug foo` pairs with this `start` via slug match |
+| `--slug=foo` vs `--slug foo` | `=` vs space | `splitShellArgs` is whitespace-only; the `=` form is captured by the equals branch in `parseTaskPyCommand` |
+
+The "two-call" case is the load-bearing one: a brainstorm window opens on the
+first `task.py create` inside the same Bash command and closes on the
+second `task.py start`, so missing the second call would silently drop the
+window. `parseTaskPyCommandsAll` was added in 0.6.0-beta.5 specifically to
+fix that drop after a real `--phase brainstorm` dogfood run on this repo
+returned 0 windows on a session that contained 6 tasks.
+
+When extending the parser:
+
+- New surface forms (e.g., `tl task create` if Trellis ever ships a wrapper)
+  must be added to `parseTaskPyCommand`'s regex AND must round-trip through
+  the same shell-token cleanup; do not handle quoting separately.
+- Token edge-stripping (`;|&()`) is the canonical place for shell metacharacter
+  cleanup. Don't push it into the slug regex or `slugFromTaskDir` — keeping
+  it at the tokenizer means future call sites get the cleanup for free.
+- The "prose vs invocation" heuristic ("bare-word + space + capital letter")
+  is intentionally conservative: false negatives (drop a real call inside a
+  weird heredoc) are recoverable via `--phase all` fallback; false positives
+  (treat prose as an invocation) corrupt the window labeling and have no
+  recovery short of re-running with `--phase all`.
 
 ### Pairing strategy (multi-task sessions)
 
@@ -540,12 +597,23 @@ machine-readable stdout used by `--json` consumers.
 
 | Platform | `--phase brainstorm` / `implement` |
 |----------|------------------------------------|
-| Claude | Native — boundary detection runs on raw JSONL |
-| Codex | Degraded: emits stderr warning, returns full dialogue (no slicing) |
-| OpenCode | Reader unavailable in 0.6.0-beta.4 (returns empty + warning) |
+| Claude | Native — boundary detection on `tool_use` (Bash) blocks in raw JSONL |
+| Codex | Native — boundary detection on `function_call` events whose `name` is `exec_command` or `shell` (Codex's Bash twin) |
+| OpenCode | Reader unavailable in 0.6.0-beta.4+ (returns empty + warning) |
 
-This is by design (PRD MVP scope) — Codex/OpenCode equivalents to Claude's
-`tool_use` block are different shapes and are deferred to a follow-up.
+`commands/mem.ts:collectCodexTurnsAndEvents` is the Codex twin of
+`collectClaudeTurnsAndEvents`. Same single-pass shape: it produces both the
+cleaned `DialogueTurn[]` (semantically identical to `codexExtractDialogue`)
+AND the list of `task.py` events with `turnIndex`, with the boundary signal
+read from `function_call` events whose `name === "exec_command"` (or `"shell"`)
+and whose argument payload contains `task.py create|start`. The dispatcher in
+`cmdExtract` picks the right collector by `s.platform`. Pairing
+(`buildBrainstormWindows`), labeling (`slugFromTaskDir`), and the fallback
+matrix above are shared across both platforms — only the raw-event parser
+differs.
+
+OpenCode is the only outstanding gap and is gated on the OpenCode reader
+itself; see "OpenCode reader status" below.
 
 ### Combining with `--grep`
 
@@ -553,28 +621,33 @@ This is by design (PRD MVP scope) — Codex/OpenCode equivalents to Claude's
 Order matters: `--grep KW --phase brainstorm` searches only inside the
 brainstorm windows, not the entire session.
 
-### Common pitfall: tool_use is dropped during cleaning
+### Common pitfall: tool_use / function_call is dropped during cleaning
 
-`claudeExtractDialogue` (and the per-platform analogs) discard `tool_use`
-blocks because their text is not user/assistant dialogue. Boundary signals
-live in those blocks, so phase slicing CANNOT post-filter cleaned turns —
-the signals would already be gone. The implementation does its own raw
-JSONL pass that builds turns and tracks tool_use events together. When
-adding new boundary signals (e.g., for Codex / OpenCode), follow this
-pattern: read raw events, do not consume the cleaned `DialogueTurn[]`.
+`claudeExtractDialogue` and `codexExtractDialogue` both discard the
+shell-call carrier blocks (Claude `tool_use`, Codex top-level
+`function_call`) because their text is not user/assistant dialogue.
+Boundary signals live in those blocks, so phase slicing CANNOT post-filter
+cleaned turns — the signals would already be gone. The implementation does
+its own raw-JSONL pass per platform (`collectClaudeTurnsAndEvents` /
+`collectCodexTurnsAndEvents`) that builds turns and tracks shell-call events
+together. When adding a new boundary signal (e.g., for OpenCode once the
+reader returns), follow this pattern: read raw events in a single pass, do
+not consume the cleaned `DialogueTurn[]`.
 
 ### Compaction resets task.py event list, not just turns
 
-`collectClaudeTurnsAndEvents` resets BOTH `turns` AND `events` when an
-`isCompactSummary` event is encountered. Pre-compact `task.py` events
-anchor to `turnIndex` values that index into the now-collapsed dialogue
-(replaced by a single `[compact summary]` synthetic turn). Carrying them
+Both per-platform collectors reset BOTH `turns` AND `events` on a
+compaction marker —`collectClaudeTurnsAndEvents` on Claude
+`isCompactSummary` events, `collectCodexTurnsAndEvents` on Codex top-level
+`type === "compacted"` events. Pre-compact `task.py` events anchor to
+`turnIndex` values that index into the now-collapsed dialogue (replaced by
+a single `[compact summary]` / `[compact]` synthetic turn). Carrying them
 forward and pairing with post-compact `start` events would emit a window
 referencing dialogue that no longer exists. Symptom (if forgotten): a
 window with `startTurn` deep inside the post-compact region but labeled
 with a stale slug from the pre-compact task. Fix: any new boundary
-detector that mutates a `turns` accumulator on compaction must also
-reset its event accumulator.
+detector that mutates a `turns` accumulator on compaction must also reset
+its event accumulator.
 
 ---
 
@@ -612,14 +685,46 @@ infinite loop when a token has length zero. The `tokens.filter(Boolean)` guard
 in `kw.toLowerCase().split(/\s+/).filter(Boolean)` ensures empty tokens are
 dropped before this loop.
 
-### `readJsonlFirst` on huge files
-`commands/mem.ts:readJsonl` reads the entire file with `fs.readFileSync` then
-splits on `\n`. For session files in the tens of MB, even
-`readJsonlFirst` (which only needs the first valid line) loads everything
-into memory before the `"stop"` short-circuit fires. This is a known TODO —
-streaming via `readline.createInterface` would be a drop-in win, but no
-production session has hit a problematic size yet so the simpler synchronous
-path stayed.
+### `readJsonl` chunked streaming + `0x7b` fast-reject
+
+`commands/mem.ts:readJsonl` is the canonical JSONL reader for every platform
+adapter. It is **not** `fs.readFileSync` + `data.split("\n")` — that pattern
+allocated the entire file (tens of MB on long Claude sessions) as one string
+and could not honor the `"stop"` short-circuit until the whole file was
+already in memory.
+
+Current implementation:
+
+1. **Chunked sync streaming** via `fs.openSync` + `fs.readSync` with a
+   256 KB buffer. Lines are reassembled across chunk boundaries via a
+   `leftover` string; only one chunk's worth of bytes is resident at a time.
+2. **Byte-prefix fast-reject** — before allocating an exception path, skip
+   any line whose first byte is not `0x7b` (`{`). A JSONL event line begins
+   with `{` virtually always; blank lines, occasional preambles, partial
+   writes from a still-running CLI, etc. all get rejected without paying the
+   `JSON.parse` + Zod `safeParse` cost. The check is `line.charCodeAt(0)
+   !== OPEN_BRACE`.
+3. **`"stop"` short-circuit** — the visitor closure can return `"stop"` to
+   signal "I have what I need" (used by `readJsonlFirst` and
+   `findInJsonl(maxLines<100)`). The reader closes the file and returns
+   immediately, never reading further chunks.
+
+Measured impact on a 36 MB Claude session (Trellis dogfood):
+
+| Operation | Before (full read + split) | After (chunked + 0x7b skip) |
+|---|---|---|
+| `tl mem list` | ~3.5s | ~0.67s |
+| `tl mem extract --phase brainstorm` | ~5.8s | ~0.73s |
+
+Rules for extending:
+
+- Every platform adapter MUST go through `readJsonl` / `readJsonlFirst` /
+  `findInJsonl`. Never reintroduce `fs.readFileSync` for a session file.
+- Don't replace the `0x7b` fast-reject with a regex test or a `trim`
+  comparison — the byte-level check is the cheapest filter.
+- Keep the visitor closure pure-synchronous. Async closures would force the
+  read loop into `for await`, which on `fs.openSync` handles is more
+  expensive than a sync chunk read and breaks the `"stop"` short-circuit.
 
 ### Mock `node:os` BEFORE importing `mem.ts`
 Module-load constants `HOME`, `CLAUDE_PROJECTS`, `CODEX_SESSIONS`, `OC_DB_PATH`
@@ -747,6 +852,12 @@ When adding a feature to `mem.ts`:
 - A bug fix touching filtering → `mem-since-cross-day.test.ts` style
   regression: a fixture with a known boundary case + the assertion that pins
   the fix.
+- A new shell-arg form picked up by `parseTaskPyCommand` /
+  `parseTaskPyCommandsAll` → `mem-phase-slice.test.ts` fixture with the exact
+  literal Bash string the AI emitted (`SMOKE=$(...)`, heredoc-embedded prose,
+  etc.) plus an assertion on the resulting window count and slug labels.
+  The dogfood case studies live under `.trellis/tasks/05-08-mem-phase-slice/`
+  and `.trellis/tasks/05-09-mem-phase-multi/`.
 
 ### What tests must NOT do
 
@@ -776,7 +887,7 @@ For consumers (currently only `tl` Commander wire and tests):
 | `claudeListSessions`, `claudeExtractDialogue`, `claudeSearch` | Claude adapter — tested via `mem-platforms.test.ts` |
 | `codexListSessions`, `codexExtractDialogue`, `codexSearch` | Codex adapter — same |
 | `opencodeListSessions`, `opencodeExtractDialogue` | OpenCode adapter — same |
-| `parseTaskPyCommand`, `buildBrainstormWindows`, `collectClaudeTurnsAndEvents` | Phase slicing — tested via `mem-phase-slice.test.ts` |
+| `parseTaskPyCommand`, `parseTaskPyCommandsAll`, `splitShellArgs`, `slugFromTaskDir`, `buildBrainstormWindows`, `collectClaudeTurnsAndEvents`, `collectCodexTurnsAndEvents` | Phase slicing — tested via `mem-phase-slice.test.ts` |
 
 `opencodeSearch` is intentionally file-private; the dispatcher
 `commands/mem.ts:searchSession` is what tests should use to exercise OpenCode
