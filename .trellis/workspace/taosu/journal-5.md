@@ -610,3 +610,37 @@ Fixed GitHub #267 — Windows Claude users silently lost SessionStart hook injec
 ### Next Steps
 
 - None - task complete
+
+
+## Session 154: Remove misleading Copilot SessionStart systemMessage (#248)
+
+**Date**: 2026-05-11
+**Task**: Remove misleading Copilot SessionStart systemMessage (#248)
+**Branch**: `main`
+
+### Summary
+
+Fixed GitHub #248 — the user-visible 'Trellis SessionStart diagnostics emitted (N chars); Copilot currently ignores sessionStart hook output.' string was Trellis's own hardcoded systemMessage, not a Copilot error. Microsoft VS Code Agent hooks docs (updated 2026-05-06, shipped in VS Code 1.110 / Feb 2026) now document SessionStart's hookSpecificOutput.additionalContext as a working injection mechanism, making the permanent 'currently ignores' claim stale. Removed systemMessage from the hook result dict; kept suppressOutput + hookSpecificOutput.{hookEventName, additionalContext} so the spec-compliant payload still goes out. Updated docstring + platform-integration.md spec to the honest middle position: consumption depends on user's installed VS Code/Copilot version. Two regression tests pinning the old misleading text were replaced with [#248] tests asserting absence of stale phrasing + presence of non-empty additionalContext. Copilot stays class-2 (pull-based) for sub-agent delivery — that migration is out of scope until end-to-end consumption can be verified (blocked locally by lack of Copilot subscription on test environment).
+
+### Main Changes
+
+(Add details)
+
+### Git Commits
+
+| Hash | Message |
+|------|---------|
+| `fdd2322` | (see git log) |
+| `afc2477` | (see git log) |
+
+### Testing
+
+- [OK] (Add test results)
+
+### Status
+
+[OK] **Completed**
+
+### Next Steps
+
+- None - task complete

@@ -8,7 +8,7 @@
 
 <!-- @@@auto:current-status -->
 - **Active File**: `journal-5.md`
-- **Total Sessions**: 153
+- **Total Sessions**: 154
 - **Last Active**: 2026-05-11
 <!-- @@@/auto:current-status -->
 
@@ -19,7 +19,7 @@
 <!-- @@@auto:active-documents -->
 | File | Lines | Status |
 |------|-------|--------|
-| `journal-5.md` | ~612 | Active |
+| `journal-5.md` | ~646 | Active |
 | `journal-4.md` | ~1975 | Archived |
 | `journal-3.md` | ~1988 | Archived |
 | `journal-2.md` | ~1963 | Archived |
@@ -33,6 +33,7 @@
 <!-- @@@auto:session-history -->
 | # | Date | Title | Commits | Branch |
 |---|------|-------|---------|--------|
+| 154 | 2026-05-11 | Remove misleading Copilot SessionStart systemMessage (#248) | `fdd2322`, `afc2477` | `main` |
 | 153 | 2026-05-11 | Bump hook timeouts for Windows Python cold start (#267) | `43d38ad`, `af3cbde` | `main` |
 | 152 | 2026-05-11 | OpenCode subagent context injection fix (#264) | `2abafba`, `447c809` | `main` |
 | 151 | 2026-05-11 | Fix polyrepo Git status context | `29a6f7c` | `main` |
