@@ -509,3 +509,36 @@ Fixed OpenCode TRELLIS_CONTEXT_ID prefixing on Windows Git Bash by detecting POS
 ### Next Steps
 
 - None - task complete
+
+
+## Session 151: Fix polyrepo Git status context
+
+**Date**: 2026-05-11
+**Task**: Fix polyrepo Git status context
+**Branch**: `main`
+
+### Summary
+
+Fixed issue #252 by making session context detect non-Git roots before rendering root Git status, preserving package repo status for configured and discovered child repositories, and adding regression coverage plus backend spec notes.
+
+### Main Changes
+
+(Add details)
+
+### Git Commits
+
+| Hash | Message |
+|------|---------|
+| `29a6f7c` | (see git log) |
+
+### Testing
+
+- [OK] (Add test results)
+
+### Status
+
+[OK] **Completed**
+
+### Next Steps
+
+- None - task complete
