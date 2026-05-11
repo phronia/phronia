@@ -542,3 +542,37 @@ Fixed issue #252 by making session context detect non-Git roots before rendering
 ### Next Steps
 
 - None - task complete
+
+
+## Session 152: OpenCode subagent context injection fix (#264)
+
+**Date**: 2026-05-11
+**Task**: OpenCode subagent context injection fix (#264)
+**Branch**: `main`
+
+### Summary
+
+Fixed GitHub #264 — OpenCode subagent dispatch had two stacked bugs verified by local repro: Bug 2 (always-on) where session-start.js and inject-workflow-state.js injected ~38KB of main-session content into trellis-implement/check/research child sessions because they ignored input.agent; Bug 1 (env-dependent) where tool.execute.before's task-state lookup missed when .trellis/.runtime/sessions/opencode_<sessionID>.json was absent (external-terminal start or cross-window dispatch). Added isTrellisSubagent guard to both chat.message plugins, mirrored Python's _resolve_single_session_fallback in JS, added Active task: <path> prompt-hint parser (precedence > fallback for multi-window safety), and added <!-- trellis-hook-injected --> marker to all four prompt templates. 7 files changed, 986 tests pass. Side product: created planning placeholder task for parallel Pi extension subagent double-injection investigation since Pi's child-process architecture mirrors OpenCode #264 shape but lacks input.agent equivalent.
+
+### Main Changes
+
+(Add details)
+
+### Git Commits
+
+| Hash | Message |
+|------|---------|
+| `2abafba` | (see git log) |
+| `447c809` | (see git log) |
+
+### Testing
+
+- [OK] (Add test results)
+
+### Status
+
+[OK] **Completed**
+
+### Next Steps
+
+- None - task complete

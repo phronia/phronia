@@ -8,7 +8,7 @@
 
 <!-- @@@auto:current-status -->
 - **Active File**: `journal-5.md`
-- **Total Sessions**: 151
+- **Total Sessions**: 152
 - **Last Active**: 2026-05-11
 <!-- @@@/auto:current-status -->
 
@@ -19,7 +19,7 @@
 <!-- @@@auto:active-documents -->
 | File | Lines | Status |
 |------|-------|--------|
-| `journal-5.md` | ~544 | Active |
+| `journal-5.md` | ~578 | Active |
 | `journal-4.md` | ~1975 | Archived |
 | `journal-3.md` | ~1988 | Archived |
 | `journal-2.md` | ~1963 | Archived |
@@ -33,6 +33,7 @@
 <!-- @@@auto:session-history -->
 | # | Date | Title | Commits | Branch |
 |---|------|-------|---------|--------|
+| 152 | 2026-05-11 | OpenCode subagent context injection fix (#264) | `2abafba`, `447c809` | `main` |
 | 151 | 2026-05-11 | Fix polyrepo Git status context | `29a6f7c` | `main` |
 | 150 | 2026-05-11 | OpenCode shell dialect context fix | `bbdd0f0`, `5ef4825`, `ce35cd1` | `main` |
 | 149 | 2026-05-09 | v0.5.10: git-add-f prevention + Pi workflow-state injection (#249) + Pi pi-subagents isolation (#246) | `5a5e5db`, `04af444`, `f6a53b1` | `main` |
