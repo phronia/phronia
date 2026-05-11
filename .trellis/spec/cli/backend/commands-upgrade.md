@@ -19,6 +19,9 @@ trellis upgrade [--tag <tag-or-version>] [--dry-run]
 Behavior:
 
 - Builds and runs `npm install -g @mindfoldhq/trellis@<tag>`.
+- POSIX execution must spawn `npm` directly without shell execution.
+- Windows execution must route through `cmd.exe /d /s /c npm install -g ...`
+  instead of directly spawning `npm.cmd`.
 - Uses the current CLI channel by default:
   - stable versions install `@latest`
   - `-beta.*` versions install `@beta`
@@ -38,8 +41,30 @@ installed Node through pnpm, Homebrew, Volta, proto, or another manager.
 - If npm is unavailable, fail with the manual npm command.
 - If npm exits non-zero, surface the exit code.
 - If npm is interrupted by a signal, report the signal.
+- Append troubleshooting guidance for npm global prefix / PATH mismatches,
+  permissions, existing-bin or locked-file conflicts, and the manual command.
+- Do not automatically run `sudo`, pass `--force`, rewrite npm prefix, delete
+  files, or detect package managers.
 - Reject shell-shaped `--tag` input before spawning npm. Never build a shell
-  command string for execution.
+  command string for POSIX execution.
+
+## Success behavior
+
+After npm reports success, print both:
+
+```text
+trellis --version
+```
+
+and a platform-specific binary-resolution check:
+
+```text
+which trellis   # POSIX
+where trellis   # Windows
+```
+
+This catches the common case where npm installed into one global prefix while
+the user's shell still resolves an older `trellis` binary earlier on PATH.
 
 ---
 
@@ -67,6 +92,7 @@ session-start update hints.
 - Tag inference: stable → `latest`, beta → `beta`, RC → `rc`.
 - Explicit tag override.
 - Invalid tag rejection.
-- Windows npm binary name (`npm.cmd`).
+- POSIX direct npm command with `shell: false`.
+- Windows `cmd.exe /d /s /c npm ...` command plan with `shell: false`.
 - Dry-run does not spawn npm.
-- Non-zero npm exit becomes a command failure.
+- Non-zero npm exit becomes a command failure with troubleshooting guidance.
