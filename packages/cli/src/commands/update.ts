@@ -1721,7 +1721,7 @@ export async function update(options: UpdateOptions): Promise<void> {
         `⚠️  Your CLI (${cliVersion}) is behind npm (${latestNpmVersion}).`,
       ),
     );
-    console.log(chalk.yellow(`   Run: npm install -g ${PACKAGE_NAME}\n`));
+    console.log(chalk.yellow(`   Run: trellis upgrade\n`));
   }
 
   // Check for downgrade situation
@@ -1735,9 +1735,7 @@ export async function update(options: UpdateOptions): Promise<void> {
 
     if (!options.allowDowngrade) {
       console.log(chalk.gray("Solutions:"));
-      console.log(
-        chalk.gray(`  1. Update your CLI: npm install -g ${PACKAGE_NAME}`),
-      );
+      console.log(chalk.gray(`  1. Update your CLI: trellis upgrade`));
       console.log(
         chalk.gray(`  2. Force downgrade: trellis update --allow-downgrade\n`),
       );

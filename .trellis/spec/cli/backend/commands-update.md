@@ -139,7 +139,7 @@ Opt-in to apply file migrations (renames/deletes/dir renames). Without it: migra
 
 ### Tag flag (`--tag <beta|rc|latest>`)
 
-There is no `--tag` flag today. Version selection is implicit: `update()` always uses the version of the installed CLI (`constants/version.ts:VERSION`). Users who want a specific channel install the CLI from that tag (`npm install -g @trellis/cli@beta`). The npm-version check in `commands/update.ts:getLatestNpmVersion` only looks at the `latest` dist-tag and is purely advisory ("⚠️ Your CLI is behind npm").
+There is no `--tag` flag on `trellis update` today. Version selection is implicit: `update()` always uses the version of the installed CLI (`constants/version.ts:VERSION`). Users who want a specific CLI channel should run `trellis upgrade --tag beta` (or `latest` / `rc`) first, then run `trellis update`. The npm-version check in `commands/update.ts:getLatestNpmVersion` only looks at the `latest` dist-tag and is purely advisory ("⚠️ Your CLI is behind npm").
 
 ---
 

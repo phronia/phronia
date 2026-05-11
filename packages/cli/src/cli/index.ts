@@ -4,10 +4,11 @@ import chalk from "chalk";
 import { Command } from "commander";
 import { init } from "../commands/init.js";
 import { update } from "../commands/update.js";
+import { upgrade } from "../commands/upgrade.js";
 import { uninstall } from "../commands/uninstall.js";
 import { runMem } from "../commands/mem.js";
 import { DIR_NAMES } from "../constants/paths.js";
-import { VERSION, PACKAGE_NAME } from "../constants/version.js";
+import { PACKAGE_NAME, VERSION } from "../constants/version.js";
 import { compareVersions } from "../utils/compare-versions.js";
 
 // Re-export for backwards compatibility (consumers should prefer constants/version.js)
@@ -40,7 +41,7 @@ function checkForUpdates(cwd: string): void {
         `\n⚠️  Your CLI (${cliVersion}) is older than project (${projectVersion})`,
       ),
     );
-    console.log(chalk.gray(`   Run: npm install -g ${PACKAGE_NAME}\n`));
+    console.log(chalk.gray(`   Run: trellis upgrade\n`));
   }
 }
 
@@ -131,6 +132,32 @@ program
         createNew: options.createNew as boolean,
         allowDowngrade: options.allowDowngrade as boolean,
         migrate: options.migrate as boolean,
+      });
+    } catch (error) {
+      console.error(
+        chalk.red("Error:"),
+        error instanceof Error ? error.message : error,
+      );
+      if (process.env.DEBUG || process.env.TRELLIS_DEBUG) {
+        console.error(error instanceof Error ? error.stack : error);
+      }
+      process.exit(1);
+    }
+  });
+
+program
+  .command("upgrade")
+  .description("Upgrade the global Trellis CLI package")
+  .option(
+    "--tag <tag>",
+    "npm dist-tag or version to install (default follows current channel: latest, beta, or rc)",
+  )
+  .option("--dry-run", "Print the install command without running it")
+  .action(async (options: Record<string, unknown>) => {
+    try {
+      await upgrade({
+        tag: options.tag as string | undefined,
+        dryRun: options.dryRun as boolean,
       });
     } catch (error) {
       console.error(
