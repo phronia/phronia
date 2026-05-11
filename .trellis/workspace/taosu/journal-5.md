@@ -715,3 +715,36 @@ Implemented task artifact contracts, task-creation consent gates, compact Sessio
 ### Next Steps
 
 - None - task complete
+
+
+## Session 157: Harden trellis upgrade execution
+
+**Date**: 2026-05-11
+**Task**: Harden trellis upgrade execution
+**Branch**: `feat/v0.6.0-beta`
+
+### Summary
+
+Added cross-platform command planning for trellis upgrade, routed Windows npm execution through cmd.exe, preserved POSIX shell-free spawn, and expanded npm failure/success diagnostics with tests and spec coverage.
+
+### Main Changes
+
+(Add details)
+
+### Git Commits
+
+| Hash | Message |
+|------|---------|
+| `aa54b45` | (see git log) |
+
+### Testing
+
+- [OK] (Add test results)
+
+### Status
+
+[OK] **Completed**
+
+### Next Steps
+
+- None - task complete

@@ -8,8 +8,8 @@
 
 <!-- @@@auto:current-status -->
 - **Active File**: `journal-5.md`
-- **Total Sessions**: 156
-- **Last Active**: 2026-05-10
+- **Total Sessions**: 157
+- **Last Active**: 2026-05-11
 <!-- @@@/auto:current-status -->
 
 ---
@@ -19,7 +19,7 @@
 <!-- @@@auto:active-documents -->
 | File | Lines | Status |
 |------|-------|--------|
-| `journal-5.md` | ~717 | Active |
+| `journal-5.md` | ~750 | Active |
 | `journal-4.md` | ~1975 | Archived |
 | `journal-3.md` | ~1988 | Archived |
 | `journal-2.md` | ~1963 | Archived |
@@ -33,6 +33,7 @@
 <!-- @@@auto:session-history -->
 | # | Date | Title | Commits | Branch |
 |---|------|-------|---------|--------|
+| 157 | 2026-05-11 | Harden trellis upgrade execution | `aa54b45` | `feat/v0.6.0-beta` |
 | 156 | 2026-05-10 | Task artifact routing gates | `f01c772` | `feat/v0.6.0-beta` |
 | 155 | 2026-05-09 | 0.6.0-beta.4 emergency revert: drop better-sqlite3 (Windows install fix) | `300b729`, `daba04d` | `feat/v0.6.0-beta` |
 | 154 | 2026-05-09 | marketplace mem-recall: add --phase brainstorm + symlink user local | `b397638` | `feat/v0.6.0-beta` |
