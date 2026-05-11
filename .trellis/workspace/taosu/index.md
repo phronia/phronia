@@ -8,8 +8,8 @@
 
 <!-- @@@auto:current-status -->
 - **Active File**: `journal-5.md`
-- **Total Sessions**: 149
-- **Last Active**: 2026-05-09
+- **Total Sessions**: 150
+- **Last Active**: 2026-05-11
 <!-- @@@/auto:current-status -->
 
 ---
@@ -19,7 +19,7 @@
 <!-- @@@auto:active-documents -->
 | File | Lines | Status |
 |------|-------|--------|
-| `journal-5.md` | ~476 | Active |
+| `journal-5.md` | ~511 | Active |
 | `journal-4.md` | ~1975 | Archived |
 | `journal-3.md` | ~1988 | Archived |
 | `journal-2.md` | ~1963 | Archived |
@@ -33,6 +33,7 @@
 <!-- @@@auto:session-history -->
 | # | Date | Title | Commits | Branch |
 |---|------|-------|---------|--------|
+| 150 | 2026-05-11 | OpenCode shell dialect context fix | `bbdd0f0`, `5ef4825`, `ce35cd1` | `main` |
 | 149 | 2026-05-09 | v0.5.10: git-add-f prevention + Pi workflow-state injection (#249) + Pi pi-subagents isolation (#246) | `5a5e5db`, `04af444`, `f6a53b1` | `main` |
 | 148 | 2026-05-06 | Workflow-state recursion guard | `0db57e5`, `48f966e` | `feat/v0.6.0-beta` |
 | 147 | 2026-05-06 | Release 0.5.3: class-1 sub-agent context fallback + non-blocking task.py start | `6272a9e`, `1adb7b0`, `5b298ba`, `a7d54ec` | `feat/v0.6.0-beta` |

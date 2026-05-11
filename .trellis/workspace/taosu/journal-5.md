@@ -474,3 +474,38 @@ Stable patch on top of 0.5.9. (1) safe_commit.py helper centralizes git-add path
 ### Next Steps
 
 - None - task complete
+
+
+## Session 150: OpenCode shell dialect context fix
+
+**Date**: 2026-05-11
+**Task**: OpenCode shell dialect context fix
+**Branch**: `main`
+
+### Summary
+
+Fixed OpenCode TRELLIS_CONTEXT_ID prefixing on Windows Git Bash by detecting POSIX shell signals before choosing PowerShell syntax; documented the shell-dialect contract and recorded the task research artifacts.
+
+### Main Changes
+
+(Add details)
+
+### Git Commits
+
+| Hash | Message |
+|------|---------|
+| `bbdd0f0` | (see git log) |
+| `5ef4825` | (see git log) |
+| `ce35cd1` | (see git log) |
+
+### Testing
+
+- [OK] (Add test results)
+
+### Status
+
+[OK] **Completed**
+
+### Next Steps
+
+- None - task complete
