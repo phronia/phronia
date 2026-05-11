@@ -576,3 +576,37 @@ Fixed GitHub #264 — OpenCode subagent dispatch had two stacked bugs verified b
 ### Next Steps
 
 - None - task complete
+
+
+## Session 153: Bump hook timeouts for Windows Python cold start (#267)
+
+**Date**: 2026-05-11
+**Task**: Bump hook timeouts for Windows Python cold start (#267)
+**Branch**: `main`
+
+### Summary
+
+Fixed GitHub #267 — Windows Claude users silently lost SessionStart hook injection because Python cold start + 780-line session-start.py + nested subprocesses + git calls routinely exceeded the 10s default timeout (Claude Code protocol default is 60s; Trellis was actively tightening to 10s). Bumped uniformly across all 8 hook-based platform templates: SessionStart 10→30s (gemini 10000→30000ms), UserPromptSubmit/inject-workflow-state 5→15s (gemini 5000→15000ms, copilot uses timeoutSec). PreToolUse (30s) and cursor beforeShellExecution (5s) left untouched per scope. Added test/templates/hook-timeouts.test.ts dynamic regression guard that iterates platforms and asserts the floor with >= comparisons so future drift surfaces immediately. 1002 tests pass, lint + typecheck clean.
+
+### Main Changes
+
+(Add details)
+
+### Git Commits
+
+| Hash | Message |
+|------|---------|
+| `43d38ad` | (see git log) |
+| `af3cbde` | (see git log) |
+
+### Testing
+
+- [OK] (Add test results)
+
+### Status
+
+[OK] **Completed**
+
+### Next Steps
+
+- None - task complete
