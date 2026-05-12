@@ -748,3 +748,39 @@ Added cross-platform command planning for trellis upgrade, routed Windows npm ex
 ### Next Steps
 
 - None - task complete
+
+
+## Session 158: Trellis Channel Runtime — multi-agent collaboration layer
+
+**Date**: 2026-05-12
+**Task**: Trellis Channel Runtime — multi-agent collaboration layer
+**Branch**: `feat/v0.6.0-beta`
+
+### Summary
+
+Built the trellis channel command tree: 11 subcommands, claude/codex worker adapters, supervisor with ShutdownController, project-scoped storage with legacy migration, --ephemeral lifecycle, channel run one-shot, wait --all, --agent + --file + --jsonl context injection. Hardened against spawn race / kill ladder / signal handling bugs via multi-round dogfood CR. Spec doc + agent cards added; codex multi_agent_v2 disabled now that channel owns the multi-agent surface.
+
+### Main Changes
+
+(Add details)
+
+### Git Commits
+
+| Hash | Message |
+|------|---------|
+| `a2d3c83` | (see git log) |
+| `7608c30` | (see git log) |
+| `dab8e57` | (see git log) |
+| `f5681a4` | (see git log) |
+
+### Testing
+
+- [OK] (Add test results)
+
+### Status
+
+[OK] **Completed**
+
+### Next Steps
+
+- None - task complete
