@@ -1,6 +1,6 @@
 ---
 name: trellis-brainstorm
-description: "Guide requirements discovery for a Trellis task after task-creation consent. Use when the user is ready to clarify requirements before implementation."
+description: "Guides collaborative requirements discovery before implementation. Creates task directory, seeds PRD, asks high-value questions one at a time, researches technical choices, and converges on MVP scope. Use when requirements are unclear, there are multiple valid approaches, or the user describes a new feature or complex task."
 ---
 
 # Trellis Brainstorm
@@ -30,7 +30,7 @@ Use this skill only after task-creation consent has been given and the user is r
 If no task exists yet, create one:
 
 ```bash
-TASK_DIR=$({{PYTHON_CMD}} ./.trellis/scripts/task.py create "<short task title>" --slug <slug>)
+TASK_DIR=$(python3 ./.trellis/scripts/task.py create "<short task title>" --slug <slug>)
 ```
 
 Use a concise title from the user's request. Use a slug without a date prefix. `task.py create` adds the `MM-DD-` directory prefix automatically.
