@@ -2,8 +2,7 @@
 name: check
 description: |
   Code quality check expert. Reviews code changes against specs and self-fixes issues.
-tools: read, bash, edit, write, grep, find, ls, web_search
-model: openrouter/minimax/minimax-m2.7
+provider: claude
 ---
 
 # Check Agent
