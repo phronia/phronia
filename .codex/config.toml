@@ -30,6 +30,6 @@ project_doc_fallback_filenames = ["AGENTS.md"]
 #   short for Trellis subagents that routinely take 2-10 min. Hard
 #   ceiling is 3,600,000 (1 h).
 [features.multi_agent_v2]
-enabled = true
+enabled = false
 max_concurrent_threads_per_session = 6
 min_wait_timeout_ms = 480000
