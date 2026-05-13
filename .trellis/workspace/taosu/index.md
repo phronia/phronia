@@ -8,7 +8,7 @@
 
 <!-- @@@auto:current-status -->
 - **Active File**: `journal-5.md`
-- **Total Sessions**: 155
+- **Total Sessions**: 156
 - **Last Active**: 2026-05-13
 <!-- @@@/auto:current-status -->
 
@@ -19,7 +19,7 @@
 <!-- @@@auto:active-documents -->
 | File | Lines | Status |
 |------|-------|--------|
-| `journal-5.md` | ~679 | Active |
+| `journal-5.md` | ~712 | Active |
 | `journal-4.md` | ~1975 | Archived |
 | `journal-3.md` | ~1988 | Archived |
 | `journal-2.md` | ~1963 | Archived |
@@ -33,6 +33,7 @@
 <!-- @@@auto:session-history -->
 | # | Date | Title | Commits | Branch |
 |---|------|-------|---------|--------|
+| 156 | 2026-05-13 | fix uninstall over-hashing data loss + add homedir guard | `c76ff33` | `main` |
 | 155 | 2026-05-13 | Fix task.py archive auto-commit: scope + phantom-delete | `23bff8d` | `main` |
 | 154 | 2026-05-11 | Remove misleading Copilot SessionStart systemMessage (#248) | `fdd2322`, `afc2477` | `main` |
 | 153 | 2026-05-11 | Bump hook timeouts for Windows Python cold start (#267) | `43d38ad`, `af3cbde` | `main` |

@@ -677,3 +677,36 @@ Narrowed task.py archive auto-commit to only the archived task's paths (no scope
 ### Next Steps
 
 - None - task complete
+
+
+## Session 156: fix uninstall over-hashing data loss + add homedir guard
+
+**Date**: 2026-05-13
+**Task**: fix uninstall over-hashing data loss + add homedir guard
+**Branch**: `main`
+
+### Summary
+
+Root-caused two real user-reported data-loss bugs: trellis uninstall was deleting .codex/sessions/* (#221) and pre-existing AGENTS.md (PR #271). Cause: initializeHashes walked managed dirs and hashed every file. Fix: derive manifest from writeFile-recorded writes only (new/overwrite recorded, identical/skip/append not); pruneOrphanManifestKeys self-heals poisoned manifests at update+uninstall entry; AGENTS.md kept only when managed-block markers present; homedir guard refuses init/uninstall in cwd === os.homedir(). Codex CR found and fixed 2 additional edge cases (content-identical write recording + AGENTS.md unconditional preserve). 27 new tests, 1033 total passing. Spec: migrations.md adds Manifest ownership contract.
+
+### Main Changes
+
+(Add details)
+
+### Git Commits
+
+| Hash | Message |
+|------|---------|
+| `c76ff33` | (see git log) |
+
+### Testing
+
+- [OK] (Add test results)
+
+### Status
+
+[OK] **Completed**
+
+### Next Steps
+
+- None - task complete
