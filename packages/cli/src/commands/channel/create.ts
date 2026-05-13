@@ -4,16 +4,27 @@ import path from "node:path";
 import { appendEvent } from "./store/events.js";
 import {
   channelDir,
-  currentProjectKey,
   ensureBucketMarker,
   eventsPath,
+  resolveChannelProjectForCreate,
 } from "./store/paths.js";
+import {
+  parseCsv,
+  parseChannelScope,
+  parseChannelType,
+  parseLinkedContext,
+} from "./store/schema.js";
 
 export interface CreateOptions {
   task?: string;
   project?: string;
   labels?: string;
   cwd?: string;
+  scope?: string;
+  type?: string;
+  description?: string;
+  linkedContextFile?: string[];
+  linkedContextRaw?: string[];
   by?: string;
   force?: boolean;
   /** Mark this channel as ephemeral — `channel list` hides it by default
@@ -32,8 +43,15 @@ export async function createChannel(
   name: string,
   opts: CreateOptions,
 ): Promise<void> {
-  const events = eventsPath(name);
-  const dir = channelDir(name);
+  const scope = parseChannelScope(opts.scope) ?? "project";
+  const ref = resolveChannelProjectForCreate(name, { scope, cwd: opts.cwd });
+  const channelType = parseChannelType(opts.type);
+  const linkedContext = parseLinkedContext(
+    opts.linkedContextFile,
+    opts.linkedContextRaw,
+  );
+  const events = eventsPath(name, ref.project);
+  const dir = ref.dir;
 
   if (fs.existsSync(events) && !opts.force) {
     throw new Error(
@@ -42,33 +60,36 @@ export async function createChannel(
   }
 
   if (opts.force && fs.existsSync(dir)) {
-    await forceCleanChannel(name);
+    await forceCleanChannel(name, ref.project);
   }
 
   // Stamp the project bucket so future migrations and `listProjects`
   // recognise it (project key derives from the cwd at create time).
-  ensureBucketMarker(currentProjectKey());
+  ensureBucketMarker(ref.project);
 
   const cwd = opts.cwd ?? process.cwd();
-  const labels = opts.labels
-    ? opts.labels
-        .split(",")
-        .map((l) => l.trim())
-        .filter((l) => l.length > 0)
-    : undefined;
+  const labels = parseCsv(opts.labels);
 
-  await appendEvent(name, {
-    kind: "create",
-    by: opts.by ?? "main",
-    cwd,
-    ...(opts.task ? { task: opts.task } : {}),
-    ...(opts.project ? { project: opts.project } : {}),
-    ...(labels ? { labels } : {}),
-    ...(opts.ephemeral ? { ephemeral: true } : {}),
-    ...(opts.origin ? { origin: opts.origin } : {}),
-  });
+  await appendEvent(
+    name,
+    {
+      kind: "create",
+      by: opts.by ?? "main",
+      cwd,
+      scope: ref.scope,
+      type: channelType,
+      ...(opts.task ? { task: opts.task } : {}),
+      ...(opts.project ? { project: opts.project } : {}),
+      ...(labels ? { labels } : {}),
+      ...(opts.description ? { description: opts.description } : {}),
+      ...(linkedContext ? { linkedContext } : {}),
+      ...(opts.ephemeral ? { ephemeral: true } : {}),
+      ...(opts.origin ? { origin: opts.origin } : {}),
+    },
+    ref.project,
+  );
 
-  console.log(`Created channel '${name}' at ${dir}`);
+  console.log(`Created channel '${name}' (${channelType}) at ${dir}`);
   if (opts.ephemeral) {
     process.stderr.write(
       "ephemeral channel is hidden from `channel list`; use `channel list --all` or `channel prune --ephemeral`\n",
@@ -85,8 +106,8 @@ export async function createChannel(
  * SECURITY: only operates within `~/.trellis/channels/<name>/`. Resolves
  * `name` to an absolute path and refuses to descend outside that root.
  */
-async function forceCleanChannel(name: string): Promise<void> {
-  const dir = channelDir(name);
+async function forceCleanChannel(name: string, project: string): Promise<void> {
+  const dir = channelDir(name, project);
   // Kill any live workers first (signal supervisor by pid; on failure,
   // still proceed — the worst case is an orphan process which won't see
   // the new channel anyway because pid files will be gone).

@@ -11,8 +11,14 @@ import { channelPrune, channelRm } from "./rm.js";
 import { channelSend } from "./send.js";
 import { channelRun } from "./run.js";
 import { channelSpawn } from "./spawn.js";
+import {
+  channelThreadPost,
+  channelThreadShow,
+  channelThreadsList,
+} from "./threads.js";
 import { runSupervisor } from "./supervisor.js";
 import { channelWait, parseDuration } from "./wait.js";
+import { parseCsv } from "./store/schema.js";
 
 export function registerChannelCommand(program: Command): void {
   const channel = program
@@ -24,9 +30,24 @@ export function registerChannelCommand(program: Command): void {
   channel
     .command("create <name>")
     .description("Create a new channel (collaboration session)")
+    .option("--scope <scope>", "channel scope: project | global")
+    .option("--type <type>", "channel type: chat | thread", "chat")
     .option("--task <path>", "associated Trellis task directory")
     .option("--project <slug>", "project slug")
     .option("--labels <csv>", "comma-separated labels")
+    .option("--description <text>", "stable channel description")
+    .option(
+      "--linked-context-file <absolute-path>",
+      "absolute file path attached as linked context (repeatable)",
+      (val: string, prev: string[] | undefined) => [...(prev ?? []), val],
+      [] as string[],
+    )
+    .option(
+      "--linked-context-raw <text>",
+      "raw linked context text (repeatable)",
+      (val: string, prev: string[] | undefined) => [...(prev ?? []), val],
+      [] as string[],
+    )
     .option("--cwd <path>", "working directory recorded in the create event")
     .option("--by <agent>", "agent name recorded as the creator", "main")
     .option("--force", "overwrite existing channel with the same name")
@@ -41,6 +62,11 @@ export function registerChannelCommand(program: Command): void {
           task?: string;
           project?: string;
           labels?: string;
+          scope?: string;
+          type?: string;
+          description?: string;
+          linkedContextFile?: string[];
+          linkedContextRaw?: string[];
           cwd?: string;
           by?: string;
           force?: boolean;
@@ -63,7 +89,9 @@ export function registerChannelCommand(program: Command): void {
     .command("send <name>")
     .description("Send a message into the channel")
     .requiredOption("--as <agent>", "agent name sending")
-    .option("--kind <tag>", "tag (e.g. interrupt / phase_done / question)")
+    .option("--scope <scope>", "channel scope: project | global")
+    .option("--tag <tag>", "tag (e.g. interrupt / phase_done / question)")
+    .option("--kind <tag>", "legacy alias for --tag")
     .option(
       "--to <agents>",
       "comma-separated target agents (default: broadcast)",
@@ -82,6 +110,8 @@ export function registerChannelCommand(program: Command): void {
       ) => {
         const opts = raw as {
           as: string;
+          scope?: string;
+          tag?: string;
           kind?: string;
           to?: string;
           stdin?: boolean;
@@ -93,6 +123,8 @@ export function registerChannelCommand(program: Command): void {
             text,
             stdin: opts.stdin,
             textFile: opts.textFile,
+            scope: opts.scope,
+            tag: opts.tag,
             kind: opts.kind,
             to: opts.to,
           });
@@ -110,10 +142,13 @@ export function registerChannelCommand(program: Command): void {
     .command("wait <name>")
     .description("Block until an event matching the filter arrives, or timeout")
     .requiredOption("--as <agent>", "agent name waiting")
+    .option("--scope <scope>", "channel scope: project | global")
     .option("--timeout <duration>", "max wait (e.g. 30s, 2m, 1h)")
     .option("--from <agents>", "only wake on events from these agents (CSV)")
     .option("--kind <kind>", "only wake on this event kind")
     .option("--tag <tag>", "only wake on this user tag")
+    .option("--thread <key>", "only wake on this thread key")
+    .option("--action <action>", "only wake on this thread action")
     .option(
       "--to <target>",
       "only wake on events targeted to this name (default: own agent)",
@@ -130,6 +165,9 @@ export function registerChannelCommand(program: Command): void {
         from?: string;
         kind?: string;
         tag?: string;
+        scope?: string;
+        thread?: string;
+        action?: string;
         to?: string;
         includeProgress?: boolean;
         all?: boolean;
@@ -141,6 +179,9 @@ export function registerChannelCommand(program: Command): void {
           from: opts.from,
           kind: opts.kind,
           tag: opts.tag,
+          scope: opts.scope,
+          thread: opts.thread,
+          action: opts.action,
           to: opts.to,
           includeProgress: opts.includeProgress,
           all: opts.all,
@@ -159,6 +200,7 @@ export function registerChannelCommand(program: Command): void {
     .description(
       "Register a worker (claude/codex) into the channel — the worker stays idle until the first `channel send --to <worker>` arrives",
     )
+    .option("--scope <scope>", "channel scope: project | global")
     .option(
       "--agent <agent-name>",
       "load .trellis/agents/<name>.md (sets default --provider / --model / system prompt)",
@@ -206,6 +248,7 @@ export function registerChannelCommand(program: Command): void {
         file?: string[];
         jsonl?: string[];
         by?: string;
+        scope?: string;
       };
       if (opts.provider !== undefined && !isProvider(opts.provider)) {
         console.error(
@@ -226,6 +269,7 @@ export function registerChannelCommand(program: Command): void {
           files: opts.file,
           jsonls: opts.jsonl,
           by: opts.by,
+          scope: opts.scope,
         });
       } catch (err) {
         console.error(
@@ -322,9 +366,10 @@ export function registerChannelCommand(program: Command): void {
   channel
     .command("rm <name>")
     .description("Kill workers and delete a channel directory entirely")
-    .action(async (name: string) => {
+    .option("--scope <scope>", "channel scope: project | global")
+    .action(async (name: string, raw: Record<string, unknown>) => {
       try {
-        await channelRm(name);
+        await channelRm(name, raw as { scope?: string });
       } catch (err) {
         console.error(
           chalk.red("Error:"),
@@ -339,6 +384,7 @@ export function registerChannelCommand(program: Command): void {
     .description(
       "Bulk-remove channels by criteria (defaults to dry-run preview)",
     )
+    .option("--scope <scope>", "channel scope: project | global")
     .option("--all", "remove all channels (except live ones and --keep)")
     .option("--empty", "remove channels with no activity (only create event)")
     .option(
@@ -364,6 +410,7 @@ export function registerChannelCommand(program: Command): void {
         yes?: boolean;
         dryRun?: boolean;
         keep?: string;
+        scope?: string;
       };
       try {
         await channelPrune({
@@ -373,12 +420,8 @@ export function registerChannelCommand(program: Command): void {
           ephemeral: opts.ephemeral,
           yes: opts.yes,
           dryRun: !opts.yes,
-          keep: opts.keep
-            ? opts.keep
-                .split(",")
-                .map((s) => s.trim())
-                .filter(Boolean)
-            : undefined,
+          keep: parseCsv(opts.keep),
+          scope: opts.scope,
         });
       } catch (err) {
         console.error(
@@ -394,6 +437,7 @@ export function registerChannelCommand(program: Command): void {
     .description(
       "List channels in ~/.trellis/channels/ with worker / activity summary",
     )
+    .option("--scope <scope>", "channel scope: project | global")
     .option("--json", "emit JSON instead of a formatted table")
     .option(
       "--project <slug>",
@@ -413,6 +457,7 @@ export function registerChannelCommand(program: Command): void {
         project?: string;
         all?: boolean;
         allProjects?: boolean;
+        scope?: string;
       };
       try {
         await channelList(opts);
@@ -428,6 +473,7 @@ export function registerChannelCommand(program: Command): void {
   channel
     .command("messages <name>")
     .description("View messages and events in the channel")
+    .option("--scope <scope>", "channel scope: project | global")
     .option("--raw", "print raw JSON (one event per line)")
     .option("--follow", "stream new events as they arrive (Ctrl-C to stop)")
     .option("--last <N>", "show only the last N matching events", (v) =>
@@ -443,6 +489,8 @@ export function registerChannelCommand(program: Command): void {
     .option("--from <agents>", "filter by author (CSV)")
     .option("--to <target>", "filter by routing target")
     .option("--tag <tag>", "filter by user tag (e.g. interrupt, final_answer)")
+    .option("--thread <key>", "filter by thread key")
+    .option("--action <action>", "filter by thread action")
     .option("--no-progress", "hide progress events (tool calls, deltas)")
     .action(async (name: string, raw: Record<string, unknown>) => {
       const opts = raw as {
@@ -454,6 +502,9 @@ export function registerChannelCommand(program: Command): void {
         from?: string;
         to?: string;
         tag?: string;
+        scope?: string;
+        thread?: string;
+        action?: string;
         progress?: boolean; // commander negates --no-progress to progress:false
       };
       try {
@@ -466,6 +517,9 @@ export function registerChannelCommand(program: Command): void {
           from: opts.from,
           to: opts.to,
           tag: opts.tag,
+          scope: opts.scope,
+          thread: opts.thread,
+          action: opts.action,
           noProgress: opts.progress === false,
         });
       } catch (err) {
@@ -483,9 +537,10 @@ export function registerChannelCommand(program: Command): void {
       "Stop a worker in the channel (SIGTERM, or SIGKILL with --force)",
     )
     .requiredOption("--as <agent>", "worker agent name")
+    .option("--scope <scope>", "channel scope: project | global")
     .option("--force", "skip graceful shutdown, send SIGKILL immediately")
     .action(async (name: string, raw: Record<string, unknown>) => {
-      const opts = raw as { as: string; force?: boolean };
+      const opts = raw as { as: string; force?: boolean; scope?: string };
       try {
         await channelKill(name, opts);
       } catch (err) {
@@ -496,6 +551,92 @@ export function registerChannelCommand(program: Command): void {
         process.exit(1);
       }
     });
+
+  channel
+    .command("post <name> <action>")
+    .description("Append a structured thread event to a thread channel")
+    .requiredOption("--as <agent>", "agent name posting")
+    .option("--scope <scope>", "channel scope: project | global")
+    .option("--thread <key>", "thread key (required except opened)")
+    .option("--title <text>", "thread title")
+    .option("--text <text>", "event body")
+    .option("--description <text>", "stable thread description")
+    .option("--status <status>", "thread status")
+    .option("--labels <csv>", "replace thread labels")
+    .option("--assignees <csv>", "replace thread assignees")
+    .option("--summary <text>", "thread summary")
+    .option(
+      "--linked-context-file <absolute-path>",
+      "absolute file path attached as linked context (repeatable)",
+      (val: string, prev: string[] | undefined) => [...(prev ?? []), val],
+      [] as string[],
+    )
+    .option(
+      "--linked-context-raw <text>",
+      "raw linked context text (repeatable)",
+      (val: string, prev: string[] | undefined) => [...(prev ?? []), val],
+      [] as string[],
+    )
+    .action(
+      async (name: string, action: string, raw: Record<string, unknown>) => {
+        try {
+          await channelThreadPost(name, {
+            ...(raw as unknown as Parameters<typeof channelThreadPost>[1]),
+            action,
+          });
+        } catch (err) {
+          console.error(
+            chalk.red("Error:"),
+            err instanceof Error ? err.message : err,
+          );
+          process.exit(1);
+        }
+      },
+    );
+
+  channel
+    .command("threads <name>")
+    .description("List threads in a thread channel")
+    .option("--scope <scope>", "channel scope: project | global")
+    .option("--status <status>", "filter by thread status")
+    .option("--raw", "print raw reduced thread JSON")
+    .action(async (name: string, raw: Record<string, unknown>) => {
+      try {
+        await channelThreadsList(
+          name,
+          raw as Parameters<typeof channelThreadsList>[1],
+        );
+      } catch (err) {
+        console.error(
+          chalk.red("Error:"),
+          err instanceof Error ? err.message : err,
+        );
+        process.exit(1);
+      }
+    });
+
+  channel
+    .command("thread <name> <thread>")
+    .description("Show one thread timeline")
+    .option("--scope <scope>", "channel scope: project | global")
+    .option("--raw", "print raw thread events")
+    .action(
+      async (name: string, thread: string, raw: Record<string, unknown>) => {
+        try {
+          await channelThreadShow(
+            name,
+            thread,
+            raw as Parameters<typeof channelThreadShow>[2],
+          );
+        } catch (err) {
+          console.error(
+            chalk.red("Error:"),
+            err instanceof Error ? err.message : err,
+          );
+          process.exit(1);
+        }
+      },
+    );
 
   // Hidden: supervisor entry point invoked by `channel spawn` via fork.
   channel

@@ -2,8 +2,16 @@ import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
 
+import {
+  GLOBAL_PROJECT_KEY,
+  type ChannelRef,
+  type ChannelScope,
+} from "./schema.js";
+
 /** Top-level Trellis channels directory. */
 export function channelRoot(): string {
+  const env = process.env.TRELLIS_CHANNEL_ROOT;
+  if (env && env.length > 0) return path.resolve(env);
   return path.join(os.homedir(), ".trellis", "channels");
 }
 
@@ -177,16 +185,116 @@ export function listProjects(): string[] {
       continue;
     }
     // A directory is a project bucket if it has the marker OR is
-    // _legacy / _default (both reserved bucket names).
+    // _legacy / _default / _global (reserved bucket names).
     if (
       fs.existsSync(path.join(dir, BUCKET_MARKER)) ||
       entry === "_legacy" ||
-      entry === "_default"
+      entry === "_default" ||
+      entry === GLOBAL_PROJECT_KEY
     ) {
       out.push(entry);
     }
   }
   return out;
+}
+
+export interface ResolveChannelOptions {
+  scope?: ChannelScope;
+  cwd?: string;
+}
+
+export function resolveChannelProjectForCreate(
+  name: string,
+  opts: ResolveChannelOptions = {},
+): ChannelRef {
+  const scope = opts.scope ?? "project";
+  const project =
+    scope === "global"
+      ? GLOBAL_PROJECT_KEY
+      : opts.cwd
+        ? projectKey(opts.cwd)
+        : currentProjectKey();
+  return {
+    name,
+    scope,
+    project,
+    dir: channelDir(name, project),
+  };
+}
+
+export function resolveExistingChannelRef(
+  name: string,
+  opts: ResolveChannelOptions = {},
+): ChannelRef {
+  migrateLegacyChannels();
+
+  if (opts.scope) {
+    const project =
+      opts.scope === "global"
+        ? GLOBAL_PROJECT_KEY
+        : opts.cwd
+          ? projectKey(opts.cwd)
+          : currentProjectKey();
+    if (!fs.existsSync(eventsPath(name, project))) {
+      throw new Error(
+        `Channel '${name}' not found in ${opts.scope} scope (${project})`,
+      );
+    }
+    process.env.TRELLIS_CHANNEL_PROJECT = project;
+    return { name, scope: opts.scope, project, dir: channelDir(name, project) };
+  }
+
+  const current = currentProjectKey();
+  const projectMatches = listProjects()
+    .filter((project) => project !== GLOBAL_PROJECT_KEY)
+    .filter((project) => fs.existsSync(eventsPath(name, project)));
+  const globalExists = fs.existsSync(eventsPath(name, GLOBAL_PROJECT_KEY));
+
+  if (globalExists && projectMatches.length > 0) {
+    throw new Error(
+      `Channel '${name}' exists in global and project scopes. Use --scope global or --scope project.`,
+    );
+  }
+
+  if (globalExists) {
+    process.env.TRELLIS_CHANNEL_PROJECT = GLOBAL_PROJECT_KEY;
+    return {
+      name,
+      scope: "global",
+      project: GLOBAL_PROJECT_KEY,
+      dir: channelDir(name, GLOBAL_PROJECT_KEY),
+    };
+  }
+
+  if (fs.existsSync(eventsPath(name, current))) {
+    process.env.TRELLIS_CHANNEL_PROJECT = current;
+    return {
+      name,
+      scope: "project",
+      project: current,
+      dir: channelDir(name, current),
+    };
+  }
+
+  if (projectMatches.length === 1) {
+    process.env.TRELLIS_CHANNEL_PROJECT = projectMatches[0];
+    return {
+      name,
+      scope: "project",
+      project: projectMatches[0],
+      dir: channelDir(name, projectMatches[0]),
+    };
+  }
+
+  if (projectMatches.length > 1) {
+    throw new Error(
+      `Channel '${name}' exists in multiple project buckets: ${projectMatches.join(", ")}. Run from the owning project cwd or use --scope.`,
+    );
+  }
+
+  throw new Error(
+    `Channel '${name}' not found in current project bucket (${current}) or any known scope`,
+  );
 }
 
 /**
@@ -196,30 +304,5 @@ export function listProjects(): string[] {
  * without silently writing a second event stream.
  */
 export function selectExistingChannelProject(name: string): string {
-  migrateLegacyChannels();
-
-  const current = currentProjectKey();
-  if (fs.existsSync(eventsPath(name, current))) {
-    process.env.TRELLIS_CHANNEL_PROJECT = current;
-    return current;
-  }
-
-  const matches = listProjects().filter((project) =>
-    fs.existsSync(eventsPath(name, project)),
-  );
-
-  if (matches.length === 1) {
-    process.env.TRELLIS_CHANNEL_PROJECT = matches[0];
-    return matches[0];
-  }
-
-  if (matches.length > 1) {
-    throw new Error(
-      `Channel '${name}' exists in multiple project buckets: ${matches.join(", ")}. Run from the owning project cwd or set TRELLIS_CHANNEL_PROJECT.`,
-    );
-  }
-
-  throw new Error(
-    `Channel '${name}' not found in current project bucket (${current}) or any known project bucket`,
-  );
+  return resolveExistingChannelRef(name).project;
 }

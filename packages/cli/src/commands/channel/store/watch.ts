@@ -1,77 +1,10 @@
 import fs from "node:fs";
 
 import { eventsPath, channelDir } from "./paths.js";
-import type { ChannelEvent, ChannelEventKind } from "./events.js";
+import type { ChannelEvent } from "./events.js";
+import { matchesEventFilter, type ChannelEventFilter } from "./filter.js";
 
-/**
- * meaningful kinds — these wake a wait() call.
- * progress / waiting / awake are status pings and never wake.
- */
-const MEANINGFUL_KINDS: ReadonlySet<ChannelEventKind> = new Set([
-  "create",
-  "join",
-  "leave",
-  "message",
-  "spawned",
-  "killed",
-  "respawned",
-  "done",
-  "error",
-] as ChannelEventKind[]);
-
-export interface WatchFilter {
-  /** Only events from one of these agents wake us. */
-  from?: string[];
-  /** Only events with this kind wake us. */
-  kind?: ChannelEventKind;
-  /** Only events with this tag wake us (most useful with kind=say). */
-  tag?: string;
-  /**
-   * `to` filter:
-   *  - "any"        — events with no `to` (broadcast) OR explicitly to us; default
-   *  - "<agent>"    — explicitly targeted at <agent>; broadcasts also pass
-   *  - "exclusive"  — only events explicitly targeted (no broadcasts)
-   */
-  to?: string;
-  /** The agent name watching; used to filter out events the agent itself produced. */
-  self?: string;
-  /** Include progress events too (defaults to false). */
-  includeProgress?: boolean;
-}
-
-export function matchesFilter(ev: ChannelEvent, filter: WatchFilter): boolean {
-  // Don't wake on our own events (avoid self-loop)
-  if (filter.self && ev.by === filter.self) return false;
-
-  if (!filter.includeProgress && !MEANINGFUL_KINDS.has(ev.kind)) return false;
-
-  if (filter.kind && ev.kind !== filter.kind) return false;
-
-  if (filter.from && filter.from.length > 0) {
-    if (!filter.from.includes(ev.by)) return false;
-  }
-
-  if (filter.tag !== undefined && (ev as ChannelEvent).tag !== filter.tag) {
-    return false;
-  }
-
-  // `to` routing: events with `to` set are targeted; broadcasts (no `to`)
-  // generally pass through.
-  if (filter.to) {
-    const evTo = (ev as ChannelEvent).to as string | string[] | undefined;
-    if (filter.to === "exclusive") {
-      if (!evTo) return false;
-    } else {
-      if (!evTo) return true; // broadcast — pass
-      if (Array.isArray(evTo)) {
-        return evTo.includes(filter.to);
-      }
-      return evTo === filter.to;
-    }
-  }
-
-  return true;
-}
+export type WatchFilter = ChannelEventFilter;
 
 interface ReadProgress {
   byteOffset: number;
@@ -136,12 +69,19 @@ async function readNewEvents(
 export async function* watchEvents(
   channelName: string,
   filter: WatchFilter,
-  opts: { signal?: AbortSignal; fromStart?: boolean; sinceSeq?: number } = {},
+  opts: {
+    signal?: AbortSignal;
+    fromStart?: boolean;
+    sinceSeq?: number;
+    project?: string;
+  } = {},
 ): AsyncGenerator<ChannelEvent, void, unknown> {
-  const file = eventsPath(channelName);
+  const file = eventsPath(channelName, opts.project);
   // Ensure channel dir exists so fs.watch on its parent works
-  if (!fs.existsSync(channelDir(channelName))) {
-    await fs.promises.mkdir(channelDir(channelName), { recursive: true });
+  if (!fs.existsSync(channelDir(channelName, opts.project))) {
+    await fs.promises.mkdir(channelDir(channelName, opts.project), {
+      recursive: true,
+    });
   }
 
   // Three modes:
@@ -177,7 +117,7 @@ export async function* watchEvents(
 
   let watcher: fs.FSWatcher | null = null;
   try {
-    watcher = fs.watch(channelDir(channelName), () => wake());
+    watcher = fs.watch(channelDir(channelName, opts.project), () => wake());
   } catch {
     // ignore — fall back to polling
   }
@@ -195,7 +135,7 @@ export async function* watchEvents(
       const fresh = await readNewEvents(file, state);
       for (const ev of fresh) {
         if (sinceSeq !== undefined && ev.seq <= sinceSeq) continue;
-        if (matchesFilter(ev, filter)) yield ev;
+        if (matchesEventFilter(ev, filter)) yield ev;
         if (opts.signal?.aborted) return;
       }
 

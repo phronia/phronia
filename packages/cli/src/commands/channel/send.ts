@@ -1,14 +1,17 @@
 import fs from "node:fs";
 
 import { appendEvent } from "./store/events.js";
-import { selectExistingChannelProject } from "./store/paths.js";
+import { resolveExistingChannelRef } from "./store/paths.js";
+import { parseChannelScope, parseCsv } from "./store/schema.js";
 
 export interface SendOptions {
   as: string;
   text?: string;
   stdin?: boolean;
   textFile?: string;
+  scope?: string;
   kind?: string; // tag
+  tag?: string;
   to?: string; // CSV
 }
 
@@ -32,23 +35,25 @@ export async function channelSend(
   channelName: string,
   opts: SendOptions,
 ): Promise<void> {
-  selectExistingChannelProject(channelName);
+  const ref = resolveExistingChannelRef(channelName, {
+    scope: parseChannelScope(opts.scope),
+  });
   const text = (await readText(opts)).trimEnd();
   if (!text) throw new Error("Empty message");
+  const tag = opts.tag ?? opts.kind;
 
-  const to = opts.to
-    ? opts.to
-        .split(",")
-        .map((s) => s.trim())
-        .filter(Boolean)
-    : undefined;
+  const to = parseCsv(opts.to);
 
-  const event = await appendEvent(channelName, {
-    kind: "message",
-    by: opts.as,
-    text,
-    ...(opts.kind ? { tag: opts.kind } : {}),
-    ...(to ? { to: to.length === 1 ? to[0] : to } : {}),
-  });
+  const event = await appendEvent(
+    channelName,
+    {
+      kind: "message",
+      by: opts.as,
+      text,
+      ...(tag ? { tag } : {}),
+      ...(to ? { to: to.length === 1 ? to[0] : to } : {}),
+    },
+    ref.project,
+  );
   console.log(JSON.stringify(event));
 }

@@ -11,7 +11,7 @@ integration via env wiring and storage layout).
 
 | Trigger | Why this requires code-spec depth |
 |---------|------------------------------------|
-| New top-level `channel` command tree (11 subcommands) | New CLI surface — signatures must be locked |
+| New top-level `channel` command tree (14 subcommands) | New CLI surface — signatures must be locked |
 | Event-stream protocol (events.jsonl, fixed kind taxonomy) | Cross-component contract: workers, supervisor, CLI all parse the same payloads |
 | Per-worker subprocess supervision (claude / codex) | Infra integration: process lifecycle + signal handling |
 | Disk layout migration (legacy flat → project buckets) | Infra: irreversible filesystem move + cross-tool path conventions (claude code parity) |
@@ -26,9 +26,14 @@ integration via env wiring and storage layout).
 
 ```
 trellis channel create <name> [opts]
+  --scope <scope>        : project | global (default project)
+  --type <type>          : chat | thread (default chat)
   --task <path>          : associated Trellis task directory (string)
   --project <slug>       : project metadata tag (string; NOT the bucket key)
   --labels <csv>         : comma-separated labels
+  --description <text>   : stable channel description
+  --linked-context-file <abs-path> : absolute linked context file (repeatable)
+  --linked-context-raw <text>      : raw linked context text (repeatable)
   --cwd <path>           : cwd recorded in create event (default process.cwd())
   --by <agent>           : creator identity (default "main")
   --force                : if channel exists, kill workers + rmrf + recreate
@@ -38,6 +43,7 @@ trellis channel create <name> [opts]
   → exit 0 success; throw if --force=false and channel exists
 
 trellis channel spawn <name> [opts]
+  --scope <scope>        : project | global
   --agent <name>         : load .trellis/agents/<name>.md (sets provider / as / system prompt)
   --provider <p>         : claude | codex (overrides agent)
   --as <worker-name>     : worker identifier (default = agent name)
@@ -53,7 +59,9 @@ trellis channel spawn <name> [opts]
 
 trellis channel send <name> [text] [opts]
   --as <agent>           : sender identity (REQUIRED)
-  --kind <tag>           : user tag (e.g. interrupt / final_answer / question)
+  --scope <scope>        : project | global
+  --tag <tag>            : user tag (e.g. interrupt / final_answer / question)
+  --kind <tag>           : legacy alias for --tag
   --to <agents>          : CSV of target worker names (default: broadcast)
   --stdin                : read body from stdin
   --text-file <path>     : read body from file
@@ -63,10 +71,13 @@ trellis channel send <name> [text] [opts]
 
 trellis channel wait <name> [opts]
   --as <agent>           : caller identity (REQUIRED, also default --to)
+  --scope <scope>        : project | global
   --timeout <duration>   : max wait (no timeout = wait indefinitely)
   --from <agents>        : CSV — only wake on events from these authors
   --kind <kind>          : only wake on this event kind
   --tag <tag>            : only wake on this user tag
+  --thread <key>         : only wake on this thread key
+  --action <action>      : only wake on this thread action
   --to <target>          : only wake on events to this target (default = --as)
   --include-progress     : also wake on progress events
   --all                  : require EVERY agent in --from to emit a match (default: first-match wins)
@@ -75,6 +86,7 @@ trellis channel wait <name> [opts]
   → on --all timeout: stderr "timeout: still waiting on <csv>"
 
 trellis channel messages <name> [opts]
+  --scope <scope>        : project | global
   --raw                  : one JSON event per line
   --follow               : tail new events after history (Ctrl-C to stop)
   --last <N>             : show only the last N matching
@@ -83,10 +95,13 @@ trellis channel messages <name> [opts]
   --from <agents>        : filter by author (CSV)
   --to <target>          : filter by routing target
   --tag <tag>            : filter by user tag
+  --thread <key>         : filter by thread key
+  --action <action>      : filter by thread action
   --no-progress          : hide progress events
-  → stdout: formatted (default) or raw JSON event stream
+  → stdout: formatted (default) or raw JSON event stream; thread channels default to thread board view unless event filters are set
 
 trellis channel list [opts]
+  --scope <scope>        : project | global
   --json                 : emit JSON array instead of table
   --project <slug>       : filter by `task` field substring
   --all                  : include ephemeral channels (marked with " *")
@@ -96,14 +111,17 @@ trellis channel list [opts]
 
 trellis channel kill <name> [opts]
   --as <agent>           : worker name (REQUIRED)
+  --scope <scope>        : project | global
   --force                : SIGKILL immediately (skip graceful)
   → exit 0 sent; non-zero if no such worker
 
-trellis channel rm <name>
+trellis channel rm <name> [opts]
+  --scope <scope>        : project | global
   → kill any live workers, rmrf channel dir
   → exit 0 removed; throws if not found
 
 trellis channel prune [opts]
+  --scope <scope>        : project | global
   --all                  : remove all channels (except live + --keep)
   --empty                : remove channels with only the create event
   --idle <duration>      : remove channels whose last event is older than duration
@@ -124,6 +142,33 @@ trellis channel run [name] [opts]
   --timeout <duration>   : max wait for done (default 5m)
   → on success: stdout = worker's final message body, channel auto-rm'd, exit 0
   → on failure (error/killed/timeout): channel preserved, stderr "channel kept for inspection: <path>", exit 1
+
+trellis channel post <name> <action> [opts]
+  --as <agent>           : author identity (REQUIRED)
+  --scope <scope>        : project | global
+  --thread <key>         : thread key (required except action=opened)
+  --title <text>         : thread title (opened)
+  --text <text>          : event body (comment/opened)
+  --description <text>   : stable thread description
+  --status <status>      : thread status
+  --labels <csv>         : replace thread labels
+  --assignees <csv>      : replace thread assignees
+  --summary <text>       : thread summary
+  --linked-context-file <abs-path> : absolute linked context file (repeatable)
+  --linked-context-raw <text>      : raw linked context text (repeatable)
+  → stdout: appended `thread` event as JSON
+  → throws unless channel `type` is `thread`
+
+trellis channel threads <name> [opts]
+  --scope <scope>        : project | global
+  --status <status>      : filter reduced thread board by status
+  --raw                  : one reduced thread state JSON per line
+  → stdout: thread board summary
+
+trellis channel thread <name> <thread> [opts]
+  --scope <scope>        : project | global
+  --raw                  : one raw `thread` event per line
+  → stdout: one thread timeline summary
 ```
 
 ### Internal modules
@@ -143,15 +188,35 @@ migrateLegacyChannels(): void                               // idempotent; moves
 ensureBucketMarker(project: string): void                   // touch <project>/.bucket
 listProjects(): string[]                                    // bucket names (has .bucket OR is reserved)
 selectExistingChannelProject(name: string): string          // throws if not found / ambiguous
+resolveChannelProjectForCreate(name, opts?): ChannelRef      // maps --scope to project bucket
+resolveExistingChannelRef(name, opts?): ChannelRef           // resolves --scope and rejects global/project ambiguity
 
 // store/events.ts
-appendEvent(name, partial: Omit<ChannelEvent,'seq'|'ts'>): Promise<ChannelEvent>
+appendEvent(name, partial: Omit<ChannelEvent,'seq'|'ts'>, project?): Promise<ChannelEvent>
   // Atomic under withLock(lockPath(name)). Reads last seq, writes seq=last+1.
   // Returns event with ts (ISO) and seq (monotonic).
+readChannelEvents(name, project?): Promise<ChannelEvent[]>
+readChannelMetadata(name, project?): Promise<ChannelMetadata>
+isCreateEvent(ev): ev is CreateChannelEvent
+isThreadEvent(ev): ev is ThreadChannelEvent
+metadataFromCreateEvent(ev?): ChannelMetadata
+  // Single source of truth for create-event metadata projection. UI commands
+  // must not re-parse create payload fields locally.
 
-watchEvents(name, filter: WatchFilter, opts?: {signal?, fromStart?, sinceSeq?}): AsyncGenerator<ChannelEvent>
+watchEvents(name, filter: WatchFilter, opts?: {signal?, fromStart?, sinceSeq?, project?}): AsyncGenerator<ChannelEvent>
   // Default: from EOF (live tail). fromStart: from byte 0. sinceSeq: skip seq <= N.
   // Driven by fs.watch + 200ms poll fallback.
+
+// store/filter.ts
+matchesEventFilter(ev, filter): boolean
+  // Single source of truth for kind/tag/thread/action/from/to/progress matching.
+  // Used by both historical `messages` reads and live `watchEvents`.
+
+// store/thread-state.ts
+reduceThreads(events): ThreadState[]
+formatThreadBoard(states): string[]
+  // Single source of truth for replaying thread state and rendering board rows.
+  // ThreadState includes `lastSeq` so reduced state can point back to the last event.
 
 // adapters/index.ts
 interface WorkerAdapter {
@@ -188,15 +253,16 @@ All events carry: `seq: number` (monotonic ≥ 1), `ts: string` (ISO 8601),
 are kind-specific.
 
 ```ts
-type ChannelEventKind = "create" | "join" | "leave" | "message" | "spawned"
+type ChannelEventKind = "create" | "join" | "leave" | "message" | "thread" | "spawned"
   | "killed" | "respawned" | "progress" | "done" | "error" | "waiting" | "awake";
 ```
 
 | Kind | Required (beyond base) | Optional | Producer |
 |------|------------------------|----------|----------|
-| `create` | `cwd: string` | `task: string`, `project: string`, `labels: string[]`, `ephemeral: true`, `origin: "run"` | CLI |
+| `create` | `cwd: string`, `scope: "project"\|"global"`, `type: "chat"\|"thread"` | `task: string`, `project: string`, `labels: string[]`, `description: string`, `linkedContext: LinkedContextEntry[]`, `ephemeral: true`, `origin: "run"` | CLI |
 | `spawned` | `as: string`, `provider: "claude"\|"codex"`, `pid: number` | `agent: string`, `files: string[]`, `manifests: string[]` | supervisor |
 | `message` | `text: string` | `to: string \| string[]`, `tag: string` | any |
+| `thread` | `action: ThreadAction`, `thread: string` | `title`, `text`, `description`, `status`, `labels`, `assignees`, `summary`, `linkedContext` | CLI / agents |
 | `progress` | `detail: object` (free-form) | — | adapter |
 | `done` | — | `duration_ms: number`, `total_cost_usd: number`, `num_turns: number`, `synthesized: true`, `exit_code: number` | adapter (real) / supervisor (synthesised) |
 | `error` | `message: string` | `detail: object`, `provider: string`, `synthesized: true`, `exit_code`, `exit_signal` | supervisor / adapter |
@@ -204,6 +270,24 @@ type ChannelEventKind = "create" | "join" | "leave" | "message" | "spawned"
 | `respawned` | (reserved, no fields yet) | — | (future) |
 
 **Author identity (`by`) shape**: `"main"`, `"<worker-name>"`, `"supervisor:<worker>"`, or `"cli:<command>"` (e.g. `cli:kill`).
+
+**Channel type semantics**:
+- `chat` is the default and remains timeline-first.
+- `thread` is board-first: `messages <channel>` pretty output starts with `Thread channel: showing threads...` and shows a reduced thread list unless event filters are set; `messages --raw` always prints one event per JSONL line.
+- Pretty output for create/thread events shows `description` and a short `linkedContext` summary; raw output remains the full JSONL event.
+- `send` always appends `kind:"message"` and never targets a thread.
+- `post` appends `kind:"thread"` and is only valid on `type:"thread"` channels.
+
+**Thread action taxonomy**: `opened`, `comment`, `status`, `labels`, `assignees`, `summary`, `processed`.
+
+**Linked context shape**:
+```ts
+type LinkedContextEntry =
+  | { type: "file"; path: string }   // absolute path only
+  | { type: "raw"; text: string };
+```
+
+Linked context may appear on the channel create event and on a thread opened event.
 
 **Routing (`to`) semantics**: omitted = broadcast. Workers ONLY consume events with `to` matching their own name (broadcasts are operator/user-facing). CLI filters (`--to <target>`) follow `watchEvents` rules: events with no `to` pass through (broadcast); explicit `to` mismatch rejects.
 
@@ -216,6 +300,7 @@ type ChannelEventKind = "create" | "join" | "leave" | "message" | "spawned"
 ├── _legacy/                         # reserved bucket (auto-migrated flat channels)
 │   └── .bucket
 ├── _default/                        # reserved bucket name (currently unused)
+├── _global/                         # global-scope channels
 └── <projectKey(cwd)>/               # one bucket per project
     ├── .bucket                      # marker — distinguishes bucket from legacy channel
     └── <channel-name>/
@@ -232,9 +317,9 @@ type ChannelEventKind = "create" | "join" | "leave" | "message" | "spawned"
 ```
 
 **Bucket discovery rules**:
-- Top-level dir is a bucket iff it has `.bucket` file OR name is `_legacy` / `_default`
+- Top-level dir is a bucket iff it has `.bucket` file OR name is `_legacy` / `_default` / `_global`
 - Any other top-level dir with `events.jsonl` inside is a legacy channel → auto-migrated
-- Reserved bucket names: `_legacy`, `_default` (never written as projectKey output because projectKey never starts with `_`)
+- Reserved bucket names: `_legacy`, `_default`, `_global` (never written as projectKey output because projectKey never starts with `_`)
 
 **Cleanup contract** (`cleanup(channel, worker)` in supervisor.ts):
 - ALWAYS removes: `pid`, `worker-pid`, `config`, `spawnlock`
@@ -270,12 +355,17 @@ type ChannelEventKind = "create" | "join" | "leave" | "message" | "spawned"
 | `spawn` and worker name already has a live pid | throw `"Worker '<as>' is already running in channel '<name>' (pid <N>)"` |
 | `spawn` and `--provider` not in REGISTRY | exit 1, stderr `"--provider must be one of: claude, codex"` |
 | `send` with none of `--stdin`/`--text-file`/`[text]` | throw (missing body) |
+| `send`/`spawn`/`wait`/`messages`/`kill`/`rm` with channel in both project and global scopes but no `--scope` | throw `"Channel '<name>' exists in global and project scopes. Use --scope global or --scope project."` before writing |
+| `post` against a `chat` channel | throw `"Channel '<name>' is type 'chat'. 'post' requires a thread channel."` |
+| `post <action>` with invalid action | throw `"Invalid thread action '<action>'..."` |
+| `post` without `--thread` for non-`opened` action | throw `"--thread is required unless action is 'opened'"` |
+| `--linked-context-file <path>` with relative path | throw `"--linked-context-file must be absolute: <path>"` |
 | `wait --all` without `--from` | throw `"--all requires --from <a,b,...>"` |
 | `wait` timeout | exit 124; if `--all`, stderr `"timeout: still waiting on <csv>"` |
 | `prune` with >1 of `--all/--empty/--idle/--ephemeral` | throw `"prune flags are mutually exclusive: <flags>. Pick one."` |
 | `prune` without `--yes` | print candidates + `(dry-run)` notice; exit 0 without deleting |
 | `run` worker exits with `error` or `killed` before `done` | exit 1, stderr `"channel kept for inspection: <path>"` |
-| `selectExistingChannelProject(name)` channel exists in ≥2 buckets | throw `"Channel '<name>' exists in multiple project buckets: <csv>. Run from the owning project cwd or set TRELLIS_CHANNEL_PROJECT."` |
+| `selectExistingChannelProject(name)` channel exists in ≥2 project buckets | throw `"Channel '<name>' exists in multiple project buckets: <csv>. Run from the owning project cwd or use --scope."` |
 | `selectExistingChannelProject(name)` not found anywhere | throw `"Channel '<name>' not found in current project bucket (<key>) or any known project bucket"` |
 
 ### Supervisor-level
@@ -377,10 +467,35 @@ $ cd /tmp && trellis channel send unique-name --as main --text "hi"
 **Bad** (same name exists in multiple buckets):
 ```bash
 $ cd /tmp && trellis channel send cr-r1 --as main --text "hi"
-Error: Channel 'cr-r1' exists in multiple project buckets: -Users-me-work-trellis, -Users-me-work-vine. Run from the owning project cwd or set TRELLIS_CHANNEL_PROJECT.
+Error: Channel 'cr-r1' exists in multiple project buckets: -Users-me-work-trellis, -Users-me-work-vine. Run from the owning project cwd or use --scope.
 ```
 
-### Case D — Spawn-fail event sequence
+### Case D — Global thread board
+
+**Good** (local feedback board shared across projects):
+```bash
+trellis channel create trellis-issue --scope global --type thread \
+  --description "Local Trellis feedback board" \
+  --linked-context-file /Users/me/work/Trellis/.trellis/spec/cli/backend/commands-channel.md
+trellis channel post trellis-issue opened --scope global --as main \
+  --thread channel-thread-mode \
+  --title "Channel thread mode" \
+  --description "Track thread-channel feedback." \
+  --labels channel,ux
+trellis channel post trellis-issue comment --scope global --as arch \
+  --thread channel-thread-mode \
+  --text "Reviewed the functional shape."
+trellis channel messages trellis-issue --scope global
+# channel-thread-mode [open] Channel thread mode labels=channel,ux
+```
+
+**Bad** (`send` is not a thread primitive):
+```bash
+trellis channel send trellis-issue --scope global --as main --thread channel-thread-mode "hi"
+# Error: unknown option '--thread'
+```
+
+### Case E — Spawn-fail event sequence
 
 **Wrong** (pre-r5 behavior, never ship):
 ```
@@ -405,6 +520,15 @@ Error: Channel 'cr-r1' exists in multiple project buckets: -Users-me-work-trelli
 | Surface | Test type | Assertion points |
 |---------|-----------|-------------------|
 | `paths.projectKey(cwd)` | unit | (a) `"/Users/x"` → `"-Users-x"`, (b) backslash → `-`, (c) CJK/spaces/`#` → `-`, (d) idempotent on re-sanitized input |
+| `TRELLIS_CHANNEL_ROOT` override | integration | create a channel with env override; assert events land under that root, not `~/.trellis/channels` |
+| Global/project scope collision | integration | create same name in `_global` and current project; unscoped write throws before appending, explicit `--scope global` succeeds |
+| Thread board reducer | unit/integration | create `type=thread`; post `opened` + `comment` + `status`; assert reduced state has title/status/labels/assignees/comment count |
+| Thread reducer cursor | unit/integration | reduced state records `lastSeq` from the last thread event applied |
+| Thread pretty output | integration | default board prints the thread-view hint; create/thread event views print description and linked-context summaries |
+| `matchesEventFilter` | unit | kind/from/thread/action/progress/to semantics match both `messages` and `watchEvents` consumers |
+| `parseCsv` helper | unit | comma-separated options share trimming and empty-entry behavior |
+| `post` chat rejection | integration | create default `chat`; `post opened` throws and events.jsonl remains unchanged |
+| `linkedContext` validation | unit/integration | absolute file path accepted; relative file path rejected; raw empty rejected |
 | `paths.migrateLegacyChannels()` | integration | (a) flat dir with events.jsonl → moves to `_legacy/<name>/`, (b) bucket marker dir → skipped, (c) `_legacy`/`_default` → skipped, (d) idempotent (no-op second call) |
 | `paths.selectExistingChannelProject(name)` | integration | (a) current bucket has channel → returns currentProjectKey, (b) only one other bucket has it → mutates env + returns that bucket, (c) two buckets have it → throws with `Channel '<name>' exists in multiple` message, (d) none have it → throws with current bucket name in error |
 | `appendEvent` atomicity | concurrent | spawn N parallel `appendEvent` calls; assert seqs are strictly monotonic 1..N with no duplicates or gaps |
@@ -539,6 +663,7 @@ commands/channel/
 ├── send.ts                   channel send
 ├── wait.ts                   channel wait (+ --all)
 ├── messages.ts               channel messages (+ --follow)
+├── threads.ts                channel post / threads / thread
 ├── list.ts                   channel list (+ --all-projects / --all)
 ├── rm.ts                     channel rm + prune
 ├── kill.ts                   channel kill
@@ -553,6 +678,9 @@ commands/channel/
 ├── adapters/codex.ts         Codex app-server JSON-RPC adapter
 ├── store/paths.ts            project bucket helpers + migration
 ├── store/events.ts           appendEvent + ChannelEvent kind taxonomy
+├── store/schema.ts           scope/type/thread/linked-context parsers
+├── store/filter.ts           shared event filtering SOT
+├── store/thread-state.ts     thread replay + board formatting SOT
 ├── store/lock.ts             withLock (O_EXCL + stale-pid recovery)
 ├── store/watch.ts            watchEvents (fs.watch + poll fallback)
 ├── context-loader.ts         --file / --jsonl injection (jailed realpath)

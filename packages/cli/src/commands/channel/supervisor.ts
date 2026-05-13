@@ -67,8 +67,9 @@ export async function runSupervisor(
   const config = readConfig(configPath);
 
   // Self-pid file lets `trellis channel kill` find us.
+  const project = process.env.TRELLIS_CHANNEL_PROJECT;
   fs.writeFileSync(
-    workerFile(channelName, workerName, "pid"),
+    workerFile(channelName, workerName, "pid", project),
     String(process.pid),
   );
 
@@ -91,7 +92,7 @@ export async function runSupervisor(
     TRELLIS_CHANNEL_AS: workerName,
   };
 
-  const logPath = workerFile(channelName, workerName, "log");
+  const logPath = workerFile(channelName, workerName, "log", project);
   const log = fs.createWriteStream(logPath);
   log.write(`[supervisor] starting ${adapter.provider} ${args.join(" ")}\n`);
 
@@ -150,12 +151,16 @@ export async function runSupervisor(
       settleSpawn();
       void (async () => {
         try {
-          await appendEvent(channelName, {
-            kind: "error",
-            by: `supervisor:${workerName}`,
-            message: `worker spawn failed: ${err.message}`,
-            provider: config.provider,
-          });
+          await appendEvent(
+            channelName,
+            {
+              kind: "error",
+              by: `supervisor:${workerName}`,
+              message: `worker spawn failed: ${err.message}`,
+              provider: config.provider,
+            },
+            project,
+          );
         } catch {
           // ignore — we're exiting anyway
         }
@@ -175,12 +180,16 @@ export async function runSupervisor(
     shutdown.claim("crash");
     void (async () => {
       try {
-        await appendEvent(channelName, {
-          kind: "error",
-          by: `supervisor:${workerName}`,
-          message: `worker process error: ${err.message}`,
-          provider: config.provider,
-        });
+        await appendEvent(
+          channelName,
+          {
+            kind: "error",
+            by: `supervisor:${workerName}`,
+            message: `worker process error: ${err.message}`,
+            provider: config.provider,
+          },
+          project,
+        );
       } catch {
         // ignore
       }
@@ -228,24 +237,28 @@ export async function runSupervisor(
   }
 
   fs.writeFileSync(
-    workerFile(channelName, workerName, "worker-pid"),
+    workerFile(channelName, workerName, "worker-pid", project),
     String(child.pid),
   );
 
-  await appendEvent(channelName, {
-    kind: "spawned",
-    by: config.spawnedBy ?? "main",
-    as: workerName,
-    provider: config.provider,
-    pid: child.pid,
-    ...(config.agent ? { agent: config.agent } : {}),
-    ...(config.contextFiles && config.contextFiles.length > 0
-      ? { files: config.contextFiles }
-      : {}),
-    ...(config.contextManifests && config.contextManifests.length > 0
-      ? { manifests: config.contextManifests }
-      : {}),
-  });
+  await appendEvent(
+    channelName,
+    {
+      kind: "spawned",
+      by: config.spawnedBy ?? "main",
+      as: workerName,
+      provider: config.provider,
+      pid: child.pid,
+      ...(config.agent ? { agent: config.agent } : {}),
+      ...(config.contextFiles && config.contextFiles.length > 0
+        ? { files: config.contextFiles }
+        : {}),
+      ...(config.contextManifests && config.contextManifests.length > 0
+        ? { manifests: config.contextManifests }
+        : {}),
+    },
+    project,
+  );
 
   // ── 1. stdout reader ──
   startStdoutPump({
@@ -297,13 +310,17 @@ export async function runSupervisor(
       // `killed{reason:"crash"}` with no detail on what went wrong.
       void (async () => {
         try {
-          await appendEvent(channelName, {
-            kind: "error",
-            by: `supervisor:${workerName}`,
-            message: `handshake failed: ${msg}`,
-            provider: config.provider,
-            detail: { source: "handshake" },
-          });
+          await appendEvent(
+            channelName,
+            {
+              kind: "error",
+              by: `supervisor:${workerName}`,
+              message: `handshake failed: ${msg}`,
+              provider: config.provider,
+              detail: { source: "handshake" },
+            },
+            project,
+          );
         } catch {
           // ignore
         }
@@ -323,7 +340,14 @@ async function cleanup(channelName: string, workerName: string): Promise<void> {
   // killing the channel) doesn't replay messages.
   for (const suffix of ["pid", "worker-pid", "config", "spawnlock"]) {
     try {
-      fs.unlinkSync(workerFile(channelName, workerName, suffix));
+      fs.unlinkSync(
+        workerFile(
+          channelName,
+          workerName,
+          suffix,
+          process.env.TRELLIS_CHANNEL_PROJECT,
+        ),
+      );
     } catch {
       // already gone
     }
@@ -339,8 +363,9 @@ export function writeSupervisorConfig(
   channelName: string,
   workerName: string,
   config: SupervisorConfig,
+  project?: string,
 ): string {
-  const p = workerFile(channelName, workerName, "config");
+  const p = workerFile(channelName, workerName, "config", project);
   fs.mkdirSync(path.dirname(p), { recursive: true });
   fs.writeFileSync(p, JSON.stringify(config, null, 2), "utf-8");
   return p;

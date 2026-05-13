@@ -9,11 +9,11 @@ import { assembleContext } from "./context-loader.js";
 import { withLock } from "./store/lock.js";
 import {
   channelDir,
-  currentProjectKey,
-  selectExistingChannelProject,
+  resolveExistingChannelRef,
   workerFile,
   workerLockPath,
 } from "./store/paths.js";
+import { parseChannelScope } from "./store/schema.js";
 import { writeSupervisorConfig } from "./supervisor.js";
 
 export interface SpawnOptions {
@@ -29,6 +29,7 @@ export interface SpawnOptions {
   files?: string[];
   /** Trellis jsonl manifests to expand into the system prompt. */
   jsonls?: string[];
+  scope?: string;
   /** Identity recorded as the `spawned` event author. Defaults to
    *  the calling worker (`TRELLIS_CHANNEL_AS` env) or "main". */
   by?: string;
@@ -134,10 +135,12 @@ export async function channelSpawn(
   channelName: string,
   opts: SpawnOptions,
 ): Promise<{ pid: number; log: string; worker: string }> {
-  selectExistingChannelProject(channelName);
-  if (!fs.existsSync(channelDir(channelName))) {
+  const ref = resolveExistingChannelRef(channelName, {
+    scope: parseChannelScope(opts.scope),
+  });
+  if (!fs.existsSync(channelDir(channelName, ref.project))) {
     throw new Error(
-      `Channel '${channelName}' not found at ${channelDir(channelName)}`,
+      `Channel '${channelName}' not found at ${channelDir(channelName, ref.project)}`,
     );
   }
 
@@ -146,18 +149,22 @@ export async function channelSpawn(
   // Acquire the worker-level lock so a concurrent spawn / kill can't race
   // with us. The lock is released as soon as we've handed off to a detached
   // supervisor (pid file in place).
-  return withLock(workerLockPath(channelName, resolved.as), async () => {
-    return spawnLocked(channelName, resolved, opts);
-  });
+  return withLock(
+    workerLockPath(channelName, resolved.as, ref.project),
+    async () => {
+      return spawnLocked(channelName, resolved, opts, ref.project);
+    },
+  );
 }
 
 async function spawnLocked(
   channelName: string,
   resolved: ResolvedSpawn,
   opts: SpawnOptions,
+  project: string,
 ): Promise<{ pid: number; log: string; worker: string }> {
   // Re-check worker name not already busy (now safe under the lock).
-  const pidPath = workerFile(channelName, resolved.as, "pid");
+  const pidPath = workerFile(channelName, resolved.as, "pid", project);
   if (fs.existsSync(pidPath)) {
     const existing = Number(fs.readFileSync(pidPath, "utf-8").trim());
     if (existing && processAlive(existing)) {
@@ -174,22 +181,27 @@ async function spawnLocked(
       ? process.env.TRELLIS_CHANNEL_AS
       : "main");
 
-  const configPath = writeSupervisorConfig(channelName, resolved.as, {
-    provider: resolved.provider,
-    cwd: opts.cwd ?? process.cwd(),
-    systemPrompt: resolved.systemPrompt,
-    model: resolved.model,
-    resume: opts.resume,
-    timeoutMs: opts.timeoutMs,
-    spawnedBy,
-    ...(opts.agent ? { agent: opts.agent } : {}),
-    ...(resolved.contextFiles.length > 0
-      ? { contextFiles: resolved.contextFiles }
-      : {}),
-    ...(resolved.contextManifests.length > 0
-      ? { contextManifests: resolved.contextManifests }
-      : {}),
-  });
+  const configPath = writeSupervisorConfig(
+    channelName,
+    resolved.as,
+    {
+      provider: resolved.provider,
+      cwd: opts.cwd ?? process.cwd(),
+      systemPrompt: resolved.systemPrompt,
+      model: resolved.model,
+      resume: opts.resume,
+      timeoutMs: opts.timeoutMs,
+      spawnedBy,
+      ...(opts.agent ? { agent: opts.agent } : {}),
+      ...(resolved.contextFiles.length > 0
+        ? { contextFiles: resolved.contextFiles }
+        : {}),
+      ...(resolved.contextManifests.length > 0
+        ? { contextManifests: resolved.contextManifests }
+        : {}),
+    },
+    project,
+  );
 
   const supervisorBinary = resolveCliEntry();
   const child = spawn(
@@ -210,7 +222,7 @@ async function spawnLocked(
       // regardless of where the supervisor's process.cwd() ends up.
       env: {
         ...process.env,
-        TRELLIS_CHANNEL_PROJECT: currentProjectKey(),
+        TRELLIS_CHANNEL_PROJECT: project,
       },
     },
   );
@@ -245,7 +257,7 @@ async function spawnLocked(
 
   const result = {
     pid: child.pid ?? -1,
-    log: workerFile(channelName, resolved.as, "log"),
+    log: workerFile(channelName, resolved.as, "log", project),
     worker: resolved.as,
   };
   console.log(JSON.stringify(result));

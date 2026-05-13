@@ -68,7 +68,7 @@ max_journal_lines: 2000
 # behavior, so nothing changes unless you uncomment the block below.
 #
 codex:
-  dispatch_mode: inline  # or "inline" to let the main agent edit code directly
+  dispatch_mode: sub-agent  # or "inline" to let the main agent edit code directly
 
 #-------------------------------------------------------------------------------
 # Session Auto-Commit

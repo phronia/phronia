@@ -12,24 +12,31 @@ import path from "node:path";
 import {
   channelDir,
   channelRoot,
+  currentProjectKey,
   eventsPath,
   listProjects,
   migrateLegacyChannels,
   projectDir,
-  selectExistingChannelProject,
+  resolveExistingChannelRef,
 } from "./store/paths.js";
+import { GLOBAL_PROJECT_KEY, parseChannelScope } from "./store/schema.js";
 
 export interface RmOptions {
   force?: boolean;
   /** Project bucket override. Defaults to current cwd's project. */
   project?: string;
+  scope?: string;
 }
 
 export async function channelRm(
   name: string,
   opts: RmOptions = {},
 ): Promise<void> {
-  const project = opts.project ?? selectExistingChannelProject(name);
+  const project =
+    opts.project ??
+    resolveExistingChannelRef(name, {
+      scope: parseChannelScope(opts.scope),
+    }).project;
   const dir = channelDir(name, project);
   if (!fs.existsSync(dir)) {
     throw new Error(`Channel '${name}' not found at ${dir}`);
@@ -50,6 +57,7 @@ export interface PruneOptions {
   dryRun?: boolean;
   yes?: boolean;
   keep?: string[];
+  scope?: string;
 }
 
 export async function channelPrune(opts: PruneOptions): Promise<void> {
@@ -69,6 +77,7 @@ export async function channelPrune(opts: PruneOptions): Promise<void> {
   }
 
   migrateLegacyChannels();
+  const scope = parseChannelScope(opts.scope);
   const root = channelRoot();
   if (!fs.existsSync(root)) {
     console.log("(no channels)");
@@ -83,9 +92,15 @@ export async function channelPrune(opts: PruneOptions): Promise<void> {
     lastTs?: string;
   }[] = [];
 
-  // Scan every project bucket (prune is repo-wide by design — users
-  // want to clean across projects with one command).
-  for (const project of listProjects()) {
+  const projects =
+    scope === "global"
+      ? [GLOBAL_PROJECT_KEY]
+      : scope === "project"
+        ? [currentProjectKey()]
+        : listProjects();
+  // Unscoped prune stays repo-wide by design; users want to clean across
+  // projects with one command.
+  for (const project of projects) {
     const dir = projectDir(project);
     let entries: string[];
     try {

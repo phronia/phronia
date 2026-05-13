@@ -3,14 +3,16 @@ import fs from "node:fs";
 import { appendEvent } from "./store/events.js";
 import { withLock } from "./store/lock.js";
 import {
-  selectExistingChannelProject,
+  resolveExistingChannelRef,
   workerFile,
   workerLockPath,
 } from "./store/paths.js";
+import { parseChannelScope } from "./store/schema.js";
 
 export interface KillOptions {
   as: string;
   force?: boolean;
+  scope?: string;
 }
 
 const POLL_INTERVAL_MS = 100;
@@ -20,13 +22,15 @@ export async function channelKill(
   channelName: string,
   opts: KillOptions,
 ): Promise<void> {
-  selectExistingChannelProject(channelName);
+  const ref = resolveExistingChannelRef(channelName, {
+    scope: parseChannelScope(opts.scope),
+  });
   // Take the worker lock so kill ↔ spawn can't race: spawn won't claim a
   // stale pid file while we're tearing it down; we won't try to kill a
   // worker whose pid file is mid-creation.
   return withLock(
-    workerLockPath(channelName, opts.as),
-    () => killLocked(channelName, opts),
+    workerLockPath(channelName, opts.as, ref.project),
+    () => killLocked(channelName, opts, ref.project),
     { maxWaitMs: KILL_GRACE_MS + 2000 },
   );
 }
@@ -34,8 +38,9 @@ export async function channelKill(
 async function killLocked(
   channelName: string,
   opts: KillOptions,
+  project: string,
 ): Promise<void> {
-  const pidPath = workerFile(channelName, opts.as, "pid");
+  const pidPath = workerFile(channelName, opts.as, "pid", project);
   if (!fs.existsSync(pidPath)) {
     throw new Error(
       `Worker '${opts.as}' not running in channel '${channelName}'`,
@@ -43,19 +48,28 @@ async function killLocked(
   }
   const supervisorPid = Number(fs.readFileSync(pidPath, "utf-8").trim());
   if (!supervisorPid || !alive(supervisorPid)) {
-    await appendEvent(channelName, {
-      kind: "error",
-      by: `cli:kill`,
-      message: `supervisor lost (pid ${supervisorPid})`,
-      worker: opts.as,
-    });
-    cleanupFiles(channelName, opts.as);
+    await appendEvent(
+      channelName,
+      {
+        kind: "error",
+        by: `cli:kill`,
+        message: `supervisor lost (pid ${supervisorPid})`,
+        worker: opts.as,
+      },
+      project,
+    );
+    cleanupFiles(channelName, opts.as, project);
     return;
   }
 
   if (opts.force) {
     // Also kill the inner worker so it doesn't become an orphan.
-    const workerPidPath = workerFile(channelName, opts.as, "worker-pid");
+    const workerPidPath = workerFile(
+      channelName,
+      opts.as,
+      "worker-pid",
+      project,
+    );
     if (fs.existsSync(workerPidPath)) {
       const wpid = Number(fs.readFileSync(workerPidPath, "utf-8").trim());
       if (wpid && alive(wpid)) {
@@ -74,13 +88,17 @@ async function killLocked(
     // SIGKILL skips supervisor's onShutdown handler, so the `killed`
     // event would never make it into events.jsonl. Write it from here
     // so forensic readers see the kill happened.
-    await appendEvent(channelName, {
-      kind: "killed",
-      by: "cli:kill",
-      worker: opts.as,
-      reason: "explicit-kill",
-      signal: "SIGKILL",
-    });
+    await appendEvent(
+      channelName,
+      {
+        kind: "killed",
+        by: "cli:kill",
+        worker: opts.as,
+        reason: "explicit-kill",
+        signal: "SIGKILL",
+      },
+      project,
+    );
   } else {
     try {
       process.kill(supervisorPid, "SIGTERM");
@@ -104,17 +122,21 @@ async function killLocked(
     } catch {
       // already dead
     }
-    await appendEvent(channelName, {
-      kind: "killed",
-      by: "cli:kill",
-      worker: opts.as,
-      reason: "explicit-kill",
-      signal: "SIGKILL",
-      detail: "grace expired, supervisor SIGKILL'd by CLI",
-    });
+    await appendEvent(
+      channelName,
+      {
+        kind: "killed",
+        by: "cli:kill",
+        worker: opts.as,
+        reason: "explicit-kill",
+        signal: "SIGKILL",
+        detail: "grace expired, supervisor SIGKILL'd by CLI",
+      },
+      project,
+    );
   }
 
-  cleanupFiles(channelName, opts.as);
+  cleanupFiles(channelName, opts.as, project);
 }
 
 function alive(pid: number): boolean {
@@ -126,11 +148,15 @@ function alive(pid: number): boolean {
   }
 }
 
-function cleanupFiles(channelName: string, worker: string): void {
+function cleanupFiles(
+  channelName: string,
+  worker: string,
+  project: string,
+): void {
   // Keep `log` (forensic), `session-id` / `thread-id` (resume).
   for (const suffix of ["pid", "worker-pid", "config", "spawnlock"]) {
     try {
-      fs.unlinkSync(workerFile(channelName, worker, suffix));
+      fs.unlinkSync(workerFile(channelName, worker, suffix, project));
     } catch {
       // already gone
     }

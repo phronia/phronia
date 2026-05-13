@@ -72,7 +72,7 @@ export async function channelRun(opts: RunOptions): Promise<void> {
       text: opts.message,
       textFile: opts.textFile,
       stdin: opts.stdin,
-      kind: opts.tag,
+      tag: opts.tag,
     });
 
     await waitForDone(name, workerName, timeoutMs);
