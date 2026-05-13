@@ -644,3 +644,36 @@ Fixed GitHub #248 — the user-visible 'Trellis SessionStart diagnostics emitted
 ### Next Steps
 
 - None - task complete
+
+
+## Session 155: Fix task.py archive auto-commit: scope + phantom-delete
+
+**Date**: 2026-05-13
+**Task**: Fix task.py archive auto-commit: scope + phantom-delete
+**Branch**: `main`
+
+### Summary
+
+Narrowed task.py archive auto-commit to only the archived task's paths (no scope-creep into other active task dirs) and added explicit git rm --cached for source-side deletes (fixes the 'phantom delete' working-tree dirt we hit on 05-12). Backward-compat safe_archive_paths_to_add. New integration test under test/scripts/.
+
+### Main Changes
+
+(Add details)
+
+### Git Commits
+
+| Hash | Message |
+|------|---------|
+| `23bff8d` | (see git log) |
+
+### Testing
+
+- [OK] (Add test results)
+
+### Status
+
+[OK] **Completed**
+
+### Next Steps
+
+- None - task complete
