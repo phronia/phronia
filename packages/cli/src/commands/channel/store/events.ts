@@ -132,7 +132,7 @@ export async function readChannelEvents(
 
 /**
  * Read projected channel metadata from disk. Delegates to the core
- * reducer so list / messages / threads commands share projection
+ * reducer so list / messages / forum commands share projection
  * semantics with downstream consumers.
  */
 export async function readChannelMetadata(

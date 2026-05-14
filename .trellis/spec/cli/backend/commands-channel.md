@@ -27,7 +27,7 @@ integration via env wiring and storage layout).
 ```
 trellis channel create <name> [opts]
   --scope <scope>        : project | global (default project)
-  --type <type>          : chat | threads (default chat)
+  --type <type>          : chat | forum (default chat)
   --task <path>          : associated Trellis task directory (string)
   --project <slug>       : project metadata tag (string; NOT the bucket key)
   --labels <csv>         : comma-separated labels
@@ -98,7 +98,7 @@ trellis channel messages <name> [opts]
   --thread <key>         : filter by thread key
   --action <action>      : filter by thread action
   --no-progress          : hide progress events
-  → stdout: formatted (default) or raw JSON event stream; threads channels default to thread list view unless event filters are set
+  → stdout: formatted (default) or raw JSON event stream; forum channels default to thread list view unless event filters are set
 
 trellis channel list [opts]
   --scope <scope>        : project | global
@@ -170,7 +170,7 @@ trellis channel post <name> <action> [opts]
   --context-file <abs-path> : absolute context file (repeatable)
   --context-raw <text>      : raw context text (repeatable)
   → stdout: appended `thread` event as JSON
-  → throws unless channel `type` is `threads`
+  → throws unless channel `type` is `forum`
 
 trellis channel context add <name> [opts]
   --scope <scope>        : project | global
@@ -194,7 +194,7 @@ trellis channel context list <name> [opts]
   --raw                  : one context entry JSON per line
   → stdout: projected current context
 
-trellis channel threads <name> [opts]
+trellis channel forum <name> [opts]
   --scope <scope>        : project | global
   --status <status>      : filter reduced thread list by status
   --raw                  : one reduced thread state JSON per line
@@ -243,7 +243,8 @@ readChannelMetadata(name, project?): Promise<ChannelMetadata>
 reduceChannelMetadata(events): ChannelMetadata
   // Single source of truth for channel metadata projection.
   // Replays create metadata, legacy linkedContext, channel-level context
-  // add/delete, display title set/clear, and legacy type:"thread" -> "threads".
+  // add/delete, and display title set/clear. Legacy type:"thread" /
+  // type:"threads" are NOT upgraded to "forum" — they project to "chat".
 isCreateEvent(ev): ev is CreateChannelEvent
 isThreadEvent(ev): ev is ThreadChannelEvent
 metadataFromCreateEvent(ev?): ChannelMetadata
@@ -306,7 +307,7 @@ type ChannelEventKind = "create" | "join" | "leave" | "message" | "thread" | "co
 
 | Kind | Required (beyond base) | Optional | Producer |
 |------|------------------------|----------|----------|
-| `create` | `cwd: string`, `scope: "project"\|"global"`, `type: "chat"\|"threads"` | `task: string`, `project: string`, `labels: string[]`, `description: string`, `context: ContextEntry[]`, `ephemeral: true`, `origin: "cli"`, `meta: object` | CLI |
+| `create` | `cwd: string`, `scope: "project"\|"global"`, `type: "chat"\|"forum"` | `task: string`, `project: string`, `labels: string[]`, `description: string`, `context: ContextEntry[]`, `ephemeral: true`, `origin: "cli"`, `meta: object` | CLI |
 | `spawned` | `as: string`, `provider: "claude"\|"codex"`, `pid: number` | `agent: string`, `files: string[]`, `manifests: string[]` | supervisor |
 | `message` | `text: string` | `to: string \| string[]`, `tag: string` | any |
 | `thread` | `action: ThreadAction`, `thread: string` | `title`, `text`, `description`, `status`, `labels`, `assignees`, `summary`, `context`, `newThread` | CLI / agents |
@@ -434,11 +435,11 @@ return { events: [{ kind: "progress", payload: { detail } }] };
 
 **Channel type semantics**:
 - `chat` is the default and remains timeline-first.
-- `threads` is thread-list-first: `messages <channel>` pretty output starts with a reduced thread list unless event filters are set; `messages --raw` always prints one event per JSONL line.
-- Legacy event logs with `type:"thread"` are read as `type:"threads"` in normalized projections. New CLI writes and accepts only `threads`; `--type thread` throws with a clear "Use '--type threads'" error.
+- `forum` is thread-list-first (a topic area whose threads are individual topics): `messages <channel>` pretty output starts with a reduced thread list unless event filters are set; `messages --raw` always prints one event per JSONL line.
+- Legacy event logs with `type:"thread"` / `type:"threads"` are NOT upgraded to `forum`; they project to `chat`, so forum/thread APIs reject them as non-forum channels. New CLI writes and accepts only `forum`; `--type thread` and `--type threads` both throw with a clear "Use '--type forum'" error.
 - Pretty output for create/thread events shows `description` and a short `context` summary; raw output remains the full JSONL event.
 - `send` always appends `kind:"message"` and never targets a thread.
-- `post` appends `kind:"thread"` and is only valid on `type:"threads"` channels.
+- `post` appends `kind:"thread"` and is only valid on `type:"forum"` channels.
 
 **Thread action taxonomy**: `opened`, `comment`, `status`, `labels`, `assignees`, `summary`, `processed`, `rename`.
 
@@ -567,7 +568,7 @@ only applies to per-worker supervisor cleanup.
 | `spawn` and `--provider` not in REGISTRY | exit 1, stderr `"--provider must be one of: claude, codex"` |
 | `send` with none of `--stdin`/`--text-file`/`[text]` | throw (missing body) |
 | `send`/`spawn`/`wait`/`messages`/`kill`/`rm` with channel in both project and global scopes but no `--scope` | throw `"Channel '<name>' exists in global and project scopes. Use --scope global or --scope project."` before writing |
-| `post` against a `chat` channel | throw `"Channel '<name>' is type 'chat'. 'post' requires a thread channel."` |
+| `post` against a `chat` channel | throw `"Channel '<name>' is type 'chat'. 'post' requires a forum channel."` |
 | `post <action>` with invalid action | throw `"Invalid thread action '<action>'..."` |
 | `post` without `--thread` for non-`opened` action | throw `"--thread is required unless action is 'opened'"` |
 | `--context-file <path>` with relative path | throw `"--context-file must be absolute: <path>"` |
@@ -681,28 +682,28 @@ $ cd /tmp && trellis channel send cr-r1 --as main --text "hi"
 Error: Channel 'cr-r1' exists in multiple project buckets: -Users-me-work-trellis, -Users-me-work-app. Run from the owning project cwd or use --scope.
 ```
 
-### Case D — Global threads channel
+### Case D — Global forum channel
 
 **Good** (local feedback channel shared across projects):
 ```bash
-trellis channel create trellis-issue --scope global --type threads \
+trellis channel create trellis-issue --scope global --type forum \
   --description "Local Trellis feedback channel" \
   --context-file /Users/me/work/Trellis/.trellis/spec/cli/backend/commands-channel.md
 trellis channel post trellis-issue opened --scope global --as main \
-  --thread channel-thread-mode \
-  --title "Channel thread mode" \
-  --description "Track thread-channel feedback." \
+  --thread forum-mode \
+  --title "Forum mode" \
+  --description "Track forum feedback." \
   --labels channel,ux
 trellis channel post trellis-issue comment --scope global --as arch \
-  --thread channel-thread-mode \
+  --thread forum-mode \
   --text "Reviewed the functional shape."
 trellis channel messages trellis-issue --scope global
-# channel-thread-mode [open] Channel thread mode labels=channel,ux
+# forum-mode [open] Forum mode labels=channel,ux
 ```
 
 **Bad** (`send` is not a thread primitive):
 ```bash
-trellis channel send trellis-issue --scope global --as main --thread channel-thread-mode "hi"
+trellis channel send trellis-issue --scope global --as main --thread forum-mode "hi"
 # Error: unknown option '--thread'
 ```
 
@@ -733,7 +734,7 @@ trellis channel send trellis-issue --scope global --as main --thread channel-thr
 | `paths.projectKey(cwd)` | unit | (a) `"/Users/x"` → `"-Users-x"`, (b) backslash → `-`, (c) CJK/spaces/`#` → `-`, (d) idempotent on re-sanitized input |
 | `TRELLIS_CHANNEL_ROOT` override | integration | create a channel with env override; assert events land under that root, not `~/.trellis/channels` |
 | Global/project scope collision | integration | create same name in `_global` and current project; unscoped write throws before appending, explicit `--scope global` succeeds |
-| Thread reducer | unit/integration | create `type=threads`; post `opened` + `comment` + `status`; assert reduced state has title/status/labels/assignees/comment count |
+| Thread reducer | unit/integration | create `type=forum`; post `opened` + `comment` + `status`; assert reduced state has title/status/labels/assignees/comment count |
 | Thread reducer cursor | unit/integration | reduced state records `lastSeq` from the last thread event applied |
 | Thread pretty output | integration | default thread list prints the thread-view hint; create/thread event views print description and context summaries |
 | `matchesEventFilter` | unit | kind/from/thread/action/progress/to semantics match both `messages` and `watchEvents` consumers |
@@ -878,7 +879,7 @@ commands/channel/
 ├── send.ts                   channel send
 ├── wait.ts                   channel wait (+ --all)
 ├── messages.ts               channel messages (+ --follow)
-├── threads.ts                channel post / threads / thread
+├── threads.ts                channel post / forum / thread
 ├── list.ts                   channel list (+ --all-projects / --all)
 ├── rm.ts                     channel rm + prune
 ├── kill.ts                   channel kill

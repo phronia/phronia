@@ -10,6 +10,7 @@ import {
   ensureBucketMarker,
   eventsPath,
 } from "../internal/store/paths.js";
+import { parseChannelType } from "../internal/store/schema.js";
 import { resolveChannelRef } from "./resolve.js";
 import type { CreateChannelOptions } from "./types.js";
 
@@ -28,7 +29,7 @@ export async function createChannel(
     ...(opts.cwd !== undefined ? { cwd: opts.cwd } : {}),
     forCreate: true,
   });
-  const channelType = opts.type ?? "chat";
+  const channelType = parseChannelType(opts.type);
   const events = eventsPath(opts.channel, ref.project);
   const dir = ref.dir;
 

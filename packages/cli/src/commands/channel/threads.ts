@@ -1,6 +1,6 @@
 import {
   buildContextEntries,
-  listThreads as coreListThreads,
+  listForumThreads as coreListForumThreads,
   showThread as coreShowThread,
   postThread as corePostThread,
   reduceThreads,
@@ -41,7 +41,7 @@ export interface ThreadPostOptions {
   linkedContextRaw?: string[];
 }
 
-export interface ThreadsOptions {
+export interface ForumOptions {
   scope?: string;
   status?: string;
   raw?: boolean;
@@ -102,13 +102,13 @@ export async function channelThreadPost(
   console.log(JSON.stringify(event));
 }
 
-export async function channelThreadsList(
+export async function channelForumList(
   channelName: string,
-  opts: ThreadsOptions,
+  opts: ForumOptions,
 ): Promise<void> {
   const scope: ChannelScope | undefined = parseChannelScope(opts.scope);
   const states = (
-    await coreListThreads({
+    await coreListForumThreads({
       channel: channelName,
       ...(scope !== undefined ? { scope } : {}),
     })

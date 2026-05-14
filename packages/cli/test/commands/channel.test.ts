@@ -29,7 +29,7 @@ import { reduceThreads } from "../../src/commands/channel/store/thread-state.js"
 
 const noop = (): void => undefined;
 
-describe("channel storage and thread channels", () => {
+describe("channel storage and forum channels", () => {
   let tmpDir: string;
   let projectDir: string;
   let oldRoot: string | undefined;
@@ -79,7 +79,7 @@ describe("channel storage and thread channels", () => {
     await createChannel("roadmap", {
       by: "main",
       scope: "global",
-      type: "threads",
+      type: "forum",
       description: "Local Trellis feedback board",
       contextFile: [linkedFile],
       contextRaw: ["watch channel UX"],
@@ -150,7 +150,7 @@ describe("channel storage and thread channels", () => {
       .mocked(console.log)
       .mock.calls.map(([line]) => String(line))
       .join("\n");
-    expect(boardOutput).toContain("Thread channel: showing threads");
+    expect(boardOutput).toContain("Forum channel: showing threads");
     expect(boardOutput).toContain("issue-1 [processed] Channel thread mode");
 
     vi.mocked(console.log).mockClear();
@@ -200,7 +200,7 @@ describe("channel storage and thread channels", () => {
     fs.writeFileSync(bodyFile, "## Review\n\nLooks good.\n\n");
     await createChannel("file-post", {
       by: "main",
-      type: "threads",
+      type: "forum",
     });
 
     await channelThreadPost("file-post", {
@@ -227,7 +227,7 @@ describe("channel storage and thread channels", () => {
     fs.writeFileSync(bodyFile, "file body\n");
     await createChannel("precedence-post", {
       by: "main",
-      type: "threads",
+      type: "forum",
     });
 
     await channelThreadPost("precedence-post", {
@@ -253,7 +253,7 @@ describe("channel storage and thread channels", () => {
   it("posts thread event text from stdin", async () => {
     await createChannel("stdin-post", {
       by: "main",
-      type: "threads",
+      type: "forum",
     });
     const stdin = new PassThrough();
     Object.defineProperty(process, "stdin", {
@@ -285,7 +285,7 @@ describe("channel storage and thread channels", () => {
   it("defaults context and title author to main when --as is omitted", async () => {
     await createChannel("defaults", {
       by: "main",
-      type: "threads",
+      type: "forum",
     });
     await channelThreadPost("defaults", {
       as: "main",

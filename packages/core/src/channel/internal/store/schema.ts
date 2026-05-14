@@ -4,12 +4,13 @@ export const GLOBAL_PROJECT_KEY = "_global";
 
 export type ChannelScope = "project" | "global";
 /**
- * Channel structural type. `chat` is timeline-first; `threads` is
- * thread-list-first. Legacy event logs may carry the old singular
- * `"thread"` value — readers normalize it to `"threads"` but new writes
- * always emit `"threads"`.
+ * Channel structural type. `chat` is timeline-first; `forum` is a topic
+ * area whose threads are individual topics. Legacy event logs may carry
+ * the old `"threads"` / `"thread"` values — readers do NOT normalize them
+ * to `forum`; they are treated as non-forum channels. New writes always
+ * emit `"forum"`.
  */
-export type ChannelType = "chat" | "threads";
+export type ChannelType = "chat" | "forum";
 
 export type ThreadAction =
   | "opened"
@@ -29,7 +30,7 @@ export type EventOrigin = "cli" | "api" | "worker";
 
 export const CHANNEL_TYPES: ReadonlySet<ChannelType> = new Set([
   "chat",
-  "threads",
+  "forum",
 ]);
 
 export const THREAD_ACTIONS: ReadonlySet<ThreadAction> = new Set([
@@ -97,11 +98,11 @@ export function parseChannelScope(
 
 export function parseChannelType(v: string | undefined): ChannelType {
   if (v === undefined) return "chat";
-  if (v === "thread") {
-    throw new Error("Invalid --type 'thread'. Use '--type threads'.");
+  if (v === "thread" || v === "threads") {
+    throw new Error(`Invalid --type '${v}'. Use '--type forum'.`);
   }
   if (!CHANNEL_TYPES.has(v as ChannelType)) {
-    throw new Error("Invalid --type. Must be one of: chat, threads");
+    throw new Error("Invalid --type. Must be one of: chat, forum");
   }
   return v as ChannelType;
 }

@@ -1,21 +1,13 @@
 /**
- * Tests for `tl mem extract --phase` (brainstorm window slicing).
+ * Tests for brainstorm-window phase slicing.
  *
- * The MVP definition (PRD 05-08-mem-phase-slice):
- *   brainstorm window = [task.py create, task.py start)
+ * brainstorm window = [task.py create, task.py start)
  *
- * Boundary signals are recovered from raw Claude JSONL `tool_use` blocks
- * (which `claudeExtractDialogue` discards), so the implementation does its
- * own pass with `collectClaudeTurnsAndEvents` and produces both cleaned
- * turns + task.py event metadata.
+ * Boundary signals are recovered from raw Claude JSONL `tool_use` blocks, so
+ * `collectClaudeTurnsAndEvents` does its own pass producing both cleaned turns
+ * and `task.py` event metadata.
  *
- * Test coverage:
- *   - `parseTaskPyCommand`: invoker variants (python/python3/py -3/none),
- *     path separators (/, \, \\), false-positive guard against flag values
- *   - `buildBrainstormWindows`: single window, multi window, slug pairing,
- *     missing create / missing start, malformed (start before create)
- *   - End-to-end via `collectClaudeTurnsAndEvents` against synthetic JSONL
- *     fixtures (mocked $HOME pattern from mem-platforms.test.ts)
+ * Migrated from the CLI `mem-phase-slice` suite.
  */
 
 import { describe, it, expect, afterAll, afterEach, vi } from "vitest";
@@ -38,13 +30,13 @@ vi.mock("node:os", async () => {
   return { ...actual, homedir: () => fakeHome };
 });
 
-const {
-  parseTaskPyCommand,
-  parseTaskPyCommandsAll,
-  buildBrainstormWindows,
-  collectClaudeTurnsAndEvents,
-} = await import("../../src/commands/mem.js");
-import type { TaskPyEvent } from "../../src/commands/mem.js";
+const { parseTaskPyCommand, parseTaskPyCommandsAll, buildBrainstormWindows } =
+  await import("../../src/mem/phase.js");
+const { collectClaudeTurnsAndEvents } =
+  await import("../../src/mem/adapters/claude.js");
+const { collectCodexTurnsAndEvents, commandFromCodexArguments } =
+  await import("../../src/mem/adapters/codex.js");
+import type { MemSessionInfo, TaskPyEvent } from "../../src/mem/types.js";
 
 afterAll(() => {
   nodeFs.rmSync(fakeHome, { recursive: true, force: true });
@@ -62,7 +54,7 @@ describe("parseTaskPyCommand", () => {
     expect(parseTaskPyCommand(undefined)).toBeNull();
   });
 
-  it("matches `python ./.trellis/scripts/task.py create \"foo\"`", () => {
+  it('matches `python ./.trellis/scripts/task.py create "foo"`', () => {
     const r = parseTaskPyCommand(
       'python ./.trellis/scripts/task.py create "fix bug"',
     );
@@ -132,10 +124,7 @@ describe("parseTaskPyCommand", () => {
   });
 
   it("does NOT match `--slug task.py-create-foo` (false-positive guard)", () => {
-    // task.py-create is embedded inside a flag value, not a real invocation.
-    expect(
-      parseTaskPyCommand("ls --slug task.py-create-foo"),
-    ).toBeNull();
+    expect(parseTaskPyCommand("ls --slug task.py-create-foo")).toBeNull();
   });
 
   it("does NOT match arbitrary text containing task.py without verb", () => {
@@ -149,13 +138,12 @@ describe("parseTaskPyCommand", () => {
   });
 
   it("rejects `task.py-create` (must have whitespace before verb)", () => {
-    // Hyphen-joined: not a valid invocation.
     expect(parseTaskPyCommand("task.py-create foo")).toBeNull();
   });
 });
 
 // =============================================================================
-// buildBrainstormWindows — pairing strategy + fallbacks
+// parseTaskPyCommandsAll — dogfood-driven edge cases
 // =============================================================================
 
 function ev(
@@ -173,7 +161,6 @@ function ev(
 
 describe("parseTaskPyCommandsAll (dogfood-driven edge cases)", () => {
   it("strips $(...) closing paren from --slug value", () => {
-    // Real pattern in scripted brainstorm: TASK_DIR=$(... --slug NAME)
     const all = parseTaskPyCommandsAll(
       'TASK_DIR=$(python3 ./.trellis/scripts/task.py create "fix: tl mem --since drops cross-day sessions" --slug mem-since-cross-day-filter)',
     );
@@ -185,7 +172,6 @@ describe("parseTaskPyCommandsAll (dogfood-driven edge cases)", () => {
   });
 
   it("captures BOTH task.py invocations in one Bash command", () => {
-    // SMOKE_TASK pattern: create + start in a single one-liner.
     const cmd =
       'SMOKE_TASK=$(python3 ./.trellis/scripts/task.py create "smoke" 2>&1); python3 ./.trellis/scripts/task.py start ".trellis/tasks/$SMOKE_TASK" 2>&1 | tail -3';
     const all = parseTaskPyCommandsAll(cmd);
@@ -193,35 +179,30 @@ describe("parseTaskPyCommandsAll (dogfood-driven edge cases)", () => {
     expect(all[0]).toMatchObject({ action: "create" });
     expect(all[1]).toMatchObject({ action: "start" });
     if (all[1] && all[1].action === "start") {
-      // Quoted arg with $ var inside — should not be dropped.
       expect(all[1].taskDir).toContain("$SMOKE_TASK");
     }
   });
 
   it("rejects prose-embedded matches (heredoc / commit-message text)", () => {
-    // From a real commit message: "task.py start exits with hint to set X"
     const cmd =
       'git commit -m "Previous text said `.current-task` is a CLI fallback. Current code never writes that file — task.py start exits with hint to set TRELLIS_CONTEXT_ID."';
-    const all = parseTaskPyCommandsAll(cmd);
-    expect(all).toEqual([]);
+    expect(parseTaskPyCommandsAll(cmd)).toEqual([]);
   });
 
   it("rejects empty restRaw (no positional, just trailing whitespace)", () => {
-    const all = parseTaskPyCommandsAll("python3 ./scripts/task.py start  ");
-    expect(all).toEqual([]);
+    expect(parseTaskPyCommandsAll("python3 ./scripts/task.py start  ")).toEqual(
+      [],
+    );
   });
 
   it("does not match action embedded in flag value (--something=task.py-create-foo)", () => {
-    expect(
-      parseTaskPyCommandsAll("foo --bar=task.py-create-baz xyz"),
-    ).toEqual([]);
+    expect(parseTaskPyCommandsAll("foo --bar=task.py-create-baz xyz")).toEqual(
+      [],
+    );
   });
 });
 
-describe("slugFromTaskDir (dogfood-driven)", () => {
-  // slugFromTaskDir is internal; we verify it via buildBrainstormWindows
-  // pairing: a `create --slug FOO` should match `start .trellis/tasks/05-08-FOO`
-  // (i.e., the MM-DD- prefix on the start side is stripped before comparison).
+describe("slugFromTaskDir (via buildBrainstormWindows pairing)", () => {
   it("pairs --slug FOO with start .trellis/tasks/MM-DD-FOO via prefix strip", () => {
     const events: TaskPyEvent[] = [
       {
@@ -246,6 +227,10 @@ describe("slugFromTaskDir (dogfood-driven)", () => {
     });
   });
 });
+
+// =============================================================================
+// buildBrainstormWindows — pairing strategy + fallbacks
+// =============================================================================
 
 describe("buildBrainstormWindows", () => {
   it("returns [] when there are no events", () => {
@@ -273,17 +258,13 @@ describe("buildBrainstormWindows", () => {
   });
 
   it("prefers slug match over FIFO order", () => {
-    // Two creates with explicit slugs, two starts — slug pairing should
-    // align even when starts are out of order.
     const events = [
       ev("create", 1, { slug: "aaa" }),
       ev("create", 2, { slug: "bbb" }),
       ev("start", 5, { taskDir: ".trellis/tasks/bbb" }),
       ev("start", 6, { taskDir: ".trellis/tasks/aaa" }),
     ];
-    const w = buildBrainstormWindows(events, 10);
-    // Sorted by startTurn ascending.
-    expect(w).toEqual([
+    expect(buildBrainstormWindows(events, 10)).toEqual([
       { label: "aaa", startTurn: 1, endTurn: 6 },
       { label: "bbb", startTurn: 2, endTurn: 5 },
     ]);
@@ -304,7 +285,6 @@ describe("buildBrainstormWindows", () => {
   });
 
   it("skips malformed window where start.turnIndex < create.turnIndex (event order quirk)", () => {
-    // Slug match would pair them, but turn indices are reversed → guard skips.
     const events = [
       ev("create", 8, { slug: "weird" }),
       ev("start", 3, { taskDir: ".trellis/tasks/weird" }),
@@ -352,11 +332,7 @@ describe("collectClaudeTurnsAndEvents", () => {
   function buildSession(
     sessionId: string,
     events: readonly Record<string, unknown>[],
-  ): {
-    platform: "claude";
-    id: string;
-    filePath: string;
-  } {
+  ): MemSessionInfo {
     nodeFs.mkdirSync(projectDir, { recursive: true });
     const file = nodePath.join(projectDir, `${sessionId}.jsonl`);
     writeJsonl(file, events);
@@ -365,14 +341,12 @@ describe("collectClaudeTurnsAndEvents", () => {
 
   it("captures task.py create + start events with correct turnIndex", () => {
     const s = buildSession("session-a", [
-      // turn 0: user
       {
         type: "user",
         timestamp: "2026-05-08T00:00:00Z",
         cwd: projectCwd,
         message: { role: "user", content: "let's brainstorm something" },
       },
-      // turn 1: assistant text-only
       {
         type: "assistant",
         timestamp: "2026-05-08T00:00:01Z",
@@ -381,13 +355,11 @@ describe("collectClaudeTurnsAndEvents", () => {
           content: [{ type: "text", text: "OK, what is it?" }],
         },
       },
-      // turn 2: user
       {
         type: "user",
         timestamp: "2026-05-08T00:00:02Z",
         message: { role: "user", content: "do task X" },
       },
-      // turn 3: assistant with tool_use create — turnIndex captured = 3
       {
         type: "assistant",
         timestamp: "2026-05-08T00:00:03Z",
@@ -406,13 +378,11 @@ describe("collectClaudeTurnsAndEvents", () => {
           ],
         },
       },
-      // turn 4: user
       {
         type: "user",
         timestamp: "2026-05-08T00:00:04Z",
         message: { role: "user", content: "go" },
       },
-      // turn 5: assistant with tool_use start — turnIndex captured = 5
       {
         type: "assistant",
         timestamp: "2026-05-08T00:00:05Z",
@@ -431,7 +401,6 @@ describe("collectClaudeTurnsAndEvents", () => {
           ],
         },
       },
-      // turn 6: user
       {
         type: "user",
         timestamp: "2026-05-08T00:00:06Z",
@@ -439,10 +408,7 @@ describe("collectClaudeTurnsAndEvents", () => {
       },
     ]);
 
-    // SessionInfo only needs filePath/platform/id for collectClaudeTurnsAndEvents.
-    const { turns, events } = collectClaudeTurnsAndEvents(
-      s as unknown as Parameters<typeof collectClaudeTurnsAndEvents>[0],
-    );
+    const { turns, events } = collectClaudeTurnsAndEvents(s);
 
     expect(turns.length).toBe(7);
     expect(events).toHaveLength(2);
@@ -458,11 +424,7 @@ describe("collectClaudeTurnsAndEvents", () => {
     });
 
     const windows = buildBrainstormWindows(events, turns.length);
-    expect(windows).toEqual([
-      { label: "task-x", startTurn: 3, endTurn: 5 },
-    ]);
-    // Brainstorm turns at indices 3 and 4: assistant ("creating the task
-    // now") + user ("go").
+    expect(windows).toEqual([{ label: "task-x", startTurn: 3, endTurn: 5 }]);
     const brainstorm = turns.slice(3, 5);
     expect(brainstorm.map((t) => t.role)).toEqual(["assistant", "user"]);
     expect(brainstorm[1]?.text).toBe("go");
@@ -483,24 +445,16 @@ describe("collectClaudeTurnsAndEvents", () => {
           role: "assistant",
           content: [
             { type: "text", text: "running ls" },
-            {
-              type: "tool_use",
-              name: "Bash",
-              input: { command: "ls -la" },
-            },
+            { type: "tool_use", name: "Bash", input: { command: "ls -la" } },
           ],
         },
       },
     ]);
-    const { events } = collectClaudeTurnsAndEvents(
-      s as unknown as Parameters<typeof collectClaudeTurnsAndEvents>[0],
-    );
-    expect(events).toEqual([]);
+    expect(collectClaudeTurnsAndEvents(s).events).toEqual([]);
   });
 
   it("survives compaction: turns reset, subsequent task.py events still tracked", () => {
     const s = buildSession("session-c", [
-      // pre-compact turns
       {
         type: "user",
         timestamp: "2026-05-08T00:00:00Z",
@@ -515,23 +469,17 @@ describe("collectClaudeTurnsAndEvents", () => {
           content: [{ type: "text", text: "early reply" }],
         },
       },
-      // compaction event resets turns to a single [compact summary] turn (index 0)
       {
         type: "user",
         timestamp: "2026-05-08T00:00:02Z",
         isCompactSummary: true,
-        message: {
-          role: "user",
-          content: "summarized history",
-        },
+        message: { role: "user", content: "summarized history" },
       },
-      // post-compact: turn 1 = user
       {
         type: "user",
         timestamp: "2026-05-08T00:00:03Z",
         message: { role: "user", content: "continuing" },
       },
-      // post-compact: turn 2 = assistant with tool_use create — turnIndex = 2
       {
         type: "assistant",
         timestamp: "2026-05-08T00:00:04Z",
@@ -552,10 +500,7 @@ describe("collectClaudeTurnsAndEvents", () => {
       },
     ]);
 
-    const { turns, events } = collectClaudeTurnsAndEvents(
-      s as unknown as Parameters<typeof collectClaudeTurnsAndEvents>[0],
-    );
-    // After compaction: 1 (compact summary) + 2 post-compact = 3 turns.
+    const { turns, events } = collectClaudeTurnsAndEvents(s);
     expect(turns.length).toBe(3);
     expect(turns[0]?.text.startsWith("[compact summary]")).toBe(true);
     expect(events).toHaveLength(1);
@@ -567,19 +512,13 @@ describe("collectClaudeTurnsAndEvents", () => {
   });
 
   it("compaction discards PRE-compact task.py events (turnIndex no longer valid)", () => {
-    // A pre-compact `create` would anchor to a turnIndex pointing into the
-    // collapsed [compact summary] surface. Pairing it to a post-compact
-    // `start` would emit a window referencing dialogue that no longer
-    // exists. The collector resets events alongside turns on compaction.
     const s = buildSession("session-d", [
-      // turn 0: user
       {
         type: "user",
         timestamp: "2026-05-08T00:00:00Z",
         cwd: projectCwd,
         message: { role: "user", content: "pre-compact talk" },
       },
-      // turn 1: assistant with PRE-compact create event (turnIndex=1)
       {
         type: "assistant",
         timestamp: "2026-05-08T00:00:01Z",
@@ -598,14 +537,12 @@ describe("collectClaudeTurnsAndEvents", () => {
           ],
         },
       },
-      // compaction wipes the above
       {
         type: "user",
         timestamp: "2026-05-08T00:00:02Z",
         isCompactSummary: true,
         message: { role: "user", content: "summary" },
       },
-      // post-compact: turn 1 user
       {
         type: "user",
         timestamp: "2026-05-08T00:00:03Z",
@@ -613,11 +550,220 @@ describe("collectClaudeTurnsAndEvents", () => {
       },
     ]);
 
-    const { events } = collectClaudeTurnsAndEvents(
-      s as unknown as Parameters<typeof collectClaudeTurnsAndEvents>[0],
+    expect(collectClaudeTurnsAndEvents(s).events).toEqual([]);
+  });
+});
+
+// =============================================================================
+// commandFromCodexArguments — argument shape recovery
+// =============================================================================
+
+describe("commandFromCodexArguments", () => {
+  it("returns a raw shell string unchanged", () => {
+    expect(commandFromCodexArguments("task.py create foo")).toBe(
+      "task.py create foo",
     );
-    // The pre-compact create must be gone — pairing it to a post-compact
-    // start would silently produce an incorrect window.
-    expect(events).toEqual([]);
+  });
+
+  it("extracts `cmd` from a stringified JSON object", () => {
+    expect(
+      commandFromCodexArguments(JSON.stringify({ cmd: "task.py start bar" })),
+    ).toBe("task.py start bar");
+  });
+
+  it("extracts `command` from a stringified JSON object", () => {
+    expect(
+      commandFromCodexArguments(
+        JSON.stringify({ command: "task.py create baz" }),
+      ),
+    ).toBe("task.py create baz");
+  });
+
+  it("joins `argv[]` with spaces from a stringified JSON object", () => {
+    expect(
+      commandFromCodexArguments(
+        JSON.stringify({ argv: ["python3", "task.py", "create", "qux"] }),
+      ),
+    ).toBe("python3 task.py create qux");
+  });
+
+  it("extracts `cmd` / `command` / `argv` from a raw object", () => {
+    expect(commandFromCodexArguments({ cmd: "a" })).toBe("a");
+    expect(commandFromCodexArguments({ command: "b" })).toBe("b");
+    expect(commandFromCodexArguments({ argv: ["c", "d"] })).toBe("c d");
+  });
+
+  it("returns undefined for unrecognized shapes", () => {
+    expect(commandFromCodexArguments(undefined)).toBeUndefined();
+    expect(commandFromCodexArguments(42)).toBeUndefined();
+    expect(commandFromCodexArguments({ other: "x" })).toBeUndefined();
+    expect(commandFromCodexArguments("not json, no task.py")).toBe(
+      "not json, no task.py",
+    );
+    expect(commandFromCodexArguments(JSON.stringify(["a", "b"]))).toBeUndefined();
+  });
+});
+
+// =============================================================================
+// collectCodexTurnsAndEvents — raw rollout JSONL → turns + events
+// =============================================================================
+
+const CODEX_SESSIONS = nodePath.join(fakeHome, ".codex", "sessions");
+
+describe("collectCodexTurnsAndEvents", () => {
+  const sessionFile = nodePath.join(CODEX_SESSIONS, "rollout-test.jsonl");
+
+  afterEach(() => {
+    rimraf(CODEX_SESSIONS);
+  });
+
+  function buildSession(events: readonly Record<string, unknown>[]): MemSessionInfo {
+    writeJsonl(sessionFile, events);
+    return { platform: "codex", id: "codex-test", filePath: sessionFile };
+  }
+
+  it("recognizes task.py boundary from `argv[]` joined with spaces", () => {
+    const s = buildSession([
+      {
+        timestamp: "2026-05-08T00:00:00Z",
+        payload: { id: "codex-test", cwd: "/tmp/codex" },
+      },
+      {
+        timestamp: "2026-05-08T00:00:01Z",
+        payload: {
+          type: "message",
+          role: "user",
+          content: [{ type: "input_text", text: "brainstorm a task" }],
+        },
+      },
+      {
+        timestamp: "2026-05-08T00:00:02Z",
+        payload: {
+          type: "function_call",
+          name: "shell",
+          arguments: JSON.stringify({
+            argv: [
+              "python3",
+              ".trellis/scripts/task.py",
+              "create",
+              "--slug",
+              "codex-task",
+            ],
+          }),
+        },
+      },
+      {
+        timestamp: "2026-05-08T00:00:03Z",
+        payload: {
+          type: "message",
+          role: "user",
+          content: [{ type: "input_text", text: "go" }],
+        },
+      },
+      {
+        timestamp: "2026-05-08T00:00:04Z",
+        payload: {
+          type: "function_call",
+          name: "exec_command",
+          arguments: JSON.stringify({
+            argv: [
+              "python3",
+              ".trellis/scripts/task.py",
+              "start",
+              ".trellis/tasks/05-08-codex-task",
+            ],
+          }),
+        },
+      },
+      {
+        timestamp: "2026-05-08T00:00:05Z",
+        payload: {
+          type: "message",
+          role: "user",
+          content: [{ type: "input_text", text: "implementing" }],
+        },
+      },
+    ]);
+
+    const { turns, events } = collectCodexTurnsAndEvents(s);
+    expect(turns.length).toBe(3);
+    expect(events).toHaveLength(2);
+    expect(events[0]).toMatchObject({
+      action: "create",
+      slug: "codex-task",
+      turnIndex: 1,
+    });
+    expect(events[1]).toMatchObject({
+      action: "start",
+      taskDir: ".trellis/tasks/05-08-codex-task",
+      turnIndex: 2,
+    });
+
+    const windows = buildBrainstormWindows(events, turns.length);
+    expect(windows).toEqual([
+      { label: "codex-task", startTurn: 1, endTurn: 2 },
+    ]);
+  });
+
+  it("recognizes task.py boundary from a raw `argv[]` object (not stringified)", () => {
+    const s = buildSession([
+      {
+        timestamp: "2026-05-08T00:00:00Z",
+        payload: { id: "codex-test", cwd: "/tmp/codex" },
+      },
+      {
+        timestamp: "2026-05-08T00:00:01Z",
+        payload: {
+          type: "function_call",
+          name: "shell",
+          arguments: {
+            argv: ["task.py", "create", "--slug", "raw-obj"],
+          },
+        },
+      },
+    ]);
+    const { events } = collectCodexTurnsAndEvents(s);
+    expect(events).toHaveLength(1);
+    expect(events[0]).toMatchObject({ action: "create", slug: "raw-obj" });
+  });
+
+  it("still recognizes the raw-string `cmd` form", () => {
+    const s = buildSession([
+      {
+        timestamp: "2026-05-08T00:00:00Z",
+        payload: { id: "codex-test", cwd: "/tmp/codex" },
+      },
+      {
+        timestamp: "2026-05-08T00:00:01Z",
+        payload: {
+          type: "function_call",
+          name: "exec_command",
+          arguments: JSON.stringify({
+            cmd: "python3 .trellis/scripts/task.py create --slug str-cmd",
+          }),
+        },
+      },
+    ]);
+    const { events } = collectCodexTurnsAndEvents(s);
+    expect(events).toHaveLength(1);
+    expect(events[0]).toMatchObject({ action: "create", slug: "str-cmd" });
+  });
+
+  it("ignores non-task.py function calls", () => {
+    const s = buildSession([
+      {
+        timestamp: "2026-05-08T00:00:00Z",
+        payload: { id: "codex-test", cwd: "/tmp/codex" },
+      },
+      {
+        timestamp: "2026-05-08T00:00:01Z",
+        payload: {
+          type: "function_call",
+          name: "shell",
+          arguments: JSON.stringify({ argv: ["ls", "-la"] }),
+        },
+      },
+    ]);
+    expect(collectCodexTurnsAndEvents(s).events).toEqual([]);
   });
 });

@@ -107,7 +107,7 @@ export {
 export {
   readChannelEvents,
   readChannelMetadata,
-  listThreads,
+  listForumThreads,
   showThread,
 } from "./api/read.js";
 

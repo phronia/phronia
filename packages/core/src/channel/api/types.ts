@@ -22,7 +22,7 @@ export interface MutationCommonOptions {
 export interface CreateChannelOptions
   extends ChannelAddressOptions,
     MutationCommonOptions {
-  type?: "chat" | "threads";
+  type?: "chat" | "forum";
   task?: string;
   project?: string;
   labels?: string[];

@@ -26,12 +26,14 @@ Core owns:
 - task record helpers that are useful outside the CLI
 - structured types shared by CLI, tests, and future SDK consumers
 - pure validation and normalization logic that should not depend on Commander or Chalk
+- the `mem` retrieval domain under `packages/core/src/mem/`: persisted-session readers (Claude Code / Codex / OpenCode), search and relevance scoring, dialogue-context extraction, brainstorm-phase slicing, and project aggregation
 
 CLI owns:
 
-- command definitions and option parsing
-- help text and terminal output
+- command definitions and option parsing (including `tl mem` argv parsing)
+- help text and terminal output (including `tl mem` row formatting and `--json` shaping)
 - prompts, confirmations, exit codes, and `process.exit`
+- the OpenCode-unavailable stderr notice for `tl mem` (a presentation concern, not a core one)
 - template copying, dogfooding paths, migration manifest application, and update UX
 - release scripts and CI-specific package orchestration
 
@@ -55,6 +57,19 @@ import { parseEvent } from "../../core/src/channel/internal/parse-event";
 ```
 
 Core public exports must be declared explicitly in `packages/core/package.json`. Do not expose wildcard internal paths. Export entries should provide `types`, `import`, and `default` targets.
+
+### Subpath exports
+
+Core exposes domains as explicit subpaths, not from one root barrel:
+
+```ts
+import { createChannelStore } from "@mindfoldhq/trellis-core/channel";
+import { searchMemSessions } from "@mindfoldhq/trellis-core/mem";
+```
+
+`mem` is published as the `@mindfoldhq/trellis-core/mem` subpath only. It is intentionally **not** re-exported from the `@mindfoldhq/trellis-core` root barrel — that keeps the root API small and stops `DialogueTurn` / `SearchHit` / `MemFilter` from leaking into the root surface. The `mem` public API is `listMemSessions`, `searchMemSessions`, `readMemContext`, `extractMemDialogue`, `listMemProjects`, plus their input/output types and `MemSessionNotFoundError`. Anything under `packages/core/src/mem/internal/` (JSONL/path helpers) is private and must not be deep-imported by the CLI.
+
+The `mem` domain follows the same core API rules as the rest of core: no `zod`, no `console.*`, no `process.exit`. It returns structured results with a `warnings` array; the CLI decides how to surface warnings and what exit code to use.
 
 ---
 
@@ -129,3 +144,5 @@ Release/versioning details live in `release-process.md`.
 Core behavior should be tested in `packages/core` when the behavior can run without CLI rendering. CLI tests should cover option parsing, terminal output, command orchestration, and integration with template/migration flows.
 
 If a CLI test duplicates a pure core test, move the pure assertion to core and keep only the CLI-specific behavior in the CLI test.
+
+`mem` is the worked example of this rule: the pure retrieval/search/phase/adapter tests live in `packages/core/test/mem/**`, while `packages/cli/test/commands/mem-*.test.ts` keeps only CLI-wrapper coverage — argv parsing, `--json` output shape, exit behavior, and the OpenCode warning.

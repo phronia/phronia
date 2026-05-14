@@ -12,7 +12,7 @@ import {
 } from "../internal/store/thread-state.js";
 import { normalizeThreadKey } from "../internal/store/schema.js";
 import type { ChannelMetadata } from "../internal/store/schema.js";
-import { readThreadsChannelEvents } from "./assert.js";
+import { readForumChannelEvents } from "./assert.js";
 import { resolveChannelRef } from "./resolve.js";
 import type { ChannelAddressOptions } from "./types.js";
 
@@ -35,7 +35,7 @@ export async function readChannelMetadata(
   return reduceChannelMetadata(events);
 }
 
-export async function listThreads(
+export async function listForumThreads(
   opts: ChannelAddressOptions,
 ): Promise<ThreadState[]> {
   const ref = resolveChannelRef({
@@ -44,10 +44,10 @@ export async function listThreads(
     ...(opts.projectKey !== undefined ? { projectKey: opts.projectKey } : {}),
     ...(opts.cwd !== undefined ? { cwd: opts.cwd } : {}),
   });
-  const events = await readThreadsChannelEvents(
+  const events = await readForumChannelEvents(
     opts.channel,
     ref.project,
-    "threads",
+    "forum",
   );
   return reduceThreads(events);
 }
@@ -61,7 +61,7 @@ export async function showThread(
     ...(opts.projectKey !== undefined ? { projectKey: opts.projectKey } : {}),
     ...(opts.cwd !== undefined ? { cwd: opts.cwd } : {}),
   });
-  const events = await readThreadsChannelEvents(
+  const events = await readForumChannelEvents(
     opts.channel,
     ref.project,
     "thread",

@@ -4,16 +4,16 @@ import {
 } from "../internal/store/events.js";
 import { reduceChannelMetadata } from "../internal/store/channel-metadata.js";
 
-export async function readThreadsChannelEvents(
+export async function readForumChannelEvents(
   channel: string,
   project: string,
   operation: string,
 ): Promise<ChannelEvent[]> {
   const events = await readChannelEvents(channel, project);
   const metadata = reduceChannelMetadata(events);
-  if (metadata.type !== "threads") {
+  if (metadata.type !== "forum") {
     throw new Error(
-      `Channel '${channel}' is type '${metadata.type}'. '${operation}' requires a threads channel.`,
+      `Channel '${channel}' is type '${metadata.type}'. '${operation}' requires a forum channel.`,
     );
   }
   return events;

@@ -30,7 +30,7 @@ describe("reduceChannelMetadata", () => {
     await createChannel({
       channel: "meta",
       by: "main",
-      type: "threads",
+      type: "forum",
       description: "Test feed",
       labels: ["x", "y"],
       context: [
@@ -40,7 +40,7 @@ describe("reduceChannelMetadata", () => {
     });
     const md = await readChannelMetadata({ channel: "meta" });
     expect(md).toMatchObject({
-      type: "threads",
+      type: "forum",
       description: "Test feed",
       labels: ["x", "y"],
     });
@@ -48,8 +48,8 @@ describe("reduceChannelMetadata", () => {
     expect(md.title).toBeUndefined();
   });
 
-  it("normalizes legacy type:'thread' to 'threads'", () => {
-    const md = reduceChannelMetadata([
+  it("does not normalize legacy type:'thread'/'threads' to 'forum'", () => {
+    const fromThread = reduceChannelMetadata([
       {
         seq: 1,
         ts: "2026-05-13T00:00:00.000Z",
@@ -58,7 +58,17 @@ describe("reduceChannelMetadata", () => {
         type: "thread",
       },
     ]);
-    expect(md.type).toBe("threads");
+    const fromThreads = reduceChannelMetadata([
+      {
+        seq: 1,
+        ts: "2026-05-13T00:00:00.000Z",
+        kind: "create",
+        by: "main",
+        type: "threads",
+      },
+    ]);
+    expect(fromThread.type).toBe("chat");
+    expect(fromThreads.type).toBe("chat");
   });
 
   it("reads legacy linkedContext into normalized context", () => {
@@ -68,7 +78,7 @@ describe("reduceChannelMetadata", () => {
         ts: "2026-05-13T00:00:00.000Z",
         kind: "create",
         by: "main",
-        type: "threads",
+        type: "forum",
         linkedContext: [
           { type: "file", path: "/abs/legacy.md" },
           { type: "raw", text: "legacy" },
@@ -81,12 +91,30 @@ describe("reduceChannelMetadata", () => {
     ]);
   });
 
-  it("rejects '--type thread' with helpful error", () => {
-    expect(() => parseChannelType("thread")).toThrow(/Use '--type threads'/);
+  it("rejects '--type thread'/'--type threads' with helpful error", () => {
+    expect(() => parseChannelType("thread")).toThrow(/Use '--type forum'/);
+    expect(() => parseChannelType("threads")).toThrow(/Use '--type forum'/);
+  });
+
+  it("rejects legacy type values at the core create boundary", async () => {
+    await expect(
+      createChannel({
+        channel: "legacy-thread",
+        by: "main",
+        type: "thread" as "forum",
+      }),
+    ).rejects.toThrow(/Use '--type forum'/);
+    await expect(
+      createChannel({
+        channel: "legacy-threads",
+        by: "main",
+        type: "threads" as "forum",
+      }),
+    ).rejects.toThrow(/Use '--type forum'/);
   });
 
   it("projects channel-level context add/delete", async () => {
-    await createChannel({ channel: "ctx", by: "main", type: "threads" });
+    await createChannel({ channel: "ctx", by: "main", type: "forum" });
     await addChannelContext({
       channel: "ctx",
       by: "main",
@@ -114,7 +142,7 @@ describe("reduceChannelMetadata", () => {
   });
 
   it("projects channel title set/clear", async () => {
-    await createChannel({ channel: "named", by: "main", type: "threads" });
+    await createChannel({ channel: "named", by: "main", type: "forum" });
     await setChannelTitle({
       channel: "named",
       by: "main",

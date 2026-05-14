@@ -83,11 +83,11 @@ export interface CreateChannelEvent extends BaseChannelEvent<"create"> {
   cwd?: string;
   task?: string;
   /**
-   * Stored channel type. May be the legacy `"thread"` value on old event
-   * logs — readers normalize through `reduceChannelMetadata` to
-   * `"threads"`.
+   * Stored channel type. May carry the legacy `"thread"` / `"threads"`
+   * values on old event logs — `reduceChannelMetadata` does NOT upgrade
+   * those to `"forum"`; they project to `"chat"`.
    */
-  type?: ChannelType | "thread";
+  type?: ChannelType | "thread" | "threads";
   description?: string;
   /** Canonical context entries. */
   context?: ContextEntry[];

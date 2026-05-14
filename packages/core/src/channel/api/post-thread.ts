@@ -6,7 +6,7 @@ import { normalizeThreadKey } from "../internal/store/schema.js";
 import {
   buildThreadAliasResolver,
 } from "../internal/store/thread-state.js";
-import { readThreadsChannelEvents } from "./assert.js";
+import { readForumChannelEvents } from "./assert.js";
 import { resolveChannelRef } from "./resolve.js";
 import type { PostThreadOptions, RenameThreadOptions } from "./types.js";
 
@@ -22,7 +22,7 @@ const VALID_ACTIONS: ReadonlySet<PostThreadOptions["action"]> = new Set([
 
 /**
  * Append a structured thread event. Throws when the channel is not of
- * `threads` type, when `action` is invalid, or when a non-`opened` event
+ * `forum` type, when `action` is invalid, or when a non-`opened` event
  * is missing a thread key.
  */
 export async function postThread(
@@ -39,7 +39,7 @@ export async function postThread(
       `Invalid thread action '${opts.action}'. Must be one of: ${[...VALID_ACTIONS].join(", ")}`,
     );
   }
-  await readThreadsChannelEvents(opts.channel, ref.project, "post");
+  await readForumChannelEvents(opts.channel, ref.project, "post");
   const thread = resolveThreadKey(opts.action, opts.thread);
   const event = await appendEvent(
     opts.channel,
@@ -90,7 +90,7 @@ export async function renameThread(
     ...(opts.projectKey !== undefined ? { projectKey: opts.projectKey } : {}),
     ...(opts.cwd !== undefined ? { cwd: opts.cwd } : {}),
   });
-  const events = await readThreadsChannelEvents(
+  const events = await readForumChannelEvents(
     opts.channel,
     ref.project,
     "thread rename",

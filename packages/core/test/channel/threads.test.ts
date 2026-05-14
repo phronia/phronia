@@ -4,7 +4,7 @@ import {
   addThreadContext,
   createChannel,
   deleteThreadContext,
-  listThreads,
+  listForumThreads,
   listThreadContext,
   postThread,
   readChannelEvents,
@@ -34,18 +34,18 @@ describe("thread reducer and lifecycle", () => {
         action: "opened",
         thread: "x",
       }),
-    ).rejects.toThrow(/requires a threads channel/);
+    ).rejects.toThrow(/requires a forum channel/);
   });
 
   it("rejects thread reads and thread context mutations on chat channels", async () => {
     await createChannel({ channel: "chat-read", by: "main" });
 
-    await expect(listThreads({ channel: "chat-read" })).rejects.toThrow(
-      /requires a threads channel/,
+    await expect(listForumThreads({ channel: "chat-read" })).rejects.toThrow(
+      /requires a forum channel/,
     );
     await expect(
       showThread({ channel: "chat-read", thread: "issue" }),
-    ).rejects.toThrow(/requires a threads channel/);
+    ).rejects.toThrow(/requires a forum channel/);
     await expect(
       addThreadContext({
         channel: "chat-read",
@@ -53,11 +53,11 @@ describe("thread reducer and lifecycle", () => {
         thread: "issue",
         context: [{ type: "raw", text: "note" }],
       }),
-    ).rejects.toThrow(/requires a threads channel/);
+    ).rejects.toThrow(/requires a forum channel/);
   });
 
   it("reduces opened/comment/status/labels/processed/lastSeq", async () => {
-    await createChannel({ channel: "b", by: "main", type: "threads" });
+    await createChannel({ channel: "b", by: "main", type: "forum" });
     await postThread({
       channel: "b",
       by: "main",
@@ -95,7 +95,7 @@ describe("thread reducer and lifecycle", () => {
       thread: "t1",
     });
 
-    const states = await listThreads({ channel: "b" });
+    const states = await listForumThreads({ channel: "b" });
     expect(states).toHaveLength(1);
     expect(states[0]).toMatchObject({
       thread: "t1",
@@ -111,7 +111,7 @@ describe("thread reducer and lifecycle", () => {
 
   describe("thread rename alias semantics", () => {
     it("resolves a -> b chain into b including pre-rename and late-old-key events", async () => {
-      await createChannel({ channel: "r", by: "main", type: "threads" });
+      await createChannel({ channel: "r", by: "main", type: "forum" });
       await postThread({
         channel: "r",
         by: "main",
@@ -142,7 +142,7 @@ describe("thread reducer and lifecycle", () => {
         text: "after-rename-on-old-key",
       });
 
-      const states = await listThreads({ channel: "r" });
+      const states = await listForumThreads({ channel: "r" });
       expect(states).toHaveLength(1);
       expect(states[0].thread).toBe("new");
       expect(states[0].aliases).toContain("old");
@@ -154,7 +154,7 @@ describe("thread reducer and lifecycle", () => {
     });
 
     it("rejects rename when target already exists", async () => {
-      await createChannel({ channel: "rc", by: "main", type: "threads" });
+      await createChannel({ channel: "rc", by: "main", type: "forum" });
       await postThread({
         channel: "rc",
         by: "main",
@@ -181,7 +181,7 @@ describe("thread reducer and lifecycle", () => {
       await createChannel({
         channel: "missing-source",
         by: "main",
-        type: "threads",
+        type: "forum",
       });
 
       await expect(
@@ -195,7 +195,7 @@ describe("thread reducer and lifecycle", () => {
     });
 
     it("flattens chains a -> b -> c into c", async () => {
-      await createChannel({ channel: "ch", by: "main", type: "threads" });
+      await createChannel({ channel: "ch", by: "main", type: "forum" });
       await postThread({
         channel: "ch",
         by: "main",
@@ -214,7 +214,7 @@ describe("thread reducer and lifecycle", () => {
         thread: "b",
         newThread: "c",
       });
-      const states = await listThreads({ channel: "ch" });
+      const states = await listForumThreads({ channel: "ch" });
       expect(states[0].thread).toBe("c");
       expect(new Set(states[0].aliases)).toEqual(new Set(["a", "b"]));
     });
@@ -222,7 +222,7 @@ describe("thread reducer and lifecycle", () => {
 
   describe("thread context", () => {
     it("add/delete thread context and resolves through rename", async () => {
-      await createChannel({ channel: "tc", by: "main", type: "threads" });
+      await createChannel({ channel: "tc", by: "main", type: "forum" });
       await postThread({
         channel: "tc",
         by: "main",
@@ -262,7 +262,7 @@ describe("thread reducer and lifecycle", () => {
         thread: "issue",
       });
       expect(listed).toEqual([{ type: "file", path: "/abs/a.md" }]);
-      const states = await listThreads({ channel: "tc" });
+      const states = await listForumThreads({ channel: "tc" });
       expect(states[0].thread).toBe("issue-new");
       expect(states[0].context).toEqual([
         { type: "file", path: "/abs/a.md" },
@@ -277,7 +277,7 @@ describe("thread reducer and lifecycle", () => {
         ts: "2026-05-13T00:00:00.000Z",
         kind: "create",
         by: "main",
-        type: "threads",
+        type: "forum",
       },
       {
         seq: 2,

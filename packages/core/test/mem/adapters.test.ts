@@ -1,15 +1,12 @@
 /**
- * Tier-2 fixture-based tests for the per-platform parsers in mem.ts.
+ * Fixture-based tests for the persisted-session adapters.
  *
- * mem.ts derives session-store paths from `os.homedir()` at module-load time
- * (`const HOME = os.homedir()`), so we mock node:os via vi.hoisted to point
- * homedir() at a single per-suite tmpdir. The mock ALSO has to preserve the
- * rest of the os module (tmpdir, EOL, ...) because vitest itself uses them.
+ * The adapters derive session-store paths from `os.homedir()` at module-load
+ * time (`internal/paths.ts`), so `node:os` is mocked via `vi.hoisted` to point
+ * `homedir()` at a per-suite tmpdir before any mem module resolves.
  *
- * Each test seeds the relevant platform's session directory with minimal
- * fixture files, asserts the parser returns the expected SessionInfo /
- * DialogueTurn shape, and cleans up its own files in afterEach so suites
- * don't leak across each other.
+ * Migrated from the CLI `mem-platforms` suite when the adapters moved into
+ * `@mindfoldhq/trellis-core/mem`.
  */
 
 import {
@@ -24,8 +21,6 @@ import {
 import * as nodeFs from "node:fs";
 import * as nodePath from "node:path";
 
-// Hoisted: runs before mem.ts import resolves so the mocked homedir() value
-// is in place when mem.ts captures `const HOME = os.homedir()`.
 const { fakeHome } = vi.hoisted(() => {
   // eslint-disable-next-line @typescript-eslint/no-require-imports
   const f = require("node:fs") as typeof import("node:fs");
@@ -42,20 +37,19 @@ vi.mock("node:os", async () => {
   return { ...actual, homedir: () => fakeHome };
 });
 
-// Import AFTER the mock is set up. mem.ts now sees fakeHome as $HOME.
-//
-// OpenCode adapter is exercised inside its own describe block via dynamic
-// re-import (so the module-level `opencodeWarned` flag resets per test) —
-// hence not destructured here.
-const {
-  claudeListSessions,
-  claudeExtractDialogue,
-  claudeSearch,
-  codexListSessions,
-  codexExtractDialogue,
-  codexSearch,
-  buildFilter,
-} = await import("../../src/commands/mem.js");
+const { claudeListSessions, claudeExtractDialogue, claudeSearch } =
+  await import("../../src/mem/adapters/claude.js");
+const { codexListSessions, codexExtractDialogue, codexSearch } =
+  await import("../../src/mem/adapters/codex.js");
+const { opencodeListSessions, opencodeExtractDialogue, opencodeSearch } =
+  await import("../../src/mem/adapters/opencode.js");
+
+import type { MemFilter } from "../../src/mem/types.js";
+
+/** Minimal global-scope filter; overrides merge in. */
+function mkFilter(overrides: Partial<MemFilter> = {}): MemFilter {
+  return { platform: "all", limit: 50, cwd: undefined, ...overrides };
+}
 
 // =============================================================================
 // shared fixture helpers
@@ -63,16 +57,6 @@ const {
 
 const CLAUDE_PROJECTS = nodePath.join(fakeHome, ".claude", "projects");
 const CODEX_SESSIONS = nodePath.join(fakeHome, ".codex", "sessions");
-// OpenCode SQLite path — kept for the degraded-adapter tests, which still
-// surface this in SessionInfo.filePath shape assertions even though the
-// adapter no longer touches the DB (see "opencode adapter (degraded)" below).
-const OC_DB_PATH = nodePath.join(
-  fakeHome,
-  ".local",
-  "share",
-  "opencode",
-  "opencode.db",
-);
 
 function writeJsonl(file: string, lines: readonly unknown[]): void {
   nodeFs.mkdirSync(nodePath.dirname(file), { recursive: true });
@@ -100,7 +84,6 @@ afterAll(() => {
 // =============================================================================
 
 describe("claudeListSessions / claudeExtractDialogue", () => {
-  // Claude encodes cwd by replacing '/' and '_' with '-'.
   const projectCwd = "/tmp/test-project";
   const encodedCwd = projectCwd.replace(/[/_]/g, "-");
   const projectDir = nodePath.join(CLAUDE_PROJECTS, encodedCwd);
@@ -117,8 +100,7 @@ describe("claudeListSessions / claudeExtractDialogue", () => {
 
   it("returns no sessions when ~/.claude/projects/ doesn't exist", () => {
     rimraf(CLAUDE_PROJECTS);
-    const r = claudeListSessions(buildFilter({ global: true }));
-    expect(r).toEqual([]);
+    expect(claudeListSessions(mkFilter())).toEqual([]);
   });
 
   it("lists a session and reads cwd/timestamp from the first event when index is missing", () => {
@@ -130,8 +112,9 @@ describe("claudeListSessions / claudeExtractDialogue", () => {
         message: { role: "user", content: "hello" },
       },
     ]);
-    const r = claudeListSessions(buildFilter({ global: true }));
-    const found = r.find((s) => s.id === sessionId);
+    const found = claudeListSessions(mkFilter()).find(
+      (s) => s.id === sessionId,
+    );
     expect(found).toBeDefined();
     expect(found?.platform).toBe("claude");
     expect(found?.cwd).toBe(projectCwd);
@@ -140,10 +123,7 @@ describe("claudeListSessions / claudeExtractDialogue", () => {
 
   it("merges sessions-index.json metadata (title, cwd, created)", () => {
     writeJsonl(sessionFile, [
-      {
-        type: "user",
-        message: { role: "user", content: "hi" },
-      },
+      { type: "user", message: { role: "user", content: "hi" } },
     ]);
     writeJson(nodePath.join(projectDir, "sessions-index.json"), {
       entries: [
@@ -155,8 +135,9 @@ describe("claudeListSessions / claudeExtractDialogue", () => {
         },
       ],
     });
-    const r = claudeListSessions(buildFilter({ global: true }));
-    const found = r.find((s) => s.id === sessionId);
+    const found = claudeListSessions(mkFilter()).find(
+      (s) => s.id === sessionId,
+    );
     expect(found?.title).toBe("fixed bug in foo");
     expect(found?.cwd).toBe(projectCwd);
   });
@@ -170,13 +151,9 @@ describe("claudeListSessions / claudeExtractDialogue", () => {
         message: { role: "user", content: "old session" },
       },
     ]);
-    // mtime must also be old: list filter is interval-overlap, so a fresh
-    // mtime (test-run time) would otherwise keep the session in range.
     const oldT = new Date("2026-01-01T00:00:00Z");
     nodeFs.utimesSync(sessionFile, oldT, oldT);
-    const r = claudeListSessions(
-      buildFilter({ global: true, since: "2026-04-01" }),
-    );
+    const r = claudeListSessions(mkFilter({ since: new Date("2026-04-01") }));
     expect(r.find((s) => s.id === sessionId)).toBeUndefined();
   });
 
@@ -189,7 +166,6 @@ describe("claudeListSessions / claudeExtractDialogue", () => {
         message: { role: "user", content: "x" },
       },
     ]);
-    // Other-project session should NOT be visible when we scope to projectCwd.
     const otherEncoded = "/tmp/other".replace(/[/_]/g, "-");
     const otherFile = nodePath.join(
       CLAUDE_PROJECTS,
@@ -204,8 +180,9 @@ describe("claudeListSessions / claudeExtractDialogue", () => {
         message: { role: "user", content: "x" },
       },
     ]);
-    const r = claudeListSessions(buildFilter({ cwd: projectCwd }));
-    const ids = r.map((s) => s.id);
+    const ids = claudeListSessions(mkFilter({ cwd: projectCwd })).map(
+      (s) => s.id,
+    );
     expect(ids).toContain(sessionId);
     expect(ids).not.toContain("22222222-2222-2222-2222-222222222222");
   });
@@ -233,7 +210,6 @@ describe("claudeListSessions / claudeExtractDialogue", () => {
           ],
         },
       },
-      // tool_result: user role but content is array → skipped entirely.
       {
         type: "user",
         message: {
@@ -242,8 +218,7 @@ describe("claudeListSessions / claudeExtractDialogue", () => {
         },
       },
     ]);
-    const sessions = claudeListSessions(buildFilter({ global: true }));
-    const s = sessions.find((x) => x.id === sessionId);
+    const s = claudeListSessions(mkFilter()).find((x) => x.id === sessionId);
     expect(s).toBeDefined();
     if (!s) return;
     const turns = claudeExtractDialogue(s);
@@ -280,13 +255,10 @@ describe("claudeListSessions / claudeExtractDialogue", () => {
         message: { role: "user", content: "post-compact question" },
       },
     ]);
-    const s = claudeListSessions(buildFilter({ global: true })).find(
-      (x) => x.id === sessionId,
-    );
+    const s = claudeListSessions(mkFilter()).find((x) => x.id === sessionId);
     expect(s).toBeDefined();
     if (!s) return;
     const turns = claudeExtractDialogue(s);
-    // Pre-compact turns dropped; we keep [compact summary] + post-compact turn.
     expect(turns.map((t) => t.text)).toEqual([
       "[compact summary]\nsummary of the previous conversation",
       "post-compact question",
@@ -300,9 +272,6 @@ describe("claudeListSessions / claudeExtractDialogue", () => {
         cwd: projectCwd,
         timestamp: "2026-04-15T10:00:00Z",
         message: {
-          // AGENTS.md preamble with no following human-paragraph break:
-          // stripInjectionTags consumes the whole thing → cleaned="" → dropped
-          // by the outer `if (text)` guard in claudeExtractDialogue.
           role: "user",
           content: "# AGENTS.md instructions for /repo - rules go here",
         },
@@ -312,23 +281,19 @@ describe("claudeListSessions / claudeExtractDialogue", () => {
         message: { role: "user", content: "actual user question" },
       },
     ]);
-    const s = claudeListSessions(buildFilter({ global: true })).find(
-      (x) => x.id === sessionId,
-    );
+    const s = claudeListSessions(mkFilter()).find((x) => x.id === sessionId);
     expect(s).toBeDefined();
     if (!s) return;
-    const turns = claudeExtractDialogue(s);
-    // AGENTS.md turn dropped; only the real question survives.
-    expect(turns.map((t) => t.text)).toEqual(["actual user question"]);
+    expect(claudeExtractDialogue(s).map((t) => t.text)).toEqual([
+      "actual user question",
+    ]);
   });
 
   it("returns empty turns array for a session with no parseable content", () => {
     writeJsonl(sessionFile, [
       { type: "user", cwd: projectCwd, timestamp: "2026-04-15T10:00:00Z" },
     ]);
-    const s = claudeListSessions(buildFilter({ global: true })).find(
-      (x) => x.id === sessionId,
-    );
+    const s = claudeListSessions(mkFilter()).find((x) => x.id === sessionId);
     expect(s).toBeDefined();
     if (!s) return;
     expect(claudeExtractDialogue(s)).toEqual([]);
@@ -350,14 +315,12 @@ describe("claudeListSessions / claudeExtractDialogue", () => {
         },
       },
     ]);
-    const s = claudeListSessions(buildFilter({ global: true })).find(
-      (x) => x.id === sessionId,
-    );
+    const s = claudeListSessions(mkFilter()).find((x) => x.id === sessionId);
     expect(s).toBeDefined();
     if (!s) return;
     const hit = claudeSearch(s, "memory");
-    expect(hit.user_count).toBe(1);
-    expect(hit.asst_count).toBe(1);
+    expect(hit.userCount).toBe(1);
+    expect(hit.asstCount).toBe(1);
     expect(hit.count).toBe(2);
   });
 });
@@ -369,7 +332,6 @@ describe("claudeListSessions / claudeExtractDialogue", () => {
 describe("codexListSessions / codexExtractDialogue", () => {
   const sessionId = "abc-codex-session";
   const projectCwd = "/tmp/codex-project";
-  // Codex stores rollout files as rollout-YYYY-MM-DDTHH-MM-SS-<id>.jsonl
   const fileName = `rollout-2026-04-15T10-00-00-${sessionId}.jsonl`;
   const sessionFile = nodePath.join(
     CODEX_SESSIONS,
@@ -389,7 +351,7 @@ describe("codexListSessions / codexExtractDialogue", () => {
 
   it("returns no sessions when ~/.codex/sessions/ doesn't exist", () => {
     rimraf(CODEX_SESSIONS);
-    expect(codexListSessions(buildFilter({ global: true }))).toEqual([]);
+    expect(codexListSessions(mkFilter())).toEqual([]);
   });
 
   it("lists sessions, picking up cwd from the first payload", () => {
@@ -409,8 +371,7 @@ describe("codexListSessions / codexExtractDialogue", () => {
         },
       },
     ]);
-    const sessions = codexListSessions(buildFilter({ global: true }));
-    const s = sessions.find((x) => x.id === sessionId);
+    const s = codexListSessions(mkFilter()).find((x) => x.id === sessionId);
     expect(s).toBeDefined();
     expect(s?.platform).toBe("codex");
     expect(s?.cwd).toBe(projectCwd);
@@ -436,8 +397,9 @@ describe("codexListSessions / codexExtractDialogue", () => {
         payload: { id: "other", cwd: "/elsewhere" },
       },
     ]);
-    const r = codexListSessions(buildFilter({ cwd: projectCwd }));
-    const ids = r.map((s) => s.id);
+    const ids = codexListSessions(mkFilter({ cwd: projectCwd })).map(
+      (s) => s.id,
+    );
     expect(ids).toContain(sessionId);
     expect(ids).not.toContain("other");
   });
@@ -481,13 +443,10 @@ describe("codexListSessions / codexExtractDialogue", () => {
         },
       },
     ]);
-    const s = codexListSessions(buildFilter({ global: true })).find(
-      (x) => x.id === sessionId,
-    );
+    const s = codexListSessions(mkFilter()).find((x) => x.id === sessionId);
     expect(s).toBeDefined();
     if (!s) return;
-    const turns = codexExtractDialogue(s);
-    expect(turns).toEqual([
+    expect(codexExtractDialogue(s)).toEqual([
       { role: "user", text: "hello world" },
       { role: "assistant", text: "hi back" },
     ]);
@@ -513,13 +472,10 @@ describe("codexListSessions / codexExtractDialogue", () => {
         },
       },
     ]);
-    const s = codexListSessions(buildFilter({ global: true })).find(
-      (x) => x.id === sessionId,
-    );
+    const s = codexListSessions(mkFilter()).find((x) => x.id === sessionId);
     expect(s).toBeDefined();
     if (!s) return;
-    const turns = codexExtractDialogue(s);
-    expect(turns).toEqual([
+    expect(codexExtractDialogue(s)).toEqual([
       { role: "user", text: "real question trailing" },
     ]);
   });
@@ -560,13 +516,10 @@ describe("codexListSessions / codexExtractDialogue", () => {
         },
       },
     ]);
-    const s = codexListSessions(buildFilter({ global: true })).find(
-      (x) => x.id === sessionId,
-    );
+    const s = codexListSessions(mkFilter()).find((x) => x.id === sessionId);
     expect(s).toBeDefined();
     if (!s) return;
-    const turns = codexExtractDialogue(s);
-    expect(turns.map((t) => t.text)).toEqual([
+    expect(codexExtractDialogue(s).map((t) => t.text)).toEqual([
       "[compact]\nsummary of earlier",
       "post-compact turn",
     ]);
@@ -596,13 +549,12 @@ describe("codexListSessions / codexExtractDialogue", () => {
         },
       },
     ]);
-    const s = codexListSessions(buildFilter({ global: true })).find(
-      (x) => x.id === sessionId,
-    );
+    const s = codexListSessions(mkFilter()).find((x) => x.id === sessionId);
     expect(s).toBeDefined();
     if (!s) return;
-    const turns = codexExtractDialogue(s);
-    expect(turns).toEqual([{ role: "user", text: "real question" }]);
+    expect(codexExtractDialogue(s)).toEqual([
+      { role: "user", text: "real question" },
+    ]);
   });
 
   it("codexSearch returns SearchHit with correct counts", () => {
@@ -620,109 +572,38 @@ describe("codexListSessions / codexExtractDialogue", () => {
         },
       },
     ]);
-    const s = codexListSessions(buildFilter({ global: true })).find(
-      (x) => x.id === sessionId,
-    );
+    const s = codexListSessions(mkFilter()).find((x) => x.id === sessionId);
     expect(s).toBeDefined();
     if (!s) return;
     const hit = codexSearch(s, "memory");
-    expect(hit.user_count).toBe(1);
+    expect(hit.userCount).toBe(1);
     expect(hit.count).toBe(1);
   });
 });
 
 // =============================================================================
-// OpenCode adapter (degraded — SQLite reader reverted in 0.6.0-beta.4)
+// OpenCode adapter (degraded — silent no-op; the "unavailable" notice is a CLI
+// presentation concern, see packages/cli/src/commands/mem.ts).
 // =============================================================================
-//
-// 0.6.0-beta.3 introduced a `better-sqlite3`-backed reader for OpenCode 1.2+'s
-// SQLite session storage. 0.6.0-beta.4 reverted the native dep because the
-// prebuild-tarball + node-gyp fallback chain was breaking `npm install` on
-// Windows + China network (see PRD 05-09-revert-opencode-sqlite-emergency).
-// The three exported adapter functions are kept (callers in dispatch /
-// slicePhase rely on them) but degraded to no-ops with a one-shot stderr
-// warning. These tests pin that degraded contract.
 
-describe("opencode adapter (degraded — SQLite reader reverted)", () => {
-  let errSpy: ReturnType<typeof vi.spyOn>;
-
-  beforeEach(() => {
-    errSpy = vi.spyOn(process.stderr, "write").mockImplementation(() => true);
+describe("opencode adapter (degraded no-op)", () => {
+  it("opencodeListSessions returns []", () => {
+    expect(opencodeListSessions(mkFilter())).toEqual([]);
   });
 
-  afterEach(() => {
-    errSpy.mockRestore();
-    vi.resetModules();
-  });
-
-  it("opencodeListSessions returns []", async () => {
-    // Re-import inside the test so the module-level `opencodeWarned` flag
-    // is fresh and we can observe the one-shot warning fire.
-    vi.resetModules();
-    const mod = await import("../../src/commands/mem.js");
-    expect(mod.opencodeListSessions(buildFilter({ global: true }))).toEqual([]);
-  });
-
-  it("opencodeExtractDialogue returns [] for any session", async () => {
-    vi.resetModules();
-    const mod = await import("../../src/commands/mem.js");
-    const fakeSession = {
-      platform: "opencode" as const,
-      id: "ses_x",
-      filePath: OC_DB_PATH,
-    };
-    expect(mod.opencodeExtractDialogue(fakeSession)).toEqual([]);
-  });
-
-  it("warning fires only once across multiple opencode adapter calls", async () => {
-    vi.resetModules();
-    const mod = await import("../../src/commands/mem.js");
-    mod.opencodeListSessions(buildFilter({ global: true }));
-    mod.opencodeListSessions(buildFilter({ global: true }));
-    mod.opencodeExtractDialogue({
-      platform: "opencode",
-      id: "ses_x",
-      filePath: OC_DB_PATH,
-    });
-    // Each warning write call passes a single string arg; we expect exactly one.
-    expect(errSpy).toHaveBeenCalledTimes(1);
-    const firstCallArg = errSpy.mock.calls[0]?.[0];
-    expect(typeof firstCallArg).toBe("string");
-    expect(firstCallArg as string).toMatch(/temporarily unavailable/i);
-  });
-
-  it("--platform opencode does not break dispatch for other platforms", async () => {
-    // Seed a Claude session so `--platform all` produces non-empty output.
-    const claudeProjectCwd = "/tmp/oc-degrade-mixed";
-    const encodedCwd = claudeProjectCwd.replace(/[/_]/g, "-");
-    const claudeProjectDir = nodePath.join(CLAUDE_PROJECTS, encodedCwd);
-    const claudeSessionId = "33333333-3333-3333-3333-333333333333";
-    const claudeSessionFile = nodePath.join(
-      claudeProjectDir,
-      `${claudeSessionId}.jsonl`,
-    );
-    writeJsonl(claudeSessionFile, [
-      {
-        type: "user",
-        cwd: claudeProjectCwd,
-        timestamp: "2026-04-15T10:00:00Z",
-        message: { role: "user", content: "alive" },
-      },
-    ]);
-
-    vi.resetModules();
-    const mod = await import("../../src/commands/mem.js");
-
-    // OpenCode list returns [] but doesn't throw / doesn't drop other platforms.
+  it("opencodeExtractDialogue returns [] for any session", () => {
     expect(
-      mod.opencodeListSessions(buildFilter({ global: true })),
+      opencodeExtractDialogue({
+        platform: "opencode",
+        id: "ses_x",
+        filePath: "/tmp/opencode.db",
+      }),
     ).toEqual([]);
-    const claudeSessions = mod.claudeListSessions(
-      buildFilter({ global: true }),
-    );
-    expect(claudeSessions.find((s) => s.id === claudeSessionId)).toBeDefined();
+  });
 
-    rimraf(claudeProjectDir);
+  it("opencodeSearch returns an empty hit", () => {
+    const hit = opencodeSearch("anything");
+    expect(hit.count).toBe(0);
+    expect(hit.totalTurns).toBe(0);
   });
 });
-

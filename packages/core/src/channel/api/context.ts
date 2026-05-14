@@ -12,7 +12,7 @@ import {
   reduceThreads,
   type ThreadState,
 } from "../internal/store/thread-state.js";
-import { readThreadsChannelEvents } from "./assert.js";
+import { readForumChannelEvents } from "./assert.js";
 import { resolveChannelRef } from "./resolve.js";
 import type {
   ContextMutationOptions,
@@ -121,7 +121,7 @@ export async function addThreadContext(
   });
   const thread = normalizeThreadKey(opts.thread);
   const states = reduceThreads(
-    await readThreadsChannelEvents(opts.channel, ref.project, "context add"),
+    await readForumChannelEvents(opts.channel, ref.project, "context add"),
   );
   assertKnownThread(states, thread, opts.channel);
   return appendContextEvent(
@@ -147,7 +147,7 @@ export async function deleteThreadContext(
   });
   const thread = normalizeThreadKey(opts.thread);
   const states = reduceThreads(
-    await readThreadsChannelEvents(opts.channel, ref.project, "context delete"),
+    await readForumChannelEvents(opts.channel, ref.project, "context delete"),
   );
   assertKnownThread(states, thread, opts.channel);
   return appendContextEvent(
@@ -175,7 +175,7 @@ export async function listThreadContext(opts: {
     ...(opts.projectKey !== undefined ? { projectKey: opts.projectKey } : {}),
     ...(opts.cwd !== undefined ? { cwd: opts.cwd } : {}),
   });
-  const events = await readThreadsChannelEvents(
+  const events = await readForumChannelEvents(
     opts.channel,
     ref.project,
     "context list",

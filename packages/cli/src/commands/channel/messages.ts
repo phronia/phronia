@@ -63,7 +63,7 @@ export async function channelMessages(
   const metadata = await readChannelMetadata(channelName, ref.project);
   if (metadata.type === "chat" && (threadFilter || actionFilter)) {
     throw new Error(
-      `Channel '${channelName}' is type 'chat'. --thread/--action require a thread channel.`,
+      `Channel '${channelName}' is type 'chat'. --thread/--action require a forum channel.`,
     );
   }
 
@@ -85,7 +85,7 @@ export async function channelMessages(
   const view = opts.last ? filtered.slice(-opts.last) : filtered;
   const threadBoardView =
     !opts.raw &&
-    metadata.type === "threads" &&
+    metadata.type === "forum" &&
     !threadFilter &&
     !kindFilter &&
     !actionFilter &&
@@ -94,7 +94,7 @@ export async function channelMessages(
     !opts.tag;
   if (threadBoardView) {
     console.log(
-      "Thread channel: showing threads. Use --thread <key> for timeline, --raw for event log.",
+      "Forum channel: showing threads. Use --thread <key> for timeline, --raw for event log.",
     );
     printThreadBoard(view);
   } else {

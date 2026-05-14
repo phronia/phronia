@@ -20,7 +20,7 @@ import {
   channelThreadPost,
   channelThreadRename,
   channelThreadShow,
-  channelThreadsList,
+  channelForumList,
 } from "./threads.js";
 import { channelTitleClear, channelTitleSet } from "./title.js";
 import { runSupervisor } from "./supervisor.js";
@@ -38,7 +38,7 @@ export function registerChannelCommand(program: Command): void {
     .command("create <name>")
     .description("Create a new channel (collaboration session)")
     .option("--scope <scope>", "channel scope: project | global")
-    .option("--type <type>", "channel type: chat | threads", "chat")
+    .option("--type <type>", "channel type: chat | forum", "chat")
     .option("--task <path>", "associated Trellis task directory")
     .option("--project <slug>", "project slug")
     .option("--labels <csv>", "comma-separated labels")
@@ -575,7 +575,7 @@ export function registerChannelCommand(program: Command): void {
 
   channel
     .command("post <name> <action>")
-    .description("Append a structured thread event to a threads channel")
+    .description("Append a structured thread event to a forum channel")
     .requiredOption("--as <agent>", "agent name posting")
     .option("--scope <scope>", "channel scope: project | global")
     .option("--thread <key>", "thread key (required except opened)")
@@ -630,16 +630,16 @@ export function registerChannelCommand(program: Command): void {
     );
 
   channel
-    .command("threads <name>")
-    .description("List threads in a thread channel")
+    .command("forum <name>")
+    .description("List threads in a forum channel")
     .option("--scope <scope>", "channel scope: project | global")
     .option("--status <status>", "filter by thread status")
     .option("--raw", "print raw reduced thread JSON")
     .action(async (name: string, raw: Record<string, unknown>) => {
       try {
-        await channelThreadsList(
+        await channelForumList(
           name,
-          raw as Parameters<typeof channelThreadsList>[1],
+          raw as Parameters<typeof channelForumList>[1],
         );
       } catch (err) {
         console.error(
@@ -679,7 +679,7 @@ export function registerChannelCommand(program: Command): void {
 
   thread
     .command("rename <name> <oldThread> <newThread>")
-    .description("Rename a thread inside a threads channel")
+    .description("Rename a thread inside a forum channel")
     .requiredOption("--as <agent>", "agent name")
     .option("--scope <scope>", "channel scope: project | global")
     .action(

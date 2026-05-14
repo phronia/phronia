@@ -20,7 +20,8 @@ import {
  * Covers:
  *   - create event metadata (type, description, labels, context)
  *   - legacy `linkedContext` field on create / thread events
- *   - legacy `type:"thread"` → projected `type:"threads"`
+ *   - legacy `type:"thread"` / `type:"threads"` are NOT normalized to
+ *     `forum`; they project to `chat` so thread APIs reject them
  *   - `kind:"context", target:"channel"` add/delete projection
  *   - `kind:"channel", action:"title"` set/clear projection
  */
@@ -101,6 +102,9 @@ export function metadataFromCreateEvent(
 }
 
 function normalizeChannelType(value: unknown): ChannelType {
-  if (value === "threads" || value === "thread") return "threads";
+  if (value === "forum") return "forum";
+  // Legacy `"thread"` / `"threads"` values are intentionally not
+  // upgraded to `forum`; they fall through to `chat` so forum/thread
+  // APIs reject pre-rename channels.
   return "chat";
 }
