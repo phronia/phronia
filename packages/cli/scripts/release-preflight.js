@@ -27,6 +27,13 @@
  *                                    on @mindfoldhq/trellis-core resolves
  *                                    to the exact shared version (not
  *                                    "workspace:*" or a loose range).
+ *   verify-npm [--package all|core|cli]
+ *                                    Verify the published package version and
+ *                                    dist-tag are visible on the public npm
+ *                                    registry. Used after CI publish so a
+ *                                    registry visibility problem fails the
+ *                                    release pipeline instead of being fixed
+ *                                    by a local publish.
  *
  * Idempotency rule: a CI rerun on the same tag must not republish an
  * already-published version, but must also never silently paper over a
@@ -82,7 +89,7 @@ export function computeNpmTag(version) {
 export function npmVersionExists(pkgName, version) {
   try {
     const out = execSync(
-      `npm view ${pkgName}@${version} version --json`,
+      `npm view ${pkgName}@${version} version --json --registry=https://registry.npmjs.org/`,
       { encoding: "utf-8", stdio: ["pipe", "pipe", "pipe"], timeout: 15_000 },
     ).trim();
     if (!out) return false;
@@ -96,6 +103,36 @@ export function npmVersionExists(pkgName, version) {
     // the version doesn't exist, because that would trigger a republish.
     throw err;
   }
+}
+
+function npmViewJSON(args) {
+  const out = execSync(
+    `npm view ${args} --json --registry=https://registry.npmjs.org/`,
+    { encoding: "utf-8", stdio: ["pipe", "pipe", "pipe"], timeout: 15_000 },
+  ).trim();
+  return out ? JSON.parse(out) : null;
+}
+
+async function sleep(ms) {
+  await new Promise((resolve) => setTimeout(resolve, ms));
+}
+
+async function retry(label, fn) {
+  const attempts = 6;
+  let lastError;
+  for (let i = 1; i <= attempts; i += 1) {
+    try {
+      return fn();
+    } catch (err) {
+      lastError = err;
+      if (i === attempts) break;
+      console.error(
+        `${YELLOW}! ${label} not visible yet; retrying (${i}/${attempts})${RESET}`,
+      );
+      await sleep(10_000);
+    }
+  }
+  throw lastError;
 }
 
 function fail(msg) {
@@ -228,7 +265,36 @@ function verifyPackedCli() {
   }
 }
 
-function main() {
+async function verifyNpm({ packageFilter }) {
+  const v = checkVersions({ requireTag: false });
+  const tag = computeNpmTag(v.cliVersion);
+  const packages = [
+    { key: "core", name: v.coreName },
+    { key: "cli", name: v.cliName },
+  ].filter((pkg) => packageFilter === "all" || pkg.key === packageFilter);
+
+  for (const pkg of packages) {
+    await retry(`${pkg.name}@${v.cliVersion}`, () => {
+      const version = npmViewJSON(`${pkg.name}@${v.cliVersion} version`);
+      if (version !== v.cliVersion) {
+        fail(
+          `${pkg.name}@${v.cliVersion} is not visible on the public npm registry.`,
+        );
+      }
+      const taggedVersion = npmViewJSON(`${pkg.name}@${tag} version`);
+      if (taggedVersion !== v.cliVersion) {
+        fail(
+          `${pkg.name}@${tag} resolves to ${taggedVersion ?? "nothing"}, expected ${v.cliVersion}.`,
+        );
+      }
+      console.log(
+        `${GREEN}ok${RESET} ${pkg.name}@${v.cliVersion} visible on npm tag "${tag}".`,
+      );
+    });
+  }
+}
+
+async function main() {
   const [cmd, ...rest] = process.argv.slice(2);
   if (!cmd || cmd === "--help" || cmd === "-h") {
     console.log(
@@ -237,7 +303,8 @@ function main() {
         `  check-versions [--require-tag]\n` +
         `  npm-tag\n` +
         `  publish-plan [--json|--github]\n` +
-        `  verify-packed-cli\n`,
+        `  verify-packed-cli\n` +
+        `  verify-npm [--package all|core|cli]\n`,
     );
     return;
   }
@@ -261,6 +328,15 @@ function main() {
   }
   if (cmd === "verify-packed-cli") {
     verifyPackedCli();
+    return;
+  }
+  if (cmd === "verify-npm") {
+    const packageIndex = rest.indexOf("--package");
+    const packageArg = packageIndex >= 0 ? rest[packageIndex + 1] : "all";
+    if (!["all", "core", "cli"].includes(packageArg)) {
+      fail(`--package must be one of: all, core, cli`);
+    }
+    await verifyNpm({ packageFilter: packageArg });
     return;
   }
   fail(`unknown command: ${cmd}`);

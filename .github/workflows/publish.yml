@@ -84,3 +84,6 @@ jobs:
       - name: Skip @mindfoldhq/trellis (already on npm)
         if: steps.plan.outputs.cli_publish != 'true'
         run: echo "@mindfoldhq/trellis@${{ steps.plan.outputs.version }} already published; skipping."
+
+      - name: Verify published packages on public npm
+        run: node packages/cli/scripts/release-preflight.js verify-npm --package all

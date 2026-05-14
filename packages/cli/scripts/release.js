@@ -79,7 +79,7 @@ function main() {
   run("pnpm --filter @mindfoldhq/trellis-core test");
   run("pnpm test");
 
-  run("git add -A -- ':!docs-site'");
+  run("git add -A -- ':!docs-site' ':!marketplace'");
   if (hasGitDiff()) {
     run("git commit -m 'chore: pre-release updates'");
   }

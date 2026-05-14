@@ -6,90 +6,39 @@
 
 ## Overview
 
-This project is a **TypeScript CLI tool** using ES modules. The source code follows a **dogfooding architecture** - Trellis uses its own configuration files (`.cursor/`, `.claude/`, `.trellis/`) as templates for new projects.
+This project is a **TypeScript monorepo** using ES modules. It publishes a CLI package (`@mindfoldhq/trellis`) and a reusable core package (`@mindfoldhq/trellis-core`). The source code also follows a **dogfooding architecture** - Trellis uses its own configuration files (`.cursor/`, `.claude/`, `.trellis/`) as templates for new projects.
 
 ---
 
 ## Directory Layout
 
 ```
-src/
-├── cli/                 # CLI entry point and argument parsing
-│   └── index.ts         # Main CLI entry (Commander.js setup)
-├── commands/            # Command implementations (one file per command)
-│   ├── init.ts          # `trellis init` — bootstrap / joiner / reinit flows
-│   ├── update.ts        # `trellis update` — template hash refresh + migrations
-│   ├── uninstall.ts     # `trellis uninstall` — manifest scan + scrubber dispatch
-│   └── mem.ts           # `trellis mem` — multi-platform session indexing (list/search/context/extract/projects)
-├── configurators/       # Configuration generators
-│   ├── index.ts         # Platform registry (PLATFORM_FUNCTIONS, derived helpers)
-│   ├── shared.ts        # Shared utilities (resolvePlaceholders, writeSkills, writeAgents, writeSharedHooks, pull-prelude builders)
-│   ├── antigravity.ts   # Antigravity configurator
-│   ├── claude.ts        # Claude Code configurator
-│   ├── codebuddy.ts     # CodeBuddy configurator
-│   ├── codex.ts         # Codex configurator
-│   ├── copilot.ts       # Copilot configurator
-│   ├── cursor.ts        # Cursor configurator
-│   ├── droid.ts         # Droid configurator
-│   ├── gemini.ts        # Gemini CLI configurator
-│   ├── kilo.ts          # Kilo configurator
-│   ├── kiro.ts          # Kiro configurator
-│   ├── opencode.ts      # OpenCode configurator
-│   ├── pi.ts            # Pi Agent configurator (TS extension pattern)
-│   ├── qoder.ts         # Qoder configurator
-│   ├── windsurf.ts      # Windsurf configurator
-│   └── workflow.ts      # Creates .trellis/ structure
-├── constants/           # Shared constants and paths
-│   └── paths.ts         # Path constants (centralized)
-├── templates/           # Template utilities and platform templates
-│   ├── template-utils.ts # createTemplateReader() factory — eliminates boilerplate
-│   ├── extract.ts       # Template extraction utilities (.trellis/ files)
-│   ├── common/          # Single source of truth for commands + skills
-│   │   ├── commands/    # Slash commands (start.md, finish-work.md)
-│   │   ├── skills/      # Auto-triggered skills (before-dev, brainstorm, check, break-loop, update-spec)
-│   │   ├── bundled-skills/ # Multi-file bundled skills (e.g. trellis-meta/)
-│   │   └── index.ts     # getCommandTemplates(), getSkillTemplates(), getBundledSkillTemplates()
-│   ├── shared-hooks/    # Platform-independent Python hook scripts
-│   │   ├── index.ts     # getSharedHookScripts()
-│   │   ├── session-start.py
-│   │   ├── inject-shell-session-context.py
-│   │   ├── inject-workflow-state.py
-│   │   └── inject-subagent-context.py
-│   ├── claude/          # Claude Code templates (agents, hooks, settings)
-│   ├── codebuddy/       # CodeBuddy templates (agents, settings)
-│   ├── codex/           # Codex templates (agents, hooks.json)
-│   ├── copilot/         # Copilot templates (prompts, hooks, hooks.json)
-│   ├── cursor/          # Cursor templates (agents, hooks.json)
-│   ├── droid/           # Droid templates (droids, settings)
-│   ├── gemini/          # Gemini templates (agents, settings)
-│   ├── kiro/            # Kiro templates (agents as JSON)
-│   ├── opencode/        # OpenCode templates (agents, plugin, lib)
-│   ├── pi/              # Pi Agent templates (agents, extensions, settings.json)
-│   ├── qoder/           # Qoder templates (skills, settings)
-│   ├── markdown/        # Generic markdown templates
-│   │   ├── spec/        # Spec templates (*.md.txt)
-│   │   ├── agents.md    # Project root file template
-│   │   ├── gitignore.txt # .gitignore template
-│   │   ├── workspace-index.md # Workspace index template
-│   │   ├── worktree.yaml.txt  # Legacy worktree template — orphaned (not exported by markdown/index.ts; left in tree but never written)
-│   │   └── index.ts     # Template exports
-│   └── trellis/         # .trellis/ workflow templates (scripts, workflow.md)
-│
-│   Note: Kilo, Antigravity, Windsurf have no template dir — content is generated
-│   at runtime by their configurators.
-├── types/               # TypeScript type definitions
-│   └── ai-tools.ts      # AI tool types and registry
-├── utils/               # Shared utility functions
-│   ├── compare-versions.ts # Semver comparison with prerelease support
-│   ├── file-writer.ts   # File writing with conflict handling (WriteMode = ask|force|skip|append)
-│   ├── posix.ts         # toPosix() — normalize Windows paths for cross-platform string compare
-│   ├── project-detector.ts # Project type detection (monorepo aware)
-│   ├── proxy.ts         # HTTPS_PROXY / NO_PROXY support for remote template fetch
-│   ├── task-json.ts     # Canonical TaskJson factory (emptyTaskJson) — single TS source of truth
-│   ├── template-fetcher.ts # Remote template download from GitHub
-│   ├── template-hash.ts # Template hash tracking for update detection
-│   └── uninstall-scrubbers.ts # Per-format scrubbers (settings.json, hooks.json, config.toml, package.json) used by `trellis uninstall`
-└── index.ts             # Package entry point (exports public API)
+packages/
+├── core/                # @mindfoldhq/trellis-core: reusable APIs
+│   ├── src/
+│   │   ├── channel/     # channel/thread storage, reducers, event protocol helpers
+│   │   ├── task/        # reusable task record helpers
+│   │   ├── testing/     # test helpers intended for package consumers
+│   │   └── index.ts     # package public API
+│   └── package.json     # explicit public exports
+└── cli/                 # @mindfoldhq/trellis: user-facing CLI
+    ├── src/
+    │   ├── cli/         # CLI entry point and argument parsing
+    │   │   └── index.ts # Main CLI entry (Commander.js setup)
+    │   ├── commands/    # Command implementations (one file or folder per command)
+    │   │   ├── init.ts
+    │   │   ├── update.ts
+    │   │   ├── uninstall.ts
+    │   │   ├── mem.ts
+    │   │   └── channel/ # Channel command renderers and CLI orchestration
+    │   ├── configurators/
+    │   ├── constants/
+    │   ├── templates/
+    │   ├── types/
+    │   ├── utils/
+    │   └── index.ts     # CLI package public API
+    ├── scripts/         # release, manifest, template copy, and verification scripts
+    └── package.json
 ```
 
 ### Dogfooding Directories (Project Root)
@@ -183,13 +132,16 @@ dist/
 
 | Layer | Directory | Responsibility |
 |-------|-----------|----------------|
-| CLI | `cli/` | Parse arguments, display help, call commands |
-| Commands | `commands/` | Implement CLI commands, orchestrate actions |
-| Configurators | `configurators/` | Copy/generate configuration for tools |
-| Templates | `templates/` | Extract template content, provide utilities |
-| Types | `types/` | TypeScript type definitions |
-| Utils | `utils/` | Reusable utility functions |
-| Constants | `constants/` | Shared constants (paths, names) |
+| Core | `packages/core/src/` | Reusable APIs, reducers, storage helpers, typed contracts |
+| CLI | `packages/cli/src/cli/` | Parse arguments, display help, call commands |
+| Commands | `packages/cli/src/commands/` | Implement CLI commands, orchestrate actions |
+| Configurators | `packages/cli/src/configurators/` | Copy/generate configuration for tools |
+| Templates | `packages/cli/src/templates/` | Extract template content, provide utilities |
+| Types | `packages/cli/src/types/` | CLI-specific TypeScript type definitions |
+| Utils | `packages/cli/src/utils/` | CLI-specific utility functions |
+| Constants | `packages/cli/src/constants/` | CLI constants (paths, names) |
+
+Shared logic belongs in `packages/core/src/` when it is useful outside terminal command rendering. Package boundary rules live in `trellis-core-sdk.md`.
 
 ### Configurator Pattern
 

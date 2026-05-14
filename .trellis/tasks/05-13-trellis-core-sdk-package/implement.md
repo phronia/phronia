@@ -70,6 +70,11 @@
 11. [x] One npm dist-tag computed in `publish-plan` (via `computeNpmTag`) and exported through `$GITHUB_OUTPUT.tag`; both publish steps consume the same `steps.plan.outputs.tag`.
 12. [x] Publish is idempotent: `publish-plan` queries `npm view <pkg>@<version> version` for each package and emits `core_publish` / `cli_publish` booleans. Already-published versions are skipped with a log line; mismatches still fail loudly in `check-versions` before the plan step runs. A rerun for the same tag with core already on npm continues to publish CLI without republishing core.
 13. [x] Kept both `release.published` and `push.tags: v*` triggers — idempotency from (12) plus publish workflow concurrency on the tag makes duplicate triggers safe; the workflow header documents the rationale.
+14. [x] Added `release-preflight.js verify-npm --package all|core|cli` as the CI post-publish public registry visibility gate. It validates the exact published package version and computed npm dist-tag for both `@mindfoldhq/trellis-core` and `@mindfoldhq/trellis`.
+15. [x] `.github/workflows/publish.yml` now runs `verify-npm --package all` after publish/skip steps so registry visibility issues fail in CI instead of being repaired by local publication.
+16. [x] `release.js` excludes both `docs-site` and `marketplace` from the automatic pre-release staging commit, matching the documented submodule commit ordering.
+17. [x] Added `.trellis/spec/cli/backend/trellis-core-sdk.md` and refreshed `release-process.md`, `directory-structure.md`, and backend `index.md` with core/CLI boundaries, CI-only publishing, dual-package versioning, beta/rc/GA lifecycle, and release preflight rules.
+18. [x] Synced `.codex/skills/create-manifest/SKILL.md` and `.claude/commands/trellis/create-manifest.md` so manifest creation now analyzes `packages/cli/src/` and `packages/core/src/`, records dual-package release rules, and forbids local npm publishing.
 
 ## Verification
 
@@ -109,7 +114,14 @@
 34. [x] Phase 6: `python3 .trellis/scripts/task.py validate .trellis/tasks/05-13-trellis-core-sdk-package` — context manifests valid.
 35. [x] Phase 6: `node --check packages/cli/scripts/{bump-versions.js,release-preflight.js,release.js}` — syntax clean for all release scripts.
 36. [x] Phase 6: `node --check packages/cli/scripts/check-docs-changelog.js` — syntax clean after reusing `computeNext` from `bump-versions.js`.
-37. [ ] Phase 6: end-to-end publish workflow run on a real tag — deferred (needs npm token + tag push).
+37. [x] Phase 6 follow-up: `node --check packages/cli/scripts/release-preflight.js && node --check packages/cli/scripts/release.js` — syntax clean after adding `verify-npm` and excluding `marketplace`.
+38. [x] Phase 6 follow-up: `node packages/cli/scripts/release-preflight.js verify-npm --package all` — confirms `@mindfoldhq/trellis-core@0.6.0-beta.13` and `@mindfoldhq/trellis@0.6.0-beta.13` are visible on public npm under `beta`.
+39. [x] Phase 6 follow-up: `diff -u <(sed '1,5d' .codex/skills/create-manifest/SKILL.md) .claude/commands/trellis/create-manifest.md` — confirms the Codex skill body and Claude slash command body are identical apart from Codex frontmatter.
+40. [x] Phase 6 follow-up: `pnpm typecheck` — root aggregate clean after spec/release-preflight changes.
+41. [x] Phase 6 follow-up: `pnpm lint` — root aggregate clean.
+42. [x] Phase 6 follow-up: `pnpm test` — root aggregate clean (core 56/56, CLI 1191/1191).
+43. [x] Phase 6 follow-up: `trellis channel run release-spec-check --agent check --timeout 10m --stdin` — check agent verdict `[VERDICT] ship`, no blocking or major issues.
+44. [ ] Phase 6: end-to-end publish workflow run on a future real tag — deferred until the next version tag because official npm publishing must stay CI-only.
 
 ## Deferred
 
