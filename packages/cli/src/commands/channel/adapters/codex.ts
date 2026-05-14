@@ -20,7 +20,7 @@ import type { AdapterEvent, ParseResult } from "./types.js";
  *     item/started   webSearch           → progress(kind=web_search, query)
  *     item/started   fileChange          → progress(kind=file_change)
  *     item/completed agentMessage        → say(text, phase)
- *     item/agentMessage/delta            → progress(text_delta)
+ *     item/agentMessage/delta            → progress(kind, stream_id, text_delta)
  *     item/completed commandExecution    → optional progress(status, exitCode)
  *     item/started   collabAgentToolCall → error(reason=collab_blocked, recommendation=set features.multi_agent=false)
  *     turn/completed                     → done
@@ -50,6 +50,8 @@ import type { AdapterEvent, ParseResult } from "./types.js";
 export interface CodexCtx {
   /** id → label tracking outgoing requests, so adapter can recognise their responses. */
   pending: Map<number, "initialize" | "thread/start" | "turn/start" | "other">;
+  /** Codex item id → stream metadata used to classify interleaved deltas. */
+  items: Map<string, CodexItemMeta>;
   /** Last-known thread id (used to scope future requests). */
   threadId?: string;
   /** Monotonic outbound id allocator. */
@@ -57,7 +59,12 @@ export interface CodexCtx {
 }
 
 export function createCodexCtx(): CodexCtx {
-  return { pending: new Map(), nextId: 1 };
+  return { pending: new Map(), items: new Map(), nextId: 1 };
+}
+
+interface CodexItemMeta {
+  type?: string;
+  phase?: string;
 }
 
 interface JsonRpcInbound {
@@ -128,7 +135,7 @@ export function parseCodexLine(line: string, ctx: CodexCtx): ParseResult {
 
   // (3) Notification
   if (msg.method) {
-    return handleNotification(msg);
+    return handleNotification(msg, ctx);
   }
 
   return { events: [] };
@@ -212,18 +219,18 @@ function handleResponse(msg: JsonRpcInbound, ctx: CodexCtx): ParseResult {
   return { events, side };
 }
 
-function handleNotification(msg: JsonRpcInbound): ParseResult {
+function handleNotification(msg: JsonRpcInbound, ctx: CodexCtx): ParseResult {
   const method = msg.method as string;
 
   if (SKIP_METHODS.has(method)) return { events: [] };
 
   switch (method) {
     case "item/started":
-      return handleItemStarted(msg);
+      return handleItemStarted(msg, ctx);
     case "item/completed":
-      return handleItemCompleted(msg);
+      return handleItemCompleted(msg, ctx);
     case "item/agentMessage/delta":
-      return handleAgentMessageDelta(msg);
+      return handleAgentMessageDelta(msg, ctx);
     case "turn/completed":
       return { events: [{ kind: "done", payload: {} }] };
     case "turn/aborted":
@@ -266,9 +273,10 @@ function handleNotification(msg: JsonRpcInbound): ParseResult {
   }
 }
 
-function handleItemStarted(msg: JsonRpcInbound): ParseResult {
+function handleItemStarted(msg: JsonRpcInbound, ctx: CodexCtx): ParseResult {
   const item = ((msg.params ?? {}) as { item?: Record<string, unknown> }).item;
   if (!isObject(item)) return { events: [] };
+  rememberItem(ctx, item);
   const t = item.type as string | undefined;
   switch (t) {
     case "commandExecution":
@@ -388,9 +396,10 @@ function handleItemStarted(msg: JsonRpcInbound): ParseResult {
   }
 }
 
-function handleItemCompleted(msg: JsonRpcInbound): ParseResult {
+function handleItemCompleted(msg: JsonRpcInbound, ctx: CodexCtx): ParseResult {
   const item = ((msg.params ?? {}) as { item?: Record<string, unknown> }).item;
   if (!isObject(item)) return { events: [] };
+  rememberItem(ctx, item);
   const t = item.type as string | undefined;
 
   switch (t) {
@@ -478,19 +487,54 @@ function handleItemCompleted(msg: JsonRpcInbound): ParseResult {
   }
 }
 
-function handleAgentMessageDelta(msg: JsonRpcInbound): ParseResult {
+function handleAgentMessageDelta(
+  msg: JsonRpcInbound,
+  ctx: CodexCtx,
+): ParseResult {
+  const params = msg.params ?? {};
   const delta =
-    ((msg.params ?? {}) as { delta?: string; text?: string }).delta ??
-    ((msg.params ?? {}) as { text?: string }).text;
+    (params as { delta?: string; text?: string }).delta ??
+    (params as { text?: string }).text;
   if (!delta) return { events: [] };
+
+  const itemId =
+    typeof params.itemId === "string" ? (params.itemId as string) : undefined;
+  const item = isObject(params.item) ? params.item : undefined;
+  if (item) rememberItem(ctx, item);
+  const meta =
+    itemId !== undefined ? ctx.items.get(itemId) : item && itemMeta(item);
+  const kind = classifyAgentMessageDelta(meta);
+  const detail: Record<string, unknown> = { kind, text_delta: delta };
+  if (itemId) detail.stream_id = itemId;
+  if (meta?.phase) detail.phase = meta.phase;
+
   return {
     events: [
       {
         kind: "progress",
-        payload: { detail: { text_delta: delta } },
+        payload: { detail },
       },
     ],
   };
+}
+
+function rememberItem(ctx: CodexCtx, item: Record<string, unknown>): void {
+  const id = item.id;
+  if (typeof id !== "string") return;
+  ctx.items.set(id, itemMeta(item));
+}
+
+function itemMeta(item: Record<string, unknown>): CodexItemMeta {
+  return {
+    type: typeof item.type === "string" ? item.type : undefined,
+    phase: typeof item.phase === "string" ? item.phase : undefined,
+  };
+}
+
+function classifyAgentMessageDelta(meta: CodexItemMeta | undefined): string {
+  if (meta?.type === "reasoning") return "reasoning";
+  if (meta?.phase === "commentary") return "commentary";
+  return "output";
 }
 
 function isObject(x: unknown): x is Record<string, unknown> {
