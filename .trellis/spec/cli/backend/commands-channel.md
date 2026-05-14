@@ -320,6 +320,118 @@ type ChannelEventKind = "create" | "join" | "leave" | "message" | "thread" | "co
 
 **Author identity (`by`) shape**: `"main"`, `"<worker-name>"`, `"supervisor:<worker>"`, or `"cli:<command>"` (e.g. `cli:kill`).
 
+### Codex progress stream metadata
+
+#### 1. Scope / Trigger
+
+- Trigger: `packages/cli/src/commands/channel/adapters/codex.ts` converts
+  Codex `app-server` JSON-RPC notifications into channel `progress` events.
+- This is a cross-layer event contract: the worker adapter writes
+  `events.jsonl`, `messages --raw` exposes the payload, and downstream UI/SDK
+  consumers replay streamed text from the same fields.
+- Codex can emit more than one `agentMessage` stream in a turn. Treating all
+  `item/agentMessage/delta` payloads as one untyped `text_delta` stream makes
+  interleaved commentary/final-output tokens unrecoverable.
+
+#### 2. Signatures
+
+```ts
+type CodexProgressDeltaDetail = {
+  kind: "output" | "commentary" | "reasoning";
+  text_delta: string;          // backward-compatible streamed token/chunk
+  stream_id?: string;          // Codex params.itemId when present
+  phase?: string;              // Codex item.phase when known
+};
+
+type CodexItemMeta = {
+  type?: string;               // item.type from item/started or item/completed
+  phase?: string;              // item.phase from item/started or item/completed
+};
+```
+
+Adapter state:
+
+```ts
+interface CodexCtx {
+  pending: Map<number, "initialize" | "thread/start" | "turn/start" | "other">;
+  items: Map<string, CodexItemMeta>;
+  threadId?: string;
+  nextId: number;
+}
+```
+
+#### 3. Contracts
+
+| Codex input | Required adapter behavior |
+|-------------|---------------------------|
+| `item/started` with `item.id` | Store `item.id -> {type, phase}` in `ctx.items`; do not emit an event for plain `agentMessage`, `reasoning`, `plan`, or prompt scaffolding items. |
+| `item/completed` with `item.id` | Refresh `ctx.items` before projecting completed events, so later deltas for the same id still have metadata. |
+| `item/agentMessage/delta` with `params.delta` or `params.text` | Emit one `progress` event with `detail.text_delta` unchanged. |
+| `item/agentMessage/delta` with `params.itemId` | Add `detail.stream_id = params.itemId`. |
+| Known `phase:"commentary"` | Add `detail.kind = "commentary"` and `detail.phase = "commentary"`. |
+| Known `phase:"final_answer"` or unknown phase on `agentMessage` | Add `detail.kind = "output"`; add `detail.phase` only when known. |
+| Known `type:"reasoning"` | Add `detail.kind = "reasoning"`. |
+| Completed `agentMessage` with `phase:"commentary"` | Continue projecting it as `progress.detail.kind = "commentary"` with summarized `text_delta`. |
+| Completed `agentMessage` with `phase:"final_answer"` or no phase | Continue projecting it as `kind:"message"`; this remains the canonical completed assistant answer. |
+
+Consumer contract:
+
+- Group streamed Codex deltas by `detail.stream_id` when present.
+- Use `detail.kind` for lane routing (`output`, `commentary`, `reasoning`).
+- Keep `kind:"message"` as the durable completed assistant answer; streamed
+  deltas are activity/progress, not the authoritative final body.
+
+#### 4. Validation & Error Matrix
+
+| Condition | Behavior |
+|-----------|----------|
+| Delta event has no `delta` and no `text` | Emit no event. |
+| Delta event has `itemId` but no remembered metadata | Emit `detail.kind = "output"`, keep `detail.stream_id`, keep `detail.text_delta`. |
+| Delta event has inline `params.item` | Record that item metadata before classification. |
+| `item.id` is missing or not a string | Do not write to `ctx.items`; continue normal event projection. |
+| Unknown `item.type` / unknown `phase` | Do not throw; default streamed delta kind to `output`. |
+| Multiple streams interleave in one turn | Do not buffer/reorder globally; preserve event order and make streams separable through `stream_id`. |
+
+#### 5. Good/Base/Bad Cases
+
+- Good: `item/started(agentMessage id=msg_final phase=final_answer)` followed
+  by `item/agentMessage/delta(itemId=msg_final)` emits
+  `{kind:"output", stream_id:"msg_final", phase:"final_answer", text_delta}`.
+- Base: `item/agentMessage/delta(itemId=msg_unknown)` without prior metadata
+  emits `{kind:"output", stream_id:"msg_unknown", text_delta}`.
+- Bad: two Codex streams write only `{text_delta}`; replay consumers concatenate
+  both streams into unreadable text and cannot reconstruct either lane.
+
+#### 6. Tests Required
+
+- Unit: `parseCodexLine` records `item/started` metadata and classifies a
+  commentary delta as `detail.kind = "commentary"`.
+- Unit: interleaved final/commentary streams produce different
+  `detail.stream_id` values and route to `output` vs `commentary`.
+- Unit: unknown `itemId` preserves `detail.text_delta` and adds fallback
+  `detail.kind = "output"` plus `detail.stream_id`.
+- Integration or fixture: recorded Codex trace with interleaved deltas can be
+  replayed without consumers treating the whole turn as one mono stream.
+
+#### 7. Wrong vs Correct
+
+**Wrong** (loses stream identity):
+
+```ts
+return {
+  events: [{ kind: "progress", payload: { detail: { text_delta: delta } } }],
+};
+```
+
+**Correct** (old field preserved, new fields make streams separable):
+
+```ts
+const detail: Record<string, unknown> = { kind, text_delta: delta };
+if (itemId) detail.stream_id = itemId;
+if (meta?.phase) detail.phase = meta.phase;
+return { events: [{ kind: "progress", payload: { detail } }] };
+```
+
 **Channel type semantics**:
 - `chat` is the default and remains timeline-first.
 - `threads` is thread-list-first: `messages <channel>` pretty output starts with a reduced thread list unless event filters are set; `messages --raw` always prints one event per JSONL line.
@@ -639,6 +751,7 @@ trellis channel send trellis-issue --scope global --as main --thread channel-thr
 | `matchesFilter` `to` semantics | unit | (a) event with no `to` passes when filter.to set (broadcast OK), (b) event with `to=X` only passes filter.to=X, (c) `filter.to="exclusive"` requires explicit `to` |
 | Spawn-fail path (ENOENT) | e2e | `PATH=/no/claude trellis channel spawn ...` → events.jsonl has ONE error event, no spawned, no killed; supervisor exited; pid file removed |
 | Happy turn (claude / codex) | e2e | spawn → send "hi" → wait done; assert events sequence is `create → spawned → message(to) → ...progress... → message(by:worker) → done` with no synthesised events |
+| Codex streamed delta metadata | unit/fixture | `parseCodexLine` stores `item/started` metadata; deltas keep `text_delta`, add `kind`, add `stream_id` from `itemId`, and route interleaved `final_answer` / `commentary` streams into different lanes |
 | Cold-exit fallback synthesis | e2e | kill worker child PID directly (bypassing supervisor); assert `finalizeOnExit` synthesises terminal event with `by=workerName`, `synthesized:true` |
 | Kill ladder | e2e | `channel kill`, assert events.jsonl has `killed{reason:"explicit-kill", signal:"SIGTERM"}` AND supervisor process gone within 6s |
 | `markTerminalEmitted` race | concurrent | trigger adapter `done` and `child.on("exit")` near-simultaneously; assert exactly one terminal event (no duplicate synthesised one) |
