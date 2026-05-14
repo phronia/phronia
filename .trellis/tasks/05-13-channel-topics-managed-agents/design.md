@@ -117,6 +117,69 @@ Thread 级 `description` 和 `text` 分工不同：
 }
 ```
 
+## 后续事件归属与业务扩展字段
+
+V1 先保留现有轻量事件模型：`by` 表示说话者 alias，`to` 表示路由目标，`kind` /
+`action` 表示 Trellis 自己理解的事件类别和 thread 状态变化。这个模型足够支撑
+本地 CLI、worker 协作和 thread board。
+
+Vine 这类多用户、多 agent、多项目产品接入时，问题不是给 `by` 加业务字段，而是
+把 Trellis 自己需要理解的字段和业务系统自己的字段分层：
+
+```json
+{
+  "kind": "thread",
+  "action": "comment",
+  "thread": "vine-trellis-core-sdk-needs",
+  "by": "Alice",
+  "to": ["codex-review"],
+  "origin": "api",
+  "text": "Vine needs channel-as-library before daemon cutover.",
+  "meta": {
+    "vine": {
+      "authorId": "user_abc",
+      "projectId": "project_123",
+      "taskId": "task_456"
+    }
+  }
+}
+```
+
+字段边界：
+
+- `by`：Trellis 轻量说话者 alias，用于 pretty output、`--from`、`wait --from`。
+  它不是真实用户 ID，不承担权限语义。
+- `to`：Trellis 路由目标，用于把消息投递给 channel worker / agent handle。
+  它不是业务身份。
+- `origin`：事件写入入口，只允许 `cli | api | worker`。`cli` 是
+  `trellis channel ...` 命令写入；`api` 是未来 channel core/library 调用写入；
+  `worker` 是 channel supervisor / worker runtime 写入。
+- `meta`：业务系统扩展区，必须是 JSON object。Trellis 原样持久化、读取、
+  raw 输出和可选过滤，但不解释其中的业务含义。
+
+Trellis 不定义 `user`、`org`、`displayName`、权限或 SaaS 租户模型。Vine 可以把
+这些信息放在 `meta.vine` 下，并由 Vine 自己解析、鉴权和展示。Trellis 只保证
+事件归属、路由和扩展字段的稳定 pass-through。
+
+`origin` 不应是 object；先用字符串保持最小协议。worker pid、provider session、
+Vine server 名称等细节进入 `meta.trellis` 或业务 namespace。当前 create event
+里用于标记 `channel run` 的 `origin: "run"` 与这个后续语义冲突；做 0.7
+事件模型时应迁移为 `meta.trellis.createMode = "run"` 或等价字段。
+
+`meta` 约束：
+
+- 必须是 JSON object，不能是 string / array / null。
+- 不存 secrets、tokens、private keys。
+- CLI pretty mode 默认不展开完整 `meta`；`messages --raw` 完整输出。
+- 未来如提供过滤，只做简单 JSON path equality，不把业务 schema 写进 Trellis。
+
+事件流分层也应走同一个思路。Trellis 顶层 `kind` 继续少而稳定：
+`create / spawned / message / thread / progress / done / error / killed / respawned`
+等。Thread 变化继续使用 `kind: "thread"` + `action`。Agent runtime 的
+`text_delta`、`tool_call`、`tool_result`、`reasoning` 等可以作为 runtime 类
+events 或放入 `progress.detail`，但业务 UI 应按 `kind/action/meta` 过滤和合并，
+不要把真实业务身份塞进 `by`。
+
 ## 用户可见命令形态
 
 ```bash

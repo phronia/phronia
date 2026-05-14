@@ -784,3 +784,36 @@ Built the trellis channel command tree: 11 subcommands, claude/codex worker adap
 ### Next Steps
 
 - None - task complete
+
+
+## Session 159: Core mem and forum channels
+
+**Date**: 2026-05-14
+**Task**: Core mem and forum channels
+**Branch**: `feat/v0.6.0-beta`
+
+### Summary
+
+Added the @mindfoldhq/trellis-core/mem subpath API, converted trellis mem into a CLI wrapper, renamed channel thread-board commands to forum terminology, updated specs, and passed Trellis check review.
+
+### Main Changes
+
+(Add details)
+
+### Git Commits
+
+| Hash | Message |
+|------|---------|
+| `3e53e17` | (see git log) |
+
+### Testing
+
+- [OK] (Add test results)
+
+### Status
+
+[OK] **Completed**
+
+### Next Steps
+
+- None - task complete

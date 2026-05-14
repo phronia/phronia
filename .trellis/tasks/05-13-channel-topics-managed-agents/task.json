@@ -18,7 +18,9 @@
   "commit": null,
   "pr_url": null,
   "subtasks": [],
-  "children": [],
+  "children": [
+    "05-13-channel-post-text-input"
+  ],
   "parent": null,
   "relatedFiles": [],
   "notes": "",
