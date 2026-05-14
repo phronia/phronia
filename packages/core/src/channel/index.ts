@@ -12,6 +12,7 @@ export type {
   ContextMutationAction,
   EventOrigin,
   ThreadAction,
+  InboxPolicy,
 } from "./internal/store/schema.js";
 
 export {
@@ -19,10 +20,12 @@ export {
   CHANNEL_TYPES,
   THREAD_ACTIONS,
   EVENT_ORIGINS,
+  INBOX_POLICIES,
   parseChannelScope,
   parseChannelType,
   parseThreadAction,
   parseEventOrigin,
+  parseInboxPolicy,
   normalizeThreadKey,
   buildContextEntries,
   contextEntryKey,
@@ -43,16 +46,55 @@ export type {
   DoneChannelEvent,
   ErrorChannelEvent,
   ProgressChannelEvent,
+  UndeliverableChannelEvent,
+  InterruptRequestedChannelEvent,
+  TurnStartedChannelEvent,
+  TurnFinishedChannelEvent,
+  InterruptedChannelEvent,
+  InterruptReason,
+  InterruptMethod,
+  InterruptOutcome,
+  UndeliverableReason,
+  ReadChannelEventsPagination,
 } from "./internal/store/events.js";
 
 export {
   CHANNEL_EVENT_KINDS,
+  DEFAULT_CURSOR_PAGE_SIZE,
   parseChannelKind,
   isCreateEvent,
   isThreadEvent,
   isContextEvent,
   isChannelMetadataEvent,
 } from "./internal/store/events.js";
+
+export type {
+  WorkerState,
+  WorkerLifecycle,
+  WorkerActivity,
+  WorkerRegistry,
+} from "./internal/store/worker-state.js";
+
+export {
+  reduceWorkerRegistry,
+  isTerminalLifecycle,
+} from "./internal/store/worker-state.js";
+
+export {
+  DEFAULT_INBOX_POLICY,
+  matchesInboxPolicy,
+} from "./internal/store/inbox.js";
+
+export type {
+  DeliveryMode,
+  UndeliverableTarget,
+} from "./internal/store/delivery.js";
+
+export {
+  DELIVERY_MODES,
+  parseDeliveryMode,
+  classifyDelivery,
+} from "./internal/store/delivery.js";
 
 export type { ChannelEventFilter } from "./internal/store/filter.js";
 export type { WatchFilter } from "./internal/store/watch.js";
@@ -110,11 +152,60 @@ export {
   listForumThreads,
   showThread,
 } from "./api/read.js";
+export type { ReadChannelEventsOptions } from "./api/read.js";
 
 export {
   watchChannelEvents,
 } from "./api/watch.js";
 export type { WatchChannelOptions } from "./api/watch.js";
+
+export {
+  watchChannels,
+  channelCursorKey,
+} from "./api/watch-channels.js";
+export type {
+  WatchChannelsInput,
+  CrossChannelEvent,
+  ChannelCursor,
+  ChannelCursorKey,
+} from "./api/watch-channels.js";
+
+export {
+  listWorkers,
+  watchWorkers,
+  probeWorkerRuntime,
+  reconcileWorkerLiveness,
+} from "./api/workers.js";
+export type {
+  ListWorkersInput,
+  WatchWorkersInput,
+  WorkerRuntimeObservation,
+  ProbeWorkerRuntimeInput,
+  ReconcileWorkerLivenessInput,
+  ReconcileWorkerLivenessResult,
+} from "./api/workers.js";
+
+export { spawnWorker } from "./api/spawn.js";
+export {
+  requestInterrupt,
+  interruptWorker,
+} from "./api/interrupt.js";
+export type {
+  InterruptWorkerInput,
+  InterruptWorkerResult,
+  InterruptDelivery,
+} from "./api/interrupt.js";
+
+export type {
+  WorkerStartInput,
+  WorkerRuntimeHandle,
+  WorkerInterruptInput,
+  WorkerInterruptResult,
+  WorkerStopInput,
+  WorkerStopResult,
+  WorkerRuntime,
+  SpawnWorkerInput,
+} from "./api/runtime.js";
 
 export { resolveChannelRef } from "./api/resolve.js";
 export type { ResolveChannelRefOptions } from "./api/resolve.js";

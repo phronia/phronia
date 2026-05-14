@@ -13,9 +13,17 @@ import type { ChildProcessByStdio } from "node:child_process";
 import fs from "node:fs";
 import type { Readable, Writable } from "node:stream";
 
+import {
+  DEFAULT_INBOX_POLICY,
+  matchesInboxPolicy,
+  type InboxPolicy,
+} from "@mindfoldhq/trellis-core/channel";
+
 import type { WorkerAdapter } from "../adapters/index.js";
+import { appendEvent } from "../store/events.js";
 import { workerFile } from "../store/paths.js";
 import { watchEvents } from "../store/watch.js";
+import type { TurnTracker } from "./turns.js";
 
 type Child = ChildProcessByStdio<Writable, Readable, Readable>;
 
@@ -26,10 +34,14 @@ export interface InboxWatcherArgs {
   ctx: unknown;
   child: Child;
   signal: AbortSignal;
+  /** Inbox delivery policy. Defaults to `explicitOnly` (legacy behavior). */
+  inboxPolicy?: InboxPolicy;
+  turnTracker?: TurnTracker;
 }
 
 export async function runInboxWatcher(args: InboxWatcherArgs): Promise<void> {
   const { channelName, workerName, adapter, ctx, child, signal } = args;
+  const inboxPolicy = args.inboxPolicy ?? DEFAULT_INBOX_POLICY;
   // Resume from persisted cursor: first-time spawn → 0 (read full backlog);
   // respawn after kill → last forwarded seq (no replay).
   let cursor = readInboxCursor(channelName, workerName);
@@ -38,7 +50,7 @@ export async function runInboxWatcher(args: InboxWatcherArgs): Promise<void> {
     channelName,
     {
       self: workerName, // ignore our own events
-      to: workerName, // workers ONLY consume explicit `to`
+      to: workerName, // explicit-to-other is filtered here; broadcasts pass
       kind: "message",
     },
     // First run with cursor=0 reads backlog from start; subsequent runs
@@ -47,12 +59,10 @@ export async function runInboxWatcher(args: InboxWatcherArgs): Promise<void> {
     { signal, sinceSeq: cursor, fromStart: cursor === 0 ? true : undefined },
   )) {
     if (signal.aborted) return;
-    // Workers must NOT consume each other's broadcast `message` events.
-    // Only ingest messages explicitly addressed to this worker via `to`.
-    const evTo = (ev as { to?: string | string[] }).to;
-    if (!evTo) continue;
-    const toList = Array.isArray(evTo) ? evTo : [evTo];
-    if (!toList.includes(workerName)) continue;
+    // Core decides delivery from the worker's inbox policy: explicitOnly
+    // (default) consumes only targeted messages; broadcastAndExplicit
+    // also consumes broadcasts.
+    if (!matchesInboxPolicy(ev, workerName, inboxPolicy)) continue;
 
     const text = ((ev as { text?: string }).text ?? "").trim();
     if (!text) continue;
@@ -79,11 +89,67 @@ export async function runInboxWatcher(args: InboxWatcherArgs): Promise<void> {
       }
     }
 
+    if (tag !== "interrupt") {
+      await waitForActiveTurnToFinish(args.turnTracker, signal);
+      if (signal.aborted) return;
+    }
+
+    if (tag === "interrupt") {
+      await appendEvent(channelName, {
+        kind: "interrupt_requested",
+        by: ev.by,
+        worker: workerName,
+        reason: "user",
+        message: text,
+      });
+      const aborted = args.turnTracker?.abortCurrent();
+      if (aborted) {
+        await appendEvent(channelName, {
+          kind: "turn_finished",
+          by: workerName,
+          worker: workerName,
+          inputSeq: aborted.inputSeq,
+          turnId: aborted.turnId,
+          outcome: "aborted",
+        });
+      }
+      await appendEvent(channelName, {
+        kind: "interrupted",
+        by: workerName,
+        worker: workerName,
+        ...(aborted?.turnId ? { turnId: aborted.turnId } : {}),
+        reason: "user",
+        method: "stdin",
+        outcome: aborted ? "interrupted" : "no-active-turn",
+      });
+    }
+    let turn = args.turnTracker?.begin(ev.seq);
     try {
+      if (turn) {
+        await appendEvent(channelName, {
+          kind: "turn_started",
+          by: workerName,
+          worker: workerName,
+          inputSeq: ev.seq,
+          turnId: turn.turnId,
+        });
+      }
       child.stdin.write(adapter.encodeUserMessage(text, tag, ctx));
       cursor = ev.seq;
       writeInboxCursor(channelName, workerName, cursor);
     } catch {
+      if (turn) {
+        args.turnTracker?.finish();
+        await appendEvent(channelName, {
+          kind: "turn_finished",
+          by: workerName,
+          worker: workerName,
+          inputSeq: turn.inputSeq,
+          turnId: turn.turnId,
+          outcome: "aborted",
+        }).catch(() => undefined);
+        turn = undefined;
+      }
       // stdin closed, worker exiting — bail out
       return;
     }
@@ -128,4 +194,13 @@ function writeInboxCursor(
 
 function sleep(ms: number): Promise<void> {
   return new Promise((r) => setTimeout(r, ms));
+}
+
+async function waitForActiveTurnToFinish(
+  turnTracker: TurnTracker | undefined,
+  signal: AbortSignal,
+): Promise<void> {
+  while (turnTracker?.current() && !signal.aborted) {
+    await sleep(25);
+  }
 }

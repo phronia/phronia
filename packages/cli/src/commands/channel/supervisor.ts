@@ -17,12 +17,18 @@ import fs from "node:fs";
 import path from "node:path";
 import type { Readable, Writable } from "node:stream";
 
+import {
+  DEFAULT_INBOX_POLICY,
+  type InboxPolicy,
+} from "@mindfoldhq/trellis-core/channel";
+
 import { getAdapter, type Provider } from "./adapters/index.js";
 import { appendEvent } from "./store/events.js";
 import { workerFile } from "./store/paths.js";
 import { runInboxWatcher } from "./supervisor/inbox.js";
 import { createShutdown } from "./supervisor/shutdown.js";
 import { startStdoutPump } from "./supervisor/stdout.js";
+import { TurnTracker } from "./supervisor/turns.js";
 
 export interface SupervisorConfig {
   provider: Provider;
@@ -50,6 +56,9 @@ export interface SupervisorConfig {
    *  (recorded on `spawned` for observability — "I passed --jsonl X but
    *  X contained no real entries"). */
   contextManifests?: string[];
+  /** Worker inbox delivery policy (recorded on `spawned`; default
+   *  `explicitOnly`). */
+  inboxPolicy?: InboxPolicy;
 }
 
 type Child = ChildProcessByStdio<Writable, Readable, Readable>;
@@ -240,6 +249,7 @@ export async function runSupervisor(
     workerFile(channelName, workerName, "worker-pid", project),
     String(child.pid),
   );
+  const turnTracker = new TurnTracker();
 
   await appendEvent(
     channelName,
@@ -249,6 +259,7 @@ export async function runSupervisor(
       as: workerName,
       provider: config.provider,
       pid: child.pid,
+      inboxPolicy: config.inboxPolicy ?? DEFAULT_INBOX_POLICY,
       ...(config.agent ? { agent: config.agent } : {}),
       ...(config.contextFiles && config.contextFiles.length > 0
         ? { files: config.contextFiles }
@@ -269,6 +280,7 @@ export async function runSupervisor(
     adapterCtx,
     log,
     shutdown,
+    turnTracker,
   });
 
   // ── timeout guard (anti-zombie) ──
@@ -296,6 +308,8 @@ export async function runSupervisor(
     ctx: adapterCtx,
     child,
     signal: abort.signal,
+    inboxPolicy: config.inboxPolicy ?? DEFAULT_INBOX_POLICY,
+    turnTracker,
   });
 
   // ── adapter handshake (no initial user prompt) ──

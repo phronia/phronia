@@ -142,4 +142,54 @@ describe("Codex channel adapter", () => {
       },
     ]);
   });
+
+  it("emits done after the final answer when turn/completed arrives first", () => {
+    const ctx = createCodexCtx();
+    const completed = parse({ method: "turn/completed", params: {} }, ctx);
+    expect(completed.events).toEqual([]);
+
+    const final = parse(
+      {
+        method: "item/completed",
+        params: {
+          item: {
+            type: "agentMessage",
+            id: "msg_final",
+            text: "DONE",
+            phase: "final_answer",
+          },
+        },
+      },
+      ctx,
+    );
+
+    expect(final.events).toEqual([
+      {
+        kind: "message",
+        payload: { text: "DONE", tag: "final_answer" },
+      },
+      { kind: "done", payload: {} },
+    ]);
+  });
+
+  it("emits done immediately when turn/completed arrives after the final answer", () => {
+    const ctx = createCodexCtx();
+    parse(
+      {
+        method: "item/completed",
+        params: {
+          item: {
+            type: "agentMessage",
+            id: "msg_final",
+            text: "DONE",
+            phase: "final_answer",
+          },
+        },
+      },
+      ctx,
+    );
+
+    const completed = parse({ method: "turn/completed", params: {} }, ctx);
+    expect(completed.events).toEqual([{ kind: "done", payload: {} }]);
+  });
 });

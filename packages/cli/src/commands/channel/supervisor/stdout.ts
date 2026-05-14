@@ -19,6 +19,7 @@ import type { ParseResult } from "../adapters/types.js";
 import { appendEvent } from "../store/events.js";
 import { workerFile } from "../store/paths.js";
 import type { ShutdownController } from "./shutdown.js";
+import type { TurnOutcome, TurnTracker } from "./turns.js";
 
 type Child = ChildProcessByStdio<Writable, Readable, Readable>;
 
@@ -69,6 +70,7 @@ export async function applyParseResult(
   result: ParseResult,
   child: Child,
   shutdown: ShutdownController,
+  turnTracker?: TurnTracker,
 ): Promise<void> {
   for (const ev of result.events) {
     // Claim the terminal slot SYNCHRONOUSLY before the await so a
@@ -83,6 +85,20 @@ export async function applyParseResult(
       by: workerName,
       ...(ev.payload ?? {}),
     });
+    if (ev.kind === "done" || ev.kind === "error") {
+      const turn = turnTracker?.finish();
+      if (turn) {
+        const outcome: TurnOutcome = ev.kind === "done" ? "done" : "error";
+        await appendEvent(channelName, {
+          kind: "turn_finished",
+          by: workerName,
+          worker: workerName,
+          inputSeq: turn.inputSeq,
+          turnId: turn.turnId,
+          outcome,
+        });
+      }
+    }
   }
   if (result.side) {
     const { reply, persistSessionId, persistThreadId } = result.side;
@@ -123,15 +139,31 @@ export function startStdoutPump(args: {
   adapterCtx: unknown;
   log: { write: (data: string) => void };
   shutdown: ShutdownController;
+  turnTracker?: TurnTracker;
 }): void {
-  const { channelName, workerName, child, adapter, adapterCtx, log, shutdown } =
-    args;
+  const {
+    channelName,
+    workerName,
+    child,
+    adapter,
+    adapterCtx,
+    log,
+    shutdown,
+    turnTracker,
+  } = args;
   pumpStdout(
     child.stdout,
     async (line: string) => {
       log.write(line + "\n");
       const result = adapter.parseLine(line, adapterCtx);
-      await applyParseResult(channelName, workerName, result, child, shutdown);
+      await applyParseResult(
+        channelName,
+        workerName,
+        result,
+        child,
+        shutdown,
+        turnTracker,
+      );
     },
     (err) => {
       log.write(`[supervisor] stdout line handler failed: ${err.message}\n`);

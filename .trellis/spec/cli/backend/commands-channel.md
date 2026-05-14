@@ -54,6 +54,8 @@ trellis channel spawn <name> [opts]
   --file <path>          : context file (repeatable, glob OK)
   --jsonl <path>         : manifest of {file, reason} entries (repeatable)
   --by <agent>           : caller identity recorded on `spawned` event
+  --inbox-policy <policy>: explicitOnly | broadcastAndExplicit (default explicitOnly)
+                           — durable worker inbox delivery policy recorded on `spawned`
   → stdout (one line, JSON): {"pid": number, "log": string, "worker": string}
   → throws if worker name in use, agent not found, provider missing, channel not found
 
@@ -65,6 +67,7 @@ trellis channel send <name> [text] [opts]
   --to <agents>          : CSV of target worker names (default: broadcast)
   --stdin                : read body from stdin
   --text-file <path>     : read body from file
+  --delivery-mode <mode> : appendOnly | requireKnownWorker | requireRunningWorker
   [text] positional      : inline body
   → stdout: appended event as JSON
   → throws if none of stdin/textFile/[text] provided
@@ -302,13 +305,14 @@ are kind-specific.
 
 ```ts
 type ChannelEventKind = "create" | "join" | "leave" | "message" | "thread" | "context" | "channel" | "spawned"
-  | "killed" | "respawned" | "progress" | "done" | "error" | "waiting" | "awake";
+  | "killed" | "respawned" | "progress" | "done" | "error" | "waiting" | "awake"
+  | "undeliverable" | "interrupt_requested" | "turn_started" | "turn_finished" | "interrupted";
 ```
 
 | Kind | Required (beyond base) | Optional | Producer |
 |------|------------------------|----------|----------|
 | `create` | `cwd: string`, `scope: "project"\|"global"`, `type: "chat"\|"forum"` | `task: string`, `project: string`, `labels: string[]`, `description: string`, `context: ContextEntry[]`, `ephemeral: true`, `origin: "cli"`, `meta: object` | CLI |
-| `spawned` | `as: string`, `provider: "claude"\|"codex"`, `pid: number` | `agent: string`, `files: string[]`, `manifests: string[]` | supervisor |
+| `spawned` | `as: string`, `provider: "claude"\|"codex"`, `pid: number` | `agent: string`, `files: string[]`, `manifests: string[]`, `inboxPolicy: "explicitOnly"\|"broadcastAndExplicit"` | supervisor / core `spawnWorker` |
 | `message` | `text: string` | `to: string \| string[]`, `tag: string` | any |
 | `thread` | `action: ThreadAction`, `thread: string` | `title`, `text`, `description`, `status`, `labels`, `assignees`, `summary`, `context`, `newThread` | CLI / agents |
 | `context` | `target: "channel"\|"thread"`, `action: "add"\|"delete"`, `context: ContextEntry[]` | `thread` when `target="thread"` | CLI / agents |
@@ -316,10 +320,42 @@ type ChannelEventKind = "create" | "join" | "leave" | "message" | "thread" | "co
 | `progress` | `detail: object` (free-form) | — | adapter |
 | `done` | — | `duration_ms: number`, `total_cost_usd: number`, `num_turns: number`, `synthesized: true`, `exit_code: number` | adapter (real) / supervisor (synthesised) |
 | `error` | `message: string` | `detail: object`, `provider: string`, `synthesized: true`, `exit_code`, `exit_signal` | supervisor / adapter |
-| `killed` | `reason: "explicit-kill"\|"timeout"\|"crash"`, `signal: NodeJS.Signals` | `timeout_ms: number` (if reason="timeout") | supervisor |
+| `killed` | `reason: "explicit-kill"\|"timeout"\|"crash"`, `signal: NodeJS.Signals` | `timeout_ms: number` (if reason="timeout"), `worker: string` | supervisor / cli:kill |
 | `respawned` | (reserved, no fields yet) | — | (future) |
+| `undeliverable` | `targetWorker: string`, `messageSeq: number`, `reason: "worker-terminal"\|"worker-unknown"` | — | core `sendMessage` (strict delivery modes only) |
+| `interrupt_requested` | `worker: string` | `turnId: string`, `reason: "user"\|"system"\|"timeout"\|"superseded"`, `message: string` | core `requestInterrupt` / `interruptWorker` |
+| `turn_started` | `worker: string`, `inputSeq: number` | `turnId: string` | adapter / supervisor |
+| `turn_finished` | `worker: string` | `inputSeq: number`, `turnId: string`, `outcome: "done"\|"error"\|"aborted"` | adapter / supervisor |
+| `interrupted` | `worker: string`, `method: "provider"\|"stdin"\|"signal"\|"none"`, `outcome: "interrupted"\|"queued"\|"unsupported"\|"no-active-turn"\|"failed"` | `turnId: string`, `reason`, `message: string` | core `interruptWorker` |
 
 **Author identity (`by`) shape**: `"main"`, `"<worker-name>"`, `"supervisor:<worker>"`, or `"cli:<command>"` (e.g. `cli:kill`).
+
+**Worker lifecycle / inbox / delivery contracts** (owned by `@mindfoldhq/trellis-core`):
+
+- `reduceWorkerRegistry(events, channel?)` is the SOT worker projection. Worker
+  lifecycle (`starting`/`running`/`done`/`error`/`killed`/`crashed`) and turn
+  activity (`idle`/`mid-turn`) are projected purely from durable events — never
+  from pid files or inbox cursors. `pendingMessageCount` counts deliverable
+  `message` events with seq greater than the latest consumed
+  `turn_started.inputSeq`. Pid files feed `probeWorkerRuntime` /
+  `reconcileWorkerLiveness` only; `reconcileWorkerLiveness` performs no durable
+  writes unless `appendTerminalEvents: true`.
+- Inbox policy applies to `kind:"message"` only. `explicitOnly` (default)
+  consumes only messages whose `to` targets the worker; `broadcastAndExplicit`
+  also consumes broadcasts. Old `spawned` events without `inboxPolicy` project
+  as `explicitOnly`. `matchesInboxPolicy` is the shared SOT used by the worker
+  reducer and the supervisor inbox watcher.
+- `sendMessage` delivery modes: `appendOnly` (default — append-only / pre-spawn
+  backlog compatible), `requireKnownWorker`, `requireRunningWorker`. Strict modes
+  append the `message` event first, then append `undeliverable` for targeted
+  workers failing the selected condition. Broadcast messages never produce
+  `undeliverable`. CLI exposes this through `trellis channel send
+  --delivery-mode <mode>`.
+- Interrupt is a first-class API, not a magic tag. `requestInterrupt` appends
+  `interrupt_requested` only; `interruptWorker(input, runtime)` appends
+  `interrupt_requested`, calls the injected `WorkerRuntime`, then appends
+  `interrupted` with `method` / `outcome`. `tag:"interrupt"` remains CLI
+  compatibility input that normalizes to the first-class API.
 
 ### Codex progress stream metadata
 

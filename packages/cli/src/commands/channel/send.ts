@@ -1,4 +1,5 @@
 import {
+  parseDeliveryMode,
   sendMessage as coreSendMessage,
   type ChannelScope,
 } from "@mindfoldhq/trellis-core/channel";
@@ -15,6 +16,7 @@ export interface SendOptions {
   kind?: string; // legacy alias for tag
   tag?: string;
   to?: string; // CSV
+  deliveryMode?: string;
 }
 
 export async function channelSend(
@@ -30,6 +32,7 @@ export async function channelSend(
   const tag = opts.tag ?? opts.kind;
   const to = parseCsv(opts.to);
   const scope: ChannelScope | undefined = parseChannelScope(opts.scope);
+  const deliveryMode = parseDeliveryMode(opts.deliveryMode);
 
   const event = await coreSendMessage({
     channel: channelName,
@@ -38,6 +41,7 @@ export async function channelSend(
     ...(scope !== undefined ? { scope } : {}),
     ...(tag !== undefined ? { tag } : {}),
     ...(to !== undefined ? { to: to.length === 1 ? to[0] : to } : {}),
+    ...(deliveryMode !== undefined ? { deliveryMode } : {}),
     origin: "cli",
   });
   console.log(JSON.stringify(event));

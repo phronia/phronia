@@ -26,6 +26,7 @@ import { channelTitleClear, channelTitleSet } from "./title.js";
 import { runSupervisor } from "./supervisor.js";
 import { channelWait, parseDuration } from "./wait.js";
 import { parseCsv } from "./store/schema.js";
+import { parseInboxPolicy } from "@mindfoldhq/trellis-core/channel";
 
 export function registerChannelCommand(program: Command): void {
   const channel = program
@@ -119,6 +120,10 @@ export function registerChannelCommand(program: Command): void {
     )
     .option("--stdin", "read message body from stdin")
     .option("--text-file <path>", "read message body from file")
+    .option(
+      "--delivery-mode <mode>",
+      "targeted delivery validation: appendOnly | requireKnownWorker | requireRunningWorker",
+    )
     .argument(
       "[text]",
       "inline text body (otherwise use --stdin / --text-file)",
@@ -137,6 +142,7 @@ export function registerChannelCommand(program: Command): void {
           to?: string;
           stdin?: boolean;
           textFile?: string;
+          deliveryMode?: string;
         };
         try {
           await channelSend(name, {
@@ -148,6 +154,7 @@ export function registerChannelCommand(program: Command): void {
             tag: opts.tag,
             kind: opts.kind,
             to: opts.to,
+            deliveryMode: opts.deliveryMode,
           });
         } catch (err) {
           console.error(
@@ -257,6 +264,10 @@ export function registerChannelCommand(program: Command): void {
       "--by <agent>",
       "identity recorded as the spawn author (defaults to TRELLIS_CHANNEL_AS env or 'main')",
     )
+    .option(
+      "--inbox-policy <policy>",
+      "worker inbox delivery policy: explicitOnly | broadcastAndExplicit (default explicitOnly)",
+    )
     .action(async (name: string, raw: Record<string, unknown>) => {
       const opts = raw as {
         agent?: string;
@@ -270,6 +281,7 @@ export function registerChannelCommand(program: Command): void {
         jsonl?: string[];
         by?: string;
         scope?: string;
+        inboxPolicy?: string;
       };
       if (opts.provider !== undefined && !isProvider(opts.provider)) {
         console.error(
@@ -291,6 +303,7 @@ export function registerChannelCommand(program: Command): void {
           jsonls: opts.jsonl,
           by: opts.by,
           scope: opts.scope,
+          inboxPolicy: parseInboxPolicy(opts.inboxPolicy),
         });
       } catch (err) {
         console.error(

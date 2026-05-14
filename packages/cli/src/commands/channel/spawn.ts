@@ -3,6 +3,8 @@ import fs from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 
+import type { InboxPolicy } from "@mindfoldhq/trellis-core/channel";
+
 import { loadAgent } from "./agent-loader.js";
 import type { Provider } from "./adapters/index.js";
 import { assembleContext } from "./context-loader.js";
@@ -33,6 +35,8 @@ export interface SpawnOptions {
   /** Identity recorded as the `spawned` event author. Defaults to
    *  the calling worker (`TRELLIS_CHANNEL_AS` env) or "main". */
   by?: string;
+  /** Worker inbox delivery policy (default `explicitOnly`). */
+  inboxPolicy?: InboxPolicy;
 }
 
 interface ResolvedSpawn {
@@ -192,6 +196,7 @@ async function spawnLocked(
       resume: opts.resume,
       timeoutMs: opts.timeoutMs,
       spawnedBy,
+      ...(opts.inboxPolicy ? { inboxPolicy: opts.inboxPolicy } : {}),
       ...(opts.agent ? { agent: opts.agent } : {}),
       ...(resolved.contextFiles.length > 0
         ? { contextFiles: resolved.contextFiles }

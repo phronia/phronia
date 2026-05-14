@@ -104,6 +104,41 @@ Do not duplicate `lastSeq`, event classification, linked context parsing, or thr
 
 ---
 
+## Channel runtime substrate
+
+Core owns the reusable channel runtime substrate so CLI, external daemons,
+and future SDK consumers share one implementation instead of each
+re-parsing `events.jsonl`, pid files, and worker state.
+
+Core owns:
+
+- worker lifecycle event schema (`undeliverable`, `interrupt_requested`,
+  `turn_started`, `turn_finished`, `interrupted`) and `spawned.inboxPolicy`
+- `reduceWorkerRegistry` — the SOT worker-state projection (pure; durable
+  events only, never pid files or inbox cursors)
+- `listWorkers` / `watchWorkers` — worker read/watch APIs
+- `probeWorkerRuntime` / `reconcileWorkerLiveness` — host-local pid-file
+  observation, kept separate from the durable projection;
+  `reconcileWorkerLiveness` defaults to no durable writes
+- `readChannelEvents` cursor pagination (`beforeSeq` / `afterSeq` / `limit`);
+  the read-all default is preserved when no option is set
+- `watchChannels` + `channelCursorKey` — cross-channel fan-in with
+  per-channel cursors and dynamic channel discovery (project / global scope)
+- `matchesInboxPolicy` + delivery modes (`classifyDelivery`,
+  `DeliveryMode`) — delivery classification
+- the provider-injected runtime contract (`WorkerRuntime`,
+  `WorkerStartInput`, `WorkerInterruptResult`, …) plus `spawnWorker`,
+  `requestInterrupt`, and `interruptWorker`
+
+CLI owns: Commander argv, terminal rendering, exit codes, provider adapter
+implementations (`WorkerAdapter`), the supervisor process launch / signal /
+pid-file details, and `process.exit`. Core must not import CLI provider
+adapters or shell-specific process behavior — the `WorkerRuntime` is
+injected. Do not move `packages/cli/src/commands/channel/supervisor.ts`
+wholesale into core.
+
+---
+
 ## Build and typecheck contract
 
 Fresh checkouts do not have `packages/core/dist`. The root `typecheck` script must build core before checking the CLI so TypeScript can resolve core declarations.

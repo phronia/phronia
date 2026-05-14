@@ -52,6 +52,10 @@ export interface CodexCtx {
   pending: Map<number, "initialize" | "thread/start" | "turn/start" | "other">;
   /** Codex item id → stream metadata used to classify interleaved deltas. */
   items: Map<string, CodexItemMeta>;
+  /** Whether the current turn has emitted a final user-visible answer. */
+  finalMessageSeen: boolean;
+  /** Codex may send turn/completed before the final agentMessage item. */
+  pendingDone: boolean;
   /** Last-known thread id (used to scope future requests). */
   threadId?: string;
   /** Monotonic outbound id allocator. */
@@ -59,7 +63,13 @@ export interface CodexCtx {
 }
 
 export function createCodexCtx(): CodexCtx {
-  return { pending: new Map(), items: new Map(), nextId: 1 };
+  return {
+    pending: new Map(),
+    items: new Map(),
+    finalMessageSeen: false,
+    pendingDone: false,
+    nextId: 1,
+  };
 }
 
 interface CodexItemMeta {
@@ -232,7 +242,12 @@ function handleNotification(msg: JsonRpcInbound, ctx: CodexCtx): ParseResult {
     case "item/agentMessage/delta":
       return handleAgentMessageDelta(msg, ctx);
     case "turn/completed":
-      return { events: [{ kind: "done", payload: {} }] };
+      if (ctx.finalMessageSeen) {
+        ctx.pendingDone = false;
+        return { events: [{ kind: "done", payload: {} }] };
+      }
+      ctx.pendingDone = true;
+      return { events: [] };
     case "turn/aborted":
       return {
         events: [{ kind: "error", payload: { message: "turn aborted" } }],
@@ -430,14 +445,18 @@ function handleItemCompleted(msg: JsonRpcInbound, ctx: CodexCtx): ParseResult {
           ],
         };
       }
-      return {
-        events: [
-          {
-            kind: "message",
-            payload: phase ? { text, tag: phase } : { text },
-          },
-        ],
-      };
+      ctx.finalMessageSeen = true;
+      const events: AdapterEvent[] = [
+        {
+          kind: "message",
+          payload: phase ? { text, tag: phase } : { text },
+        },
+      ];
+      if (ctx.pendingDone) {
+        ctx.pendingDone = false;
+        events.push({ kind: "done", payload: {} });
+      }
+      return { events };
     }
     case "commandExecution": {
       const exitCode = item.exitCode as number | undefined;
@@ -571,6 +590,8 @@ export function encodeCodexUserMessage(
       "[GRID INTERRUPT — drop current work and follow this new instruction]\n" +
       text;
   }
+  ctx.finalMessageSeen = false;
+  ctx.pendingDone = false;
   return encodeCodexRequest(
     ctx,
     "turn/start",

@@ -118,6 +118,16 @@ export async function* watchEvents(
   let watcher: fs.FSWatcher | null = null;
   try {
     watcher = fs.watch(channelDir(channelName, opts.project), () => wake());
+    watcher.on("error", () => {
+      try {
+        watcher?.close();
+      } catch {
+        // already closed
+      }
+      watcher = null;
+      // Keep the generator alive; the 200ms poll remains the fallback.
+      wake();
+    });
   } catch {
     // ignore — fall back to polling
   }
@@ -145,7 +155,11 @@ export async function* watchEvents(
     }
   } finally {
     clearInterval(poll);
-    watcher?.close();
+    try {
+      watcher?.close();
+    } catch {
+      // already closed
+    }
     opts.signal?.removeEventListener("abort", abortHandler);
   }
 }

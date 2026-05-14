@@ -169,6 +169,29 @@ export function listProjects(): string[] {
   return out;
 }
 
+/**
+ * List channel names inside a project bucket — subdirectories that
+ * contain an `events.jsonl` file. Used by the cross-channel watcher for
+ * dynamic channel discovery.
+ */
+export function listChannelNamesInProject(project: string): string[] {
+  const dir = projectDir(project);
+  if (!fs.existsSync(dir)) return [];
+  const out: string[] = [];
+  let entries: string[];
+  try {
+    entries = fs.readdirSync(dir);
+  } catch {
+    return [];
+  }
+  for (const entry of entries) {
+    if (entry.startsWith(".")) continue;
+    const channelEvents = path.join(dir, entry, "events.jsonl");
+    if (fs.existsSync(channelEvents)) out.push(entry);
+  }
+  return out;
+}
+
 export interface ResolveChannelOptions {
   scope?: ChannelScope;
   cwd?: string;

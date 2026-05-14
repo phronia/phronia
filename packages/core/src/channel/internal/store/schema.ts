@@ -28,6 +28,31 @@ export type ContextMutationAction = "add" | "delete";
 
 export type EventOrigin = "cli" | "api" | "worker";
 
+/**
+ * Worker inbox delivery policy. `explicitOnly` consumes only messages
+ * whose `to` targets the worker (current CLI behavior).
+ * `broadcastAndExplicit` also consumes broadcast messages (no `to`).
+ * Applies to `kind:"message"` events only.
+ */
+export type InboxPolicy = "explicitOnly" | "broadcastAndExplicit";
+
+export const INBOX_POLICIES: ReadonlySet<InboxPolicy> = new Set([
+  "explicitOnly",
+  "broadcastAndExplicit",
+]);
+
+export function parseInboxPolicy(
+  v: string | undefined,
+): InboxPolicy | undefined {
+  if (v === undefined) return undefined;
+  if (!INBOX_POLICIES.has(v as InboxPolicy)) {
+    throw new Error(
+      `Invalid inbox policy '${v}'. Must be one of: ${[...INBOX_POLICIES].join(", ")}`,
+    );
+  }
+  return v as InboxPolicy;
+}
+
 export const CHANNEL_TYPES: ReadonlySet<ChannelType> = new Set([
   "chat",
   "forum",
