@@ -1,173 +1,53 @@
+/**
+ * Channel events local module.
+ *
+ * Canonical types and reducers come from `@mindfoldhq/trellis-core`.
+ * The legacy local `appendEvent` / `readLastSeq` primitives remain
+ * here for CLI runtime callers (supervisor / spawn / kill) that still
+ * write directly to the JSONL during the Phase 5 supervisor migration.
+ *
+ * Local `appendEvent` shares the channel-level lock with core, so
+ * concurrent writes stay mutually exclusive. Core's seq sidecar
+ * self-repairs on the next core append if a CLI-runtime write lands
+ * without updating it.
+ */
+
 import fs from "node:fs";
 import fsp from "node:fs/promises";
 
+import {
+  reduceChannelMetadata,
+  type ChannelEvent,
+  type ChannelMetadata,
+} from "@mindfoldhq/trellis-core/channel";
+
 import { withLock } from "./lock.js";
 import { eventsPath, channelDir, lockPath } from "./paths.js";
-import {
-  asLinkedContextEntries,
-  asStringArray,
-  type ChannelMetadata,
-  type ChannelType,
-  type LinkedContextEntry,
-  type ThreadAction,
-} from "./schema.js";
 
-export type ChannelEventKind =
-  | "create"
-  | "join"
-  | "leave"
-  | "message"
-  | "thread"
-  | "spawned"
-  | "killed"
-  | "respawned"
-  | "progress"
-  | "done"
-  | "error"
-  | "waiting"
-  | "awake";
+export {
+  CHANNEL_EVENT_KINDS,
+  parseChannelKind,
+  isCreateEvent,
+  isThreadEvent,
+  isContextEvent,
+  isChannelMetadataEvent,
+  reduceChannelMetadata,
+} from "@mindfoldhq/trellis-core/channel";
 
-export const CHANNEL_EVENT_KINDS: ReadonlySet<ChannelEventKind> = new Set([
-  "create",
-  "join",
-  "leave",
-  "message",
-  "thread",
-  "spawned",
-  "killed",
-  "respawned",
-  "progress",
-  "done",
-  "error",
-  "waiting",
-  "awake",
-]);
-
-export function parseChannelKind(
-  v: string | undefined,
-): ChannelEventKind | undefined {
-  if (v === undefined) return undefined;
-  if (!CHANNEL_EVENT_KINDS.has(v as ChannelEventKind)) {
-    throw new Error(
-      `Invalid --kind '${v}'. Must be one of: ${[...CHANNEL_EVENT_KINDS].join(", ")}`,
-    );
-  }
-  return v as ChannelEventKind;
-}
-
-export interface BaseChannelEvent<
-  K extends ChannelEventKind = ChannelEventKind,
-> {
-  seq: number;
-  ts: string;
-  kind: K;
-  by: string;
-  [extra: string]: unknown;
-}
-
-export interface CreateChannelEvent extends BaseChannelEvent<"create"> {
-  cwd?: string;
-  task?: string;
-  type?: ChannelType;
-  description?: string;
-  linkedContext?: LinkedContextEntry[];
-  labels?: string[];
-  ephemeral?: boolean;
-}
-
-export interface MessageChannelEvent extends BaseChannelEvent<"message"> {
-  text?: string;
-  to?: string | string[];
-  tag?: string;
-}
-
-export interface ThreadChannelEvent extends BaseChannelEvent<"thread"> {
-  action?: ThreadAction;
-  thread: string;
-  title?: string;
-  text?: string;
-  description?: string;
-  status?: string;
-  labels?: string[];
-  assignees?: string[];
-  summary?: string;
-  linkedContext?: LinkedContextEntry[];
-}
-
-export interface SpawnedChannelEvent extends BaseChannelEvent<"spawned"> {
-  as?: string;
-  provider?: string;
-  pid?: number;
-  agent?: string;
-  files?: string[];
-  manifests?: string[];
-}
-
-export interface KilledChannelEvent extends BaseChannelEvent<"killed"> {
-  reason?: string;
-  signal?: string;
-}
-
-export interface DoneChannelEvent extends BaseChannelEvent<"done"> {
-  duration_ms?: number;
-}
-
-export interface ErrorChannelEvent extends BaseChannelEvent<"error"> {
-  message?: string;
-}
-
-export interface ProgressChannelEvent extends BaseChannelEvent<"progress"> {
-  detail?: Record<string, unknown>;
-}
-
-export type GenericChannelEvent = BaseChannelEvent<
-  Exclude<
-    ChannelEventKind,
-    | "create"
-    | "message"
-    | "thread"
-    | "spawned"
-    | "killed"
-    | "done"
-    | "error"
-    | "progress"
-  >
->;
-
-export type ChannelEvent =
-  | CreateChannelEvent
-  | MessageChannelEvent
-  | ThreadChannelEvent
-  | SpawnedChannelEvent
-  | KilledChannelEvent
-  | DoneChannelEvent
-  | ErrorChannelEvent
-  | ProgressChannelEvent
-  | GenericChannelEvent;
-
-export function isCreateEvent(ev: ChannelEvent): ev is CreateChannelEvent {
-  return ev.kind === "create";
-}
-
-export function isThreadEvent(ev: ChannelEvent): ev is ThreadChannelEvent {
-  return ev.kind === "thread" && typeof ev.thread === "string";
-}
-
-export function metadataFromCreateEvent(
-  create: ChannelEvent | undefined,
-): ChannelMetadata {
-  if (!create || !isCreateEvent(create)) return { type: "chat" };
-  const linkedContext = asLinkedContextEntries(create.linkedContext);
-  const labels = asStringArray(create.labels);
-  return {
-    type: create.type === "thread" ? "thread" : "chat",
-    ...(typeof create.description === "string"
-      ? { description: create.description }
-      : {}),
-    ...(linkedContext ? { linkedContext } : {}),
-    ...(labels ? { labels } : {}),
-  };
-}
+export type {
+  ChannelEvent,
+  ChannelEventKind,
+  CreateChannelEvent,
+  MessageChannelEvent,
+  ThreadChannelEvent,
+  ContextChannelEvent,
+  ChannelMetadataEvent,
+  SpawnedChannelEvent,
+  KilledChannelEvent,
+  DoneChannelEvent,
+  ErrorChannelEvent,
+  ProgressChannelEvent,
+} from "@mindfoldhq/trellis-core/channel";
 
 export async function ensureChannelDir(
   name: string,
@@ -197,20 +77,24 @@ export async function readLastSeq(
 }
 
 export interface AppendablePartial {
-  kind: ChannelEventKind;
+  kind: ChannelEvent["kind"];
   by: string;
   ts?: string;
   [extra: string]: unknown;
 }
 
+/**
+ * Local channel append used by CLI runtime code (supervisor / spawn /
+ * kill) until the Phase 5 supervisor migration moves those callers to
+ * core's typed APIs. Shares the channel-level lock with core, so
+ * concurrent writes stay mutually exclusive.
+ */
 export async function appendEvent(
   name: string,
   partial: AppendablePartial,
   project?: string,
 ): Promise<ChannelEvent> {
   await ensureChannelDir(name, project);
-  // Hold the channel-level lock so concurrent supervisors / CLIs can't
-  // race seq assignment. The read-then-append window is the hot spot.
   return withLock(lockPath(name, project), async () => {
     const lastSeq = await readLastSeq(name, project);
     const event = {
@@ -246,10 +130,14 @@ export async function readChannelEvents(
   return events;
 }
 
+/**
+ * Read projected channel metadata from disk. Delegates to the core
+ * reducer so list / messages / threads commands share projection
+ * semantics with downstream consumers.
+ */
 export async function readChannelMetadata(
   name: string,
   project?: string,
 ): Promise<ChannelMetadata> {
-  const events = await readChannelEvents(name, project);
-  return metadataFromCreateEvent(events.find(isCreateEvent));
+  return reduceChannelMetadata(await readChannelEvents(name, project));
 }

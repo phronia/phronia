@@ -12,7 +12,7 @@ import chalk from "chalk";
 
 import {
   isCreateEvent,
-  metadataFromCreateEvent,
+  reduceChannelMetadata,
   type ChannelEvent,
   type CreateChannelEvent,
 } from "./store/events.js";
@@ -143,26 +143,23 @@ function summarize(name: string, project: string): ChannelSummary | null {
   let firstEvent: CreateChannelEvent | null = null;
   let lastEvent: ChannelEvent | null = null;
   let totalEvents = 0;
+  const events: ChannelEvent[] = [];
 
   try {
-    // Single read — chop first / last lines out of one buffer. Avoids
-    // the previous double-read (head 8KB + whole file) which doubled
-    // syscall cost on every list call.
     const allText = fs.readFileSync(eventsFile, "utf-8");
     const lines = allText.split("\n").filter((l) => l.trim());
     totalEvents = lines.length;
-    if (lines.length > 0) {
+    for (const line of lines) {
       try {
-        const parsed = JSON.parse(lines[0]) as ChannelEvent;
-        firstEvent = isCreateEvent(parsed) ? parsed : null;
+        events.push(JSON.parse(line) as ChannelEvent);
       } catch {
-        // ignore
+        // skip corrupted lines
       }
-      try {
-        lastEvent = JSON.parse(lines[lines.length - 1]) as ChannelEvent;
-      } catch {
-        // ignore
-      }
+    }
+    if (events.length > 0) {
+      const first = events[0];
+      firstEvent = isCreateEvent(first) ? first : null;
+      lastEvent = events[events.length - 1];
     }
   } catch {
     return null;
@@ -184,14 +181,16 @@ function summarize(name: string, project: string): ChannelSummary | null {
     // ignore
   }
 
-  const metadata = metadataFromCreateEvent(firstEvent ?? undefined);
+  // Use the full event-stream reducer so projected metadata reflects
+  // title set/clear, context add/delete, and legacy linkedContext.
+  const metadata = reduceChannelMetadata(events);
   return {
     name,
     project,
     createdAt: firstEvent?.ts,
     task: firstEvent?.task,
     type: metadata.type,
-    description: metadata.description,
+    description: metadata.title ?? metadata.description,
     workersAlive,
     workersTotal,
     lastEventTs: lastEvent?.ts,

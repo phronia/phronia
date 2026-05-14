@@ -2,6 +2,11 @@ import chalk from "chalk";
 import type { Command } from "commander";
 
 import { isProvider, listProviders, type Provider } from "./adapters/index.js";
+import {
+  channelContextAdd,
+  channelContextDelete,
+  channelContextList,
+} from "./context.js";
 import { createChannel } from "./create.js";
 import { parseTrace } from "./dev-parse-trace.js";
 import { channelKill } from "./kill.js";
@@ -13,9 +18,11 @@ import { channelRun } from "./run.js";
 import { channelSpawn } from "./spawn.js";
 import {
   channelThreadPost,
+  channelThreadRename,
   channelThreadShow,
   channelThreadsList,
 } from "./threads.js";
+import { channelTitleClear, channelTitleSet } from "./title.js";
 import { runSupervisor } from "./supervisor.js";
 import { channelWait, parseDuration } from "./wait.js";
 import { parseCsv } from "./store/schema.js";
@@ -31,20 +38,32 @@ export function registerChannelCommand(program: Command): void {
     .command("create <name>")
     .description("Create a new channel (collaboration session)")
     .option("--scope <scope>", "channel scope: project | global")
-    .option("--type <type>", "channel type: chat | thread", "chat")
+    .option("--type <type>", "channel type: chat | threads", "chat")
     .option("--task <path>", "associated Trellis task directory")
     .option("--project <slug>", "project slug")
     .option("--labels <csv>", "comma-separated labels")
     .option("--description <text>", "stable channel description")
     .option(
+      "--context-file <absolute-path>",
+      "absolute file path attached as channel context (repeatable)",
+      (val: string, prev: string[] | undefined) => [...(prev ?? []), val],
+      [] as string[],
+    )
+    .option(
+      "--context-raw <text>",
+      "raw channel context text (repeatable)",
+      (val: string, prev: string[] | undefined) => [...(prev ?? []), val],
+      [] as string[],
+    )
+    .option(
       "--linked-context-file <absolute-path>",
-      "absolute file path attached as linked context (repeatable)",
+      "[deprecated alias for --context-file] absolute file path (repeatable)",
       (val: string, prev: string[] | undefined) => [...(prev ?? []), val],
       [] as string[],
     )
     .option(
       "--linked-context-raw <text>",
-      "raw linked context text (repeatable)",
+      "[deprecated alias for --context-raw] raw context text (repeatable)",
       (val: string, prev: string[] | undefined) => [...(prev ?? []), val],
       [] as string[],
     )
@@ -65,6 +84,8 @@ export function registerChannelCommand(program: Command): void {
           scope?: string;
           type?: string;
           description?: string;
+          contextFile?: string[];
+          contextRaw?: string[];
           linkedContextFile?: string[];
           linkedContextRaw?: string[];
           cwd?: string;
@@ -554,26 +575,40 @@ export function registerChannelCommand(program: Command): void {
 
   channel
     .command("post <name> <action>")
-    .description("Append a structured thread event to a thread channel")
+    .description("Append a structured thread event to a threads channel")
     .requiredOption("--as <agent>", "agent name posting")
     .option("--scope <scope>", "channel scope: project | global")
     .option("--thread <key>", "thread key (required except opened)")
     .option("--title <text>", "thread title")
     .option("--text <text>", "event body")
+    .option("--stdin", "read event body from stdin")
+    .option("--text-file <path>", "read event body from file")
     .option("--description <text>", "stable thread description")
     .option("--status <status>", "thread status")
     .option("--labels <csv>", "replace thread labels")
     .option("--assignees <csv>", "replace thread assignees")
     .option("--summary <text>", "thread summary")
     .option(
+      "--context-file <absolute-path>",
+      "absolute file path attached as thread context (repeatable)",
+      (val: string, prev: string[] | undefined) => [...(prev ?? []), val],
+      [] as string[],
+    )
+    .option(
+      "--context-raw <text>",
+      "raw thread context text (repeatable)",
+      (val: string, prev: string[] | undefined) => [...(prev ?? []), val],
+      [] as string[],
+    )
+    .option(
       "--linked-context-file <absolute-path>",
-      "absolute file path attached as linked context (repeatable)",
+      "[deprecated alias for --context-file] absolute file path (repeatable)",
       (val: string, prev: string[] | undefined) => [...(prev ?? []), val],
       [] as string[],
     )
     .option(
       "--linked-context-raw <text>",
-      "raw linked context text (repeatable)",
+      "[deprecated alias for --context-raw] raw context text (repeatable)",
       (val: string, prev: string[] | undefined) => [...(prev ?? []), val],
       [] as string[],
     )
@@ -615,17 +650,21 @@ export function registerChannelCommand(program: Command): void {
       }
     });
 
-  channel
-    .command("thread <name> <thread>")
-    .description("Show one thread timeline")
+  const thread = channel
+    .command("thread")
+    .description("Show or mutate one thread timeline");
+
+  thread
+    .argument("<name>", "channel name")
+    .argument("<thread>", "thread key")
     .option("--scope <scope>", "channel scope: project | global")
     .option("--raw", "print raw thread events")
     .action(
-      async (name: string, thread: string, raw: Record<string, unknown>) => {
+      async (name: string, threadKey: string, raw: Record<string, unknown>) => {
         try {
           await channelThreadShow(
             name,
-            thread,
+            threadKey,
             raw as Parameters<typeof channelThreadShow>[2],
           );
         } catch (err) {
@@ -637,6 +676,157 @@ export function registerChannelCommand(program: Command): void {
         }
       },
     );
+
+  thread
+    .command("rename <name> <oldThread> <newThread>")
+    .description("Rename a thread inside a threads channel")
+    .requiredOption("--as <agent>", "agent name")
+    .option("--scope <scope>", "channel scope: project | global")
+    .action(
+      async (
+        name: string,
+        oldThread: string,
+        newThread: string,
+        raw: Record<string, unknown>,
+      ) => {
+        const opts = raw as { as: string; scope?: string };
+        try {
+          await channelThreadRename(name, oldThread, newThread, opts);
+        } catch (err) {
+          console.error(
+            chalk.red("Error:"),
+            err instanceof Error ? err.message : err,
+          );
+          process.exit(1);
+        }
+      },
+    );
+
+  const context = channel
+    .command("context")
+    .description("Manage channel-level or thread-level context entries");
+
+  const addContextOptions = (cmd: Command): Command =>
+    cmd
+      .option("--as <agent>", "agent name", "main")
+      .option("--scope <scope>", "channel scope: project | global")
+      .option(
+        "--thread <key>",
+        "mutate thread-level context instead of channel-level",
+      )
+      .option(
+        "--file <absolute-path>",
+        "absolute file path (repeatable)",
+        (val: string, prev: string[] | undefined) => [...(prev ?? []), val],
+        [] as string[],
+      )
+      .option(
+        "--raw <text>",
+        "raw text entry (repeatable)",
+        (val: string, prev: string[] | undefined) => [...(prev ?? []), val],
+        [] as string[],
+      );
+
+  addContextOptions(context.command("add <name>"))
+    .description("Add context entries")
+    .action(async (name: string, raw: Record<string, unknown>) => {
+      try {
+        await channelContextAdd(
+          name,
+          raw as unknown as Parameters<typeof channelContextAdd>[1],
+        );
+      } catch (err) {
+        console.error(
+          chalk.red("Error:"),
+          err instanceof Error ? err.message : err,
+        );
+        process.exit(1);
+      }
+    });
+
+  addContextOptions(context.command("delete <name>"))
+    .description("Delete context entries")
+    .action(async (name: string, raw: Record<string, unknown>) => {
+      try {
+        await channelContextDelete(
+          name,
+          raw as unknown as Parameters<typeof channelContextDelete>[1],
+        );
+      } catch (err) {
+        console.error(
+          chalk.red("Error:"),
+          err instanceof Error ? err.message : err,
+        );
+        process.exit(1);
+      }
+    });
+
+  context
+    .command("list <name>")
+    .description("List projected current context entries")
+    .option("--scope <scope>", "channel scope: project | global")
+    .option(
+      "--thread <key>",
+      "show thread-level context instead of channel-level",
+    )
+    .option("--raw", "print one context entry JSON per line")
+    .action(async (name: string, raw: Record<string, unknown>) => {
+      try {
+        await channelContextList(
+          name,
+          raw as Parameters<typeof channelContextList>[1],
+        );
+      } catch (err) {
+        console.error(
+          chalk.red("Error:"),
+          err instanceof Error ? err.message : err,
+        );
+        process.exit(1);
+      }
+    });
+
+  const title = channel
+    .command("title")
+    .description("Set or clear the channel display title");
+
+  title
+    .command("set <name>")
+    .description("Set the channel display title")
+    .option("--as <agent>", "agent name", "main")
+    .option("--scope <scope>", "channel scope: project | global")
+    .requiredOption("--title <text>", "display title")
+    .action(async (name: string, raw: Record<string, unknown>) => {
+      const opts = raw as { as: string; scope?: string; title: string };
+      try {
+        await channelTitleSet(name, opts);
+      } catch (err) {
+        console.error(
+          chalk.red("Error:"),
+          err instanceof Error ? err.message : err,
+        );
+        process.exit(1);
+      }
+    });
+
+  title
+    .command("clear <name>")
+    .description("Clear the channel display title")
+    .option("--as <agent>", "agent name", "main")
+    .option("--scope <scope>", "channel scope: project | global")
+    .action(async (name: string, raw: Record<string, unknown>) => {
+      try {
+        await channelTitleClear(
+          name,
+          raw as unknown as Parameters<typeof channelTitleClear>[1],
+        );
+      } catch (err) {
+        console.error(
+          chalk.red("Error:"),
+          err instanceof Error ? err.message : err,
+        );
+        process.exit(1);
+      }
+    });
 
   // Hidden: supervisor entry point invoked by `channel spawn` via fork.
   channel

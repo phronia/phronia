@@ -1,8 +1,10 @@
-import fs from "node:fs";
+import {
+  sendMessage as coreSendMessage,
+  type ChannelScope,
+} from "@mindfoldhq/trellis-core/channel";
 
-import { appendEvent } from "./store/events.js";
-import { resolveExistingChannelRef } from "./store/paths.js";
 import { parseChannelScope, parseCsv } from "./store/schema.js";
+import { resolveChannelTextBody } from "./text-body.js";
 
 export interface SendOptions {
   as: string;
@@ -10,50 +12,33 @@ export interface SendOptions {
   stdin?: boolean;
   textFile?: string;
   scope?: string;
-  kind?: string; // tag
+  kind?: string; // legacy alias for tag
   tag?: string;
   to?: string; // CSV
-}
-
-async function readText(opts: SendOptions): Promise<string> {
-  if (opts.text !== undefined && opts.text !== "") return opts.text;
-  if (opts.textFile) return fs.readFileSync(opts.textFile, "utf-8");
-  if (opts.stdin) {
-    return await new Promise<string>((resolve) => {
-      let buf = "";
-      process.stdin.on(
-        "data",
-        (chunk: Buffer) => (buf += chunk.toString("utf-8")),
-      );
-      process.stdin.on("end", () => resolve(buf));
-    });
-  }
-  throw new Error("No text provided (use <text> arg, --stdin, or --text-file)");
 }
 
 export async function channelSend(
   channelName: string,
   opts: SendOptions,
 ): Promise<void> {
-  const ref = resolveExistingChannelRef(channelName, {
-    scope: parseChannelScope(opts.scope),
+  const text = await resolveChannelTextBody(opts, {
+    required: true,
+    missingMessage:
+      "No text provided (use <text> arg, --stdin, or --text-file)",
+    emptyMessage: "Empty message",
   });
-  const text = (await readText(opts)).trimEnd();
-  if (!text) throw new Error("Empty message");
   const tag = opts.tag ?? opts.kind;
-
   const to = parseCsv(opts.to);
+  const scope: ChannelScope | undefined = parseChannelScope(opts.scope);
 
-  const event = await appendEvent(
-    channelName,
-    {
-      kind: "message",
-      by: opts.as,
-      text,
-      ...(tag ? { tag } : {}),
-      ...(to ? { to: to.length === 1 ? to[0] : to } : {}),
-    },
-    ref.project,
-  );
+  const event = await coreSendMessage({
+    channel: channelName,
+    by: opts.as,
+    text: text as string,
+    ...(scope !== undefined ? { scope } : {}),
+    ...(tag !== undefined ? { tag } : {}),
+    ...(to !== undefined ? { to: to.length === 1 ? to[0] : to } : {}),
+    origin: "cli",
+  });
   console.log(JSON.stringify(event));
 }

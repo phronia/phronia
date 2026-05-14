@@ -64,8 +64,7 @@ grep -r "keyword" .
 
 ```typescript
 const description = (ev as { description?: string }).description;
-const linkedContext = (ev as { linkedContext?: LinkedContextEntry[] })
-  .linkedContext;
+const context = (ev as { context?: ContextEntry[] }).context;
 ```
 
 This is duplicated contract logic even when the code is only two lines. Each

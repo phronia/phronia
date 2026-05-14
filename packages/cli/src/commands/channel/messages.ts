@@ -11,7 +11,7 @@ import {
 import { matchesEventFilter } from "./store/filter.js";
 import { eventsPath, resolveExistingChannelRef } from "./store/paths.js";
 import {
-  type LinkedContextEntry,
+  type ContextEntry,
   normalizeThreadKey,
   parseCsv,
   parseChannelScope,
@@ -85,7 +85,7 @@ export async function channelMessages(
   const view = opts.last ? filtered.slice(-opts.last) : filtered;
   const threadBoardView =
     !opts.raw &&
-    metadata.type === "thread" &&
+    metadata.type === "threads" &&
     !threadFilter &&
     !kindFilter &&
     !actionFilter &&
@@ -130,7 +130,7 @@ function printEvent(ev: ChannelEvent, raw: boolean): void {
       );
       if (ev.description)
         console.log(`         ${chalk.dim("description:")} ${ev.description}`);
-      printLinkedContext(ev.linkedContext);
+      printContext(ev.context ?? ev.linkedContext);
       break;
     }
     case "spawned": {
@@ -182,7 +182,7 @@ function printEvent(ev: ChannelEvent, raw: boolean): void {
       printLine(`${kindTag("thread")} by=${by}  ${action} ${ev.thread}`, ts);
       if (ev.description)
         console.log(`         ${chalk.dim("description:")} ${ev.description}`);
-      printLinkedContext(ev.linkedContext);
+      printContext(ev.context ?? ev.linkedContext);
       if (text) console.log(`         ${text}`);
       break;
     }
@@ -211,20 +211,16 @@ function printEvent(ev: ChannelEvent, raw: boolean): void {
   }
 }
 
-function printLinkedContext(
-  linkedContext: LinkedContextEntry[] | undefined,
-): void {
-  if (!linkedContext || linkedContext.length === 0) return;
-  for (const entry of linkedContext) {
+function printContext(context: ContextEntry[] | undefined): void {
+  if (!context || context.length === 0) return;
+  for (const entry of context) {
     const detail =
-      entry.type === "file"
-        ? entry.path
-        : summarizeLinkedContextText(entry.text);
+      entry.type === "file" ? entry.path : summarizeContextText(entry.text);
     console.log(`         ${chalk.dim(`context:${entry.type}:`)} ${detail}`);
   }
 }
 
-function summarizeLinkedContextText(text: string): string {
+function summarizeContextText(text: string): string {
   const oneLine = text.replace(/\s+/g, " ").trim();
   return oneLine.length > 100 ? `${oneLine.slice(0, 100)}...` : oneLine;
 }

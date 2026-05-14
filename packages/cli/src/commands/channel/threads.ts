@@ -1,20 +1,23 @@
 import {
-  appendEvent,
-  isThreadEvent,
-  readChannelEvents,
-  readChannelMetadata,
+  buildContextEntries,
+  listThreads as coreListThreads,
+  showThread as coreShowThread,
+  postThread as corePostThread,
+  reduceThreads,
+  renameThread as coreRenameThread,
+  type ChannelScope,
+  type ContextChannelEvent,
   type ThreadChannelEvent,
-} from "./store/events.js";
-import { resolveExistingChannelRef } from "./store/paths.js";
+} from "@mindfoldhq/trellis-core/channel";
+
 import {
-  normalizeThreadKey,
-  parseCsv,
   parseChannelScope,
-  parseLinkedContext,
   parseThreadAction,
   type ThreadAction,
 } from "./store/schema.js";
-import { formatThreadBoard, reduceThreads } from "./store/thread-state.js";
+import { parseCsv } from "./store/schema.js";
+import { formatThreadBoard } from "./store/thread-state.js";
+import { resolveChannelTextBody } from "./text-body.js";
 
 export interface ThreadPostOptions {
   as: string;
@@ -22,12 +25,18 @@ export interface ThreadPostOptions {
   thread?: string;
   title?: string;
   text?: string;
+  stdin?: boolean;
+  textFile?: string;
   description?: string;
   status?: string;
   labels?: string;
   assignees?: string;
   summary?: string;
   scope?: string;
+  /** New canonical flag list. */
+  contextFile?: string[];
+  contextRaw?: string[];
+  /** Legacy aliases accepted while users migrate scripts. */
   linkedContextFile?: string[];
   linkedContextRaw?: string[];
 }
@@ -43,47 +52,53 @@ export interface ThreadShowOptions {
   raw?: boolean;
 }
 
+export interface ThreadRenameOptions {
+  as: string;
+  scope?: string;
+}
+
 export async function channelThreadPost(
   channelName: string,
   opts: ThreadPostOptions,
 ): Promise<void> {
-  const ref = resolveExistingChannelRef(channelName, {
-    scope: parseChannelScope(opts.scope),
-  });
-  const metadata = await readChannelMetadata(channelName, ref.project);
-  if (metadata.type !== "thread") {
+  const parsed = parseThreadAction(opts.action);
+  if (parsed === "rename") {
     throw new Error(
-      `Channel '${channelName}' is type '${metadata.type}'. 'post' requires a thread channel.`,
+      "Use `trellis channel thread rename <channel> <old> <new>` instead of `post rename`.",
     );
   }
+  const action = parsed as Exclude<ThreadAction, "rename">;
 
-  const action = parseThreadAction(opts.action);
-  const thread = resolveThreadKey(action, opts.thread);
-  const linkedContext = parseLinkedContext(
-    opts.linkedContextFile,
-    opts.linkedContextRaw,
+  const context = buildContextEntries(
+    [...(opts.contextFile ?? []), ...(opts.linkedContextFile ?? [])],
+    [...(opts.contextRaw ?? []), ...(opts.linkedContextRaw ?? [])],
   );
   const labels = parseCsv(opts.labels);
   const assignees = parseCsv(opts.assignees);
+  const text = await resolveChannelTextBody(opts, {
+    required: false,
+    missingMessage: "No text provided (use --text, --stdin, or --text-file)",
+    emptyMessage: "Empty thread event text",
+  });
 
-  const event = await appendEvent(
-    channelName,
-    {
-      kind: "thread",
-      by: opts.as,
-      action,
-      thread,
-      ...(opts.title ? { title: opts.title } : {}),
-      ...(opts.text ? { text: opts.text } : {}),
-      ...(opts.description ? { description: opts.description } : {}),
-      ...(opts.status ? { status: opts.status } : {}),
-      ...(labels ? { labels } : {}),
-      ...(assignees ? { assignees } : {}),
-      ...(opts.summary ? { summary: opts.summary } : {}),
-      ...(linkedContext ? { linkedContext } : {}),
-    },
-    ref.project,
-  );
+  const scope: ChannelScope | undefined = parseChannelScope(opts.scope);
+
+  const event = await corePostThread({
+    channel: channelName,
+    by: opts.as,
+    action,
+    thread: opts.thread ?? "",
+    ...(scope !== undefined ? { scope } : {}),
+    ...(opts.title ? { title: opts.title } : {}),
+    ...(text !== undefined ? { text } : {}),
+    ...(opts.description ? { description: opts.description } : {}),
+    ...(opts.status ? { status: opts.status } : {}),
+    ...(labels ? { labels } : {}),
+    ...(assignees ? { assignees } : {}),
+    ...(opts.summary ? { summary: opts.summary } : {}),
+    ...(context ? { context } : {}),
+    origin: "cli",
+  });
   console.log(JSON.stringify(event));
 }
 
@@ -91,17 +106,12 @@ export async function channelThreadsList(
   channelName: string,
   opts: ThreadsOptions,
 ): Promise<void> {
-  const ref = resolveExistingChannelRef(channelName, {
-    scope: parseChannelScope(opts.scope),
-  });
-  const metadata = await readChannelMetadata(channelName, ref.project);
-  if (metadata.type !== "thread") {
-    throw new Error(
-      `Channel '${channelName}' is type '${metadata.type}'. 'threads' requires a thread channel.`,
-    );
-  }
-  const states = reduceThreads(
-    await readChannelEvents(channelName, ref.project),
+  const scope: ChannelScope | undefined = parseChannelScope(opts.scope);
+  const states = (
+    await coreListThreads({
+      channel: channelName,
+      ...(scope !== undefined ? { scope } : {}),
+    })
   ).filter((state) => (opts.status ? state.status === opts.status : true));
   if (opts.raw) {
     for (const state of states) console.log(JSON.stringify(state));
@@ -115,25 +125,20 @@ export async function channelThreadShow(
   threadKey: string,
   opts: ThreadShowOptions,
 ): Promise<void> {
-  const ref = resolveExistingChannelRef(channelName, {
-    scope: parseChannelScope(opts.scope),
+  const scope: ChannelScope | undefined = parseChannelScope(opts.scope);
+  const events = await coreShowThread({
+    channel: channelName,
+    thread: threadKey,
+    ...(scope !== undefined ? { scope } : {}),
   });
-  const metadata = await readChannelMetadata(channelName, ref.project);
-  if (metadata.type !== "thread") {
-    throw new Error(
-      `Channel '${channelName}' is type '${metadata.type}'. 'thread' requires a thread channel.`,
-    );
-  }
-  const thread = normalizeThreadKey(threadKey);
-  const events = (await readChannelEvents(channelName, ref.project)).filter(
-    (ev): ev is ThreadChannelEvent => isThreadEvent(ev) && ev.thread === thread,
-  );
   if (opts.raw) {
     for (const ev of events) console.log(JSON.stringify(ev));
     return;
   }
   if (events.length === 0) {
-    throw new Error(`Thread '${thread}' not found in channel '${channelName}'`);
+    throw new Error(
+      `Thread '${threadKey}' not found in channel '${channelName}'`,
+    );
   }
   const state = reduceThreads(events)[0];
   console.log(
@@ -145,21 +150,38 @@ export async function channelThreadShow(
     console.log(`assignees: ${state.assignees.join(",")}`);
   }
   if (state.summary) console.log(`summary: ${state.summary}`);
-  for (const ev of events) printThreadEvent(ev);
+  for (const ev of events) printTimelineEvent(ev);
 }
 
-function resolveThreadKey(
-  action: ThreadAction,
-  value: string | undefined,
-): string {
-  if (value) return normalizeThreadKey(value);
-  if (action === "opened") return `thread-${Date.now().toString(36)}`;
-  throw new Error("--thread is required unless action is 'opened'");
+export async function channelThreadRename(
+  channelName: string,
+  oldThread: string,
+  newThread: string,
+  opts: ThreadRenameOptions,
+): Promise<void> {
+  const scope: ChannelScope | undefined = parseChannelScope(opts.scope);
+  const event = await coreRenameThread({
+    channel: channelName,
+    by: opts.as,
+    thread: oldThread,
+    newThread,
+    ...(scope !== undefined ? { scope } : {}),
+    origin: "cli",
+  });
+  console.log(JSON.stringify(event));
 }
 
-function printThreadEvent(ev: ThreadChannelEvent): void {
+function printTimelineEvent(
+  ev: ThreadChannelEvent | ContextChannelEvent,
+): void {
   const ts = ev.ts.slice(0, 19).replace("T", " ");
+  if (ev.kind === "thread") {
+    const action = ev.action ?? "?";
+    const text = ev.text ? ` ${ev.text}` : "";
+    console.log(`  ${ts} ${action} by=${ev.by}${text}`);
+    return;
+  }
+  // context event
   const action = ev.action ?? "?";
-  const text = ev.text ? ` ${ev.text}` : "";
-  console.log(`  ${ts} ${action} by=${ev.by}${text}`);
+  console.log(`  ${ts} context-${action} by=${ev.by}`);
 }

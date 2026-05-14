@@ -1,12 +1,21 @@
 import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
+import { PassThrough } from "node:stream";
 
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { createChannel } from "../../src/commands/channel/create.js";
+import {
+  channelContextAdd,
+  channelContextList,
+} from "../../src/commands/channel/context.js";
 import { channelMessages } from "../../src/commands/channel/messages.js";
 import { channelSend } from "../../src/commands/channel/send.js";
+import {
+  channelTitleClear,
+  channelTitleSet,
+} from "../../src/commands/channel/title.js";
 import { channelThreadPost } from "../../src/commands/channel/threads.js";
 import { readChannelEvents } from "../../src/commands/channel/store/events.js";
 import { matchesEventFilter } from "../../src/commands/channel/store/filter.js";
@@ -25,6 +34,7 @@ describe("channel storage and thread channels", () => {
   let projectDir: string;
   let oldRoot: string | undefined;
   let oldProject: string | undefined;
+  let originalStdin: typeof process.stdin;
 
   beforeEach(() => {
     tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), "trellis-channel-test-"));
@@ -32,6 +42,7 @@ describe("channel storage and thread channels", () => {
     fs.mkdirSync(projectDir);
     oldRoot = process.env.TRELLIS_CHANNEL_ROOT;
     oldProject = process.env.TRELLIS_CHANNEL_PROJECT;
+    originalStdin = process.stdin;
     process.env.TRELLIS_CHANNEL_ROOT = path.join(tmpDir, "channels");
     delete process.env.TRELLIS_CHANNEL_PROJECT;
     vi.spyOn(process, "cwd").mockReturnValue(projectDir);
@@ -45,6 +56,10 @@ describe("channel storage and thread channels", () => {
     else process.env.TRELLIS_CHANNEL_ROOT = oldRoot;
     if (oldProject === undefined) delete process.env.TRELLIS_CHANNEL_PROJECT;
     else process.env.TRELLIS_CHANNEL_PROJECT = oldProject;
+    Object.defineProperty(process, "stdin", {
+      value: originalStdin,
+      configurable: true,
+    });
     fs.rmSync(tmpDir, { recursive: true, force: true });
   });
 
@@ -64,10 +79,10 @@ describe("channel storage and thread channels", () => {
     await createChannel("roadmap", {
       by: "main",
       scope: "global",
-      type: "thread",
+      type: "threads",
       description: "Local Trellis feedback board",
-      linkedContextFile: [linkedFile],
-      linkedContextRaw: ["watch channel UX"],
+      contextFile: [linkedFile],
+      contextRaw: ["watch channel UX"],
     });
     await channelThreadPost("roadmap", {
       as: "main",
@@ -178,6 +193,134 @@ describe("channel storage and thread channels", () => {
       kind: "message",
       text: "global message",
     });
+  });
+
+  it("posts thread event text from a file with send-compatible trimming", async () => {
+    const bodyFile = path.join(tmpDir, "body.md");
+    fs.writeFileSync(bodyFile, "## Review\n\nLooks good.\n\n");
+    await createChannel("file-post", {
+      by: "main",
+      type: "threads",
+    });
+
+    await channelThreadPost("file-post", {
+      as: "check",
+      action: "comment",
+      thread: "issue-1",
+      textFile: bodyFile,
+    });
+
+    const events = await readChannelEvents(
+      "file-post",
+      projectKey(projectDir),
+    );
+    expect(events.at(-1)).toMatchObject({
+      kind: "thread",
+      action: "comment",
+      thread: "issue-1",
+      text: "## Review\n\nLooks good.",
+    });
+  });
+
+  it("prefers non-empty inline post text over text-file input", async () => {
+    const bodyFile = path.join(tmpDir, "ignored.md");
+    fs.writeFileSync(bodyFile, "file body\n");
+    await createChannel("precedence-post", {
+      by: "main",
+      type: "threads",
+    });
+
+    await channelThreadPost("precedence-post", {
+      as: "check",
+      action: "comment",
+      thread: "issue-1",
+      text: "inline body",
+      textFile: bodyFile,
+    });
+
+    const events = await readChannelEvents(
+      "precedence-post",
+      projectKey(projectDir),
+    );
+    expect(events.at(-1)).toMatchObject({
+      kind: "thread",
+      action: "comment",
+      thread: "issue-1",
+      text: "inline body",
+    });
+  });
+
+  it("posts thread event text from stdin", async () => {
+    await createChannel("stdin-post", {
+      by: "main",
+      type: "threads",
+    });
+    const stdin = new PassThrough();
+    Object.defineProperty(process, "stdin", {
+      value: stdin,
+      configurable: true,
+    });
+
+    const posted = channelThreadPost("stdin-post", {
+      as: "check",
+      action: "comment",
+      thread: "issue-1",
+      stdin: true,
+    });
+    stdin.end("Body from stdin\n");
+    await posted;
+
+    const events = await readChannelEvents(
+      "stdin-post",
+      projectKey(projectDir),
+    );
+    expect(events.at(-1)).toMatchObject({
+      kind: "thread",
+      action: "comment",
+      thread: "issue-1",
+      text: "Body from stdin",
+    });
+  });
+
+  it("defaults context and title author to main when --as is omitted", async () => {
+    await createChannel("defaults", {
+      by: "main",
+      type: "threads",
+    });
+    await channelThreadPost("defaults", {
+      as: "main",
+      action: "opened",
+      thread: "issue-1",
+    });
+
+    await channelContextAdd("defaults", {
+      raw: ["channel note"],
+    });
+    await channelContextAdd("defaults", {
+      thread: "issue-1",
+      raw: ["thread note"],
+    });
+    await channelTitleSet("defaults", {
+      title: "Readable",
+    });
+    await channelTitleClear("defaults", {});
+
+    const events = await readChannelEvents(
+      "defaults",
+      projectKey(projectDir),
+    );
+    expect(events.slice(-4).map((event) => event.by)).toEqual([
+      "main",
+      "main",
+      "main",
+      "main",
+    ]);
+
+    vi.mocked(console.log).mockClear();
+    await channelContextList("defaults", {});
+    expect(vi.mocked(console.log).mock.calls[0]?.[0]).toBe(
+      "raw  channel note",
+    );
   });
 });
 
