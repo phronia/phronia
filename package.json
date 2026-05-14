@@ -10,7 +10,7 @@
     "test:core": "pnpm --filter @mindfoldhq/trellis-core test",
     "test:cli": "pnpm --filter @mindfoldhq/trellis test",
     "lint": "pnpm --filter @mindfoldhq/trellis-core lint && pnpm --filter @mindfoldhq/trellis lint",
-    "typecheck": "pnpm --filter @mindfoldhq/trellis-core typecheck && pnpm --filter @mindfoldhq/trellis typecheck",
+    "typecheck": "pnpm --filter @mindfoldhq/trellis-core build && pnpm --filter @mindfoldhq/trellis typecheck",
     "release": "pnpm --filter @mindfoldhq/trellis release",
     "release:minor": "pnpm --filter @mindfoldhq/trellis release:minor",
     "release:major": "pnpm --filter @mindfoldhq/trellis release:major",
