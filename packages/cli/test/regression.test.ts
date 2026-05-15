@@ -5519,6 +5519,15 @@ describe("regression: sub-agent context injection fallback (0.5.3)", () => {
   const __dirnameFb = path.dirname(fileURLToPath(import.meta.url));
   const repoRootFb = path.resolve(__dirnameFb, "../../..");
 
+  function expectTaskArtifactContract(content: string): void {
+    expect(content).toContain("prd.md");
+    expect(content).toContain("design.md");
+    expect(content).toContain("implement.md");
+    expect(content).not.toMatch(/prd\.md`?\s+(?:if present|if exists)/i);
+    expect(content).toMatch(/design\.md[^\n.]*(?:if present|if exists)/i);
+    expect(content).toMatch(/implement\.md[^\n.]*(?:if present|if exists)/i);
+  }
+
   for (const { platform, rel, agent } of CLASS1_MD_AGENT_FILES) {
     it(`${platform}/${agent} markdown agent file carries marker + fallback protocol`, () => {
       const content = fs.readFileSync(path.join(repoRootFb, rel), "utf-8");
@@ -5529,7 +5538,7 @@ describe("regression: sub-agent context injection fallback (0.5.3)", () => {
       // 3. Tells AI how to find the active task path
       expect(content).toContain("Active task:");
       // 4. Tells AI which task files to Read in fallback path
-      expect(content).toContain("prd.md");
+      expectTaskArtifactContract(content);
       const expectedJsonl = agent === "implement" ? "implement.jsonl" : "check.jsonl";
       expect(content).toContain(expectedJsonl);
     });
@@ -5547,9 +5556,33 @@ describe("regression: sub-agent context injection fallback (0.5.3)", () => {
       expect(prompt).toContain(HOOK_INJECTED_MARKER);
       expect(prompt).toContain("Trellis Context Loading Protocol");
       expect(prompt).toContain("Active task:");
-      expect(prompt).toContain("prd.md");
+      expectTaskArtifactContract(prompt);
       const expectedJsonl = agent === "implement" ? "implement.jsonl" : "check.jsonl";
       expect(prompt).toContain(expectedJsonl);
+    });
+  }
+
+  const GEMINI_QODER_AGENT_FILES = [
+    "packages/cli/src/templates/gemini/agents/trellis-implement.md",
+    "packages/cli/src/templates/gemini/agents/trellis-check.md",
+    "packages/cli/src/templates/qoder/agents/trellis-implement.md",
+    "packages/cli/src/templates/qoder/agents/trellis-check.md",
+  ];
+
+  for (const rel of GEMINI_QODER_AGENT_FILES) {
+    it(`${rel} references task artifacts`, () => {
+      const content = fs.readFileSync(path.join(repoRootFb, rel), "utf-8");
+      expectTaskArtifactContract(content);
+    });
+  }
+
+  for (const agent of ["implement", "check"] as const) {
+    it(`pi/${agent} agent references task artifacts`, () => {
+      const content = fs.readFileSync(
+        path.join(repoRootFb, `packages/cli/src/templates/pi/agents/trellis-${agent}.md`),
+        "utf-8",
+      );
+      expectTaskArtifactContract(content);
     });
   }
 
