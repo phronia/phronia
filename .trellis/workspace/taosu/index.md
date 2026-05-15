@@ -8,7 +8,7 @@
 
 <!-- @@@auto:current-status -->
 - **Active File**: `journal-5.md`
-- **Total Sessions**: 161
+- **Total Sessions**: 162
 - **Last Active**: 2026-05-15
 <!-- @@@/auto:current-status -->
 
@@ -19,7 +19,7 @@
 <!-- @@@auto:active-documents -->
 | File | Lines | Status |
 |------|-------|--------|
-| `journal-5.md` | ~885 | Active |
+| `journal-5.md` | ~918 | Active |
 | `journal-4.md` | ~1975 | Archived |
 | `journal-3.md` | ~1988 | Archived |
 | `journal-2.md` | ~1963 | Archived |
@@ -33,6 +33,7 @@
 <!-- @@@auto:session-history -->
 | # | Date | Title | Commits | Branch |
 |---|------|-------|---------|--------|
+| 162 | 2026-05-15 | Channel wait supervisor warnings | `d2e72268` | `feat/v0.6.0-beta` |
 | 161 | 2026-05-15 | Workflow marketplace switcher | `5c27923` | `feat/v0.6.0-beta` |
 | 160 | 2026-05-15 | Align Agent Artifacts | `fb7a4ed` | `feat/v0.6.0-beta` |
 | 159 | 2026-05-14 | Core mem and forum channels | `3e53e17` | `feat/v0.6.0-beta` |

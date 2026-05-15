@@ -883,3 +883,36 @@ Implemented workflow marketplace templates and trellis workflow switching, docum
 ### Next Steps
 
 - None - task complete
+
+
+## Session 162: Channel wait supervisor warnings
+
+**Date**: 2026-05-15
+**Task**: Channel wait supervisor warnings
+**Branch**: `feat/v0.6.0-beta`
+
+### Summary
+
+Implemented channel wait kind unions and supervisor pre-timeout warning events; split worker inbox API into a follow-up child task; updated channel command spec and tests.
+
+### Main Changes
+
+(Add details)
+
+### Git Commits
+
+| Hash | Message |
+|------|---------|
+| `d2e72268` | (see git log) |
+
+### Testing
+
+- [OK] (Add test results)
+
+### Status
+
+[OK] **Completed**
+
+### Next Steps
+
+- None - task complete
