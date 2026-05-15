@@ -252,6 +252,10 @@ export function registerChannelCommand(program: Command): void {
       "auto-kill worker after this duration (e.g. 30m, 1h, 7200s)",
     )
     .option(
+      "--warn-before <duration>",
+      "emit supervisor_warning before timeout (default 5m; 0ms disables)",
+    )
+    .option(
       "--file <path>",
       "include a file's content as context in the worker's system prompt (glob supported, repeatable)",
       (val: string, prev: string[] | undefined) => [...(prev ?? []), val],
@@ -280,6 +284,7 @@ export function registerChannelCommand(program: Command): void {
         model?: string;
         resume?: string;
         timeout?: string;
+        warnBefore?: string;
         file?: string[];
         jsonl?: string[];
         by?: string;
@@ -302,6 +307,7 @@ export function registerChannelCommand(program: Command): void {
           model: opts.model,
           resume: opts.resume,
           timeoutMs: parseDuration(opts.timeout),
+          warnBeforeMs: parseDuration(opts.warnBefore),
           files: opts.file,
           jsonls: opts.jsonl,
           by: opts.by,

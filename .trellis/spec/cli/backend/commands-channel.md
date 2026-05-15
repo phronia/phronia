@@ -51,6 +51,8 @@ trellis channel spawn <name> [opts]
   --model <id>           : model override
   --resume <id>          : resume an existing session/thread id
   --timeout <duration>   : auto-kill after duration (e.g. "30m", "1h", "7200s")
+  --warn-before <duration>: emit `supervisor_warning` before timeout
+                           (default "5m"; "0ms" disables warning)
   --file <path>          : context file (repeatable, glob OK)
   --jsonl <path>         : manifest of {file, reason} entries (repeatable)
   --by <agent>           : caller identity recorded on `spawned` event

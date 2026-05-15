@@ -27,6 +27,8 @@ export interface SpawnOptions {
   resume?: string;
   /** Auto-kill the worker after this many milliseconds (anti-zombie). */
   timeoutMs?: number;
+  /** Emit supervisor_warning this many milliseconds before timeout. */
+  warnBeforeMs?: number;
   /** Files (or globs) to include in the worker's system prompt. */
   files?: string[];
   /** Trellis jsonl manifests to expand into the system prompt. */
@@ -195,6 +197,7 @@ async function spawnLocked(
       model: resolved.model,
       resume: opts.resume,
       timeoutMs: opts.timeoutMs,
+      warnBeforeMs: opts.warnBeforeMs,
       spawnedBy,
       ...(opts.inboxPolicy ? { inboxPolicy: opts.inboxPolicy } : {}),
       ...(opts.agent ? { agent: opts.agent } : {}),

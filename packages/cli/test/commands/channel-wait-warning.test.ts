@@ -248,11 +248,11 @@ describe("scheduleSupervisorTimeoutWarning", () => {
     };
   }
 
-  it("exposes the 30s pre-timeout constant for SOT", () => {
-    expect(SUPERVISOR_TIMEOUT_WARNING_REMAINING_MS).toBe(30_000);
+  it("exposes the 5m default pre-timeout constant for SOT", () => {
+    expect(SUPERVISOR_TIMEOUT_WARNING_REMAINING_MS).toBe(300_000);
   });
 
-  it("fires immediately when timeoutMs <= 30s with remaining_ms = timeoutMs", async () => {
+  it("fires immediately when timeoutMs <= default warning lead time with remaining_ms = timeoutMs", async () => {
     await createChannel("warn-fast", { by: "main" });
 
     scheduleSupervisorTimeoutWarning({
@@ -273,6 +273,46 @@ describe("scheduleSupervisorTimeoutWarning", () => {
       timeout_ms: 10_000,
       remaining_ms: 10_000,
     });
+  });
+
+  it("uses a custom warning lead time", async () => {
+    await createChannel("warn-custom", { by: "main" });
+
+    scheduleSupervisorTimeoutWarning({
+      channelName: "warn-custom",
+      workerName: "worker",
+      timeoutMs: 500,
+      warnBeforeMs: 400,
+      shutdown: makeShutdown(),
+      isChildExited: () => false,
+      log: { write: noop },
+    });
+
+    const early = await waitForWarning(env, "warn-custom", 50);
+    expect(early).toBeUndefined();
+
+    const warning = await waitForWarning(env, "warn-custom", 300);
+    expect(warning).toMatchObject({
+      timeout_ms: 500,
+      remaining_ms: 400,
+    });
+  });
+
+  it("does not emit when warnBeforeMs <= 0", async () => {
+    await createChannel("warn-disabled", { by: "main" });
+
+    scheduleSupervisorTimeoutWarning({
+      channelName: "warn-disabled",
+      workerName: "worker",
+      timeoutMs: 50,
+      warnBeforeMs: 0,
+      shutdown: makeShutdown(),
+      isChildExited: () => false,
+      log: { write: noop },
+    });
+
+    const warning = await waitForWarning(env, "warn-disabled", 150);
+    expect(warning).toBeUndefined();
   });
 
   it("never emits a second warning for one schedule", async () => {
@@ -397,28 +437,28 @@ describe("scheduleSupervisorTimeoutWarning", () => {
     expect(warning).toBeUndefined();
   });
 
-  it("computes delay = timeoutMs - 30s for large timeoutMs (no warning before that)", async () => {
-    // timeoutMs = 30_500 → delay = 500ms → warning should NOT exist at t=100ms
+  it("computes delay = timeoutMs - warnBeforeMs for large timeoutMs (no warning before that)", async () => {
+    // timeoutMs = 500ms, warnBeforeMs = 400ms → delay = 100ms.
     await createChannel("warn-delay", { by: "main" });
 
     scheduleSupervisorTimeoutWarning({
       channelName: "warn-delay",
       workerName: "worker",
-      timeoutMs: 30_500,
+      timeoutMs: 500,
+      warnBeforeMs: 400,
       shutdown: makeShutdown(),
       isChildExited: () => false,
       log: { write: noop },
     });
 
-    // Check at t≈100ms — warning has not fired yet (delay is 500ms).
-    const early = await waitForWarning(env, "warn-delay", 100);
+    const early = await waitForWarning(env, "warn-delay", 50);
     expect(early).toBeUndefined();
 
     // Now poll for the full delay.
-    const eventual = await waitForWarning(env, "warn-delay", 800);
+    const eventual = await waitForWarning(env, "warn-delay", 300);
     expect(eventual).toMatchObject({
-      timeout_ms: 30_500,
-      remaining_ms: 30_000,
+      timeout_ms: 500,
+      remaining_ms: 400,
     });
   });
 });

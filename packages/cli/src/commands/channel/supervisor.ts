@@ -47,6 +47,8 @@ export interface SupervisorConfig {
   resume?: string;
   /** Auto-kill worker after this many ms (anti-zombie). */
   timeoutMs?: number;
+  /** Emit supervisor_warning this many ms before timeout. `<=0` disables it. */
+  warnBeforeMs?: number;
   /** Caller identity recorded on the `spawned` event (default "main"). */
   spawnedBy?: string;
   /** Agent definition name loaded for this worker, if any (recorded on `spawned`). */
@@ -302,6 +304,7 @@ export async function runSupervisor(
       channelName,
       workerName,
       timeoutMs: config.timeoutMs,
+      warnBeforeMs: config.warnBeforeMs,
       shutdown,
       isChildExited: () => child.exitCode !== null || child.signalCode !== null,
       log,
