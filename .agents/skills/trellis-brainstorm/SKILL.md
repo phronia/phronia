@@ -47,6 +47,7 @@ Use a concise title from the user's request. Use a slug without a date prefix. `
    - README files, docs, existing specs, and domain notes
    - related Trellis tasks, research files, and session history when present
    - GitNexus / abcoder / repo-index tools when they are available and the task changes code structure, package boundaries, or call flows
+   - existing parent/child task structure when the request appears to contain multiple deliverables
 3. Write an evidence note into the task before asking the first question. Use `prd.md` for lightweight tasks; use `research/` for larger evidence. Include:
    - files / symbols / flows inspected
    - confirmed facts
@@ -63,6 +64,8 @@ Use a concise title from the user's request. Use a slug without a date prefix. `
 8. Record a short brainstorm round note in `prd.md` or `research/brainstorm.md`.
 9. For complex tasks, do not create or update `design.md` as a final design until evidence is recorded and at least three decision rounds have completed, unless the user explicitly says the scope is already settled.
 10. For complex tasks, create or update `design.md` and `implement.md` before implementation starts.
+
+If the request contains multiple independently verifiable deliverables, propose a parent task plus child tasks. Parent tasks own the source requirements, child map, cross-child acceptance, and final integration review. Child tasks own the actual deliverables. Do not use the parent/child tree as an implicit dependency model; write dependency ordering in each affected child `prd.md` / `implement.md`.
 
 Do not invent a project-specific product/spec hierarchy. If the repository already has product, domain, or spec docs, use them. If it does not, proceed with the evidence that exists.
 

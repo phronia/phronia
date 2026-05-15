@@ -1103,6 +1103,43 @@ The route depends on task intent, artifact presence, and execution mode. Missing
 - **List-context seed**: `task.py list-context` prints "no curated entries yet" for seed-only jsonl.
 - **Artifact gates**: workflow-state, SessionStart, and continue distinguish PRD-only lightweight tasks from complex tasks that still need `design.md` / `implement.md`.
 
+## Parent / Child Task Tree Contract
+
+### Scope / Trigger
+
+Use parent/child task trees when a request contains multiple deliverables that can be planned, implemented, checked, and archived independently. The hierarchy is for work structure and review scope, not for dependency scheduling.
+
+### Signatures
+
+```bash
+python3 ./.trellis/scripts/task.py create "<title>" --slug <name> --parent <parent-dir>
+python3 ./.trellis/scripts/task.py add-subtask <parent-dir> <child-dir>
+python3 ./.trellis/scripts/task.py remove-subtask <parent-dir> <child-dir>
+```
+
+### Contracts
+
+| Contract | Enforcer | Behavior |
+|---|---|---|
+| New child creation | `task_store.py` | `create --parent` writes the child's `parent` field and appends the child directory name to the parent's `children` list. |
+| Existing task link | `task_store.py` | `add-subtask` links two existing active tasks; the child must not already have a different parent. |
+| Unlink | `task_store.py` | `remove-subtask` removes the child from the parent's `children` and clears the child's `parent`. |
+| Parent responsibility | workflow / skills | Parent task owns source requirements, task map, cross-child acceptance, and final integration review. |
+| Child responsibility | workflow / skills | Child task owns one independently verifiable deliverable, including its own dependencies and acceptance criteria. |
+| Archive progress | `script-conventions.md` / `children_progress` | Parent `children` is historical. Archiving a child does not prune it from the parent; missing active children count as completed. |
+
+### Good / Base / Bad Cases
+
+- **Good**: parent task records the overall requirement set and lists child deliverables; each child has its own PRD and any ordering dependency is written in that child's planning artifacts.
+- **Base**: a single lightweight task uses no parent/child structure.
+- **Bad**: parent task is started as a generic "manager" implementation task while child tasks are the only real deliverables.
+- **Bad**: one child depends on another but the dependency is only implied by the parent/child tree. The child artifact must state the dependency explicitly.
+
+### Tests Required
+
+- Workflow template guidance must mention when to use parent/child task trees and where dependency ordering belongs.
+- Task system references must match the archive invariant in `script-conventions.md`.
+
 ---
 
 ## Workflow Step Detail Loading

@@ -53,6 +53,27 @@ describe("trellis template constants", () => {
     return inProgressMatch[1];
   }
 
+  function workflowStateBreadcrumb(status: string): string {
+    const match = new RegExp(
+      `\\[workflow-state:${status}\\]([\\s\\S]*?)\\[/workflow-state:${status}\\]`,
+    ).exec(workflowMdTemplate);
+    if (!match) {
+      throw new Error(`${status} breadcrumb block must exist in workflow.md`);
+    }
+    return match[1];
+  }
+
+  function stepSection(step: string): string {
+    const pattern = new RegExp(
+      `#### ${step.replace(".", "\\.")}[^\\n]*\\n([\\s\\S]*?)(?=\\n#### |\\n### |$)`,
+    );
+    const match = pattern.exec(workflowMdTemplate);
+    if (!match) {
+      throw new Error(`workflow.md step ${step} must exist`);
+    }
+    return match[1];
+  }
+
   it("all templates are non-empty strings", () => {
     for (const [name, content] of Object.entries(allTemplates)) {
       expect(content.length, `${name} should be non-empty`).toBeGreaterThan(0);
@@ -125,6 +146,42 @@ describe("trellis template constants", () => {
     expect(workflowMdTemplate).toContain(
       "not spawn another `trellis-check` / `trellis-implement`",
     );
+  });
+
+  it("workflow.md documents parent child task tree responsibilities", () => {
+    expect(workflowMdTemplate).toContain("### Parent / Child Task Trees");
+    expect(workflowMdTemplate).toContain(
+      "several independently verifiable deliverables",
+    );
+    expect(workflowMdTemplate).toContain(
+      "Parent/child structure is not a dependency system",
+    );
+    expect(workflowMdTemplate).toContain("--parent <parent-dir>");
+    expect(workflowMdTemplate).toContain("task.py add-subtask <parent> <child>");
+    expect(workflowMdTemplate).toContain(
+      "start the child that owns the next independently verifiable deliverable",
+    );
+  });
+
+  it("workflow.md step 1.1 includes parent child split guidance", () => {
+    const step = stepSection("1.1");
+    expect(step).toContain("When considering a parent/child split");
+    expect(step).toContain("Parent tasks own source requirements");
+    expect(step).toContain("Child tasks own actual deliverables");
+    expect(step).toContain(
+      "Parent/child structure is not a dependency system",
+    );
+    expect(step).toContain("Do not start the parent unless");
+  });
+
+  it("workflow.md planning breadcrumbs mention parent child split guidance", () => {
+    const planning = workflowStateBreadcrumb("planning");
+    const planningInline = workflowStateBreadcrumb("planning-inline");
+    for (const block of [planning, planningInline]) {
+      expect(block).toContain("Multi-deliverable scope");
+      expect(block).toContain("parent task plus independently verifiable child tasks");
+      expect(block).toContain("not implied by tree position");
+    }
   });
 
   it("gitignoreTemplate contains ignore patterns", () => {
