@@ -36,7 +36,11 @@ import {
   type ProjectType,
   type DetectedPackage,
 } from "../utils/project-detector.js";
-import { initializeHashes } from "../utils/template-hash.js";
+import { initializeHashes, removeHash } from "../utils/template-hash.js";
+import {
+  NATIVE_WORKFLOW_ID,
+  resolveWorkflowTemplate,
+} from "../utils/workflow-resolver.js";
 import {
   isCwdHomedir,
   homedirGuardMessage,
@@ -951,6 +955,8 @@ interface InitOptions {
   append?: boolean;
   registry?: string;
   monorepo?: boolean;
+  workflow?: string;
+  workflowSource?: string;
 }
 
 // Compile-time check: every CliFlag must be a key of InitOptions.
@@ -1748,6 +1754,28 @@ export async function init(options: InitOptions): Promise<void> {
   }
 
   // ==========================================================================
+  // Resolve workflow template (default: native bundled)
+  // ==========================================================================
+
+  const workflowIdInput = options.workflow?.trim();
+  const workflowId =
+    workflowIdInput && workflowIdInput.length > 0
+      ? workflowIdInput
+      : NATIVE_WORKFLOW_ID;
+  let workflowMdOverride: string | undefined;
+  if (workflowId !== NATIVE_WORKFLOW_ID || options.workflowSource) {
+    const resolved = await resolveWorkflowTemplate(workflowId, {
+      source: options.workflowSource,
+    });
+    if (resolved.id !== NATIVE_WORKFLOW_ID) {
+      workflowMdOverride = resolved.content;
+      console.log(
+        chalk.blue(`🧭 Using workflow template: ${chalk.cyan(resolved.id)}`),
+      );
+    }
+  }
+
+  // ==========================================================================
   // Create Workflow Structure
   // ==========================================================================
 
@@ -1765,6 +1793,7 @@ export async function init(options: InitOptions): Promise<void> {
       skipSpecTemplates: useRemoteTemplate,
       packages: monorepoPackages,
       remoteSpecPackages,
+      workflowMdOverride,
     });
 
     // Write monorepo packages to config.yaml (non-destructive patch)
@@ -1808,6 +1837,14 @@ export async function init(options: InitOptions): Promise<void> {
     console.log(
       chalk.gray(`📋 Tracking ${hashedCount} template files for updates`),
     );
+  }
+
+  // Non-native workflow is user-managed local content. Drop the
+  // `.trellis/workflow.md` hash entry so `trellis update` classifies it as
+  // modified and does not silently restore native bytes. See design.md
+  // "Durable-state contract".
+  if (workflowMdOverride !== undefined && workflowId !== NATIVE_WORKFLOW_ID) {
+    removeHash(cwd, PATHS.WORKFLOW_GUIDE_FILE);
   }
 
   // Initialize developer identity (silent - no output)

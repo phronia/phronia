@@ -65,7 +65,7 @@ Note that `force` / `skipAll` / `createNew` are mutually exclusive in spirit but
 | Python scripts under `.trellis/scripts/` | `templates/trellis/index.ts:getAllScripts` |
 | `.trellis/config.yaml` | `templates/trellis/index.ts:configYamlTemplate` |
 | `.trellis/.gitignore` | `templates/trellis/index.ts:gitignoreTemplate` |
-| `.trellis/workflow.md` | `commands/update.ts:buildWorkflowMdTemplate` (per-block merge, see below) |
+| `.trellis/workflow.md` | `templates/trellis/index.ts:workflowMdTemplate` (whole-file hash-gated, see below) |
 | Root `AGENTS.md` | `commands/update.ts:buildAgentsMdTemplate` (managed-block merge) |
 | Per-platform files | `configurators/index.ts:collectPlatformTemplates` for each detected platform via `configurators/index.ts:getConfiguredPlatforms` |
 | `.claude/settings.json` `statusLine` | preserved through `commands/update.ts:preserveExistingClaudeStatusLine` |
@@ -77,14 +77,23 @@ After collection, `collectTemplateFiles` runs two final passes:
 1. `update.skip` filtering via `commands/update.ts:loadUpdateSkipPaths` — drops paths matching the `update.skip` list in `.trellis/config.yaml`. **Bypassed** when the update is a breaking release with `recommendMigrate` (`breakingBypass`); see "Migration Trigger Semantics".
 2. `configurators/shared.ts:replacePythonCommandLiterals` is applied to every value so init-time and update-time bytes are byte-identical on the same OS. This is the load-bearing step that keeps idempotency working — see Common Pitfalls.
 
-### 2. Per-block merge for workflow.md and AGENTS.md
+### 2. Whole-file workflow.md update and AGENTS.md managed-block merge
 
-Two files are not full overwrites; they merge a CLI-managed block into the user's file:
+These two runtime-facing files have different update contracts:
 
-- **`workflow.md`** (`commands/update.ts:buildWorkflowMdTemplate`): every `[workflow-state:STATUS]…[/workflow-state:STATUS]` block (regex `WORKFLOW_STATE_TAG_RE`) is replaced from the template; missing tag blocks get appended; everything outside any tag block is preserved verbatim. Customized blocks that get overwritten emit a one-line warning.
-- **`AGENTS.md`** (`commands/update.ts:buildAgentsMdTemplate`): the `<!-- TRELLIS:START -->`…`<!-- TRELLIS:END -->` region is replaced via `commands/update.ts:replaceTrellisManagedBlock`; if no markers exist, the template managed block is appended. The legacy untracked-hash whitelist `LEGACY_UNTRACKED_AGENTS_MD_BLOCK_HASHES` lets a pristine pre-tracking AGENTS.md auto-update without a "modified by you" false positive (see `commands/update.ts:isKnownUntrackedTemplate`).
+- **`.trellis/workflow.md`** stays on the normal whole-file template path. `collectTemplateFiles` inserts the bundled `workflowMdTemplate`; `analyzeChanges` decides whether to auto-update, prompt, skip, or create `.new` by comparing the current file hash with `.trellis/.template-hashes.json`. Do not partially merge only `[workflow-state:*]` blocks.
+- **`AGENTS.md`** (`commands/update.ts:buildAgentsMdTemplate`) merges only the `<!-- TRELLIS:START -->`…`<!-- TRELLIS:END -->` region via `commands/update.ts:replaceTrellisManagedBlock`; if no markers exist, the template managed block is appended. The legacy untracked-hash whitelist `LEGACY_UNTRACKED_AGENTS_MD_BLOCK_HASHES` lets a pristine pre-tracking AGENTS.md auto-update without a "modified by you" false positive (see `commands/update.ts:isKnownUntrackedTemplate`).
 
-Why the merge exists: workflow.md and AGENTS.md are both runtime-parsed (workflow.md by `get_context.py` / breadcrumb hooks; AGENTS.md is the public root contract) AND user-customizable. A naive overwrite would clobber narrative customizations on every release. A naive skip would let runtime-critical breadcrumbs and managed contracts rot. The block-merge contract picks the right side for each region.
+Why workflow is whole-file: `.trellis/workflow.md` is parsed by `get_context.py`,
+`workflow_phase.py`, SessionStart strippers, and per-turn workflow-state hooks.
+Runtime-significant headings and platform markers live outside
+`[workflow-state:*]` blocks. Updating only tag blocks can make breadcrumbs
+current while leaving stale phase or platform routing sections behind.
+
+Non-native workflow variants selected through `trellis workflow --template` or
+`trellis init --workflow` are deliberately removed from
+`.trellis/.template-hashes.json`. That makes `trellis update` classify the file
+as user-managed instead of auto-updating it back to bundled native workflow.
 
 ### 3. Analyze on-disk state
 
@@ -239,7 +248,7 @@ The idempotency invariant ("re-running update on a clean repo writes nothing") r
 
 1. **`collectTemplateFiles` resolves all placeholders the same way init does.** The most common bug is forgetting to pipe a new placeholder through `configurators/shared.ts:replacePythonCommandLiterals` (or the per-platform `resolvePlaceholders`) inside a configurator's `collectTemplates` lambda. Init writes resolved bytes; update collects unresolved templates; hashes mismatch every run. See `platform-integration.md > Common Mistakes > "Template placeholder not resolved in collectTemplates"`.
 2. **Init and update agree on what files exist.** Anything `collectTemplateFiles` lists must also be created by `init`, otherwise update auto-adds it on every run. See `platform-integration.md > Common Mistakes > "Template listed in update but not created by init"`.
-3. **The block-merge templates (`workflow.md`, `AGENTS.md`) are byte-stable.** `buildWorkflowMdTemplate` / `buildAgentsMdTemplate` should return the same content when given the same inputs across runs. The CLI tests this via `update.integration.test.ts > #1 same version update is a true no-op` (full snapshot before/after).
+3. **The runtime templates are byte-stable.** `workflowMdTemplate` and `buildAgentsMdTemplate` should return the same content when given the same inputs across runs. The CLI tests this via `update.integration.test.ts > #1 same version update is a true no-op` (full snapshot before/after).
 
 ---
 
@@ -258,7 +267,8 @@ Update and init share the same template producers:
 
 What's unique to update:
 
-- Block-merge for `workflow.md` and `AGENTS.md` (init writes the bundled template directly).
+- Whole-file hash-gated update for bundled native `workflow.md`; non-native workflows are user-managed by removing the workflow hash entry.
+- Managed-block merge for `AGENTS.md` (init writes the bundled template directly).
 - Snapshot backup at `.trellis/.backup-<timestamp>/`.
 - Migration plan + execution.
 - `configSectionsAdded` append path.

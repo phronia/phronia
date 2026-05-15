@@ -1,4 +1,6 @@
 import { describe, expect, it } from "vitest";
+import fs from "node:fs";
+import path from "node:path";
 import {
   scriptsInit,
   commonInit,
@@ -105,6 +107,39 @@ describe("trellis template constants", () => {
 
   it("workflowMdTemplate is markdown", () => {
     expect(workflowMdTemplate).toContain("#");
+  });
+
+  it("marketplace native workflow mirror matches the bundled workflow", () => {
+    const repoRoot = fs.existsSync(path.join(process.cwd(), "marketplace"))
+      ? process.cwd()
+      : path.resolve(process.cwd(), "../..");
+    const marketplaceNative = fs.readFileSync(
+      path.join(repoRoot, "marketplace/workflows/native/workflow.md"),
+      "utf-8",
+    );
+    expect(marketplaceNative).toBe(workflowMdTemplate);
+  });
+
+  it("marketplace TDD workflow planning breadcrumbs include behavior gates", () => {
+    const repoRoot = fs.existsSync(path.join(process.cwd(), "marketplace"))
+      ? process.cwd()
+      : path.resolve(process.cwd(), "../..");
+    const tddWorkflow = fs.readFileSync(
+      path.join(repoRoot, "marketplace/workflows/tdd/workflow.md"),
+      "utf-8",
+    );
+    const planning = /\[workflow-state:planning\]([\s\S]*?)\[\/workflow-state:planning\]/.exec(
+      tddWorkflow,
+    )?.[1];
+    const planningInline = /\[workflow-state:planning-inline\]([\s\S]*?)\[\/workflow-state:planning-inline\]/.exec(
+      tddWorkflow,
+    )?.[1];
+
+    for (const block of [planning, planningInline]) {
+      expect(block).toContain("observable behavior slices");
+      expect(block).toContain("public interface under test");
+      expect(block).toContain("mock boundaries");
+    }
   });
 
   it("[issue-225] workflow.md in_progress breadcrumb has class-2 sub-agent dispatch protocol", () => {
