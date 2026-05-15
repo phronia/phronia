@@ -131,6 +131,18 @@ export {
 } from "./api/send.js";
 
 export {
+  readWorkerInbox,
+  watchWorkerInbox,
+  WorkerInboxError,
+} from "./api/inbox.js";
+export type {
+  ReadWorkerInboxInput,
+  WatchWorkerInboxInput,
+  WorkerInboxMessage,
+  WorkerInboxErrorCode,
+} from "./api/inbox.js";
+
+export {
   postThread,
   renameThread,
 } from "./api/post-thread.js";

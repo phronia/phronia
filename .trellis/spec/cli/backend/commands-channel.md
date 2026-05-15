@@ -360,6 +360,33 @@ type ChannelEventKind = "create" | "join" | "leave" | "message" | "thread" | "co
   `interrupt_requested`, calls the injected `WorkerRuntime`, then appends
   `interrupted` with `method` / `outcome`. `tag:"interrupt"` remains CLI
   compatibility input that normalizes to the first-class API.
+- Worker inbox read/watch is owned by core. `readWorkerInbox(input)` returns
+  the matching `message` events for a worker by composing
+  `resolveChannelRef`, `readChannelEvents`, `reduceWorkerRegistry`, and
+  `matchesInboxPolicy`; `limit` is a non-negative integer applied after
+  inbox filtering (`0` returns `[]`), `afterSeq` is exclusive, and `cursor`
+  on each returned message equals the message `seq`.
+  `watchWorkerInbox(input)` is an `async` function returning an
+  `AsyncGenerator<WorkerInboxMessage>` — upfront validation and a
+  `lastSeq` snapshot happen on the outer call so unknown / terminal worker
+  errors are eager and the watch is not racy against later appends.
+  The generator ends when a terminal event (`killed`, synthesized `done`,
+  or supervisor / synthesized `error`) for the watched worker arrives, and
+  does NOT cross a same-id respawn — to watch a future respawn, callers
+  re-resolve via `watchWorkers` first. `fromStart` / explicit `sinceSeq`
+  are clamped to the current worker generation floor (the latest terminal
+  event before the current `spawned`) so old-generation messages do not
+  replay while post-terminal / pre-spawn backlog remains consumable.
+  Cancellation is only via `AbortSignal`; core does not provide `timeoutMs`.
+  Stable error type
+  `WorkerInboxError` carries `code`, `channel`, `workerId`; codes are
+  `WORKER_INBOX_WORKER_NOT_FOUND` and `WORKER_INBOX_WORKER_TERMINAL`. Core
+  reasons only from the durable event log; it does not claim OS process
+  liveness and does not persist cursor state. CLI supervisor inbox
+  consolidation (`packages/cli/src/commands/channel/supervisor/inbox.ts`)
+  is intentionally deferred — adapter readiness, stdin encoding, turn
+  queueing, interrupt compatibility, and `<worker>.inbox-cursor` remain
+  CLI-local concerns.
 
 ### Codex progress stream metadata
 
