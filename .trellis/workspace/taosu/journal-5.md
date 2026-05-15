@@ -850,3 +850,36 @@ Aligned platform check agent templates with the task artifact contract, added op
 ### Next Steps
 
 - None - task complete
+
+
+## Session 161: Workflow marketplace switcher
+
+**Date**: 2026-05-15
+**Task**: Workflow marketplace switcher
+**Branch**: `feat/v0.6.0-beta`
+
+### Summary
+
+Implemented workflow marketplace templates and trellis workflow switching, documented the workflow command/update hash contract, and archived the workflow marketplace task.
+
+### Main Changes
+
+(Add details)
+
+### Git Commits
+
+| Hash | Message |
+|------|---------|
+| `5c27923` | (see git log) |
+
+### Testing
+
+- [OK] (Add test results)
+
+### Status
+
+[OK] **Completed**
+
+### Next Steps
+
+- None - task complete
