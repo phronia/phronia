@@ -817,3 +817,36 @@ Added the @mindfoldhq/trellis-core/mem subpath API, converted trellis mem into a
 ### Next Steps
 
 - None - task complete
+
+
+## Session 160: Align Agent Artifacts
+
+**Date**: 2026-05-15
+**Task**: Align Agent Artifacts
+**Branch**: `feat/v0.6.0-beta`
+
+### Summary
+
+Aligned platform check agent templates with the task artifact contract, added optional-artifact regression coverage, and verified the beta templates with focused/full regression tests and typecheck.
+
+### Main Changes
+
+(Add details)
+
+### Git Commits
+
+| Hash | Message |
+|------|---------|
+| `fb7a4ed` | (see git log) |
+
+### Testing
+
+- [OK] (Add test results)
+
+### Status
+
+[OK] **Completed**
+
+### Next Steps
+
+- None - task complete
