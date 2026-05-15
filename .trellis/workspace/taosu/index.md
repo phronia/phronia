@@ -8,7 +8,7 @@
 
 <!-- @@@auto:current-status -->
 - **Active File**: `journal-5.md`
-- **Total Sessions**: 163
+- **Total Sessions**: 164
 - **Last Active**: 2026-05-15
 <!-- @@@/auto:current-status -->
 
@@ -19,7 +19,7 @@
 <!-- @@@auto:active-documents -->
 | File | Lines | Status |
 |------|-------|--------|
-| `journal-5.md` | ~951 | Active |
+| `journal-5.md` | ~985 | Active |
 | `journal-4.md` | ~1975 | Archived |
 | `journal-3.md` | ~1988 | Archived |
 | `journal-2.md` | ~1963 | Archived |
@@ -33,6 +33,7 @@
 <!-- @@@auto:session-history -->
 | # | Date | Title | Commits | Branch |
 |---|------|-------|---------|--------|
+| 164 | 2026-05-15 | Fix Cursor sessionStart context injection | `98339802`, `d7491ed2` | `feat/v0.6.0-beta` |
 | 163 | 2026-05-15 | Worker inbox core API | `86f98938` | `feat/v0.6.0-beta` |
 | 162 | 2026-05-15 | Channel wait supervisor warnings | `d2e72268` | `feat/v0.6.0-beta` |
 | 161 | 2026-05-15 | Workflow marketplace switcher | `5c27923` | `feat/v0.6.0-beta` |

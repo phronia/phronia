@@ -949,3 +949,37 @@ Added the core worker inbox read/watch API, documented generation-boundary seman
 ### Next Steps
 
 - None - task complete
+
+
+## Session 164: Fix Cursor sessionStart context injection
+
+**Date**: 2026-05-15
+**Task**: Fix Cursor sessionStart context injection
+**Branch**: `feat/v0.6.0-beta`
+
+### Summary
+
+Cursor's sessionStart expects top-level additional_context, not Claude's nested hookSpecificOutput.additionalContext — the schema mismatch caused all Cursor models (including GPT) to silently miss Trellis context. Shared session-start.py now dual-emits both fields. Also dropped the no-op beforeSubmitPrompt → inject-workflow-state.py registration for Cursor (Cursor's beforeSubmitPrompt schema accepts only continue/user_message; per-turn context injection is impossible on Cursor by design). Spec updated to capture both the support-matrix change and the dual-format output contract.
+
+### Main Changes
+
+(Add details)
+
+### Git Commits
+
+| Hash | Message |
+|------|---------|
+| `98339802` | (see git log) |
+| `d7491ed2` | (see git log) |
+
+### Testing
+
+- [OK] (Add test results)
+
+### Status
+
+[OK] **Completed**
+
+### Next Steps
+
+- None - task complete
