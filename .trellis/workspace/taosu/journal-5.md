@@ -916,3 +916,36 @@ Implemented channel wait kind unions and supervisor pre-timeout warning events; 
 ### Next Steps
 
 - None - task complete
+
+
+## Session 163: Worker inbox core API
+
+**Date**: 2026-05-15
+**Task**: Worker inbox core API
+**Branch**: `feat/v0.6.0-beta`
+
+### Summary
+
+Added the core worker inbox read/watch API, documented generation-boundary semantics, covered inbox routing and limit edge cases, and completed channel-driven check review.
+
+### Main Changes
+
+(Add details)
+
+### Git Commits
+
+| Hash | Message |
+|------|---------|
+| `86f98938` | (see git log) |
+
+### Testing
+
+- [OK] (Add test results)
+
+### Status
+
+[OK] **Completed**
+
+### Next Steps
+
+- None - task complete
