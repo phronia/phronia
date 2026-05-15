@@ -29,6 +29,7 @@ import { runInboxWatcher } from "./supervisor/inbox.js";
 import { createShutdown } from "./supervisor/shutdown.js";
 import { startStdoutPump } from "./supervisor/stdout.js";
 import { TurnTracker } from "./supervisor/turns.js";
+import { scheduleSupervisorTimeoutWarning } from "./supervisor/warning.js";
 
 export interface SupervisorConfig {
   provider: Provider;
@@ -293,6 +294,19 @@ export async function runSupervisor(
       // no need to emit a separate one here.
       void shutdown.request("SIGTERM", "timeout");
     }, config.timeoutMs).unref();
+
+    // Fire-and-forget pre-timeout observability warning. One-shot, guarded
+    // by shutdown/terminal/exit state so it stays quiet once the worker is
+    // already on its way out.
+    scheduleSupervisorTimeoutWarning({
+      channelName,
+      workerName,
+      timeoutMs: config.timeoutMs,
+      shutdown,
+      isChildExited: () => child.exitCode !== null || child.signalCode !== null,
+      log,
+      project,
+    });
   }
 
   // ── 3. inbox watcher ──

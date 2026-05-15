@@ -205,6 +205,22 @@ function printEvent(ev: ChannelEvent, raw: boolean): void {
       printLine(`${kindTag("progress")} by=${by}  ${summary}`, ts);
       break;
     }
+    case "supervisor_warning": {
+      const worker = typeof ev.worker === "string" ? ev.worker : "?";
+      const reason = typeof ev.reason === "string" ? ev.reason : "?";
+      const remaining =
+        typeof ev.remaining_ms === "number" ? ev.remaining_ms : undefined;
+      const timeout =
+        typeof ev.timeout_ms === "number" ? ev.timeout_ms : undefined;
+      const remainingStr =
+        remaining !== undefined ? `  remaining=${remaining}ms` : "";
+      const timeoutStr = timeout !== undefined ? `  timeout=${timeout}ms` : "";
+      printLine(
+        `${kindTag("supervisor_warning")} by=${by}  worker=${colorTo(worker)} reason=${reason}${remainingStr}${timeoutStr}`,
+        ts,
+      );
+      break;
+    }
     default: {
       printLine(`${kindTag(ev.kind)} by=${by}`, ts);
     }
@@ -277,6 +293,8 @@ function kindTag(k: string): string {
       return chalk.gray(padded);
     case "create":
       return chalk.blueBright(padded);
+    case "supervisor_warning":
+      return chalk.yellow(padded);
     default:
       return padded;
   }

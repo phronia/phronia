@@ -77,7 +77,7 @@ trellis channel wait <name> [opts]
   --scope <scope>        : project | global
   --timeout <duration>   : max wait (no timeout = wait indefinitely)
   --from <agents>        : CSV — only wake on events from these authors
-  --kind <kind>          : only wake on this event kind
+  --kind <kind[,kind...]> : only wake on these event kinds (CSV, OR semantics)
   --tag <tag>            : only wake on this user tag
   --thread <key>         : only wake on this thread key
   --action <action>      : only wake on this thread action
@@ -306,7 +306,8 @@ are kind-specific.
 ```ts
 type ChannelEventKind = "create" | "join" | "leave" | "message" | "thread" | "context" | "channel" | "spawned"
   | "killed" | "respawned" | "progress" | "done" | "error" | "waiting" | "awake"
-  | "undeliverable" | "interrupt_requested" | "turn_started" | "turn_finished" | "interrupted";
+  | "undeliverable" | "interrupt_requested" | "turn_started" | "turn_finished" | "interrupted"
+  | "supervisor_warning";
 ```
 
 | Kind | Required (beyond base) | Optional | Producer |
@@ -321,6 +322,7 @@ type ChannelEventKind = "create" | "join" | "leave" | "message" | "thread" | "co
 | `done` | — | `duration_ms: number`, `total_cost_usd: number`, `num_turns: number`, `synthesized: true`, `exit_code: number` | adapter (real) / supervisor (synthesised) |
 | `error` | `message: string` | `detail: object`, `provider: string`, `synthesized: true`, `exit_code`, `exit_signal` | supervisor / adapter |
 | `killed` | `reason: "explicit-kill"\|"timeout"\|"crash"`, `signal: NodeJS.Signals` | `timeout_ms: number` (if reason="timeout"), `worker: string` | supervisor / cli:kill |
+| `supervisor_warning` | `worker: string`, `reason: "approaching_timeout"`, `timeout_ms: number`, `remaining_ms: number` | — | supervisor |
 | `respawned` | (reserved, no fields yet) | — | (future) |
 | `undeliverable` | `targetWorker: string`, `messageSeq: number`, `reason: "worker-terminal"\|"worker-unknown"` | — | core `sendMessage` (strict delivery modes only) |
 | `interrupt_requested` | `worker: string` | `turnId: string`, `reason: "user"\|"system"\|"timeout"\|"superseded"`, `message: string` | core `requestInterrupt` / `interruptWorker` |

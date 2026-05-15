@@ -1,4 +1,4 @@
-import { parseChannelKind } from "./store/events.js";
+import { parseChannelKinds } from "./store/events.js";
 import { resolveExistingChannelRef } from "./store/paths.js";
 import {
   normalizeThreadKey,
@@ -41,7 +41,7 @@ export async function channelWait(
   const filter: WatchFilter = {
     self: opts.as,
     from: fromList,
-    kind: parseChannelKind(opts.kind),
+    kind: parseChannelKinds(opts.kind),
     tag: opts.tag,
     to: opts.to ?? opts.as, // default: broadcasts to me + explicit-to-me
     thread: opts.thread ? normalizeThreadKey(opts.thread) : undefined,

@@ -22,7 +22,13 @@ export const MEANINGFUL_EVENT_KINDS: ReadonlySet<ChannelEventKind> = new Set([
 
 export interface ChannelEventFilter {
   from?: string[];
-  kind?: ChannelEventKind;
+  /**
+   * Restrict to one kind (legacy single value) or any of a list (OR
+   * semantics). An explicit kind constraint bypasses the default
+   * meaningful-kinds filter so non-meaningful kinds can still match
+   * when requested directly (e.g. `supervisor_warning`).
+   */
+  kind?: ChannelEventKind | readonly ChannelEventKind[];
   tag?: string;
   to?: string;
   self?: string;
@@ -32,19 +38,41 @@ export interface ChannelEventFilter {
   action?: ThreadAction;
 }
 
+function matchesKind(
+  evKind: ChannelEventKind,
+  filterKind: ChannelEventFilter["kind"],
+): boolean {
+  if (filterKind === undefined) return true;
+  if (typeof filterKind === "string") return evKind === filterKind;
+  // Empty array = no kind constraint (treat as if filter.kind was undefined).
+  if (filterKind.length === 0) return true;
+  return filterKind.includes(evKind);
+}
+
 export function matchesEventFilter(
   ev: ChannelEvent,
   filter: ChannelEventFilter,
 ): boolean {
   if (filter.self && ev.by === filter.self) return false;
 
-  if (!filter.includeNonMeaningful && !MEANINGFUL_EVENT_KINDS.has(ev.kind)) {
+  // An explicit kind filter is itself the caller's "I know what I want"
+  // signal — bypass the default meaningful-kinds gate so non-meaningful
+  // kinds like `supervisor_warning` remain matchable when requested.
+  const hasExplicitKind =
+    filter.kind !== undefined &&
+    (typeof filter.kind === "string" || filter.kind.length > 0);
+
+  if (
+    !filter.includeNonMeaningful &&
+    !hasExplicitKind &&
+    !MEANINGFUL_EVENT_KINDS.has(ev.kind)
+  ) {
     return false;
   }
 
   if (!filter.includeProgress && ev.kind === "progress") return false;
 
-  if (filter.kind && ev.kind !== filter.kind) return false;
+  if (!matchesKind(ev.kind, filter.kind)) return false;
 
   if (filter.thread !== undefined) {
     if (!isThreadEvent(ev)) return false;

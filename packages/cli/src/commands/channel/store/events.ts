@@ -27,6 +27,7 @@ import { eventsPath, channelDir, lockPath } from "./paths.js";
 export {
   CHANNEL_EVENT_KINDS,
   parseChannelKind,
+  parseChannelKinds,
   isCreateEvent,
   isThreadEvent,
   isContextEvent,
@@ -47,6 +48,7 @@ export type {
   DoneChannelEvent,
   ErrorChannelEvent,
   ProgressChannelEvent,
+  SupervisorWarningChannelEvent,
 } from "@mindfoldhq/trellis-core/channel";
 
 export async function ensureChannelDir(

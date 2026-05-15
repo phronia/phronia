@@ -18,7 +18,10 @@
   "commit": null,
   "pr_url": null,
   "subtasks": [],
-  "children": [],
+  "children": [
+    "05-15-channel-wait-supervisor-warnings",
+    "05-15-worker-inbox-core-api"
+  ],
   "parent": null,
   "relatedFiles": [],
   "notes": "",

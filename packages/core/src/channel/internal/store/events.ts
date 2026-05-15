@@ -40,7 +40,8 @@ export type ChannelEventKind =
   | "interrupt_requested"
   | "turn_started"
   | "turn_finished"
-  | "interrupted";
+  | "interrupted"
+  | "supervisor_warning";
 
 export const CHANNEL_EVENT_KINDS: ReadonlySet<ChannelEventKind> = new Set([
   "create",
@@ -63,6 +64,7 @@ export const CHANNEL_EVENT_KINDS: ReadonlySet<ChannelEventKind> = new Set([
   "turn_started",
   "turn_finished",
   "interrupted",
+  "supervisor_warning",
 ]);
 
 export function parseChannelKind(
@@ -75,6 +77,33 @@ export function parseChannelKind(
     );
   }
   return v as ChannelEventKind;
+}
+
+/**
+ * Parse a CSV of event kinds into a typed list. Each member is validated
+ * through {@link parseChannelKind} so the single-value error message and
+ * whitelist remain the SOT. Returns `undefined` when input is undefined
+ * or contains no non-empty members.
+ */
+export function parseChannelKinds(
+  v: string | undefined,
+): ChannelEventKind[] | undefined {
+  if (v === undefined) return undefined;
+  const parts = v
+    .split(",")
+    .map((s) => s.trim())
+    .filter((s) => s.length > 0);
+  if (parts.length === 0) return undefined;
+  const out: ChannelEventKind[] = [];
+  const seen = new Set<ChannelEventKind>();
+  for (const part of parts) {
+    const parsed = parseChannelKind(part);
+    if (parsed === undefined) continue;
+    if (seen.has(parsed)) continue;
+    seen.add(parsed);
+    out.push(parsed);
+  }
+  return out;
 }
 
 export interface BaseChannelEvent<
@@ -250,6 +279,22 @@ export interface InterruptedChannelEvent
   message?: string;
 }
 
+/** Reason for a supervisor pre-terminal warning event. */
+export type SupervisorWarningReason = "approaching_timeout";
+
+/**
+ * Pre-timeout observability event. Emitted at most once per worker run.
+ * Not part of {@link MEANINGFUL_EVENT_KINDS} so plain `wait` does not
+ * wake on it; explicit `--kind supervisor_warning` does match.
+ */
+export interface SupervisorWarningChannelEvent
+  extends BaseChannelEvent<"supervisor_warning"> {
+  worker: string;
+  reason: SupervisorWarningReason;
+  timeout_ms: number;
+  remaining_ms: number;
+}
+
 export type GenericChannelEvent = BaseChannelEvent<
   Exclude<
     ChannelEventKind,
@@ -268,6 +313,7 @@ export type GenericChannelEvent = BaseChannelEvent<
     | "turn_started"
     | "turn_finished"
     | "interrupted"
+    | "supervisor_warning"
   >
 >;
 
@@ -287,6 +333,7 @@ export type ChannelEvent =
   | TurnStartedChannelEvent
   | TurnFinishedChannelEvent
   | InterruptedChannelEvent
+  | SupervisorWarningChannelEvent
   | GenericChannelEvent;
 
 export function isCreateEvent(ev: ChannelEvent): ev is CreateChannelEvent {

@@ -173,7 +173,10 @@ export function registerChannelCommand(program: Command): void {
     .option("--scope <scope>", "channel scope: project | global")
     .option("--timeout <duration>", "max wait (e.g. 30s, 2m, 1h)")
     .option("--from <agents>", "only wake on events from these agents (CSV)")
-    .option("--kind <kind>", "only wake on this event kind")
+    .option(
+      "--kind <kind[,kind...]>",
+      "only wake on these event kinds (CSV, OR semantics)",
+    )
     .option("--tag <tag>", "only wake on this user tag")
     .option("--thread <key>", "only wake on this thread key")
     .option("--action <action>", "only wake on this thread action")
