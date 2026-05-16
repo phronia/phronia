@@ -64,8 +64,6 @@ trellis channel spawn <name> [opts]
 trellis channel send <name> [text] [opts]
   --as <agent>           : sender identity (REQUIRED)
   --scope <scope>        : project | global
-  --tag <tag>            : user tag (e.g. interrupt / final_answer / question)
-  --kind <tag>           : legacy alias for --tag
   --to <agents>          : CSV of target worker names (default: broadcast)
   --stdin                : read body from stdin
   --text-file <path>     : read body from file
@@ -74,13 +72,22 @@ trellis channel send <name> [text] [opts]
   → stdout: appended event as JSON
   → throws if none of stdin/textFile/[text] provided
 
+trellis channel interrupt <name> [text] [opts]
+  --as <agent>           : requester identity (REQUIRED)
+  --to <agent>           : target worker name (REQUIRED)
+  --scope <scope>        : project | global
+  --stdin                : read replacement instruction from stdin
+  --text-file <path>     : read replacement instruction from file
+  [text] positional      : inline replacement instruction
+  → stdout: appended `interrupt_requested` event as JSON
+  → supervisor appends `interrupted` and sends the replacement instruction to the worker
+
 trellis channel wait <name> [opts]
   --as <agent>           : caller identity (REQUIRED, also default --to)
   --scope <scope>        : project | global
   --timeout <duration>   : max wait (no timeout = wait indefinitely)
   --from <agents>        : CSV — only wake on events from these authors
   --kind <kind[,kind...]> : only wake on these event kinds (CSV, OR semantics)
-  --tag <tag>            : only wake on this user tag
   --thread <key>         : only wake on this thread key
   --action <action>      : only wake on this thread action
   --to <target>          : only wake on events to this target (default = --as)
@@ -99,7 +106,6 @@ trellis channel messages <name> [opts]
   --kind <kind>          : filter by kind
   --from <agents>        : filter by author (CSV)
   --to <target>          : filter by routing target
-  --tag <tag>            : filter by user tag
   --thread <key>         : filter by thread key
   --action <action>      : filter by thread action
   --no-progress          : hide progress events
@@ -154,7 +160,6 @@ trellis channel run [name] [opts]
   --message <text>       : inline prompt
   --message-file <path>  : read prompt from file
   --stdin                : read prompt from stdin
-  --tag <tag>            : user tag for the prompt
   --timeout <duration>   : max wait for done (default 5m)
   → on success: stdout = worker's final message body, channel auto-rm'd, exit 0
   → on failure (error/killed/timeout): channel preserved, stderr "channel kept for inspection: <path>", exit 1
@@ -262,7 +267,7 @@ watchEvents(name, filter: WatchFilter, opts?: {signal?, fromStart?, sinceSeq?, p
 
 // store/filter.ts
 matchesEventFilter(ev, filter): boolean
-  // Single source of truth for kind/tag/thread/action/from/to/progress matching.
+  // Single source of truth for kind/thread/action/from/to/progress matching.
   // Used by both historical `messages` reads and live `watchEvents`.
 
 // store/thread-state.ts
@@ -279,7 +284,8 @@ interface WorkerAdapter {
   handshake?(args: {child, ctx, view}): Promise<void>;      // optional pre-traffic init
   isReady(ctx: AdapterCtx): boolean;                        // safe to forward inbox now?
   parseLine(line: string, ctx: AdapterCtx): ParseResult;    // stdout line → events + side effects
-  encodeUserMessage(text: string, tag: string|undefined, ctx: AdapterCtx): string;
+  encodeUserMessage(text: string, ctx: AdapterCtx): string;
+  encodeInterruptMessage(text: string, ctx: AdapterCtx): string;
 }
 
 // supervisor/shutdown.ts
@@ -316,7 +322,7 @@ type ChannelEventKind = "create" | "join" | "leave" | "message" | "thread" | "co
 |------|------------------------|----------|----------|
 | `create` | `cwd: string`, `scope: "project"\|"global"`, `type: "chat"\|"forum"` | `task: string`, `project: string`, `labels: string[]`, `description: string`, `context: ContextEntry[]`, `ephemeral: true`, `origin: "cli"`, `meta: object` | CLI |
 | `spawned` | `as: string`, `provider: "claude"\|"codex"`, `pid: number` | `agent: string`, `files: string[]`, `manifests: string[]`, `inboxPolicy: "explicitOnly"\|"broadcastAndExplicit"` | supervisor / core `spawnWorker` |
-| `message` | `text: string` | `to: string \| string[]`, `tag: string` | any |
+| `message` | `text: string` | `to: string \| string[]` | any |
 | `thread` | `action: ThreadAction`, `thread: string` | `title`, `text`, `description`, `status`, `labels`, `assignees`, `summary`, `context`, `newThread` | CLI / agents |
 | `context` | `target: "channel"\|"thread"`, `action: "add"\|"delete"`, `context: ContextEntry[]` | `thread` when `target="thread"` | CLI / agents |
 | `channel` | `action: "title"` | `title: string \| null` | CLI / agents |
@@ -330,7 +336,7 @@ type ChannelEventKind = "create" | "join" | "leave" | "message" | "thread" | "co
 | `interrupt_requested` | `worker: string` | `turnId: string`, `reason: "user"\|"system"\|"timeout"\|"superseded"`, `message: string` | core `requestInterrupt` / `interruptWorker` |
 | `turn_started` | `worker: string`, `inputSeq: number` | `turnId: string` | adapter / supervisor |
 | `turn_finished` | `worker: string` | `inputSeq: number`, `turnId: string`, `outcome: "done"\|"error"\|"aborted"` | adapter / supervisor |
-| `interrupted` | `worker: string`, `method: "provider"\|"stdin"\|"signal"\|"none"`, `outcome: "interrupted"\|"queued"\|"unsupported"\|"no-active-turn"\|"failed"` | `turnId: string`, `reason`, `message: string` | core `interruptWorker` |
+| `interrupted` | `worker: string`, `method: "provider"\|"stdin"\|"signal"\|"none"`, `outcome: "interrupted"\|"queued"\|"unsupported"\|"no-active-turn"\|"failed"` | `turnId: string`, `reason`, `message: string` | core `interruptWorker` / CLI supervisor |
 
 **Author identity (`by`) shape**: `"main"`, `"<worker-name>"`, `"supervisor:<worker>"`, or `"cli:<command>"` (e.g. `cli:kill`).
 
@@ -358,8 +364,8 @@ type ChannelEventKind = "create" | "join" | "leave" | "message" | "thread" | "co
 - Interrupt is a first-class API, not a magic tag. `requestInterrupt` appends
   `interrupt_requested` only; `interruptWorker(input, runtime)` appends
   `interrupt_requested`, calls the injected `WorkerRuntime`, then appends
-  `interrupted` with `method` / `outcome`. `tag:"interrupt"` remains CLI
-  compatibility input that normalizes to the first-class API.
+  `interrupted` with `method` / `outcome`. CLI exposes this through
+  `trellis channel interrupt`; message tags are not an interrupt path.
 - Worker inbox read/watch is owned by core. `readWorkerInbox(input)` returns
   the matching `message` events for a worker by composing
   `resolveChannelRef`, `readChannelEvents`, `reduceWorkerRegistry`, and

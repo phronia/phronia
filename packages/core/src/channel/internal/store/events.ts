@@ -144,7 +144,6 @@ export interface CreateChannelEvent extends BaseChannelEvent<"create"> {
 
 export interface MessageChannelEvent extends BaseChannelEvent<"message"> {
   text?: string;
-  tag?: string;
 }
 
 export interface ThreadChannelEvent extends BaseChannelEvent<"thread"> {

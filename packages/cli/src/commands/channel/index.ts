@@ -10,6 +10,7 @@ import {
 import { createChannel } from "./create.js";
 import { parseTrace } from "./dev-parse-trace.js";
 import { channelKill } from "./kill.js";
+import { channelInterrupt } from "./interrupt.js";
 import { channelList } from "./list.js";
 import { channelMessages } from "./messages.js";
 import { channelPrune, channelRm } from "./rm.js";
@@ -112,8 +113,6 @@ export function registerChannelCommand(program: Command): void {
     .description("Send a message into the channel")
     .requiredOption("--as <agent>", "agent name sending")
     .option("--scope <scope>", "channel scope: project | global")
-    .option("--tag <tag>", "tag (e.g. interrupt / phase_done / question)")
-    .option("--kind <tag>", "legacy alias for --tag")
     .option(
       "--to <agents>",
       "comma-separated target agents (default: broadcast)",
@@ -137,8 +136,6 @@ export function registerChannelCommand(program: Command): void {
         const opts = raw as {
           as: string;
           scope?: string;
-          tag?: string;
-          kind?: string;
           to?: string;
           stdin?: boolean;
           textFile?: string;
@@ -151,8 +148,6 @@ export function registerChannelCommand(program: Command): void {
             stdin: opts.stdin,
             textFile: opts.textFile,
             scope: opts.scope,
-            tag: opts.tag,
-            kind: opts.kind,
             to: opts.to,
             deliveryMode: opts.deliveryMode,
           });
@@ -177,7 +172,6 @@ export function registerChannelCommand(program: Command): void {
       "--kind <kind[,kind...]>",
       "only wake on these event kinds (CSV, OR semantics)",
     )
-    .option("--tag <tag>", "only wake on this user tag")
     .option("--thread <key>", "only wake on this thread key")
     .option("--action <action>", "only wake on this thread action")
     .option(
@@ -195,7 +189,6 @@ export function registerChannelCommand(program: Command): void {
         timeout?: string;
         from?: string;
         kind?: string;
-        tag?: string;
         scope?: string;
         thread?: string;
         action?: string;
@@ -209,7 +202,6 @@ export function registerChannelCommand(program: Command): void {
           timeoutMs: parseDuration(opts.timeout),
           from: opts.from,
           kind: opts.kind,
-          tag: opts.tag,
           scope: opts.scope,
           thread: opts.thread,
           action: opts.action,
@@ -225,6 +217,50 @@ export function registerChannelCommand(program: Command): void {
         process.exit(1);
       }
     });
+
+  channel
+    .command("interrupt <name>")
+    .description("Interrupt a worker turn and send a replacement instruction")
+    .requiredOption("--as <agent>", "agent name requesting the interrupt")
+    .requiredOption("--to <agent>", "target worker name")
+    .option("--scope <scope>", "channel scope: project | global")
+    .option("--stdin", "read interrupt message body from stdin")
+    .option("--text-file <path>", "read interrupt message body from file")
+    .argument(
+      "[text]",
+      "inline interrupt message (otherwise use --stdin / --text-file)",
+    )
+    .action(
+      async (
+        name: string,
+        text: string | undefined,
+        raw: Record<string, unknown>,
+      ) => {
+        const opts = raw as {
+          as: string;
+          to: string;
+          scope?: string;
+          stdin?: boolean;
+          textFile?: string;
+        };
+        try {
+          await channelInterrupt(name, {
+            as: opts.as,
+            to: opts.to,
+            text,
+            stdin: opts.stdin,
+            textFile: opts.textFile,
+            scope: opts.scope,
+          });
+        } catch (err) {
+          console.error(
+            chalk.red("Error:"),
+            err instanceof Error ? err.message : err,
+          );
+          process.exit(1);
+        }
+      },
+    );
 
   channel
     .command("spawn <name>")
@@ -354,7 +390,6 @@ export function registerChannelCommand(program: Command): void {
     .option("--message <text>", "inline prompt text")
     .option("--message-file <path>", "read prompt body from file")
     .option("--stdin", "read prompt body from stdin")
-    .option("--tag <tag>", "user tag (e.g. interrupt / phase_done / question)")
     .option(
       "--timeout <duration>",
       "max time to wait for done (e.g. 30s, 5m, 1h; default 5m)",
@@ -371,7 +406,6 @@ export function registerChannelCommand(program: Command): void {
         message?: string;
         messageFile?: string;
         stdin?: boolean;
-        tag?: string;
         timeout?: string;
       };
       if (opts.provider !== undefined && !isProvider(opts.provider)) {
@@ -394,7 +428,6 @@ export function registerChannelCommand(program: Command): void {
           message: opts.message,
           textFile: opts.messageFile,
           stdin: opts.stdin,
-          tag: opts.tag,
           timeoutMs: parseDuration(opts.timeout),
         });
       } catch (err) {
@@ -531,7 +564,6 @@ export function registerChannelCommand(program: Command): void {
     )
     .option("--from <agents>", "filter by author (CSV)")
     .option("--to <target>", "filter by routing target")
-    .option("--tag <tag>", "filter by user tag (e.g. interrupt, final_answer)")
     .option("--thread <key>", "filter by thread key")
     .option("--action <action>", "filter by thread action")
     .option("--no-progress", "hide progress events (tool calls, deltas)")
@@ -544,7 +576,6 @@ export function registerChannelCommand(program: Command): void {
         kind?: string;
         from?: string;
         to?: string;
-        tag?: string;
         scope?: string;
         thread?: string;
         action?: string;
@@ -559,7 +590,6 @@ export function registerChannelCommand(program: Command): void {
           kind: opts.kind,
           from: opts.from,
           to: opts.to,
-          tag: opts.tag,
           scope: opts.scope,
           thread: opts.thread,
           action: opts.action,
