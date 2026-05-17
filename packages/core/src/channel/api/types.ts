@@ -37,6 +37,7 @@ export interface CreateChannelOptions
 export interface SendMessageOptions
   extends ChannelAddressOptions,
     MutationCommonOptions {
+  idempotencyKey?: string;
   text: string;
   to?: string | string[];
   /**
@@ -51,6 +52,7 @@ export interface SendMessageOptions
 export interface PostThreadOptions
   extends ChannelAddressOptions,
     MutationCommonOptions {
+  idempotencyKey?: string;
   action:
     | "opened"
     | "comment"

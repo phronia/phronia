@@ -46,6 +46,9 @@ export async function postThread(
     {
       kind: "thread",
       by: opts.by,
+      ...(opts.idempotencyKey !== undefined
+        ? { idempotencyKey: opts.idempotencyKey }
+        : {}),
       action: opts.action,
       thread,
       ...(opts.title !== undefined ? { title: opts.title } : {}),

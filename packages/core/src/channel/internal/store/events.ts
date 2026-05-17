@@ -113,6 +113,7 @@ export interface BaseChannelEvent<
   ts: string;
   kind: K;
   by: string;
+  idempotencyKey?: string;
   to?: string | string[];
   origin?: EventOrigin;
   meta?: Record<string, unknown>;
@@ -391,6 +392,7 @@ export interface AppendablePartial {
   kind: ChannelEventKind;
   by: string;
   ts?: string;
+  idempotencyKey?: string;
   [extra: string]: unknown;
 }
 
@@ -415,6 +417,9 @@ export async function appendEvent(
   const jsonl = eventsPath(name, project);
   const sidecar = seqSidecarPath(name, project);
   return withLock(lockPath(name, project), async () => {
+    const existing = findIdempotentEvent(jsonl, partial);
+    if (existing !== undefined) return existing;
+
     const lastSeq = await reconcileSeq(jsonl, sidecar);
     const event = {
       ...partial,
@@ -427,7 +432,30 @@ export async function appendEvent(
   });
 }
 
+function findIdempotentEvent(
+  file: string,
+  partial: AppendablePartial,
+): ChannelEvent | undefined {
+  const key = partial.idempotencyKey;
+  if (key === undefined) return undefined;
+
+  for (const ev of readAllEvents(file)) {
+    if (ev.idempotencyKey !== key) continue;
+    if (ev.kind !== partial.kind) {
+      throw new Error(
+        `Idempotency key '${key}' was already used for ${ev.kind}; cannot reuse it for ${partial.kind}`,
+      );
+    }
+    return ev;
+  }
+  return undefined;
+}
+
 function validateEventBase(partial: AppendablePartial): void {
+  const key = partial.idempotencyKey;
+  if (key?.trim().length === 0) {
+    throw new Error("idempotencyKey must be a non-empty string");
+  }
   const origin = partial.origin;
   if (origin !== undefined) {
     parseEventOrigin(typeof origin === "string" ? origin : String(origin));

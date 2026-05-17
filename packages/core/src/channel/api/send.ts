@@ -22,6 +22,9 @@ export async function sendMessage(
     {
       kind: "message",
       by: opts.by,
+      ...(opts.idempotencyKey !== undefined
+        ? { idempotencyKey: opts.idempotencyKey }
+        : {}),
       text: opts.text,
       ...(opts.to !== undefined ? { to: opts.to } : {}),
       ...(opts.origin !== undefined ? { origin: opts.origin } : {}),
@@ -32,10 +35,11 @@ export async function sendMessage(
 
   // Strict delivery modes: classify targets against the durable worker
   // registry and append `undeliverable` for failures. The message event
-  // is already durable above, so user intent is never lost.
+  // is already durable above, so user intent is never lost. Replays use
+  // the persisted event target, not the caller's retry payload.
   const mode = opts.deliveryMode ?? "appendOnly";
-  if (mode !== "appendOnly" && opts.to !== undefined) {
-    const targets = Array.isArray(opts.to) ? opts.to : [opts.to];
+  if (mode !== "appendOnly" && event.to !== undefined) {
+    const targets = Array.isArray(event.to) ? event.to : [event.to];
     const events = await readChannelEvents(opts.channel, ref.project);
     const registry = reduceWorkerRegistry(events);
     const failures = classifyDelivery(registry, targets, mode);
@@ -45,6 +49,11 @@ export async function sendMessage(
         {
           kind: "undeliverable",
           by: opts.by,
+          ...(opts.idempotencyKey !== undefined
+            ? {
+                idempotencyKey: `${opts.idempotencyKey}:undeliverable:${failure.targetWorker}`,
+              }
+            : {}),
           targetWorker: failure.targetWorker,
           messageSeq: event.seq,
           reason: failure.reason,
