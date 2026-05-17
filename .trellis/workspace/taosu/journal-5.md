@@ -1016,3 +1016,38 @@ Added default idle cleanup and live-worker budget controls for channel workers, 
 ### Next Steps
 
 - None - task complete
+
+
+## Session 166: Core Channel Durable Idempotency
+
+**Date**: 2026-05-17
+**Task**: Core Channel Durable Idempotency
+**Branch**: `feat/v0.6.0-beta`
+
+### Summary
+
+Added durable idempotency keys to core channel send/thread writes, documented the event-log contract, verified with channel check workers, build, and dist-based real JSONL tests.
+
+### Main Changes
+
+(Add details)
+
+### Git Commits
+
+| Hash | Message |
+|------|---------|
+| `b645447e` | (see git log) |
+| `399ef98f` | (see git log) |
+| `f301155f` | (see git log) |
+
+### Testing
+
+- [OK] (Add test results)
+
+### Status
+
+[OK] **Completed**
+
+### Next Steps
+
+- None - task complete
