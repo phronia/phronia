@@ -225,6 +225,7 @@ Channel-driven sub-agent dispatch is the local dogfood default. The main session
 Forum terminology: create durable discussion boards with `trellis channel create --type forum`. A `thread` is an item inside a forum, not a board type.
 
 [workflow-state:in_progress]
+Tools: channel-driven `implement` / `check` workers are Trellis channel worker roles, not skills. `trellis-update-spec` is a skill. `trellis-check` also exists as a skill, but local dogfood verification defaults to the channel-driven `check` worker.
 Flow: channel-driven `implement` worker -> channel-driven `check` worker -> `trellis-update-spec` -> commit (Phase 3.4) -> `/trellis:finish-work`.
 Main-session default: use `trellis channel spawn` with `.trellis/agents/implement.md` and `.trellis/agents/check.md`; do not use native Claude Task / Codex sub_agent unless explicitly requested or host-only tools require it.
 Worker context order: jsonl entries -> `prd.md` -> `design.md if present` -> `implement.md if present`. Use stable worker handles such as `implement`, `check`, `check-cx`, `check-cc`; read results with `trellis channel messages --raw` when precision matters.

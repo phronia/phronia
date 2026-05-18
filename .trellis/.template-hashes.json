@@ -124,7 +124,7 @@
     ".codex/hooks/session-start.py": "1c951ff35f490c5fbf576b4764ec190895df7c2a48e279fb20625209f51c321a",
     ".pi/prompts/trellis-continue.md": "b177407dc81da435afef814e04e71770b80c11cc0544a7faba9f2ff7a26a8a44",
     ".opencode/agents/trellis-research.md": "2c5135aefe280fd4508554e58c64bd13f5f9fe58b8bb25393e68496b29bfae4e",
-    ".trellis/workflow.md": "7d875a02c892dcc6ad93bfb43499dd02ce1596fead6c4a5b625b245ff25c89c4",
+    ".trellis/workflow.md": "e490c8baf34e1c21e604a7587937abbd8ec691bd5c9545c3bd28406ec2a96447",
     ".claude/hooks/inject-workflow-state.py": "f7fa9389ed7aa264597fff5de6277bec186e89a3ef539192997c6d026d88d5ec",
     ".agents/skills/trellis-brainstorm/SKILL.md": "056f7cab72748d2402717b38d8e61abacf1e91b9e0fac9d077f4522e82233667",
     ".agents/skills/trellis-update-spec/SKILL.md": "003ce08a3404aeb50998029392c4d4e57b626edf526d3ebd585032bb92dcbb96",
