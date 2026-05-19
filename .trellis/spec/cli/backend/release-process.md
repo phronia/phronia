@@ -184,6 +184,55 @@ Core publishes first because the CLI package depends on the exact core version i
 
 ---
 
+## Artifact verification for release-claimed assets
+
+Any changelog, docs page, or marketplace entry that says a feature is "bundled",
+"installed automatically", or "included with Trellis" must be verified against
+the built package artifact, not only against the source tree.
+
+Before tagging a release that adds or changes a bundled template, skill,
+workflow, hook, script, or generated platform asset:
+
+1. Run the CLI build.
+2. Run `npm pack --dry-run --json` from `packages/cli/` and check the expected
+   `dist/templates/**` paths are present.
+3. Use the built binary (`node packages/cli/bin/trellis.js`) in a fresh temp
+   git repository and run the user-facing command that should install the
+   asset.
+4. Check both the generated files and `.trellis/.template-hashes.json` for the
+   expected paths.
+5. Run `trellis update --dry-run` from the temp repository and confirm it
+   reports the project is already up to date.
+
+This gate is required when docs are updated before or separately from the code
+branch that actually adds the distributable files. A source file existing on
+another branch, in `marketplace/`, or in a docs submodule is not evidence that
+the npm package contains it.
+
+Example for a built-in multi-file skill:
+
+```bash
+pnpm --filter @mindfoldhq/trellis build
+
+cd packages/cli
+npm pack --dry-run --json | grep 'dist/templates/common/bundled-skills/<skill>/SKILL.md'
+cd ../..
+
+tmpdir=$(mktemp -d /tmp/trellis-release-smoke-XXXXXX)
+printf '{"name":"trellis-smoke","version":"0.0.0"}\n' > "$tmpdir/package.json"
+git -C "$tmpdir" init -q
+(
+  cd "$tmpdir"
+  node /path/to/Trellis/packages/cli/bin/trellis.js init -u smoke --yes --claude --codex
+  test -f .claude/skills/<skill>/SKILL.md
+  test -f .agents/skills/<skill>/SKILL.md
+  grep -q '<skill>' .trellis/.template-hashes.json
+  node /path/to/Trellis/packages/cli/bin/trellis.js update --dry-run
+)
+```
+
+---
+
 ## Pre-release checklist
 
 - [ ] Worktree is clean except intentional release changes.
@@ -194,6 +243,7 @@ Core publishes first because the CLI package depends on the exact core version i
 - [ ] Submodule commits are pushed before main repo pointer commits.
 - [ ] `node packages/cli/scripts/release-preflight.js check-versions` passes.
 - [ ] `node packages/cli/scripts/release-preflight.js verify-packed-cli` passes.
+- [ ] Release-claimed bundled assets are verified in `npm pack --dry-run --json` and a fresh temp-directory `trellis init` / `trellis update --dry-run` smoke test.
 - [ ] `pnpm lint && pnpm typecheck && pnpm test` pass or the blocker is recorded.
 - [ ] Breaking releases include `migrationGuide` and `aiInstructions` in the manifest.
 - [ ] Official package publication is left to CI.

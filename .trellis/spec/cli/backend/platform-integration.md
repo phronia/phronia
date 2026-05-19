@@ -276,6 +276,11 @@ Use bundled skills when a built-in skill needs files beyond `SKILL.md`, such as 
 - Init integration test proving at least Claude and Codex write `trellis-meta/SKILL.md` plus one reference file.
 - Configurator test proving configured files are byte-for-byte equal to `collectPlatformTemplates()` for every platform that writes skills.
 - Regression test proving `.trellis/.template-hashes.json` includes bundled skill reference files after init.
+- Release smoke test when a changelog or docs page claims the skill is
+  bundled: build the CLI, verify the skill appears in `npm pack --dry-run
+  --json` under `dist/templates/common/bundled-skills/<skill>/`, then run the
+  built binary in a fresh temp repository and confirm both generated skill
+  files and `.trellis/.template-hashes.json` contain the skill paths.
 
 ##### 7. Wrong vs Correct
 
@@ -295,6 +300,13 @@ for (const [filePath, content] of collectSkillTemplates(skillRoot, skills, bundl
 ```
 
 **Rule**: Do not add a parallel installer for built-in multi-file skills. If `trellis init` writes a bundled skill file, the platform's `collectTemplates()` path must return the same relative path and byte-identical content so `.trellis/.template-hashes.json` can track it. At minimum, tests must cover one reference file (for example `trellis-meta/references/core/template-pipeline.md`) and the platform-specific install root.
+
+**Release rule**: A bundled skill is not release-ready until it has passed the
+source, dist, generated-files, and update-tracking chain:
+`src/templates/common/bundled-skills/<skill>/` ->
+`dist/templates/common/bundled-skills/<skill>/` -> platform skill roots after
+built-binary `trellis init` -> `.trellis/.template-hashes.json` -> built-binary
+`trellis update --dry-run` with no pending changes.
 
 ### Step 5: Template Extraction
 
