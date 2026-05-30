@@ -5028,6 +5028,20 @@ describe("regression: class-2 platforms use pull-based sub-agent context", () =>
         }
       });
 
+      it("[beta.21] prelude is injected exactly once, not duplicated", () => {
+        // The codex toml source templates once carried an inline prelude that
+        // predated the code-injected prelude (injectPullBasedPreludeToml). The
+        // generated agent then contained the block twice. Source templates must
+        // stay prelude-free so the injector is the single source.
+        for (const file of preludeAgents) {
+          const content = fs.readFileSync(path.join(tmpDir, file), "utf-8");
+          const occurrences = content.split(
+            "Required: Load Trellis Context First",
+          ).length - 1;
+          expect(occurrences, `${file} should have exactly one prelude`).toBe(1);
+        }
+      });
+
       it("[issue-225] prelude tells sub-agent to look for `Active task:` line in dispatch prompt first", () => {
         for (const file of preludeAgents) {
           const content = fs.readFileSync(path.join(tmpDir, file), "utf-8");
