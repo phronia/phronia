@@ -104,3 +104,36 @@ Upgraded .omp/extensions/trellis/index.ts: session_start now invokes get_context
 ### Next Steps
 
 - None - task complete
+
+
+## Session 4: Fix OMP command frontmatter generation
+
+**Date**: 2026-06-03
+**Task**: Fix OMP command frontmatter generation
+**Branch**: `feat/support-oh-my-pi`
+
+### Summary
+
+Added wrapWithOmpFrontmatter() to shared.ts and wired it into omp.ts configurator. OMP commands now generate with proper YAML frontmatter (description + optional argument-hint). Updated platform-integration spec to include OMP in command format table and agent-capable list. Added 7 unit/integration tests.
+
+### Main Changes
+
+(Add details)
+
+### Git Commits
+
+| Hash | Message |
+|------|---------|
+| `3245bda` | (see git log) |
+
+### Testing
+
+- [OK] (Add test results)
+
+### Status
+
+[OK] **Completed**
+
+### Next Steps
+
+- None - task complete
