@@ -8,6 +8,7 @@ import {
   workflowMdTemplate,
   configYamlTemplate,
   gitignoreTemplate,
+  getAllAgents,
 } from "../templates/trellis/index.js";
 
 // Import markdown templates
@@ -117,6 +118,17 @@ export async function createWorkflowStructure(
     path.join(cwd, DIR_NAMES.WORKFLOW, "config.yaml"),
     configYamlTemplate,
   );
+
+  // Dispatch channel runtime agent definitions. These are platform-agnostic
+  // Trellis runtime files consumed by `trellis channel spawn --agent <name>`
+  // through `packages/cli/src/commands/channel/agent-loader.ts`. They are
+  // dispatched on every init regardless of selected workflow because the user
+  // can switch to a channel-driven workflow at any time via `trellis workflow
+  // --template`.
+  ensureDir(path.join(cwd, PATHS.AGENTS));
+  for (const [agentFile, content] of getAllAgents()) {
+    await writeFile(path.join(cwd, PATHS.AGENTS, agentFile), content);
+  }
 
   // Create workspace/ with index.md
   ensureDir(path.join(cwd, PATHS.WORKSPACE));

@@ -37,6 +37,7 @@ import { emptyTaskJson } from "../utils/task-json.js";
 // Import templates for comparison
 import {
   getAllScripts,
+  getAllAgents,
   // Configuration
   configYamlTemplate,
   gitignoreTemplate,
@@ -631,6 +632,14 @@ function collectTemplateFiles(
   // Python scripts (single source of truth: getAllScripts())
   for (const [scriptPath, content] of getAllScripts()) {
     files.set(`${PATHS.SCRIPTS}/${scriptPath}`, content);
+  }
+
+  // Channel runtime agent definitions (single source of truth: getAllAgents()).
+  // Backfilled by `trellis update` if missing so users who installed before the
+  // bundled agents existed pick them up. Edited files take the standard
+  // modified-file prompt path.
+  for (const [agentFile, content] of getAllAgents()) {
+    files.set(`${PATHS.AGENTS}/${agentFile}`, content);
   }
 
   // Configuration

@@ -19,6 +19,9 @@ import {
   workflowMdTemplate,
   gitignoreTemplate,
   getAllScripts,
+  getAllAgents,
+  implementAgentTemplate,
+  checkAgentTemplate,
 } from "../../src/templates/trellis/index.js";
 
 // =============================================================================
@@ -268,6 +271,49 @@ describe("getAllScripts", () => {
     const scripts = getAllScripts();
     for (const [key] of scripts) {
       expect(key, `${key} should not be a multi_agent script`).not.toContain("multi_agent");
+    }
+  });
+});
+
+// =============================================================================
+// getAllAgents — channel runtime agent definitions dispatched at init/update.
+// agent-loader.ts loads `.trellis/agents/<name>.md` and requires `---` YAML
+// frontmatter at the top with a flat `name: <name>` field. These tests pin the
+// contract so a future template edit can't silently break channel spawn.
+// =============================================================================
+
+describe("getAllAgents", () => {
+  it("ships implement and check agents", () => {
+    const agents = getAllAgents();
+    expect(agents.has("implement.md")).toBe(true);
+    expect(agents.has("check.md")).toBe(true);
+  });
+
+  it("values match exported constants", () => {
+    const agents = getAllAgents();
+    expect(agents.get("implement.md")).toBe(implementAgentTemplate);
+    expect(agents.get("check.md")).toBe(checkAgentTemplate);
+  });
+
+  it("each agent body starts with `---` frontmatter and a matching name field", () => {
+    const agents = getAllAgents();
+    for (const [file, content] of agents) {
+      expect(content.startsWith("---\n"), `${file} must start with --- frontmatter`).toBe(true);
+      // Frontmatter must close on a `---\n` line.
+      const frontmatterClose = content.indexOf("\n---\n", 4);
+      expect(frontmatterClose, `${file} must have a closing --- frontmatter line`).toBeGreaterThan(0);
+      const frontmatter = content.slice(4, frontmatterClose);
+      // The agent's `name:` field must match the file basename so
+      // `trellis channel spawn --agent <name>` resolves correctly.
+      const expectedName = file.replace(/\.md$/, "");
+      const nameLine = frontmatter
+        .split("\n")
+        .find((line) => /^name\s*:/.test(line));
+      expect(nameLine, `${file} must declare a name field`).toBeTruthy();
+      expect(
+        nameLine?.split(":")[1]?.trim(),
+        `${file} name field should equal "${expectedName}"`,
+      ).toBe(expectedName);
     }
   });
 });
