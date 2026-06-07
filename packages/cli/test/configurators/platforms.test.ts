@@ -36,7 +36,11 @@ import {
   replacePythonCommandLiterals,
 } from "../../src/configurators/shared.js";
 
-const BUNDLED_SKILL_NAMES = ["trellis-meta", "trellis-spec-bootstrap"];
+const BUNDLED_SKILL_NAMES = [
+  "trellis-meta",
+  "trellis-session-insight",
+  "trellis-spec-bootstrap",
+];
 const BUNDLED_SKILL_NAME = BUNDLED_SKILL_NAMES[0];
 const BUNDLED_REFERENCE = path.join(
   BUNDLED_SKILL_NAME,
