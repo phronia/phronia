@@ -441,15 +441,191 @@ Hardened workflow-state and implement/check agent prompts against recursive Trel
 - None - task complete
 
 
-## Session 149: v0.5.10: git-add-f prevention + Pi workflow-state injection (#249) + Pi pi-subagents isolation (#246)
+## Session 149: 0.5.7 release + Codex dispatch mode + mem unit tests + 0.6 beta sync
+
+**Date**: 2026-05-08
+**Task**: 0.5.7 release + Codex dispatch mode + mem unit tests + 0.6 beta sync
+**Branch**: `feat/v0.6.0-beta`
+
+### Summary
+
+Shipped 0.5.7 with Codex configurable dispatch mode (codex.dispatch_mode=sub-agent|inline) + new configSectionsAdded manifest field (generic mechanism for future config additions, append-only / idempotent). Tracked Codex 0.129 features.codex_hooks→features.hooks rename + new /hooks TUI approval gate across docs / spec / runtime warning / uninstall scrubber. Found and fixed parser bug in trellis_config.py during dogfood (inline # comments not stripped, breaking inline-mode detection). Merged main into feat/v0.6.0-beta to bring 0.5.5/0.5.6/0.5.7 into beta. Added 84 unit tests for trellis mem command (1461 LoC POC integrated to v0.6.0-beta with 0 coverage); 81.89% statement coverage achieved; only export annotations on mem.ts (no logic edits). Vitest 1019/1019, lint+typecheck green. npm 0.5.7 published as latest tag.
+
+### Main Changes
+
+(Add details)
+
+### Git Commits
+
+| Hash | Message |
+|------|---------|
+| `278b40a` | (see git log) |
+| `b5b23fb` | (see git log) |
+| `b02faf1` | (see git log) |
+| `b829b14` | (see git log) |
+| `1ac65c2` | (see git log) |
+| `1222f36` | (see git log) |
+| `c10ded7` | (see git log) |
+
+### Testing
+
+- [OK] (Add test results)
+
+### Status
+
+[OK] **Completed**
+
+### Next Steps
+
+- None - task complete
+
+
+## Session 150: ship 0.5.9 + 0.6.0-beta.1; fix mem --since cross-day; spec audit batches A+B+C+D
+
+**Date**: 2026-05-08
+**Task**: ship 0.5.9 + 0.6.0-beta.1; fix mem --since cross-day; spec audit batches A+B+C+D
+**Branch**: `feat/v0.6.0-beta`
+
+### Summary
+
+Released 0.5.9 (main) and 0.6.0-beta.1 (feat/v0.6.0-beta) shipping the codex dispatch namespace fix + default inline. Restored 0.6.0-beta.0.json on main for manifest continuity. Fixed tl mem list/search --since to respect cross-day session activity (interval-overlap helper, +23 tests, 1023→1046). Ran full spec audit (48 findings); cleared all P0 + mechanical P1 (Batch A+B+C+D): script-conventions task_context init-context drop, workflow-state-contract writer-table line-number refresh, quality-guidelines + unit-test conventions init.ts:931→:1081, directory-structure tree refresh, docs-site architecture.mdx .current-task fallback claim corrected EN+ZH. Out of scope: Batch E new spec files (mem.md/update.md/uninstall.md/uninstall-scrubbers.md/configurator-shared-helpers.md), Batch F docs-site Mode taxonomy + ai-tools coverage decisions, codex perf one-sided f.until prune, readJsonlFirst streaming, residual MEMORY.md iflow notes.
+
+### Main Changes
+
+(Add details)
+
+### Git Commits
+
+| Hash | Message |
+|------|---------|
+| `4b90152` | (see git log) |
+| `89bb3a0` | (see git log) |
+
+### Testing
+
+- [OK] (Add test results)
+
+### Status
+
+[OK] **Completed**
+
+### Next Steps
+
+- None - task complete
+
+
+## Session 151: spec batch E: 5 new specs for uncovered modules + mem search-index-gap doc
+
+**Date**: 2026-05-08
+**Task**: spec batch E: 5 new specs for uncovered modules + mem search-index-gap doc
+**Branch**: `feat/v0.6.0-beta`
+
+### Summary
+
+Spawned 5 parallel trellis-implement agents to author commands-mem.md (634), commands-update.md (383), commands-uninstall.md (306), uninstall-scrubbers.md (330), configurator-shared.md (309) — total 1962 lines new spec content. trellis-check single agent reviewed bundle: style consistency (all 5 mirror platform-integration.md), 10 sampled file.ts:symbolName refs all resolved, fixed 1 stale uninstall-scrubbers.md ref (performUninstall→uninstall), updated backend/index.md with 5 rows + 4 checklist lines. Added 'Search index gaps (known limitations)' section to commands-mem.md documenting that tool_use / thinking / tool_result fields are excluded from search index — users searching for tool/skill/agent names should use raw grep over JSONL. Code untouched, 1046/1046 tests pass. Local commit only — not pushed per user directive.
+
+### Main Changes
+
+(Add details)
+
+### Git Commits
+
+| Hash | Message |
+|------|---------|
+| `d7341cb` | (see git log) |
+
+### Testing
+
+- [OK] (Add test results)
+
+### Status
+
+[OK] **Completed**
+
+### Next Steps
+
+- None - task complete
+
+
+## Session 152: feat: tl mem extract --phase brainstorm|implement|all (cross-day fix already in 0.6.0-beta.2)
+
+**Date**: 2026-05-08
+**Task**: feat: tl mem extract --phase brainstorm|implement|all (cross-day fix already in 0.6.0-beta.2)
+**Branch**: `feat/v0.6.0-beta`
+
+### Summary
+
+Added --phase flag to tl mem extract for slicing session into [task.py create, task.py start) brainstorm windows. Boundary signal: regex match on Bash tool_use commands with 6+ invoker variants (python/python3/py -3/no prefix, forward/backward/double-escaped slashes, abs/rel paths) and false-positive guards. Single-pass collector emits cleaned turns + task.py events with turnIndex (necessary because the cleaning pipeline drops tool_use). Multi-task pairing: slug match > FIFO; missing-pair fallbacks. Codex/OpenCode degrade to full dialogue + stderr warning. trellis-check caught a real bug (pre-compact task.py events not reset on compaction → stale turnIndex into collapsed [compact summary] surface) and pinned a regression test. Tests: 1046 → 1079 (+33). Spec: commands-mem.md adds ## Phase slicing (--phase) section. Local commit only — not pushed.
+
+### Main Changes
+
+(Add details)
+
+### Git Commits
+
+| Hash | Message |
+|------|---------|
+| `a16b8d9` | (see git log) |
+
+### Testing
+
+- [OK] (Add test results)
+
+### Status
+
+[OK] **Completed**
+
+### Next Steps
+
+- None - task complete
+
+
+## Session 153: fix(mem): OpenCode SQLite reader (1.2+ users restored, perf streaming, --phase dogfood fixes)
+
+**Date**: 2026-05-08
+**Task**: fix(mem): OpenCode SQLite reader (1.2+ users restored, perf streaming, --phase dogfood fixes)
+**Branch**: `feat/v0.6.0-beta`
+
+### Summary
+
+Major mem.ts overhaul on feat/v0.6.0-beta. (1) Batch E new spec files (commands-{mem,update,uninstall}.md, uninstall-scrubbers.md, configurator-shared.md, +index.md). (2) Added --phase brainstorm|implement|all to mem extract with task.py create/start boundary detection. (3) Dogfood-driven robustness: shell-arg $(...) closing-paren strip, multi-task.py-per-Bash-command, prose rejection, MM-DD- prefix strip; Codex collectCodexTurnsAndEvents. (4) perf: chunked sync streaming readJsonl + byte-prefix fast-reject — list 3.5s→0.67s (5x), extract 5.8s→0.73s (8x), heap from 36MB→256KB. (5) OpenCode SQLite reader replaces obsolete JSON-tree reader: 138 sessions visible (was 0), search 0.235s on 678 messages. better-sqlite3 added as deps with createRequire bridge for ESM, pnpm.onlyBuiltDependencies for native binding install, dynamic PRAGMA schema defense, soft-degrade if dep load fails. 1085 → 1087 tests. NOT pushed per user directive.
+
+### Main Changes
+
+(Add details)
+
+### Git Commits
+
+| Hash | Message |
+|------|---------|
+| `d7341cb` | (see git log) |
+| `a16b8d9` | (see git log) |
+| `a992325` | (see git log) |
+| `7e8f30c` | (see git log) |
+| `f26c5fd` | (see git log) |
+
+### Testing
+
+- [OK] (Add test results)
+
+### Status
+
+[OK] **Completed**
+
+### Next Steps
+
+- None - task complete
+
+
+## Session 154: marketplace mem-recall: add --phase brainstorm + symlink user local
 
 **Date**: 2026-05-09
-**Task**: v0.5.10: git-add-f prevention + Pi workflow-state injection (#249) + Pi pi-subagents isolation (#246)
-**Branch**: `main`
+**Task**: marketplace mem-recall: add --phase brainstorm + symlink user local
+**Branch**: `feat/v0.6.0-beta`
 
 ### Summary
 
-Stable patch on top of 0.5.9. (1) safe_commit.py helper centralizes git-add path scope + auto -f only on 'ignored by' stderr + explicit anti- warning. add_session.py + task.py archive both go through it. Real user lost 83474 lines to git add -f, this prevents recurrence. (2) Pi extension now injects [workflow-state] / <session-overview> / subagent promptSnippet with Active task: dispatch protocol — Pi sessions previously skipped Trellis flow entirely. (3) PR #246 RenaLio: project-level packages override prevents global npm:pi-subagents from polluting current project. 939→947 tests. v0.5.10 released.
+Updated marketplace/skills/mem-recall/SKILL.md to match 0.6.0-beta.3: prereq bump, 6 new brainstorm-rationale trigger phrases, new --phase brainstorm section with 5 examples, OpenCode row → SQLite, parent_id rename. Replaced user local ~/.claude/skills/chat-history-recall (old TS POC) with symlink to marketplace mem-recall. trellis-check caught 3 Codex-as-degraded mistakes (Codex actually supports phase), fixed. commands-mem.md spec also has same stale Codex degradation table — out of scope, follow-up.
 
 ### Main Changes
 
@@ -459,9 +635,7 @@ Stable patch on top of 0.5.9. (1) safe_commit.py helper centralizes git-add path
 
 | Hash | Message |
 |------|---------|
-| `5a5e5db` | (see git log) |
-| `04af444` | (see git log) |
-| `f6a53b1` | (see git log) |
+| `b397638` | (see git log) |
 
 ### Testing
 
@@ -476,15 +650,82 @@ Stable patch on top of 0.5.9. (1) safe_commit.py helper centralizes git-add path
 - None - task complete
 
 
-## Session 150: OpenCode shell dialect context fix
+## Session 155: 0.6.0-beta.4 emergency revert: drop better-sqlite3 (Windows install fix)
+
+**Date**: 2026-05-09
+**Task**: 0.6.0-beta.4 emergency revert: drop better-sqlite3 (Windows install fix)
+**Branch**: `feat/v0.6.0-beta`
+
+### Summary
+
+0.6.0-beta.3 added better-sqlite3 dep for OpenCode SQLite reader. Windows + China-network users hit prebuild-install timeouts; node-gyp fallback needed VS2017+ (most users don't have) → Trellis itself failed to install. Emergency revert: drop the dep, OpenCode adapters return [] + one-shot stderr warning, Claude/Codex unaffected. Synced marketplace mem-recall skill + commands-mem.md spec to match. mem.ts -279 lines, package.json deps cleaned, pnpm-lock -217 lines, tests 1095→1078. Released as 0.6.0-beta.4.
+
+### Main Changes
+
+(Add details)
+
+### Git Commits
+
+| Hash | Message |
+|------|---------|
+| `300b729` | (see git log) |
+| `daba04d` | (see git log) |
+
+### Testing
+
+- [OK] (Add test results)
+
+### Status
+
+[OK] **Completed**
+
+### Next Steps
+
+- None - task complete
+
+
+## Session 156: Task artifact routing gates
+
+**Date**: 2026-05-10
+**Task**: Task artifact routing gates
+**Branch**: `feat/v0.6.0-beta`
+
+### Summary
+
+Implemented task artifact contracts, task-creation consent gates, compact SessionStart context, cross-platform artifact loading, and matching CLI regression coverage.
+
+### Main Changes
+
+(Add details)
+
+### Git Commits
+
+| Hash | Message |
+|------|---------|
+| `f01c772` | (see git log) |
+
+### Testing
+
+- [OK] (Add test results)
+
+### Status
+
+[OK] **Completed**
+
+### Next Steps
+
+- None - task complete
+
+
+## Session 157: Harden trellis upgrade execution
 
 **Date**: 2026-05-11
-**Task**: OpenCode shell dialect context fix
-**Branch**: `main`
+**Task**: Harden trellis upgrade execution
+**Branch**: `feat/v0.6.0-beta`
 
 ### Summary
 
-Fixed OpenCode TRELLIS_CONTEXT_ID prefixing on Windows Git Bash by detecting POSIX shell signals before choosing PowerShell syntax; documented the shell-dialect contract and recorded the task research artifacts.
+Added cross-platform command planning for trellis upgrade, routed Windows npm execution through cmd.exe, preserved POSIX shell-free spawn, and expanded npm failure/success diagnostics with tests and spec coverage.
 
 ### Main Changes
 
@@ -494,9 +735,7 @@ Fixed OpenCode TRELLIS_CONTEXT_ID prefixing on Windows Git Bash by detecting POS
 
 | Hash | Message |
 |------|---------|
-| `bbdd0f0` | (see git log) |
-| `5ef4825` | (see git log) |
-| `ce35cd1` | (see git log) |
+| `aa54b45` | (see git log) |
 
 ### Testing
 
@@ -511,15 +750,15 @@ Fixed OpenCode TRELLIS_CONTEXT_ID prefixing on Windows Git Bash by detecting POS
 - None - task complete
 
 
-## Session 151: Fix polyrepo Git status context
+## Session 158: Trellis Channel Runtime — multi-agent collaboration layer
 
-**Date**: 2026-05-11
-**Task**: Fix polyrepo Git status context
-**Branch**: `main`
+**Date**: 2026-05-12
+**Task**: Trellis Channel Runtime — multi-agent collaboration layer
+**Branch**: `feat/v0.6.0-beta`
 
 ### Summary
 
-Fixed issue #252 by making session context detect non-Git roots before rendering root Git status, preserving package repo status for configured and discovered child repositories, and adding regression coverage plus backend spec notes.
+Built the trellis channel command tree: 11 subcommands, claude/codex worker adapters, supervisor with ShutdownController, project-scoped storage with legacy migration, --ephemeral lifecycle, channel run one-shot, wait --all, --agent + --file + --jsonl context injection. Hardened against spawn race / kill ladder / signal handling bugs via multi-round dogfood CR. Spec doc + agent cards added; codex multi_agent_v2 disabled now that channel owns the multi-agent surface.
 
 ### Main Changes
 
@@ -529,7 +768,10 @@ Fixed issue #252 by making session context detect non-Git roots before rendering
 
 | Hash | Message |
 |------|---------|
-| `29a6f7c` | (see git log) |
+| `a2d3c83` | (see git log) |
+| `7608c30` | (see git log) |
+| `dab8e57` | (see git log) |
+| `f5681a4` | (see git log) |
 
 ### Testing
 
@@ -544,15 +786,15 @@ Fixed issue #252 by making session context detect non-Git roots before rendering
 - None - task complete
 
 
-## Session 152: OpenCode subagent context injection fix (#264)
+## Session 159: Core mem and forum channels
 
-**Date**: 2026-05-11
-**Task**: OpenCode subagent context injection fix (#264)
-**Branch**: `main`
+**Date**: 2026-05-14
+**Task**: Core mem and forum channels
+**Branch**: `feat/v0.6.0-beta`
 
 ### Summary
 
-Fixed GitHub #264 — OpenCode subagent dispatch had two stacked bugs verified by local repro: Bug 2 (always-on) where session-start.js and inject-workflow-state.js injected ~38KB of main-session content into trellis-implement/check/research child sessions because they ignored input.agent; Bug 1 (env-dependent) where tool.execute.before's task-state lookup missed when .trellis/.runtime/sessions/opencode_<sessionID>.json was absent (external-terminal start or cross-window dispatch). Added isTrellisSubagent guard to both chat.message plugins, mirrored Python's _resolve_single_session_fallback in JS, added Active task: <path> prompt-hint parser (precedence > fallback for multi-window safety), and added <!-- trellis-hook-injected --> marker to all four prompt templates. 7 files changed, 986 tests pass. Side product: created planning placeholder task for parallel Pi extension subagent double-injection investigation since Pi's child-process architecture mirrors OpenCode #264 shape but lacks input.agent equivalent.
+Added the @mindfoldhq/trellis-core/mem subpath API, converted trellis mem into a CLI wrapper, renamed channel thread-board commands to forum terminology, updated specs, and passed Trellis check review.
 
 ### Main Changes
 
@@ -562,8 +804,7 @@ Fixed GitHub #264 — OpenCode subagent dispatch had two stacked bugs verified b
 
 | Hash | Message |
 |------|---------|
-| `2abafba` | (see git log) |
-| `447c809` | (see git log) |
+| `3e53e17` | (see git log) |
 
 ### Testing
 
@@ -578,15 +819,15 @@ Fixed GitHub #264 — OpenCode subagent dispatch had two stacked bugs verified b
 - None - task complete
 
 
-## Session 153: Bump hook timeouts for Windows Python cold start (#267)
+## Session 160: Align Agent Artifacts
 
-**Date**: 2026-05-11
-**Task**: Bump hook timeouts for Windows Python cold start (#267)
-**Branch**: `main`
+**Date**: 2026-05-15
+**Task**: Align Agent Artifacts
+**Branch**: `feat/v0.6.0-beta`
 
 ### Summary
 
-Fixed GitHub #267 — Windows Claude users silently lost SessionStart hook injection because Python cold start + 780-line session-start.py + nested subprocesses + git calls routinely exceeded the 10s default timeout (Claude Code protocol default is 60s; Trellis was actively tightening to 10s). Bumped uniformly across all 8 hook-based platform templates: SessionStart 10→30s (gemini 10000→30000ms), UserPromptSubmit/inject-workflow-state 5→15s (gemini 5000→15000ms, copilot uses timeoutSec). PreToolUse (30s) and cursor beforeShellExecution (5s) left untouched per scope. Added test/templates/hook-timeouts.test.ts dynamic regression guard that iterates platforms and asserts the floor with >= comparisons so future drift surfaces immediately. 1002 tests pass, lint + typecheck clean.
+Aligned platform check agent templates with the task artifact contract, added optional-artifact regression coverage, and verified the beta templates with focused/full regression tests and typecheck.
 
 ### Main Changes
 
@@ -596,8 +837,7 @@ Fixed GitHub #267 — Windows Claude users silently lost SessionStart hook injec
 
 | Hash | Message |
 |------|---------|
-| `43d38ad` | (see git log) |
-| `af3cbde` | (see git log) |
+| `fb7a4ed` | (see git log) |
 
 ### Testing
 
@@ -612,15 +852,15 @@ Fixed GitHub #267 — Windows Claude users silently lost SessionStart hook injec
 - None - task complete
 
 
-## Session 154: Remove misleading Copilot SessionStart systemMessage (#248)
+## Session 161: Workflow marketplace switcher
 
-**Date**: 2026-05-11
-**Task**: Remove misleading Copilot SessionStart systemMessage (#248)
-**Branch**: `main`
+**Date**: 2026-05-15
+**Task**: Workflow marketplace switcher
+**Branch**: `feat/v0.6.0-beta`
 
 ### Summary
 
-Fixed GitHub #248 — the user-visible 'Trellis SessionStart diagnostics emitted (N chars); Copilot currently ignores sessionStart hook output.' string was Trellis's own hardcoded systemMessage, not a Copilot error. Microsoft VS Code Agent hooks docs (updated 2026-05-06, shipped in VS Code 1.110 / Feb 2026) now document SessionStart's hookSpecificOutput.additionalContext as a working injection mechanism, making the permanent 'currently ignores' claim stale. Removed systemMessage from the hook result dict; kept suppressOutput + hookSpecificOutput.{hookEventName, additionalContext} so the spec-compliant payload still goes out. Updated docstring + platform-integration.md spec to the honest middle position: consumption depends on user's installed VS Code/Copilot version. Two regression tests pinning the old misleading text were replaced with [#248] tests asserting absence of stale phrasing + presence of non-empty additionalContext. Copilot stays class-2 (pull-based) for sub-agent delivery — that migration is out of scope until end-to-end consumption can be verified (blocked locally by lack of Copilot subscription on test environment).
+Implemented workflow marketplace templates and trellis workflow switching, documented the workflow command/update hash contract, and archived the workflow marketplace task.
 
 ### Main Changes
 
@@ -630,8 +870,7 @@ Fixed GitHub #248 — the user-visible 'Trellis SessionStart diagnostics emitted
 
 | Hash | Message |
 |------|---------|
-| `fdd2322` | (see git log) |
-| `afc2477` | (see git log) |
+| `5c27923` | (see git log) |
 
 ### Testing
 
@@ -646,15 +885,15 @@ Fixed GitHub #248 — the user-visible 'Trellis SessionStart diagnostics emitted
 - None - task complete
 
 
-## Session 155: Fix task.py archive auto-commit: scope + phantom-delete
+## Session 162: Channel wait supervisor warnings
 
-**Date**: 2026-05-13
-**Task**: Fix task.py archive auto-commit: scope + phantom-delete
-**Branch**: `main`
+**Date**: 2026-05-15
+**Task**: Channel wait supervisor warnings
+**Branch**: `feat/v0.6.0-beta`
 
 ### Summary
 
-Narrowed task.py archive auto-commit to only the archived task's paths (no scope-creep into other active task dirs) and added explicit git rm --cached for source-side deletes (fixes the 'phantom delete' working-tree dirt we hit on 05-12). Backward-compat safe_archive_paths_to_add. New integration test under test/scripts/.
+Implemented channel wait kind unions and supervisor pre-timeout warning events; split worker inbox API into a follow-up child task; updated channel command spec and tests.
 
 ### Main Changes
 
@@ -664,7 +903,7 @@ Narrowed task.py archive auto-commit to only the archived task's paths (no scope
 
 | Hash | Message |
 |------|---------|
-| `23bff8d` | (see git log) |
+| `d2e72268` | (see git log) |
 
 ### Testing
 
@@ -679,15 +918,15 @@ Narrowed task.py archive auto-commit to only the archived task's paths (no scope
 - None - task complete
 
 
-## Session 156: fix uninstall over-hashing data loss + add homedir guard
+## Session 163: Worker inbox core API
 
-**Date**: 2026-05-13
-**Task**: fix uninstall over-hashing data loss + add homedir guard
-**Branch**: `main`
+**Date**: 2026-05-15
+**Task**: Worker inbox core API
+**Branch**: `feat/v0.6.0-beta`
 
 ### Summary
 
-Root-caused two real user-reported data-loss bugs: trellis uninstall was deleting .codex/sessions/* (#221) and pre-existing AGENTS.md (PR #271). Cause: initializeHashes walked managed dirs and hashed every file. Fix: derive manifest from writeFile-recorded writes only (new/overwrite recorded, identical/skip/append not); pruneOrphanManifestKeys self-heals poisoned manifests at update+uninstall entry; AGENTS.md kept only when managed-block markers present; homedir guard refuses init/uninstall in cwd === os.homedir(). Codex CR found and fixed 2 additional edge cases (content-identical write recording + AGENTS.md unconditional preserve). 27 new tests, 1033 total passing. Spec: migrations.md adds Manifest ownership contract.
+Added the core worker inbox read/watch API, documented generation-boundary semantics, covered inbox routing and limit edge cases, and completed channel-driven check review.
 
 ### Main Changes
 
@@ -697,7 +936,146 @@ Root-caused two real user-reported data-loss bugs: trellis uninstall was deletin
 
 | Hash | Message |
 |------|---------|
-| `c76ff33` | (see git log) |
+| `86f98938` | (see git log) |
+
+### Testing
+
+- [OK] (Add test results)
+
+### Status
+
+[OK] **Completed**
+
+### Next Steps
+
+- None - task complete
+
+
+## Session 164: Fix Cursor sessionStart context injection
+
+**Date**: 2026-05-15
+**Task**: Fix Cursor sessionStart context injection
+**Branch**: `feat/v0.6.0-beta`
+
+### Summary
+
+Cursor's sessionStart expects top-level additional_context, not Claude's nested hookSpecificOutput.additionalContext — the schema mismatch caused all Cursor models (including GPT) to silently miss Trellis context. Shared session-start.py now dual-emits both fields. Also dropped the no-op beforeSubmitPrompt → inject-workflow-state.py registration for Cursor (Cursor's beforeSubmitPrompt schema accepts only continue/user_message; per-turn context injection is impossible on Cursor by design). Spec updated to capture both the support-matrix change and the dual-format output contract.
+
+### Main Changes
+
+(Add details)
+
+### Git Commits
+
+| Hash | Message |
+|------|---------|
+| `98339802` | (see git log) |
+| `d7491ed2` | (see git log) |
+
+### Testing
+
+- [OK] (Add test results)
+
+### Status
+
+[OK] **Completed**
+
+### Next Steps
+
+- None - task complete
+
+
+## Session 165: Channel Worker OOM Guard
+
+**Date**: 2026-05-17
+**Task**: Channel Worker OOM Guard
+**Branch**: `feat/v0.6.0-beta`
+
+### Summary
+
+Added default idle cleanup and live-worker budget controls for channel workers, with config/env/CLI overrides, supervisor idle termination, core idle projection, tests, and channel command spec updates.
+
+### Main Changes
+
+(Add details)
+
+### Git Commits
+
+| Hash | Message |
+|------|---------|
+| `e7d626b0` | (see git log) |
+
+### Testing
+
+- [OK] (Add test results)
+
+### Status
+
+[OK] **Completed**
+
+### Next Steps
+
+- None - task complete
+
+
+## Session 166: Core Channel Durable Idempotency
+
+**Date**: 2026-05-17
+**Task**: Core Channel Durable Idempotency
+**Branch**: `feat/v0.6.0-beta`
+
+### Summary
+
+Added durable idempotency keys to core channel send/thread writes, documented the event-log contract, verified with channel check workers, build, and dist-based real JSONL tests.
+
+### Main Changes
+
+(Add details)
+
+### Git Commits
+
+| Hash | Message |
+|------|---------|
+| `b645447e` | (see git log) |
+| `399ef98f` | (see git log) |
+| `f301155f` | (see git log) |
+
+### Testing
+
+- [OK] (Add test results)
+
+### Status
+
+[OK] **Completed**
+
+### Next Steps
+
+- None - task complete
+
+
+## Session 167: Bundle spec bootstrap skill
+
+**Date**: 2026-05-19
+**Task**: Bundle spec bootstrap skill
+**Branch**: `feat/v0.6.0-beta`
+
+### Summary
+
+Investigated why v0.6.0-beta.18/19 did not install trellis-spec-bootstarp after trellis init. Ported the bundled spec bootstrap skill into the beta CLI templates, added init/update tracking tests, verified the built CLI through npm pack dry-run and a fresh temp-directory init/update smoke test, documented release artifact smoke-test requirements, updated docs-site changelog notes for Codex timeout bounds, and committed Trellis local platform/template refreshes in separate batches.
+
+### Main Changes
+
+(Add details)
+
+### Git Commits
+
+| Hash | Message |
+|------|---------|
+| `6a8a9049` | (see git log) |
+| `99f87d1c` | (see git log) |
+| `3a296287` | (see git log) |
+| `247d85c1` | (see git log) |
+| `8bed2de5` | (see git log) |
 
 ### Testing
 
