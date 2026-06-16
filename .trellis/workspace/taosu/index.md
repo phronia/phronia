@@ -8,8 +8,8 @@
 
 <!-- @@@auto:current-status -->
 - **Active File**: `journal-5.md`
-- **Total Sessions**: 156
-- **Last Active**: 2026-05-13
+- **Total Sessions**: 167
+- **Last Active**: 2026-05-19
 <!-- @@@/auto:current-status -->
 
 ---
@@ -19,7 +19,7 @@
 <!-- @@@auto:active-documents -->
 | File | Lines | Status |
 |------|-------|--------|
-| `journal-5.md` | ~712 | Active |
+| `journal-5.md` | ~1090 | Active |
 | `journal-4.md` | ~1975 | Archived |
 | `journal-3.md` | ~1988 | Archived |
 | `journal-2.md` | ~1963 | Archived |
@@ -33,14 +33,25 @@
 <!-- @@@auto:session-history -->
 | # | Date | Title | Commits | Branch |
 |---|------|-------|---------|--------|
-| 156 | 2026-05-13 | fix uninstall over-hashing data loss + add homedir guard | `c76ff33` | `main` |
-| 155 | 2026-05-13 | Fix task.py archive auto-commit: scope + phantom-delete | `23bff8d` | `main` |
-| 154 | 2026-05-11 | Remove misleading Copilot SessionStart systemMessage (#248) | `fdd2322`, `afc2477` | `main` |
-| 153 | 2026-05-11 | Bump hook timeouts for Windows Python cold start (#267) | `43d38ad`, `af3cbde` | `main` |
-| 152 | 2026-05-11 | OpenCode subagent context injection fix (#264) | `2abafba`, `447c809` | `main` |
-| 151 | 2026-05-11 | Fix polyrepo Git status context | `29a6f7c` | `main` |
-| 150 | 2026-05-11 | OpenCode shell dialect context fix | `bbdd0f0`, `5ef4825`, `ce35cd1` | `main` |
-| 149 | 2026-05-09 | v0.5.10: git-add-f prevention + Pi workflow-state injection (#249) + Pi pi-subagents isolation (#246) | `5a5e5db`, `04af444`, `f6a53b1` | `main` |
+| 167 | 2026-05-19 | Bundle spec bootstrap skill | `6a8a9049`, `99f87d1c`, `3a296287`, `247d85c1`, `8bed2de5` | `feat/v0.6.0-beta` |
+| 166 | 2026-05-17 | Core Channel Durable Idempotency | `b645447e`, `399ef98f`, `f301155f` | `feat/v0.6.0-beta` |
+| 165 | 2026-05-17 | Channel Worker OOM Guard | `e7d626b0` | `feat/v0.6.0-beta` |
+| 164 | 2026-05-15 | Fix Cursor sessionStart context injection | `98339802`, `d7491ed2` | `feat/v0.6.0-beta` |
+| 163 | 2026-05-15 | Worker inbox core API | `86f98938` | `feat/v0.6.0-beta` |
+| 162 | 2026-05-15 | Channel wait supervisor warnings | `d2e72268` | `feat/v0.6.0-beta` |
+| 161 | 2026-05-15 | Workflow marketplace switcher | `5c27923` | `feat/v0.6.0-beta` |
+| 160 | 2026-05-15 | Align Agent Artifacts | `fb7a4ed` | `feat/v0.6.0-beta` |
+| 159 | 2026-05-14 | Core mem and forum channels | `3e53e17` | `feat/v0.6.0-beta` |
+| 158 | 2026-05-12 | Trellis Channel Runtime — multi-agent collaboration layer | `a2d3c83`, `7608c30`, `dab8e57`, `f5681a4` | `feat/v0.6.0-beta` |
+| 157 | 2026-05-11 | Harden trellis upgrade execution | `aa54b45` | `feat/v0.6.0-beta` |
+| 156 | 2026-05-10 | Task artifact routing gates | `f01c772` | `feat/v0.6.0-beta` |
+| 155 | 2026-05-09 | 0.6.0-beta.4 emergency revert: drop better-sqlite3 (Windows install fix) | `300b729`, `daba04d` | `feat/v0.6.0-beta` |
+| 154 | 2026-05-09 | marketplace mem-recall: add --phase brainstorm + symlink user local | `b397638` | `feat/v0.6.0-beta` |
+| 153 | 2026-05-08 | fix(mem): OpenCode SQLite reader (1.2+ users restored, perf streaming, --phase dogfood fixes) | `d7341cb`, `a16b8d9`, `a992325`, `7e8f30c`, `f26c5fd` | `feat/v0.6.0-beta` |
+| 152 | 2026-05-08 | feat: tl mem extract --phase brainstorm|implement|all (cross-day fix already in 0.6.0-beta.2) | `a16b8d9` | `feat/v0.6.0-beta` |
+| 151 | 2026-05-08 | spec batch E: 5 new specs for uncovered modules + mem search-index-gap doc | `d7341cb` | `feat/v0.6.0-beta` |
+| 150 | 2026-05-08 | ship 0.5.9 + 0.6.0-beta.1; fix mem --since cross-day; spec audit batches A+B+C+D | `4b90152`, `89bb3a0` | `feat/v0.6.0-beta` |
+| 149 | 2026-05-08 | 0.5.7 release + Codex dispatch mode + mem unit tests + 0.6 beta sync | `278b40a`, `b5b23fb`, `b02faf1`, `b829b14`, `1ac65c2`, `1222f36`, `c10ded7` | `feat/v0.6.0-beta` |
 | 148 | 2026-05-06 | Workflow-state recursion guard | `0db57e5`, `48f966e` | `feat/v0.6.0-beta` |
 | 147 | 2026-05-06 | Release 0.5.3: class-1 sub-agent context fallback + non-blocking task.py start | `6272a9e`, `1adb7b0`, `5b298ba`, `a7d54ec` | `feat/v0.6.0-beta` |
 | 146 | 2026-05-06 | Release 0.5.2: Python <=3.11 f-string SyntaxError hotfix in session-start hooks | `3f1711b`, `263c8c6`, `601f213`, `2468cb2`, `5ad1e21` | `main` |
