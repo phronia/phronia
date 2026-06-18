@@ -1,122 +1,72 @@
-# GitHub Community Governance
+# GitHub Community Governance — Floor Version
 
 ## Goal
 
-Establish the **minimum-credible** public-OSS governance surface for Trellis so external contributors know how to file issues, propose work, get PRs reviewed, and follow our roadmap — without smothering 1–2 maintainers with process.
+止住一个具体的痛:**用户都在 Issue 里提问 + 大改动直接甩 PR,列表乱、没方向**。用最小动作把"答疑"和"大提案"从 Issue 分流出去,Issue 回归纯 bug/feature。
 
-## Why now
+不做全套 OSS 治理(CoC / SECURITY / 自动化 / Projects / Milestone / Epic / changesets 全部砍掉,以后按需再加)。
 
-PR activity is currently ad-hoc and will collapse under volume once we publicize. The fix is not to copy a 5-maintainer project's full ceremony but to ship a phased minimum, sized to actual issue volume.
+## 缘起(从任务起源 session decb5b25 还原)
 
-## Approach: phased rollout
+用户原话:"我们要开始管理 GitHub 社区……要有清晰的 Roadmap……要不然现在 PR 就是大家随意 PR,太混乱了。"
 
-Do **not** ship everything at once. Three phases, each gates on the previous landing cleanly:
+核心痛点两个:
+1. **乱 PR** —— 大改动(如 #337 211 文件 YAML 改造)不先讨论就甩 PR
+2. **用户在 Issue 提问** —— 答疑帖(#308/#316/#317 等)混进 Issue 列表,分不清哪些是真待办
 
-### Phase 1 — Triage hygiene (this PRD)
-The minimum to stop drowning. Ship together:
-- `.github/CONTRIBUTING.md`
-- `.github/PULL_REQUEST_TEMPLATE.md`
-- `.github/ISSUE_TEMPLATE/bug.yml`
-- `.github/ISSUE_TEMPLATE/feature.yml`
-- `.github/ISSUE_TEMPLATE/config.yml` (disable blank issues; route to Discussions)
-- `.github/CODE_OF_CONDUCT.md` (Contributor Covenant 2.1)
-- `SECURITY.md`
-- `ROADMAP.md` (thin — pointer to GitHub Projects board + Now/Next/Later)
-- GitHub Discussions enabled with 3 categories: **Q&A, Ideas, Show and Tell**
-- One GitHub Action: `.github/workflows/triage.yml` (auto-label by template, stale-close `needs-repro` after 3 days)
+## 范围(地板版 only)
 
-### Phase 2 — Governance + RFC (later task)
-Trigger: ≥2 outside maintainers active OR ≥10 active contributors.
-- `GOVERNANCE.md` with roles + maintainer nomination + decision log location
-- Discussions > Ideas template (`DISCUSSION_TEMPLATE/ideas.yml`)
-- RFC funnel (skip 4-stage Astro process; use 2-stage: Discussion → accepted Issue → PR)
+### In scope —— 现在就做,且不依赖架构图
 
-### Phase 3 — Changesets + roadmap board automation (later task)
-Trigger: ≥3 releases/quarter or merge conflicts on CHANGELOG.
-- Pilot changesets on a single 0.6.x patch first
-- Migrate beta/rc/release scripts to changeset-driven flow
-- Move ROADMAP.md to be auto-generated from Projects v2 board
+1. **开 GitHub Discussions**,2 个 category:
+   - **Q&A**(format: Q&A,带"最佳答案")—— 用户求助/使用问题
+   - **Ideas**(format: open-ended)—— 大改动/架构提案先讨论(= 轻量 RFC 入口,#337 这类的去处)
+2. **改 `.github/ISSUE_TEMPLATE/config.yml`**:
+   - `blank_issues_enabled: false`(关掉空白 issue,逼用户走模板或去 Discussions)
+   - 加 `contact_links`:Q&A(使用求助)+ Ideas(大提案)+ 保留 docs 链接
+3. **处理 `question.yml`**:删除(提问改去 Q&A Discussion),或保留但其引导文案指向 Q&A
+4. **存量清理**:把现有的提问类 Issue(#308 #316 #317 #314 等)用 GitHub "Convert to discussion" 挪到 Q&A
 
-**This PRD covers Phase 1 only.** Phases 2 and 3 will get their own tasks created when triggers hit.
+### 复用现有,不动
 
-## Scope (Phase 1)
+- `bug_report.yml` / `feature_request.yml` 已存在且够用(repro/version 已 required),**不改**——尤其不加依赖架构图的 affected-platform/layer 字段(那是后续任务的事)
 
-**In scope** — all artifacts listed under Phase 1 above.
+### Out of scope(明确砍掉,后续任务再说)
 
-**Out of scope (explicit)**
-- `GOVERNANCE.md` (phase 2)
-- RFC process (phase 2)
-- Changesets adoption (phase 3)
-- Separate `trellis-roadmap` repo (premature)
-- `platform-support.yml` issue template (fold into feature.yml as a checkbox)
-- 4-stage RFC funnel (phase 2 minimum)
-- Maintainer nomination process (phase 2, when there's >1 person)
-- "Champions" concept (phase 2)
-- Per-platform pinned Discussions (would be ghost towns at current volume)
-- Discord / Slack (no bandwidth to moderate)
-- CLA / DCO decision (decide in phase 2)
-- `maintainers@trellis` email (no one to monitor)
+- ROADMAP.md 的具体内容 —— **依赖架构图**,等第②步架构图做完再回来定(第③步)
+- Milestone / Epic tracking issue —— roadmap 详细化时一起(第③步)
+- Projects v2 看板
+- CONTRIBUTING.md 大改 / PR 模板 / CODE_OF_CONDUCT / SECURITY
+- triage 自动化(triage.yml / stale-bot)
+- Announcements / Show & Tell category(量不够,以后加)
+- RFC 正式流程(Ideas 板块先顶着)
+- changesets / 治理角色 / CLA
 
-## Constraints
+## 验收标准
 
-- **Maintainer count**: realistically 1 person right now. All process must be doable solo.
-- **Issue volume baseline**: must be measured (last 90 days) before triage cadence is set. PRD will be amended with numbers.
-- **AI-disclosure stance**: data collection only in v1, **no enforcement penalty**. Trellis's audience IS AI-assisted; hostile framing repels users.
-- **Language**: keep CONTRIBUTING.md welcoming and short (target ≤ 300 lines). Long docs are dead docs.
+- [ ] Discussions 已开,存在 Q&A + Ideas 两个 category(Q&A 是 Q&A format)
+- [ ] `config.yml`:`blank_issues_enabled: false`,New Issue 页显示 Q&A / Ideas 引导链接
+- [ ] 点 "New Issue" 时,提问类用户被引导去 Q&A,而不是开空白 issue
+- [ ] `question.yml` 已删除或改为引导去 Q&A
+- [ ] 现有提问类 issue(至少 #308/#316/#317/#314)已 convert 到 Q&A 或评论引导
+- [ ] `bug_report.yml` / `feature_request.yml` 未被破坏(回归确认仍可正常开)
+- [ ] 文档/模板不引用不存在的人或邮箱
 
-## Reference projects (graded for borrowing)
+## 约束
 
-| Project | Borrow | Skip |
-|---------|--------|------|
-| OpenHands | AI-vs-Human PR checkbox, lightweight maintainer process | Slack channels per workstream |
-| Astro | changesets pattern (phase 3), simple stage funnel | Separate roadmap repo, 4 stages |
-| Vite | Triage flowchart, p1–p5 priority labels, stale-close on needs-repro | High-volume rotation cadence |
-| Biome | AI-disclosure as norm, odd/even semver consideration | Strict enforcement language |
-| Vitest | "Real person via official templates" rule | Hostile anti-AI framing |
-| Continue | "Open issue before coding" rule, GitHub Projects = roadmap | Discord-as-primary |
-| Prettier | Per-PR changelog snippet pattern (phase 3), non-goals doc | Heavy enforcement |
-| Nx | Issue forms over free text, `affected` style targeted CI | Plugin marketplace ceremony |
+- **维护者 = 1 人**,所有动作单人可做、零长期维护负担
+- **不依赖架构图**:本任务所有产出都不碰 affected-platform/layer 词汇(那些等架构图)
+- **减法优先**:只删/改,尽量不新增文件
 
-## Acceptance Criteria
+## 后续(不在本任务)
 
-- [ ] All Phase 1 artifacts merged on `main`.
-- [ ] Bug issue forms reject submission without reproduction.
-- [ ] PR template includes: scope, affected platforms checkbox (matching architecture-diagram vocabulary), affected layers checkbox, test plan, AI-assistance disclosure (data only).
-- [ ] CONTRIBUTING.md includes:
-  - Non-goals section.
-  - Conventional commit table.
-  - Setup commands (`pnpm install`, `pnpm test`, `pnpm lint`).
-  - Pointer to `.trellis/spec/` for project conventions.
-  - Pointer to architecture diagram (dep on `architecture-diagram` task).
-  - Pointer to `SECURITY.md` and Code of Conduct.
-- [ ] `ROADMAP.md` ≤ 80 lines: Now / Next / Later headers + link to GitHub Projects board + non-goals.
-- [ ] GitHub Projects v2 board exists with Now / Next / Later columns, seeded with current in-flight tasks.
-- [ ] Discussions enabled with 3 categories, blank issues routed to Q&A.
-- [ ] `triage.yml` GitHub Action runs and auto-labels new issues by template type.
-- [ ] Stale-bot configured: `needs-repro` → close after 3 days no activity.
-- [ ] Last-90-days issue / PR volume measured and recorded in PRD; triage cadence written to match (likely daily 5-min + weekly 15-min, NOT 30-min sweep).
-- [ ] No process file references humans / emails that don't actually exist.
+- **第②步:架构图**(architecture-diagram 任务)—— 单独做
+- **第③步:Roadmap + Milestone**(架构图之后)—— 定 0.7 等版本的具体功能,#343(Pi mem adaptor)等 issue 在那时分配进 milestone
 
-## Risks & mitigations
+## 风险
 
-| Risk | Mitigation |
-|------|-----------|
-| Governance theater | Phase 1 only ships docs that match actual capacity; no fake roles. |
-| Process burden killing velocity | Hard cap: total time to triage one issue ≤ 2 min. |
-| Hostile AI framing | Disclosure clause is data-only; no penalty. |
-| Stale roadmap | Auto-pull from Projects board (phase 3) or quarterly review item. |
-| Two competing decision logs | CONTRIBUTING.md explicitly says `.trellis/spec/` is conventions; future GOVERNANCE.md will be decisions. |
-| Empty per-platform discussions | Use single "Platform Support" Q&A tag, not separate categories. |
-
-## Open questions (pre-implementation)
-
-- [ ] Issue + PR volume for the last 90 days? (need git history + GH API to count)
-- [ ] License of Trellis confirmed (MIT? Apache-2.0?) and stated in CONTRIBUTING + LICENSE.
-- [ ] CLA vs DCO decision — defer to phase 2, but record default behavior (assume DCO via `Signed-off-by` until decided).
-- [ ] Trademark policy on "Trellis" name + marketplace items — defer to phase 2 but flag.
-- [ ] Whose Code of Conduct enforcement contact? (need real person until phase 2).
-
-## Dependencies
-
-- `architecture-diagram` must publish layer names before PR template's "affected layers" checkbox can be finalized — single shared vocabulary.
-- No `benchmark-showcase` dep: that task is internal (`tmp/`), nothing flows into ROADMAP.md.
+| 风险 | 缓解 |
+|---|---|
+| 开了 Discussions 但用户还在 Issue 提问(鬼城) | config.yml 关空白 issue + 引导链接,在源头分流;存量 issue 主动 convert |
+| 砍太狠显得没治理 | 地板版只解决当下痛点;治理是渐进的,触发条件到了再加(后续任务) |
+| question.yml 删了老用户找不到提问入口 | config.yml 的 Q&A contact link 顶上,且比 issue 更适合答疑 |
