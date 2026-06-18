@@ -1,167 +1,64 @@
-# Design — GitHub Community Governance (Phase 1)
+# Design — Community Governance (Floor Version)
 
-## Architecture
+## 改动面（极小）
 
 ```
-.github/
-├── CONTRIBUTING.md            # entry point — short, scannable
-├── PULL_REQUEST_TEMPLATE.md   # forced fields, AI-assist disclosure
-├── CODE_OF_CONDUCT.md         # CC v2.1
-├── ISSUE_TEMPLATE/
-│   ├── bug.yml                 # required-field issue form
-│   ├── feature.yml             # includes platform-support checkbox
-│   └── config.yml              # blank_issues_enabled: false, route to Discussions
-└── workflows/
-    └── triage.yml              # auto-label + stale-close
+.github/ISSUE_TEMPLATE/
+├── config.yml          # 改：关空白 issue + 加 Discussions 引导链接
+├── question.yml        # 删（提问改去 Q&A Discussion）
+├── bug_report.yml      # 不动（已够用）
+└── feature_request.yml # 不动（已够用）
 
-SECURITY.md                    # private disclosure via GH Security Advisories
-ROADMAP.md                     # thin, points at Projects board
+GitHub Discussions       # 开启 + 建 Q&A / Ideas 两个 category（gh API 或 Web 设置）
+存量 issue               # convert 提问类到 Q&A
 ```
 
-## File contracts
-
-### `.github/CONTRIBUTING.md` (≤ 300 lines)
-
-Sections (in order):
-1. Welcome (3 lines).
-2. **Non-goals** (Prettier pattern) — what we will *not* accept.
-3. Setup: `pnpm install`, `pnpm test`, `pnpm lint`, `pnpm dev`.
-4. Conventional commit table (feat/fix/docs/refactor/perf/test/build/ci/chore/revert) with example PR titles.
-5. PR workflow: branch from `main`, run tests, fill PR template, expect review within X days.
-6. Triage flowchart (template → duplicate → reproduction → priority) — borrowed from Vite.
-7. Project conventions: pointer to `.trellis/spec/` (not duplicated here).
-8. Architecture entry point: pointer to architecture diagram.
-9. AI-assistance disclosure: data only, no penalty.
-10. Code of Conduct + Security pointers.
-
-### `.github/PULL_REQUEST_TEMPLATE.md`
-
-Required fields (each enforced by `triage.yml` body-check):
-- **Summary** (1–3 sentences).
-- **Linked issue** (`Closes #`).
-- **Affected platforms** — checkbox list matching `architecture-diagram` vocabulary.
-- **Affected layers** — checkbox list matching `architecture-diagram` vocabulary.
-- **Test plan** — checklist.
-- **AI authorship** — radio: Human / Human + AI assist / Agent-authored review. **Data collection only.**
-- **Migration** (if applicable) — link to manifest.
-
-### `.github/ISSUE_TEMPLATE/bug.yml`
-
-GitHub Issue Form fields (all `required: true` unless noted):
-- `description` — what happened.
-- `repro_url` — minimal repro repo URL OR full `trellis init` transcript.
-- `version` — output of `trellis --version`.
-- `node_version` + `os` + `python_version`.
-- `affected_platform` — dropdown (claude-code, cursor, opencode, iflow, codex, kiro, qoder, kilo, gemini-cli, antigravity, codebuddy, copilot, droid, pi, reasonix, windsurf, other).
-- `expected_vs_actual`.
-- Auto-applied labels: `bug`, `triage`, `needs-repro`.
-- Footer: "Issues without reproduction are closed after 3 days of inactivity."
-
-### `.github/ISSUE_TEMPLATE/feature.yml`
-
-- `problem` (1–3 sentences, no solution).
-- `proposed_solution` (optional).
-- `affected_scope` — multi-select: cli, configurators (which platforms), templates, hooks, docs, spec.
-- `platform_support_request` — checkbox: "Is this a request to add a new AI platform?" + name field.
-- Auto-applied label: `enhancement`, `triage`.
-- Note: "Large or breaking proposals → discuss in Discussions > Ideas first."
-
-### `.github/ISSUE_TEMPLATE/config.yml`
+## config.yml 目标内容
 
 ```yaml
 blank_issues_enabled: false
 contact_links:
-  - name: Question / Support
-    url: https://github.com/<org>/Trellis/discussions/categories/q-a
-    about: Ask in Q&A — keeps Issues for confirmed bugs.
-  - name: Idea / RFC-track Proposal
-    url: https://github.com/<org>/Trellis/discussions/categories/ideas
-    about: For larger or breaking proposals before opening an Issue.
-  - name: Security Disclosure
-    url: https://github.com/<org>/Trellis/security/advisories/new
-    about: Private disclosure via GitHub Security Advisories.
+  - name: 使用求助 / Question
+    url: https://github.com/mindfold-ai/Trellis/discussions/categories/q-a
+    about: 使用问题、配置疑问、"支持 X 吗" —— 发到 Q&A，保持 Issues 只装确认的 bug/feature。
+  - name: 想法 / 大改动提案 (Idea / Proposal)
+    url: https://github.com/mindfold-ai/Trellis/discussions/categories/ideas
+    about: 较大或破坏性的改动（如架构调整、工作流重构）先在 Ideas 讨论方向，再开 Issue / PR。
+  - name: 文档问题 / Docs
+    url: https://github.com/mindfold-ai/docs/issues/new
+    about: 文档相关问题请在 docs 仓提交。
 ```
 
-### `.github/CODE_OF_CONDUCT.md`
+> category slug：GitHub 对 "Q&A" 默认 slug 是 `q-a`，"Ideas" 是 `ideas`。建完 category 后核对实际 URL 再定稿。
 
-Contributor Covenant 2.1 verbatim + Trellis enforcement contact (must be a real person, named in PRD's open question).
+## Discussions 开启方式
 
-### `SECURITY.md`
+两条路（择一）：
+1. **Web**：仓库 Settings → Features → 勾选 Discussions → 进 Discussions 页配 category（默认会有 Announcements/General/Ideas/Polls/Q&A/Show and tell；留 Q&A + Ideas，其余删或留作以后）
+2. **gh API**：`gh api -X PATCH repos/mindfold-ai/Trellis -f has_discussions=true` 开启 has_discussions。category 的增删 gh CLI 支持有限，大概率仍需 Web 点一下。
 
-- Supported versions: current minor + previous minor.
-- Disclosure: GH Security Advisories link.
-- Response SLA: acknowledge within 5 business days.
-- Scope: CLI execution paths, template installation, hook injection points, marketplace ingestion.
+→ 这一步需要 maintainer 权限。AI 能跑 API 开 has_discussions，category 配置可能要用户在 Web 操作。实施时确认。
 
-### `ROADMAP.md` (≤ 80 lines)
+## question.yml 处理
 
-```markdown
-# Roadmap
+删除。提问应去 Q&A Discussion（有"最佳答案"、不占 Issues）。config.yml 的 Q&A contact link 取代它作为提问入口。
 
-Live state: <link to GitHub Projects v2 board>.
+## 存量 issue convert
 
-## Now (in flight)
-- (3–7 items, each links to a tracking issue)
+GitHub issue 右侧 "Convert to discussion" → 选 Q&A。候选（提问类，非真 bug/feature）：
+- #308 sub-agent 模式好用了吗
+- #316 spec 能否装多套
+- #317 支持全局 init 吗
+- #314 init 后 bootstrap 任务问题
 
-## Next (committed for the upcoming minor)
-- (3–7 items)
+实施时逐个判断：是真 feature 的留 Issue，纯提问的 convert。
 
-## Later (intent without commitment)
-- (3–7 items)
+## 不做（重申）
 
-## Non-goals
-- (explicit list of things we will not pursue this cycle)
+ROADMAP 内容 / Milestone / Epic / Projects / CoC / SECURITY / PR 模板 / triage 自动化 —— 全部后续任务。本任务只分流。
 
-## Updates
-Refreshed each minor release; column moves happen as issues move on the Projects board.
-```
+## Rollback
 
-### `.github/workflows/triage.yml`
-
-Triggered on: `issues: [opened]`, `pull_request: [opened, edited]`.
-Jobs:
-- `label-by-template`: parse the form / template type → apply label.
-- `stale-needs-repro`: uses `actions/stale@v9` with `needs-repro` → close after 3 days, exempt label `repro-provided`.
-- `pr-required-fields`: parse PR body, post a comment if Summary / Linked Issue / Test plan / AI authorship missing.
-
-## Vocabulary lock
-
-The PR template's "Affected platforms" and "Affected layers" checkboxes must match the `architecture-diagram` task's glossary verbatim. If diagram doesn't ship in time, freeze a draft glossary in this task's `notes/vocabulary.md` and reconcile during diagram review.
-
-## Tradeoffs
-
-| Decision | Picked | Alternative | Why |
-|----------|--------|-------------|-----|
-| 3 Discussion categories | Q&A, Ideas, Show & Tell | 6 categories per research recommendation | Volume doesn't justify 6 yet; promote later. |
-| 1 issue template per type | bug + feature only | bug + feature + platform-support + 3 more | Each extra template = maintenance + decision overhead. |
-| AI-disclosure non-punitive | Data only | Block PRs without disclosure | Hostile to audience. Re-evaluate when we have data. |
-| GH Projects = roadmap | Yes | Static ROADMAP.md only | Live state without `git commit` for status changes. |
-| Stale-bot only on `needs-repro` | Yes | Stale-bot on all triage | Don't kill long-open feature requests; targeted close only. |
-| GH Security Advisories | Yes | Custom email + PGP | Solo maintainer; Advisories is the lowest-overhead private channel. |
-| `Signed-off-by` default | Yes | CLA bot | Bot adds friction; can switch later. |
-
-## Data flow
-
-1. User clicks "New issue" → sees only Bug / Feature forms (config.yml blocks blank).
-2. Form submits → `triage.yml` auto-labels.
-3. Maintainer daily 5-min pass: confirm template, set priority `p1`–`p5`, link related issues.
-4. Weekly 15-min sweep: move triaged items onto Projects board, promote Ideas with engagement to Issues, close stale `needs-repro`.
-5. PR opened → template required → `triage.yml` checks body for required fields → CI runs tests → maintainer reviews.
-
-## Anti-bias / honesty measures
-
-- CONTRIBUTING.md never references humans/roles that don't exist.
-- All "we" claims in CONTRIBUTING are scope-bounded ("the maintainers" not "the team").
-- If the AI-disclosure clause changes (e.g. starts enforcing), require a PR and a Discussion poll first.
-
-## Rollback / fail-soft
-
-- Phase 1 can ship one file at a time if needed; CONTRIBUTING.md first, the rest in a follow-up if review bandwidth is tight.
-- If triage automation goes wrong (mislabels, false stale-closes), disable the workflow file; manual triage continues to work.
-- If issue forms feel too heavy after a month, downgrade to free-text Markdown templates.
-
-## Dependencies
-
-- `architecture-diagram` for vocabulary lock.
-- One real human committed as CoC contact (open question).
-- License confirmed and in `LICENSE` file.
+- config.yml 改坏 → git revert 单文件
+- Discussions 开了想关 → Settings 取消勾选
+- question.yml 删了想恢复 → git 历史取回
