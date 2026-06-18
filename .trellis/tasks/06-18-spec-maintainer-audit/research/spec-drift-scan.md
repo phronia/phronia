@@ -127,6 +127,74 @@ inspection before any wording change.
 The maintainer workflow says to run it when provided; here the validation
 result should record absence rather than fabricate an equivalent script.
 
+Follow-up check with `fd -t f 'check_package_map\.py$' .trellis/scripts
+packages/cli/src/templates/trellis/scripts` also found no checker.
+
+## Final Validation Results
+
+After repairs:
+
+```text
+python3 "${CODEX_HOME:-$HOME/.codex}/skills/trellis-spec-maintainer/scripts/scan_spec_drift.py"
+
+## Package map
+OK
+
+## Missing path candidates
+OK
+```
+
+Package context output now reports:
+
+```text
+## PACKAGES
+
+### cli (default)
+Path: packages/cli
+Spec layers: backend, unit-test
+  - .trellis/spec/cli/backend/index.md
+  - .trellis/spec/cli/unit-test/index.md
+
+### core
+Path: packages/core
+Spec layers: backend
+  - .trellis/spec/core/backend/index.md
+
+### docs-site [submodule]
+Path: docs-site
+Spec layers: docs
+  - .trellis/spec/docs-site/docs/index.md
+
+### Shared Guides (always included)
+Path: .trellis/spec/guides/index.md
+```
+
+`git diff --check -- .trellis/config.yaml .trellis/spec` passed.
+
+Archive references were verified:
+
+- `.trellis/tasks/archive/2026-04/04-17-subagent-hook-reliability-audit/research/platform-hook-audit.md`
+- `.trellis/tasks/archive/2026-04/04-17-workflow-enforcement-v2/prd.md`
+
+GitNexus `detect_changes(scope="all")` reported no changed symbols, no affected
+processes, and low risk, which matches the docs/config-only change set.
+
+## Spec-Update Judgment
+
+Phase 3.3 did not require an additional spec beyond the files repaired in this
+task. The reusable lessons were captured directly in long-lived specs:
+
+- repo/package routing in `.trellis/spec/tech/repo/index.md`;
+- core package visibility in `.trellis/spec/core/backend/index.md`;
+- cross-platform guide discoverability in `.trellis/spec/guides/index.md`;
+- core-vs-CLI channel ownership in
+  `.trellis/spec/cli/backend/commands-channel.md`;
+- task schema audit surfaces in
+  `.trellis/spec/cli/backend/quality-guidelines.md`;
+- archived historical references in
+  `.trellis/spec/cli/backend/platform-integration.md`;
+- generated / optional path wording in workflow and script specs.
+
 ## Initial Design Decision
 
 Use Trellis package keys `cli`, `core`, and `docs-site` in `.trellis/config.yaml`.
