@@ -27,12 +27,14 @@
 - 可能涉及 workflow.md 的 Phase 1 → Phase 2 过渡描述（Step 8 与 task.py start 之间）
 - 多平台同步（同 sync-on-change Trigger 1 类）
 
-## 验收（待细化）
+## 验收
 
-- [ ] brainstorm 走完后，终态 prd.md 无跨章节重复、无遗留临时章节
-- [ ] 收敛无损：file:line 锚点 / 决策 / AC↔需求映射全保留
-- [ ] 关联 #320，实现后在 issue 回复并 close
+- [x] `trellis-brainstorm` 的 common/codex/copilot 模板都要求在最终 review 或 `task.py start` 前执行 PRD convergence pass。
+- [x] 收敛步骤明确要求合并 `What I already know` / `Assumptions` / resolved `Open Questions`，并去除跨章节重复事实。
+- [x] 收敛步骤明确要求无损保留 file:line 锚点、决策、约束、需求 ID、验收映射。
+- [x] 回归测试覆盖三份安装模板，防止只改一份模板导致平台漂移。
+- [ ] 关联 #320，实现后在 issue 回复并 close。
 
 ## 状态
 
-planning（记账，后续排期）。关联 issue #320（已标 enhancement）。
+in_progress。关联 issue #320（已标 enhancement）。
