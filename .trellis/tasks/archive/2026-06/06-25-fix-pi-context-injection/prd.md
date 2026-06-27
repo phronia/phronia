@@ -9,8 +9,8 @@ The intended outcome is:
 - Pi users no longer see generated `<workflow-state>` / `<session-overview>` blocks appended to submitted user messages.
 - Trellis does not rewrite user input with `input` transform.
 - Trellis does not use request-local `context` messages for runtime prompt injection, because those messages are not persisted and move between turns, breaking provider prefix cache.
-- Trellis preserves the existing `before_agent_start.systemPrompt` full-context injection.
-- Trellis moves the compact runtime context formerly appended by `input` into a hidden persistent Pi custom message returned from `before_agent_start`.
+- Trellis preserves `before_agent_start.systemPrompt` for startup/full task context.
+- Trellis moves the compact runtime context formerly appended by `input` into a hidden persistent Pi custom message returned from `before_agent_start`, so `<workflow-state>` / `<session-overview>` are not duplicated in `systemPrompt`.
 - Bash tool calls and Trellis sub-agent launches keep the same `TRELLIS_CONTEXT_ID` session identity behavior.
 
 ## Confirmed Facts
@@ -28,7 +28,7 @@ The intended outcome is:
 - Trellis must not register an `input` handler for runtime context injection; user input must pass through untouched.
 - `input` must never return `action: "transform"` or append generated Trellis context to user text.
 - Preserve the existing Pi `context` handler behavior if it only establishes the context key; do not use `context` for runtime prompt injection.
-- Preserve the existing `before_agent_start.systemPrompt` full-context injection path.
+- Preserve `before_agent_start.systemPrompt` for startup/full task context, but remove per-turn `<workflow-state>` / `<session-overview>` from that path.
 - `before_agent_start` must additionally return a hidden Pi custom message with `display: false` and `customType: "trellis-runtime-context"`.
 - The custom message content must be model-visible and contain the compact runtime context formerly appended by `input`: current `<workflow-state>` and current `<session-overview>`.
 - Keep the existing `TRELLIS_CONTEXT_ID` session-key behavior for Bash tool calls and sub-agent launches.
@@ -39,9 +39,9 @@ The intended outcome is:
 
 - [ ] Generated Pi extension does not register a Trellis runtime-context `input` transform handler.
 - [ ] Generated Pi extension does not use the Pi `context` event for Trellis runtime prompt injection; its existing `getKey`-only behavior may remain.
-- [ ] Generated Pi extension preserves `before_agent_start.systemPrompt` startup/full task/workflow/session context injection.
+- [ ] Generated Pi extension preserves `before_agent_start.systemPrompt` startup/full task context injection without duplicating compact workflow/session context.
 - [ ] Generated Pi extension additionally returns a hidden persistent custom message from `before_agent_start` containing compact workflow/session context.
-- [ ] Unit tests verify user input is not rewritten, `before_agent_start` returns both system prompt context and the hidden custom message, startup context is one-shot per context key, and the `context` hook remains non-injecting.
+- [ ] Unit tests verify user input is not rewritten, `before_agent_start` returns startup/full task system prompt context plus hidden runtime custom message, compact runtime context is absent from second-turn `systemPrompt`, and the `context` hook remains non-injecting.
 - [ ] Pi platform integration spec describes the no-`input` / `before_agent_start.systemPrompt` + hidden custom message / `context` getKey-only mapping.
 - [ ] Existing Pi template/configurator tests pass.
 

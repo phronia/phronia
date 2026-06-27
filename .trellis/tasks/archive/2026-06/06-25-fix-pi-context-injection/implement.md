@@ -14,14 +14,14 @@
 
 1. Update Pi extension event handlers.
    - Remove the Trellis runtime-context `input` transform handler instead of keeping a no-op handler.
-   - Preserve the existing `before_agent_start.systemPrompt` full-context injection.
+   - Preserve `before_agent_start.systemPrompt` for startup/full task context, but remove per-turn `turn.wf` / `turn.ov` from that path.
    - Add `before_agent_start.message` as a hidden persistent custom message for the compact runtime context formerly appended by `input`.
    - Keep the existing `context` handler if it only calls `getKey(event, ctx)`; do not use `context` for prompt injection.
 
 2. Update Pi template tests.
    - Assert user input is not rewritten because no `input` handler is registered.
-   - Assert first `before_agent_start` returns both `systemPrompt` with startup/full context and a hidden compact runtime custom message.
-   - Assert second `before_agent_start` does not repeat one-shot startup context in `systemPrompt`.
+   - Assert first `before_agent_start` returns `systemPrompt` with startup/task context and a hidden compact runtime custom message.
+   - Assert second `before_agent_start` does not repeat one-shot startup context or compact runtime context in `systemPrompt`.
    - Assert `context` remains registered but no longer carries runtime message injection logic.
 
 3. Update configurator tests.
@@ -32,8 +32,8 @@
 
 4. Update platform integration spec.
    - Document that Pi no longer registers an `input` handler for Trellis runtime context injection.
-   - Document `before_agent_start.systemPrompt` as the preserved full-context path.
-   - Document `before_agent_start.message` as the hidden persistent custom-message path for compact workflow-state and session overview.
+   - Document `before_agent_start.systemPrompt` as the preserved startup/full task context path.
+   - Document `before_agent_start.message` as the only per-turn compact workflow-state and session overview path.
    - Document that `context` remains getKey-only and is not used for Trellis runtime prompt injection because request-local messages are not prefix-cache stable.
 
 5. Run targeted validation.
@@ -69,9 +69,7 @@ pi.on?.("before_agent_start", (event, ctx) => {
           display: false,
         }
       : undefined,
-    systemPrompt: [cur, startup, ctxText, turn.wf, turn.ov]
-      .filter(Boolean)
-      .join("\n\n"),
+    systemPrompt: [cur, startup, ctxText].filter(Boolean).join("\n\n"),
   };
 });
 ```
@@ -94,14 +92,14 @@ Specific behaviors to assert in tests:
 
 - First `before_agent_start`:
   - Return object has both `systemPrompt` and `message`.
-  - `systemPrompt` contains base prompt, `Trellis compact SessionStart context`, `<first-reply-notice>`, `<trellis-workflow>`, `Phase 1: Plan`, `No active Trellis task found`, `<workflow-state>`, and `<session-overview>`.
+  - `systemPrompt` contains base prompt, `Trellis compact SessionStart context`, `<first-reply-notice>`, `<trellis-workflow>`, `Phase 1: Plan`, and `No active Trellis task found`; it does not contain `<workflow-state>`.
   - `message` has `customType: "trellis-runtime-context"` and `display: false`; Pi converts it to a persisted `role: "custom"` session message.
   - `message.content` contains `<workflow-state>` and `<session-overview>`, and does not contain base prompt or one-shot startup context.
 
 - Second `before_agent_start` for same context key:
   - Return object still has both `systemPrompt` and hidden runtime custom message.
   - Startup context is not repeated in `systemPrompt`.
-  - Active task context, workflow-state, and session overview remain present.
+  - Active task context remains present in `systemPrompt`; workflow-state and session overview remain present only in the hidden runtime custom message.
 
 - Handler registration:
   - `input` handler is absent.
