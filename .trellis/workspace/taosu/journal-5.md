@@ -1157,3 +1157,41 @@ Repaired Trellis package/spec routing, added repo and core spec indexes, fixed s
 ### Next Steps
 
 - None - task complete
+
+
+## Session 170: 0.6.8 release + PR reviews + context injection caps (#441)
+
+**Date**: 2026-07-22
+**Task**: 0.6.8 release + PR reviews + context injection caps (#441)
+**Package**: cli
+**Branch**: `main`
+
+### Summary
+
+Reviewed PRs #452 (Kimi Code, merged after marketplace#10) and #443 (Snow CLI, four review blockers posted). Diagnosed and fixed test-before-build ordering in both ci.yml (#453) and publish.yml that broke main CI since #448. Released 0.6.8 (Grok/Kimi/Codex native dispatch/Pi skills migration), closed #451. Implemented #441 via task 07-22-subagent-context-limits: tiered context injection caps (32/64/128KiB, config.yaml context_injection, 0=unlimited) with UTF-8-safe truncation and degrade-to-index, mirrored in Python hook + Pi extension per frozen contract; jsonl hygiene warnings in task.py validate; spec updated in platform-integration.md; #349 tracking updated to 20 platforms.
+
+### Main Changes
+
+(Add details)
+
+### Git Commits
+
+| Hash | Message |
+|------|---------|
+| `ea399def` | (see git log) |
+| `26ca25f8` | (see git log) |
+| `dc68f5a9` | (see git log) |
+| `65a83d7d` | (see git log) |
+| `bfa7f99d` | (see git log) |
+
+### Testing
+
+- [OK] (Add test results)
+
+### Status
+
+[OK] **Completed**
+
+### Next Steps
+
+- None - task complete
