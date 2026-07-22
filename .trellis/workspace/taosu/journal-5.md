@@ -1229,3 +1229,39 @@ Implemented prompt_injection.skip_keyword (default no-trellis): word-boundary ca
 ### Next Steps
 
 - None - task complete
+
+
+## Session 172: Script QoL batch: journal flags, task tree, meta flag (#394, #402)
+
+**Date**: 2026-07-22
+**Task**: Script QoL batch: journal flags, task tree, meta flag (#394, #402)
+**Package**: cli
+**Branch**: `main`
+
+### Summary
+
+Batch of three script improvements, all probe-tested.
+
+### Main Changes
+
+- add_session.py: repeatable --change/--test/--next-step; empty sections omitted, placeholder text eliminated (#394)
+- task.py list: dangling parent refs render flat instead of vanishing (#402; tree view itself predated from #395)
+- task.py create --meta key=value (validated pre-mkdir) + set-meta subcommand for task.json meta field
+
+### Git Commits
+
+| Hash | Message |
+|------|---------|
+| `53a29d41` | (see git log) |
+
+### Testing
+
+- [OK] pnpm test 1500/1500 green, lint/typecheck clean, CI green
+
+### Status
+
+[OK] **Completed**
+
+### Next Steps
+
+- None - task complete
