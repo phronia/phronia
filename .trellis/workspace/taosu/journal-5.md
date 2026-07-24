@@ -1304,3 +1304,40 @@ Cross-day batch closing out platform and channel work.
 
 - 0.6.9 release + #459 reply pending user approval
 - #415 structural fix (per-session files + derived index) awaiting user decision on index.md leaving git
+
+
+## Session 174: Journal merge=union quick fix (#415 partial) + branch mixup recovery
+
+**Date**: 2026-07-24
+**Task**: Journal merge=union quick fix (#415 partial) + branch mixup recovery
+**Package**: cli
+**Branch**: `main`
+
+### Summary
+
+Shipped the quick-fix tier of #415 after production evidence confirmed the diagnosis.
+
+### Main Changes
+
+- .gitattributes at project root (not nested .trellis/ — verified via real git check-attr that nested placement never matches) ships journal-*.md merge=union
+- index.md intentionally left unmanaged; documented as safe-to-pick-either-side since task state lives in task.json, not index.md
+- add_session.py warns once when run inside a linked git worktree with session_auto_commit enabled
+
+### Git Commits
+
+| Hash | Message |
+|------|---------|
+| `a5374864` | (see git log) |
+
+### Testing
+
+- [OK] 1554/1554 green, lint/typecheck clean, main CI green
+
+### Status
+
+[OK] **Completed**
+
+### Next Steps
+
+- Structural #415 fix (per-session files, index.md as derived non-git cache) still queued pending user decision
+- Mid-session: commit accidentally landed on a stray local feat/v0.7-beta checkout (not created by me) instead of main; cherry-picked onto main, dropped an unrelated stray assets/claude.md that got swept in by git add -A, and restored feat/v0.7-beta to its original remote position
