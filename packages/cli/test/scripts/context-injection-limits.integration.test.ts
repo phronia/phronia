@@ -296,6 +296,46 @@ print("all-valid")
         );
         expect(out.trim()).toBe("all-valid");
       });
+
+      it('keeps a complete trailing sequence whole: "你好世界" capped at 6 bytes is "你好"', () => {
+        // Cap lands exactly after the complete 3-byte "好" — must keep it,
+        // never emit "你" plus a dangling lead byte (taosu's PR #468 repro).
+        const out = runHookProbe(
+          tmp,
+          `
+data = "\\u4f60\\u597d\\u4e16\\u754c".encode("utf-8")  # 你好世界 — 3 bytes each
+out = mod.truncate_utf8(data, 6)
+print(out.decode("utf-8"))  # strict decode — raises on a broken byte
+`,
+        );
+        expect(out.trim()).toBe("你好");
+      });
+
+      it('keeps a complete 2-byte sequence at the cap: b"a\\xc3\\xa9b" capped at 3 is "aé"', () => {
+        const out = runHookProbe(
+          tmp,
+          `
+data = b"a\\xc3\\xa9b"  # "a" + 2-byte "\\u00e9" + "b"
+out = mod.truncate_utf8(data, 3)
+print(out.decode("utf-8"))  # strict decode — raises on a broken byte
+`,
+        );
+        expect(out.trim()).toBe("aé");
+      });
+
+      it("strict decode never raises across caps 0..30 on mixed 2/3/4-byte content", () => {
+        const out = runHookProbe(
+          tmp,
+          `
+# 1 + 2 + 3 + 4 + 1 + 3 + 3 = 17 bytes of mixed-width sequences
+data = "a\\u00e9\\u20ac\\U0001f600z\\u4f60\\u597d".encode("utf-8")
+for cap in range(0, 31):
+    mod.truncate_utf8(data, cap).decode("utf-8")  # strict — raises if split
+print("all-valid")
+`,
+        );
+        expect(out.trim()).toBe("all-valid");
+      });
     });
 
     describe("inject-subagent-context.py: per-file and per-artifact caps", () => {

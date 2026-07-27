@@ -1,3 +1,23 @@
+---
+name: platform-integration
+description: How to add support for new AI CLI platforms
+paths:
+  - packages/cli/src/types/ai-tools.ts
+  - packages/cli/src/cli/index.ts
+  - packages/cli/src/configurators/**
+  - packages/cli/src/templates/**
+  - packages/cli/src/commands/init.ts
+  - packages/cli/test/types/ai-tools.test.ts
+  - packages/cli/test/templates/**
+  - packages/cli/test/configurators/platforms.test.ts
+  - packages/cli/test/commands/init.integration.test.ts
+  - packages/cli/test/regression.test.ts
+  - packages/cli/scripts/copy-templates.js
+  - README.md
+  - README_CN.md
+  - .gitignore
+---
+
 # Platform Integration Guide
 
 How to add support for a new AI CLI platform (like Claude Code, Cursor, Gemini CLI, OpenCode, Codex, Kilo, Kiro, Qoder, CodeBuddy, Copilot, Droid, Pi, Devin, Antigravity).
@@ -521,14 +541,14 @@ The native hook path calls this resolver with `platform="codex"`,
 
 #### 4. Validation & Error Matrix
 
-| Condition | Required result |
-| --- | --- |
-| recognised role + parent session maps to a live task | emit role-specific `additionalContext` |
-| unknown/missing/malformed parent session | exit successfully with no output |
-| one unrelated runtime session exists | no output; never use sole-session fallback |
+| Condition                                                    | Required result                              |
+| ------------------------------------------------------------ | -------------------------------------------- |
+| recognised role + parent session maps to a live task         | emit role-specific `additionalContext`       |
+| unknown/missing/malformed parent session                     | exit successfully with no output             |
+| one unrelated runtime session exists                         | no output; never use sole-session fallback   |
 | inherited `TRELLIS_CONTEXT_ID` conflicts with parent session | parent `session_id` wins on this native path |
-| stale/missing task, malformed hook JSON, or unexpected error | fail open; Codex still starts the child |
-| non-Trellis `agent_type` | no Trellis output |
+| stale/missing task, malformed hook JSON, or unexpected error | fail open; Codex still starts the child      |
+| non-Trellis `agent_type`                                     | no Trellis output                            |
 
 #### 5. Good / Base / Bad Cases
 
@@ -654,14 +674,14 @@ Extension-backed platforms MUST NOT receive `.trellis/templates/shared-hooks/*.p
 
 For Pi Agent:
 
-| Trellis concept                    | Pi surface                                                                                                                                                                                                                                                            |
-| ---------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Session start                      | `session_start` extension event (notify-only; context-key is established but no prompt mutation)                                                                                                                                                                      |
-| Per-turn workflow-state breadcrumb | `before_agent_start.message` hidden custom message — persists cached `<workflow-state>` + `<session-overview>` from `getTurnCtx()` without showing it in the UI; skipped when identical to the last persisted runtime context (dedup)                                |
+| Trellis concept                    | Pi surface                                                                                                                                                                                                                                                                               |
+| ---------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Session start                      | `session_start` extension event (notify-only; context-key is established but no prompt mutation)                                                                                                                                                                                         |
+| Per-turn workflow-state breadcrumb | `before_agent_start.message` hidden custom message — persists cached `<workflow-state>` + `<session-overview>` from `getTurnCtx()` without showing it in the UI; skipped when identical to the last persisted runtime context (dedup)                                                    |
 | Startup context                    | `before_agent_start` builds compact SessionStart-equivalent context (`<session-context>`, adaptive `<first-reply-notice>`, `<session-overview>`, `<trellis-workflow>`, `<ready>`) once per context key, memoizes it, and contributes the identical bytes to `systemPrompt` on every turn |
-| Per-agent-invocation context       | `before_agent_start.systemPrompt` carries a per-context-key snapshot of task context (PRD + jsonl) taken on first use; later on-disk task changes are delivered through `before_agent_start.message` as `<trellis-task-context-update>` persisted messages           |
-| Per-Bash-tool session identity     | `tool_call` extension event; mutates `event.input.command` in place via `injectTrellisContextIntoBash()` to prefix `export TRELLIS_CONTEXT_ID=<context-key>;`                                                                                                         |
-| Sub-agent dispatch                 | custom `trellis_subagent` tool with `promptSnippet`/`promptGuidelines = SUBAGENT_DISPATCH_PROTOCOL`; resolves the Pi CLI JS entrypoint when possible, runs `--mode text -p --no-session`, sends the delegated prompt through stdin, and forwards `TRELLIS_CONTEXT_ID` |
+| Per-agent-invocation context       | `before_agent_start.systemPrompt` carries a per-context-key snapshot of task context (PRD + jsonl) taken on first use; later on-disk task changes are delivered through `before_agent_start.message` as `<trellis-task-context-update>` persisted messages                               |
+| Per-Bash-tool session identity     | `tool_call` extension event; mutates `event.input.command` in place via `injectTrellisContextIntoBash()` to prefix `export TRELLIS_CONTEXT_ID=<context-key>;`                                                                                                                            |
+| Sub-agent dispatch                 | custom `trellis_subagent` tool with `promptSnippet`/`promptGuidelines = SUBAGENT_DISPATCH_PROTOCOL`; resolves the Pi CLI JS entrypoint when possible, runs `--mode text -p --no-session`, sends the delegated prompt through stdin, and forwards `TRELLIS_CONTEXT_ID`                    |
 
 The compact model-visible context injection point is `before_agent_start.message`; it uses `TurnContextCache` so the same request path does not re-spawn the default `get_context.py` session-context call unnecessarily. Pi does not register a Trellis `input` handler for runtime context injection, so user text is not rewritten. The existing Pi `context` event may establish the context key, but it must not append Trellis runtime messages because request-local messages are not persisted and can break provider prefix cache. See "Class-3 injection points (Pi extension)" below the modes table for the runtime contract.
 
@@ -903,24 +923,24 @@ These are now **automatically derived** from the registry:
 
 ## Command Format by Platform
 
-| Platform    | Command Format                                                         | File Format                                                   | Example (finish-work)  |
-| ----------- | ---------------------------------------------------------------------- | ------------------------------------------------------------- | ---------------------- |
-| Claude Code | `/trellis:xxx`                                                         | Markdown (`.md`)                                              | `/trellis:finish-work` |
-| Cursor      | `/trellis-xxx`                                                         | Markdown (`.md`)                                              | `/trellis-finish-work` |
-| OpenCode    | `/trellis:xxx`                                                         | Markdown (`.md`)                                              | `/trellis:finish-work` |
-| Gemini CLI  | `/trellis:xxx`                                                         | TOML (`.toml`)                                                | `/trellis:finish-work` |
-| Kilo        | `/<workflow-name>`                                                     | Markdown (`.md`)                                              | `/finish-work`         |
-| Codex       | `$<skill-name>` / `/skills`                                            | Markdown (`SKILL.md`)                                         | `$finish-work`         |
-| Kiro        | `$<skill-name>` / `/skills`                                            | Markdown (`SKILL.md`)                                         | `$finish-work`         |
-| Qoder       | `/trellis-<name>` (commands) + `$<skill-name>` / `/skills` (workflows) | Markdown (`.md` with frontmatter + `SKILL.md`)                | `/trellis-finish-work` |
-| Antigravity | `/<workflow-name>`                                                     | Markdown (`.md`)                                              | `/finish-work`         |
-| CodeBuddy   | `/trellis:xxx`                                                         | Markdown (`.md`)                                              | `/trellis:finish-work` |
-| Copilot     | `/trellis:xxx`                                                         | Markdown (`.prompt.md`)                                       | `/trellis:finish-work` |
-| Droid       | `/trellis:xxx`                                                         | Markdown (`.md`)                                              | `/trellis:finish-work` |
-| Devin       | `/trellis-xxx`                                                         | Markdown (`.md`) + `SKILL.md`                                 | `/trellis-finish-work` |
-| Pi Agent    | `/trellis-xxx` prompt templates + `/skill:<name>` skills               | Markdown (`.md`) + `SKILL.md` + TypeScript extension          | `/trellis-finish-work` |
-| Trae IDE    | `/trellis-xxx` commands + skills                                       | Markdown (`.md` with frontmatter) + `SKILL.md` + `hooks.json` | `/trellis-finish-work` |
-| Oh My Pi    | `/trellis-xxx`                                                         | Markdown (`.md` with YAML frontmatter) + TypeScript extension | `/trellis-finish-work` |
+| Platform    | Command Format                                                         | File Format                                                   | Example (finish-work)        |
+| ----------- | ---------------------------------------------------------------------- | ------------------------------------------------------------- | ---------------------------- |
+| Claude Code | `/trellis:xxx`                                                         | Markdown (`.md`)                                              | `/trellis:finish-work`       |
+| Cursor      | `/trellis-xxx`                                                         | Markdown (`.md`)                                              | `/trellis-finish-work`       |
+| OpenCode    | `/trellis:xxx`                                                         | Markdown (`.md`)                                              | `/trellis:finish-work`       |
+| Gemini CLI  | `/trellis:xxx`                                                         | TOML (`.toml`)                                                | `/trellis:finish-work`       |
+| Kilo        | `/<workflow-name>`                                                     | Markdown (`.md`)                                              | `/finish-work`               |
+| Codex       | `$<skill-name>` / `/skills`                                            | Markdown (`SKILL.md`)                                         | `$finish-work`               |
+| Kiro        | `$<skill-name>` / `/skills`                                            | Markdown (`SKILL.md`)                                         | `$finish-work`               |
+| Qoder       | `/trellis-<name>` (commands) + `$<skill-name>` / `/skills` (workflows) | Markdown (`.md` with frontmatter + `SKILL.md`)                | `/trellis-finish-work`       |
+| Antigravity | `/<workflow-name>`                                                     | Markdown (`.md`)                                              | `/finish-work`               |
+| CodeBuddy   | `/trellis:xxx`                                                         | Markdown (`.md`)                                              | `/trellis:finish-work`       |
+| Copilot     | `/trellis:xxx`                                                         | Markdown (`.prompt.md`)                                       | `/trellis:finish-work`       |
+| Droid       | `/trellis:xxx`                                                         | Markdown (`.md`)                                              | `/trellis:finish-work`       |
+| Devin       | `/trellis-xxx`                                                         | Markdown (`.md`) + `SKILL.md`                                 | `/trellis-finish-work`       |
+| Pi Agent    | `/trellis-xxx` prompt templates + `/skill:<name>` skills               | Markdown (`.md`) + `SKILL.md` + TypeScript extension          | `/trellis-finish-work`       |
+| Trae IDE    | `/trellis-xxx` commands + skills                                       | Markdown (`.md` with frontmatter) + `SKILL.md` + `hooks.json` | `/trellis-finish-work`       |
+| Oh My Pi    | `/trellis-xxx`                                                         | Markdown (`.md` with YAML frontmatter) + TypeScript extension | `/trellis-finish-work`       |
 | Kimi Code   | `/skill:trellis-<name>` skills                                         | Markdown (`SKILL.md`)                                         | `/skill:trellis-finish-work` |
 
 When creating platform templates, ensure references match the platform's interaction format and file format.
@@ -929,11 +949,11 @@ When creating platform templates, ensure references match the platform's interac
 
 Commands emitted by `resolveCommands(ctx)` / `resolveAllAsSkills(ctx)` / `resolveAllAsSkillsNeutral(ctx)` in `src/configurators/shared.ts`:
 
-| Command       | `agentCapable && hasHooks` (12)                                                                                                                                                                                                                | `agentCapable && !hasHooks` (3)                                                                       | `!agentCapable` (3)                                  |
-| ------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------- | ---------------------------------------------------- |
+| Command       | `agentCapable && hasHooks` (12)                                                                                                                                                                                                               | `agentCapable && !hasHooks` (3)                                                                       | `!agentCapable` (3)                                  |
+| ------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------- | ---------------------------------------------------- |
 | `start`       | ✔ filtered by the shared resolver — SessionStart-style hook injects opening context, user-facing `/start` would be redundant. Pi is the approved exception and re-adds `.pi/prompts/trellis-start.md` because `session_start` is notify-only. | ✅ emitted (skill and/or slash command per platform) — no hook fires, users need an invocable `start` | ✅ emitted — manual equivalent of session-start hook |
-| `continue`    | ✅ emitted                                                                                                                                                                                                                                     | ✅ emitted                                                                                            | ✅ emitted                                           |
-| `finish-work` | ✅ emitted                                                                                                                                                                                                                                     | ✅ emitted                                                                                            | ✅ emitted                                           |
+| `continue`    | ✅ emitted                                                                                                                                                                                                                                    | ✅ emitted                                                                                            | ✅ emitted                                           |
+| `finish-work` | ✅ emitted                                                                                                                                                                                                                                    | ✅ emitted                                                                                            | ✅ emitted                                           |
 
 **Rule**: filter is by `ctx.agentCapable && ctx.hasHooks` — **both flags required** (changed in 0.6.4; the prior single-flag rule silently dropped `start` from Codex / ZCode / OpenCode / Reasonix). `agentCapable` alone is not a proxy for "has a session-start mechanism" because some agent-capable platforms ship without a SessionStart-equivalent hook and rely on user-invocable `start` instead.
 
@@ -949,26 +969,26 @@ Commands emitted by `resolveCommands(ctx)` / `resolveAllAsSkills(ctx)` / `resolv
 
 Trellis sub-agents (implement / check / research) need task context (`prd.md` + spec files listed in `implement.jsonl` / `check.jsonl`) at startup. There are **three** delivery classes depending on the platform's hook capabilities. The class-1 / class-2 / class-3 labels below are also used by the `[workflow-state:in_progress]` breadcrumb body and by the Pi `SUBAGENT_DISPATCH_PROTOCOL` constant — keep terminology stable across all three writers.
 
-| Class                          | Mechanism                                                                                                                                                                                                      | Platforms                                                     |
-| ------------------------------ | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------- |
-| **Class-1** — Hook-inject      | Native hook or plugin fires at sub-agent start and injects context before the child runs, either by rewriting the spawn prompt or adding developer context                                                        | Claude Code, Cursor, OpenCode, Kiro, CodeBuddy, Codex, Factory Droid, ZCode |
-| **Class-2** — Pull-based       | Platform lacks a Trellis-supported native sub-agent context injection hook; Trellis injects a "Required: Load Trellis Context First" prelude into each definition so the sub-agent reads context at startup     | Gemini CLI, Qoder, Copilot, Reasonix, Trae IDE, Grok Build, Kimi Code  |
-| **Class-3** — Extension-backed | Platform exposes hook-equivalent events and custom tools through a project-local TypeScript extension; Trellis owns the sub-agent tool and the context injection path                                          | Pi Agent, Oh My Pi                                           |
+| Class                          | Mechanism                                                                                                                                                                                                   | Platforms                                                                   |
+| ------------------------------ | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------- |
+| **Class-1** — Hook-inject      | Native hook or plugin fires at sub-agent start and injects context before the child runs, either by rewriting the spawn prompt or adding developer context                                                  | Claude Code, Cursor, OpenCode, Kiro, CodeBuddy, Codex, Factory Droid, ZCode |
+| **Class-2** — Pull-based       | Platform lacks a Trellis-supported native sub-agent context injection hook; Trellis injects a "Required: Load Trellis Context First" prelude into each definition so the sub-agent reads context at startup | Gemini CLI, Qoder, Copilot, Reasonix, Trae IDE, Grok Build, Kimi Code       |
+| **Class-3** — Extension-backed | Platform exposes hook-equivalent events and custom tools through a project-local TypeScript extension; Trellis owns the sub-agent tool and the context injection path                                       | Pi Agent, Oh My Pi                                                          |
 
 ### Class-1 — Hook-inject (8 platforms)
 
 Platform's native sub-agent-start hook delivers context before the child runs. Most platforms rewrite the spawn prompt; Codex emits developer context through `SubagentStart`. Trellis's `inject-subagent-context.py` (or OpenCode's plugin) reads `prd.md` + the JSONL-referenced spec files for that delivery.
 
-| Platform      | Hook event                            | Mechanism                               |
-| ------------- | ------------------------------------- | --------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Claude Code   | `PreToolUse` + matcher `Task`/`Agent` | `updatedInput.prompt`                   |
-| CodeBuddy     | `PreToolUse` + matcher `Task`         | `modifiedInput.prompt` (same as Claude) |
+| Platform      | Hook event                                   | Mechanism                                                        |
+| ------------- | -------------------------------------------- | ---------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Claude Code   | `PreToolUse` + matcher `Task`/`Agent`        | `updatedInput.prompt`                                            |
+| CodeBuddy     | `PreToolUse` + matcher `Task`                | `modifiedInput.prompt` (same as Claude)                          |
 | Codex         | `SubagentStart` + exact Trellis-role matcher | `hookSpecificOutput.additionalContext`; child-side pull fallback |
-| Cursor        | `preToolUse` + matcher `Task          | Subagent`                               | `updated_input.prompt` (Cursor staff marked Task prompt mutation fixed on 2026-04-07; current Cursor may emit native sub-agent calls as tool name `Subagent`, and native Task args may encode custom agents as `subagent_type.custom.name`) |
-| Factory Droid | `PreToolUse` + matcher `Task`         | `updatedInput.prompt`                   |
-| Kiro          | per-agent `agentSpawn` hook           | direct stdout context                   |
-| OpenCode      | JS plugin `tool.execute.before`       | `args.prompt` mutation                  |
-| ZCode         | `PreToolUse` + matcher `Agent|Task`   | `hookSpecificOutput.updatedInput.prompt` |
+| Cursor        | `preToolUse` + matcher `Task                 | Subagent`                                                        | `updated_input.prompt` (Cursor staff marked Task prompt mutation fixed on 2026-04-07; current Cursor may emit native sub-agent calls as tool name `Subagent`, and native Task args may encode custom agents as `subagent_type.custom.name`) |
+| Factory Droid | `PreToolUse` + matcher `Task`                | `updatedInput.prompt`                                            |
+| Kiro          | per-agent `agentSpawn` hook                  | direct stdout context                                            |
+| OpenCode      | JS plugin `tool.execute.before`              | `args.prompt` mutation                                           |
+| ZCode         | `PreToolUse` + matcher `Agent                | Task`                                                            | `hookSpecificOutput.updatedInput.prompt`                                                                                                                                                                                                    |
 
 #### OpenCode injection contract (issue #264)
 
@@ -1006,15 +1026,15 @@ import { isTrellisSubagent } from "../lib/trellis-context.js"
 
 Platform's hook either does not expose a sub-agent-start event or cannot inject Trellis context. Sub-agents must read context themselves at startup. Trellis injects a "Required: Load Trellis Context First" prelude into each sub-agent definition file.
 
-| Platform | Why native context injection is unavailable |
-|---|---|
-| Gemini CLI | `BeforeTool` fires but [#18128](https://github.com/google-gemini/gemini-cli/issues/18128) hides chain-of-thought; reliability margin too thin |
-| Qoder | No `Task` tool concept; `SubagentStart` input has no `prompt` field; Context Isolation |
-| Copilot | `preToolUse` doesn't enforce on subagents ([#2392](https://github.com/github/copilot-cli/issues/2392), [#2540](https://github.com/github/copilot-cli/issues/2540)) |
-| Reasonix | Sub-agent skills run with `runAs: subagent`; no prompt-mutation hook exists, so workflow dispatch must carry the active task and the sub-agent skill reads task artifacts itself. |
-| Trae IDE | `SessionStart` / `UserPromptSubmit` hooks cover main-session context, but no Trellis-supported sub-agent prompt mutation surface exists; generated `.trae/agents/*.md` files receive the pull-based prelude. |
-| Grok Build | Hook stdout `additionalContext` is not consumed (verified on 0.2.x), so no Trellis hook is installed; dispatch goes through `spawn_subagent` and generated `.grok/agents/*.md` files receive the pull-based prelude. |
-| Kimi Code | Hooks exist only in the user-level `~/.kimi-code/config.toml` (no project-level hook/settings file Trellis may write) and there are no custom sub-agent definitions (built-in coder/explore/plan only), so the Trellis agent prompts ship as `.kimi-code/skills/trellis-*/SKILL.md` with the pull-based prelude. |
+| Platform   | Why native context injection is unavailable                                                                                                                                                                                                                                                                      |
+| ---------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Gemini CLI | `BeforeTool` fires but [#18128](https://github.com/google-gemini/gemini-cli/issues/18128) hides chain-of-thought; reliability margin too thin                                                                                                                                                                    |
+| Qoder      | No `Task` tool concept; `SubagentStart` input has no `prompt` field; Context Isolation                                                                                                                                                                                                                           |
+| Copilot    | `preToolUse` doesn't enforce on subagents ([#2392](https://github.com/github/copilot-cli/issues/2392), [#2540](https://github.com/github/copilot-cli/issues/2540))                                                                                                                                               |
+| Reasonix   | Sub-agent skills run with `runAs: subagent`; no prompt-mutation hook exists, so workflow dispatch must carry the active task and the sub-agent skill reads task artifacts itself.                                                                                                                                |
+| Trae IDE   | `SessionStart` / `UserPromptSubmit` hooks cover main-session context, but no Trellis-supported sub-agent prompt mutation surface exists; generated `.trae/agents/*.md` files receive the pull-based prelude.                                                                                                     |
+| Grok Build | Hook stdout `additionalContext` is not consumed (verified on 0.2.x), so no Trellis hook is installed; dispatch goes through `spawn_subagent` and generated `.grok/agents/*.md` files receive the pull-based prelude.                                                                                             |
+| Kimi Code  | Hooks exist only in the user-level `~/.kimi-code/config.toml` (no project-level hook/settings file Trellis may write) and there are no custom sub-agent definitions (built-in coder/explore/plan only), so the Trellis agent prompts ship as `.kimi-code/skills/trellis-*/SKILL.md` with the pull-based prelude. |
 
 #### Active task discovery on class-2 platforms (issue #225)
 
@@ -1030,10 +1050,10 @@ When changing the prelude, the dispatch protocol, or the `session-fallback` sema
 
 Platform can expose hook-equivalent events and custom tools through a project-local extension. Trellis owns the sub-agent tool and the context injection path. Unlike class-1 (which only handles sub-agent context) and class-2 (which only handles sub-agent prelude), class-3 owns hidden persistent custom-message context injection and per-Bash-tool-call session-identity prefixing through the platform extension API.
 
-| Platform | Extension surface                                                  | Context delivery                                                                                                                                                                                                                                                                                                                                                                                  |
-| -------- | ------------------------------------------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Platform | Extension surface                                                  | Context delivery                                                                                                                                                                                                                                                                                                                                                                                                                         |
+| -------- | ------------------------------------------------------------------ | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | Pi Agent | `.pi/extensions/trellis/index.ts` events + `trellis_subagent` tool | extension builds full prompt/context from `.pi/agents/*.md`, `prd.md`, `design.md` if present, `implement.md` if present, and JSONL-referenced files via `buildContext()`; preserves startup/full task context through `before_agent_start.systemPrompt` and persists compact workflow/session context through a hidden `before_agent_start.message` custom message; agent definitions also receive the pull-based prelude as a fallback |
-| Oh My Pi | `.omp/extensions/trellis/index.ts` events                          | extension resolves a session-scoped context key from the OMP runtime, injects session/task context through extension events, and keeps JSONL-referenced files jailed inside the project root                                                                                                                                                                                                       |
+| Oh My Pi | `.omp/extensions/trellis/index.ts` events                          | extension resolves a session-scoped context key from the OMP runtime, injects session/task context through extension events, and keeps JSONL-referenced files jailed inside the project root                                                                                                                                                                                                                                             |
 
 See **"Class-3 injection points (Pi extension)"** and **"Cross-platform consistency invariant"** below for the runtime contract details.
 
@@ -1041,13 +1061,13 @@ See **"Class-3 injection points (Pi extension)"** and **"Cross-platform consiste
 
 `templates/pi/extensions/trellis/index.ts.txt` registers handlers for three platform events plus one custom tool. Each injection point has a distinct lifecycle and a distinct failure mode if dropped.
 
-| Injection point         | Handler                                              | When it fires                              | What it injects                                                                                                                                                                                                 |
-| ----------------------- | ---------------------------------------------------- | ------------------------------------------ | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `input`                 | not registered for Trellis runtime context             | n/a                                        | Trellis must not rewrite submitted user text; context identity is resolved in `before_agent_start` and `tool_call` where it is needed                                                                          |
+| Injection point         | Handler                                              | When it fires                              | What it injects                                                                                                                                                                                                                                                                                         |
+| ----------------------- | ---------------------------------------------------- | ------------------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `input`                 | not registered for Trellis runtime context           | n/a                                        | Trellis must not rewrite submitted user text; context identity is resolved in `before_agent_start` and `tool_call` where it is needed                                                                                                                                                                   |
 | `before_agent_start`    | `pi.on?.("before_agent_start", …)`                   | every agent invocation (main + sub-agents) | preserves `systemPrompt` with startup/full task context only, and additionally returns `message: { customType: "trellis-runtime-context", display: false, content }` containing compact `<workflow-state>` + `<session-overview>`; Pi wraps the message as a persisted `role: "custom"` session message |
-| `context`               | `pi.on?.("context", …)`                              | before each LLM call                       | preserves existing context-key establishment only; must not append request-local Trellis runtime messages because they are not persisted and can move between turns                                           |
-| `tool_call` (Bash)      | `pi.on?.("tool_call", …)`                            | every Bash tool call                       | mutates `event.input.command` in place via `injectTrellisContextIntoBash()` to prefix `export TRELLIS_CONTEXT_ID=<context-key>;` so child Python scripts (e.g. `task.py current`) inherit session identity      |
-| `trellis_subagent` tool | `pi.registerTool?.({ name: "trellis_subagent", … })` | extension load time (once)                 | `promptSnippet` and `promptGuidelines` carry `SUBAGENT_DISPATCH_PROTOCOL` so the model sees the dispatch contract before it ever calls the tool                                                                 |
+| `context`               | `pi.on?.("context", …)`                              | before each LLM call                       | preserves existing context-key establishment only; must not append request-local Trellis runtime messages because they are not persisted and can move between turns                                                                                                                                     |
+| `tool_call` (Bash)      | `pi.on?.("tool_call", …)`                            | every Bash tool call                       | mutates `event.input.command` in place via `injectTrellisContextIntoBash()` to prefix `export TRELLIS_CONTEXT_ID=<context-key>;` so child Python scripts (e.g. `task.py current`) inherit session identity                                                                                              |
+| `trellis_subagent` tool | `pi.registerTool?.({ name: "trellis_subagent", … })` | extension load time (once)                 | `promptSnippet` and `promptGuidelines` carry `SUBAGENT_DISPATCH_PROTOCOL` so the model sees the dispatch contract before it ever calls the tool                                                                                                                                                         |
 
 `TurnContextCache` (in `index.ts.txt`) memoizes the per-turn context-key → `{workflowState, sessionOverview}` pair so `before_agent_start` does not double-spawn the default `get_context.py` session-context call. The cache key is the resolved context key; entries are short-lived (one turn/request window).
 
@@ -1297,9 +1317,9 @@ config keys MUST be applied to **both** implementations:
 
 ```yaml
 context_injection:
-  max_file_bytes: 32768        # per implement.jsonl / check.jsonl referenced file
-  max_artifact_bytes: 65536    # per task artifact (prd.md / design.md / implement.md)
-  max_total_bytes: 131072      # whole payload; overflow degrades to index lines
+  max_file_bytes: 32768 # per implement.jsonl / check.jsonl referenced file
+  max_artifact_bytes: 65536 # per task artifact (prd.md / design.md / implement.md)
+  max_total_bytes: 131072 # whole payload; overflow degrades to index lines
 ```
 
 - `0` disables that limit; negative / non-int → default + stderr warning.
@@ -1484,13 +1504,13 @@ model-visible consumption is verified end to end.
 
 #### 2. Signatures
 
-| Implementation | Injection signature | Adaptive notice? |
-| --- | --- | ---: |
-| `shared-hooks/session-start.py` | Existing shared hook output (`hookSpecificOutput.additionalContext` plus host-specific aliases, or Kiro's plain stdout context) | Yes |
-| `codex/hooks/session-start.py` | Existing Codex SessionStart payload when hooks are enabled and approved | Yes |
-| `opencode/lib/session-utils.js` + `plugins/session-start.js` | Compact context prepended to the first user message and marked for persistence | Yes |
-| `pi/extensions/trellis/index.ts.txt` | Memoized SessionStart-equivalent context added to `before_agent_start.systemPrompt` | Yes |
-| `copilot/hooks/session-start.py` | Microsoft's documented `SessionStart.hookSpecificOutput.additionalContext` payload | No |
+| Implementation                                               | Injection signature                                                                                                             | Adaptive notice? |
+| ------------------------------------------------------------ | ------------------------------------------------------------------------------------------------------------------------------- | ---------------: |
+| `shared-hooks/session-start.py`                              | Existing shared hook output (`hookSpecificOutput.additionalContext` plus host-specific aliases, or Kiro's plain stdout context) |              Yes |
+| `codex/hooks/session-start.py`                               | Existing Codex SessionStart payload when hooks are enabled and approved                                                         |              Yes |
+| `opencode/lib/session-utils.js` + `plugins/session-start.js` | Compact context prepended to the first user message and marked for persistence                                                  |              Yes |
+| `pi/extensions/trellis/index.ts.txt`                         | Memoized SessionStart-equivalent context added to `before_agent_start.systemPrompt`                                             |              Yes |
+| `copilot/hooks/session-start.py`                             | Microsoft's documented `SessionStart.hookSpecificOutput.additionalContext` payload                                              |               No |
 
 #### 3. Contracts
 
@@ -1518,16 +1538,16 @@ model-visible consumption is verified end to end.
 
 #### 4. Validation & Error Matrix
 
-| Condition | Required behavior |
-| --- | --- |
-| First request has a clear natural language | Acknowledgment uses that request language; the rest of the response keeps its intended language |
-| Request has no clear natural language and project instructions explicitly establish a communication language | Acknowledgment uses the explicit project language |
-| Neither request nor project instructions provide a language | Acknowledgment is exactly `Trellis SessionStart ✓` |
-| Later assistant reply in the same session | No repeated acknowledgment |
-| Repeated OpenCode message in one session | Startup context is not prepended again |
-| Repeated Pi turn with the same context key | Memoized startup `systemPrompt` bytes remain stable |
-| Shared or Codex hook output | Existing payload keys and `SessionStart` event name remain unchanged |
-| Copilot SessionStart | Context remains notice-free |
+| Condition                                                                                                    | Required behavior                                                                               |
+| ------------------------------------------------------------------------------------------------------------ | ----------------------------------------------------------------------------------------------- |
+| First request has a clear natural language                                                                   | Acknowledgment uses that request language; the rest of the response keeps its intended language |
+| Request has no clear natural language and project instructions explicitly establish a communication language | Acknowledgment uses the explicit project language                                               |
+| Neither request nor project instructions provide a language                                                  | Acknowledgment is exactly `Trellis SessionStart ✓`                                              |
+| Later assistant reply in the same session                                                                    | No repeated acknowledgment                                                                      |
+| Repeated OpenCode message in one session                                                                     | Startup context is not prepended again                                                          |
+| Repeated Pi turn with the same context key                                                                   | Memoized startup `systemPrompt` bytes remain stable                                             |
+| Shared or Codex hook output                                                                                  | Existing payload keys and `SessionStart` event name remain unchanged                            |
+| Copilot SessionStart                                                                                         | Context remains notice-free                                                                     |
 
 #### 5. Good / Base / Bad Cases
 
@@ -1538,7 +1558,7 @@ model-visible consumption is verified end to end.
 - **Fallback:** a request and project with no language signal receive
   `Trellis SessionStart ✓`, then processing continues directly.
 - **Bad:** the notice says `say once in Chinese`, requires `exactly one short
-  Chinese sentence`, includes a fixed Chinese acknowledgment, or causes the
+Chinese sentence`, includes a fixed Chinese acknowledgment, or causes the
   remainder of an otherwise non-Chinese response to switch languages.
 
 #### 6. Tests Required

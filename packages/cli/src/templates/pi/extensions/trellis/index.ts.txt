@@ -757,10 +757,11 @@ function truncateUtf8(buf: Buffer, cap: number): Buffer {
     if ((lead & 0xe0) === 0xc0) seqLen = 2;
     else if ((lead & 0xf0) === 0xe0) seqLen = 3;
     else if ((lead & 0xf8) === 0xf0) seqLen = 4;
-    // Drop the lead byte too if its full sequence didn't fit.
-    if (i - 1 + seqLen > cap) i--;
+    // Cut before the lead byte when its full sequence didn't fit;
+    // otherwise the trailing sequence is complete — keep it whole.
+    if (i - 1 + seqLen > cap) return buf.subarray(0, i - 1);
   }
-  return buf.subarray(0, i);
+  return buf.subarray(0, cap);
 }
 
 function stripInlineComment(value: string): string {

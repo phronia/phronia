@@ -1304,3 +1304,25 @@ Cross-day batch closing out platform and channel work.
 
 - 0.6.9 release + #459 reply pending user approval
 - #415 structural fix (per-session files + derived index) awaiting user decision on index.md leaving git
+
+
+## Session 174: Replace transcript parsing with lifecycle resets
+
+**Date**: 2026-07-27
+**Task**: Replace transcript parsing with lifecycle resets
+**Package**: cli
+**Branch**: `pr-468-specificity`
+
+### Summary
+
+Replaced Claude transcript scanning with SessionStart clear/compact reset markers, kept parent and subagent histories separate, and moved periodic refresh to wall-clock seconds. Updated templates, live mirrors, config, specs, and regression coverage. Full repository tests, lint, Python checks, and TypeScript type checking pass.
+
+### Git Commits
+
+| Hash | Message |
+|------|---------|
+| `037d130d` | (see git log) |
+
+### Status
+
+[OK] **Completed**

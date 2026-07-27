@@ -1,3 +1,19 @@
+---
+name: trellis-core-sdk
+description: "@mindfoldhq/trellis-core / CLI package boundary, public exports, build and versioning contracts"
+paths:
+  - packages/core/**
+  - packages/cli/src/**
+  - packages/cli/test/**
+  - packages/cli/package.json
+  - packages/cli/scripts/bump-versions.js
+  - packages/cli/scripts/release-preflight.js
+  - packages/cli/scripts/release.js
+  - package.json
+  - .github/workflows/ci.yml
+  - .github/workflows/publish.yml
+---
+
 # Trellis Core SDK
 
 > Package boundary and coding rules for `@mindfoldhq/trellis-core` and the CLI.
@@ -8,10 +24,10 @@
 
 Trellis is split into two version-locked packages:
 
-| Package | Responsibility |
-|---|---|
-| `@mindfoldhq/trellis-core` | Reusable domain logic, storage primitives, reducers, task APIs, channel APIs, and typed contracts. |
-| `@mindfoldhq/trellis` | CLI argument parsing, terminal rendering, command wiring, process exit behavior, template installation, migrations, and release scripts. |
+| Package                    | Responsibility                                                                                                                           |
+| -------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------- |
+| `@mindfoldhq/trellis-core` | Reusable domain logic, storage primitives, reducers, task APIs, channel APIs, and typed contracts.                                       |
+| `@mindfoldhq/trellis`      | CLI argument parsing, terminal rendering, command wiring, process exit behavior, template installation, migrations, and release scripts. |
 
 The CLI should be a thin shell around core where a capability needs to be shared with other integrations. The core package must stay independent of terminal UX and CLI process control.
 
@@ -189,7 +205,7 @@ If a CLI test duplicates a pure core test, move the pure assertion to core and k
 
 `packages/core/src/task/schema.ts` is the single TS-side source of truth for the
 `task.json` shape (including `meta: Record<string, unknown>` with its own
-validation). The `.trellis/scripts/` Python layer implements *behavior* on top of
+validation). The `.trellis/scripts/` Python layer implements _behavior_ on top of
 that shape (create/list/set-meta/validate/journal rendering) and has NO parallel
 implementation in core — jsonl validation, list tree rendering, and journal
 rendering exist only in Python.

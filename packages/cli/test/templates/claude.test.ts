@@ -52,15 +52,61 @@ describe("settingsTemplate SessionStart matchers", () => {
     expect(matchers).toContain("compact");
   });
 
-  it("all SessionStart entries invoke the same session-start.py hook", () => {
-    for (const entry of sessionStartEntries) {
-      expect(entry.hooks).toHaveLength(1);
-      expect(entry.hooks[0].command).toContain("session-start.py");
+  it("runs the reset hook only after clear and compact", () => {
+    const byMatcher = Object.fromEntries(
+      sessionStartEntries.map((entry) => [entry.matcher, entry.hooks]),
+    );
+    expect(byMatcher.startup.map((hook) => hook.command)).toEqual([
+      "{{PYTHON_CMD}} .claude/hooks/session-start.py",
+    ]);
+    for (const source of ["clear", "compact"]) {
+      expect(byMatcher[source].map((hook) => hook.command)).toEqual([
+        "{{PYTHON_CMD}} .claude/hooks/session-start.py",
+        "{{PYTHON_CMD}} .claude/hooks/inject-spec-context.py",
+      ]);
+      expect(byMatcher[source][1].timeout).toBe(30);
     }
   });
 
   it("all SessionStart entries use {{PYTHON_CMD}} placeholder", () => {
     for (const entry of sessionStartEntries) {
+      for (const hook of entry.hooks) {
+        expect(hook.command).toContain("{{PYTHON_CMD}}");
+      }
+    }
+  });
+});
+
+// =============================================================================
+// settingsTemplate — PostToolUse spec-injection hook matchers
+// =============================================================================
+
+describe("settingsTemplate PostToolUse matchers", () => {
+  const settings = JSON.parse(settingsTemplate);
+  const postToolUseEntries = settings.hooks.PostToolUse as {
+    matcher: string;
+    hooks: { type: string; command: string; timeout: number }[];
+  }[];
+
+  // R6: ONE entry with a pipe-list matcher (Claude Code's documented
+  // list-of-exact-strings semantics), not four separate matcher entries.
+  it("is a single entry matching Read|Edit|Write|MultiEdit", () => {
+    expect(postToolUseEntries).toHaveLength(1);
+    expect(postToolUseEntries[0].matcher).toBe("Read|Edit|Write|MultiEdit");
+  });
+
+  it("all PostToolUse entries invoke inject-spec-context.py with timeout 15", () => {
+    expect(postToolUseEntries.length).toBeGreaterThan(0);
+    for (const entry of postToolUseEntries) {
+      expect(entry.hooks).toHaveLength(1);
+      expect(entry.hooks[0].type).toBe("command");
+      expect(entry.hooks[0].command).toContain("inject-spec-context.py");
+      expect(entry.hooks[0].timeout).toBe(15);
+    }
+  });
+
+  it("all PostToolUse entries use {{PYTHON_CMD}} placeholder", () => {
+    for (const entry of postToolUseEntries) {
       expect(entry.hooks[0].command).toContain("{{PYTHON_CMD}}");
     }
   });
