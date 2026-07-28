@@ -56,6 +56,7 @@ interface PiExtensionInternals {
     agent: string,
     key: string | null,
   ) => string;
+  workflowBreadcrumbForTest: (root: string, key: string | null) => string;
 }
 
 function loadExtensionInternals(cwd = process.cwd()): PiExtensionInternals {
@@ -73,6 +74,7 @@ export {
   truncateUtf8,
   readContextInjectionLimits,
   buildContext as buildContextForTest,
+  workflowBreadcrumb as workflowBreadcrumbForTest,
 };
 `;
   const compiled = ts.transpileModule(source, {
@@ -329,6 +331,93 @@ describe("pi templates", () => {
     // turn one is already in the session history.
     expect(second.message).toBeUndefined();
     expect(handlers.has("context")).toBe(true);
+  });
+
+  it("resolves Pi workflow breadcrumbs by task, personal, team, then global", () => {
+    const root = createMinimalTrellisRoot();
+    const { workflowBreadcrumbForTest } = loadExtensionInternals(root);
+    const workflowsDir = join(root, ".trellis", "workflows");
+    mkdirSync(workflowsDir, { recursive: true });
+    const writeWorkflow = (id: string, marker: string) =>
+      writeFileSync(
+        join(workflowsDir, `${id}.md`),
+        [
+          "[workflow-state:no_task]",
+          marker,
+          "[/workflow-state:no_task]",
+          "[workflow-state:in_progress]",
+          marker,
+          "[/workflow-state:in_progress]",
+          "",
+        ].join("\n"),
+      );
+    writeWorkflow("team", "TEAM WORKFLOW");
+    writeWorkflow("personal", "PERSONAL WORKFLOW");
+    writeWorkflow("task", "TASK WORKFLOW");
+
+    expect(workflowBreadcrumbForTest(root, null)).toContain(
+      "No active task. First classify",
+    );
+
+    writeFileSync(
+      join(root, ".trellis", "config.yaml"),
+      'default_workflow: "team" # team default\n',
+    );
+    expect(workflowBreadcrumbForTest(root, null)).toContain("TEAM WORKFLOW");
+
+    writeFileSync(join(root, ".trellis", ".developer"), "workflow=personal\n");
+    expect(workflowBreadcrumbForTest(root, null)).toContain(
+      "PERSONAL WORKFLOW",
+    );
+
+    const taskDir = join(root, ".trellis", "tasks", "07-28-pi-workflow");
+    mkdirSync(taskDir, { recursive: true });
+    writeFileSync(
+      join(taskDir, "task.json"),
+      JSON.stringify({
+        id: "07-28-pi-workflow",
+        status: "in_progress",
+        workflow: "task",
+      }),
+    );
+    mkdirSync(join(root, ".trellis", ".runtime", "sessions"), {
+      recursive: true,
+    });
+    writeFileSync(
+      join(root, ".trellis", ".runtime", "sessions", "pi-test.json"),
+      JSON.stringify({ current_task: "tasks/07-28-pi-workflow" }),
+    );
+    expect(workflowBreadcrumbForTest(root, "pi-test")).toContain(
+      "TASK WORKFLOW",
+    );
+
+    writeFileSync(
+      join(taskDir, "task.json"),
+      JSON.stringify({
+        id: "07-28-pi-workflow",
+        status: "in_progress",
+        workflow: "../../outside",
+      }),
+    );
+    const warning = vi
+      .spyOn(console, "error")
+      .mockImplementation(() => undefined);
+    expect(workflowBreadcrumbForTest(root, "pi-test")).toContain(
+      "PERSONAL WORKFLOW",
+    );
+    expect(warning).toHaveBeenCalledOnce();
+    warning.mockRestore();
+
+    writeFileSync(join(root, ".trellis", ".developer"), "workflow=missing\n");
+    expect(workflowBreadcrumbForTest(root, null)).toContain("TEAM WORKFLOW");
+
+    writeFileSync(
+      join(root, ".trellis", "config.yaml"),
+      "# default_workflow: team\n",
+    );
+    expect(workflowBreadcrumbForTest(root, null)).toContain(
+      "No active task. First classify",
+    );
   });
 
   it("delivers task context changes as persisted messages, not systemPrompt churn", () => {

@@ -1081,10 +1081,66 @@ function adoptKey(root: string, key: string): string {
 }
 
 // ── Workflow State Breadcrumb ─────────────────────────────────────────
+const WORKFLOW_ID_RE = /^[A-Za-z0-9_-]+$/;
+const DEFAULT_WORKFLOW_RE =
+  /^default_workflow:\s*(['"]?)([A-Za-z0-9_-]+)\1\s*(?:#.*)?$/m;
+
+function workflowVariant(root: string, workflowId: string): string {
+  if (!WORKFLOW_ID_RE.test(workflowId)) return "";
+  const path = join(root, ".trellis", "workflows", `${workflowId}.md`);
+  return exists(path) ? path : "";
+}
+
+function developerWorkflowId(root: string): string {
+  for (const line of readText(join(root, ".trellis", ".developer")).split(
+    /\r?\n/,
+  )) {
+    if (line.startsWith("workflow="))
+      return line.slice("workflow=".length).trim();
+  }
+  return "";
+}
+
+function configDefaultWorkflowId(root: string): string {
+  return (
+    readText(join(root, ".trellis", "config.yaml")).match(
+      DEFAULT_WORKFLOW_RE,
+    )?.[2] ?? ""
+  );
+}
+
+/** Mirrors common/workflow_selection.py without spawning another Python
+ * process on every Pi turn. Invalid or missing selections fall through. */
+function resolveWorkflowMd(root: string, key: string | null): string {
+  const taskDir = readTaskDir(root, key);
+  let workflowId = "";
+  if (taskDir) {
+    try {
+      const task = JSON.parse(
+        readText(join(taskDir, "task.json")),
+      ) as JsonObject;
+      workflowId = typeof task.workflow === "string" ? task.workflow : "";
+    } catch {}
+  }
+  if (workflowId) {
+    const pinned = workflowVariant(root, workflowId);
+    if (pinned) return pinned;
+    console.error(
+      `Warning: active task selects workflow ${JSON.stringify(workflowId)} but .trellis/workflows/ has no matching file; using default workflow resolution`,
+    );
+  }
+
+  const personal = workflowVariant(root, developerWorkflowId(root));
+  if (personal) return personal;
+  const team = workflowVariant(root, configDefaultWorkflowId(root));
+  if (team) return team;
+  return join(root, ".trellis", "workflow.md");
+}
+
 const WF_RE =
   /\[workflow-state:([A-Za-z0-9_-]+)\]\s*\n([\s\S]*?)\n\s*\[\/workflow-state:\1\]/g;
 function workflowBreadcrumb(root: string, key: string | null): string {
-  const wf = readText(join(root, ".trellis", "workflow.md"));
+  const wf = readText(resolveWorkflowMd(root, key));
   if (!wf) return "";
   const templates: Record<string, string> = {};
   for (const m of wf.matchAll(WF_RE)) {

@@ -163,12 +163,12 @@ Consumers that resolve per-task:
 | `shared-hooks/inject-workflow-state.py` (`load_breadcrumbs`) | per-turn `[workflow-state:*]` breadcrumb bodies |
 | `scripts/common/workflow_phase.py` (`get_context.py --mode phase`) | phase/step detail bodies |
 | `opencode/plugins/inject-workflow-state.js` (`resolveWorkflowMd`) | per-turn breadcrumbs (JS port; mirrors the Python rule for the same inputs) |
+| `pi/extensions/trellis/index.ts.txt` (`resolveWorkflowMd`) | per-turn breadcrumbs (TS port; mirrors the Python rule for the same inputs) |
 | `codex/hooks/session-start.py` + `copilot/hooks/session-start.py` (`_resolve_workflow_md`) | platform-specific SessionStart Phase Index TOC |
 
-Known degradation: the Pi and OMP extensions keep injecting the global
-`.trellis/workflow.md` regardless of per-task, personal, or team selection
-(their workflow reads live inside monolithic TS extensions). Parity there is a
-tracked follow-up.
+Known degradation: the OMP extension keeps injecting the global
+`.trellis/workflow.md` regardless of per-task, personal, or team selection.
+Parity there is a tracked follow-up.
 
 Absent a per-task pin **and** the personal/team default keys, every consumer
 resolves to the global `.trellis/workflow.md` — output is byte-identical to a
