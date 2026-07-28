@@ -46,6 +46,8 @@ trellis workflow --template <id> --create-new
 trellis workflow --save <id>
 trellis workflow --marketplace <source> --save <id>
 trellis workflow --save <id> --force
+trellis workflow create <id>
+trellis workflow create <id> --skip-defaults
 
 trellis init --workflow <id>
 trellis init --workflow-source <source> --workflow <id>
@@ -150,6 +152,21 @@ Library ownership contract (`.trellis/workflows/`):
   listing the `.md` ids found on disk (sorted); the section is omitted when
   the directory is absent or empty.
 
+Local scaffold contract (`workflow create`):
+
+- `trellis workflow create <id>` writes
+  `.trellis/workflows/<id>.md` from the bundled native workflow. Reusing the
+  native source keeps all parser-sensitive headings, platform markers, and
+  `[workflow-state:*]` blocks intact without maintaining a second template.
+- The command never changes or removes `.trellis/workflow.md` or its template
+  hash. The global file remains the zero-config fallback.
+- In a TTY, the command asks two confirm questions in order: project default
+  (`config.yaml` `default_workflow`) and personal default (`.developer`
+  `workflow=`). Both default to no. `--skip-defaults` and non-TTY execution
+  create only the scaffold.
+- Existing variant files are never overwritten. Config and developer writes
+  are atomic and preserve unrelated content.
+
 Marker validation contract (`--save` only; warn, never block):
 
 - After writing the library file, `--save` checks the saved content for the
@@ -199,6 +216,11 @@ Native source-of-truth contract:
 | `--save missing-id` | `WorkflowResolveError` surfaced as command error; nothing written |
 | `--save` of a template missing parser markers | Write the file, exit 0, one stderr warning listing the missing markers |
 | `trellis update` with saved library files present | Leave `.trellis/workflows/` untouched |
+| `workflow create <id>` | Write a native-based scaffold to `.trellis/workflows/<id>.md`; leave the global workflow and hash untouched |
+| `workflow create <id>` where the file exists | Exit 1 without changing the existing variant |
+| `workflow create <id>` where id fails `[A-Za-z0-9_-]+` | Exit 1 before creating a path |
+| Interactive scaffold creation | Ask project default first, then personal default; write only selected defaults |
+| `workflow create <id> --skip-defaults` or non-TTY | Create the scaffold without prompting or changing defaults |
 
 ### 5. Good/Base/Bad Cases
 
@@ -253,6 +275,10 @@ Integration tests:
 - `--save` combined with `--template` or `--create-new` fails.
 - `--list` shows saved library ids in a `Library` section.
 - `trellis update` leaves saved library files intact.
+- `workflow create` produces the complete native workflow, preserves the
+  global workflow and hash contract, and refuses unsafe ids or existing files.
+- Interactive scaffold creation asks project then personal default and writes
+  the selected ids without disturbing unrelated config/developer content.
 
 Runtime parsing validation:
 

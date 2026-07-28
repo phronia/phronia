@@ -19,6 +19,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
+import inquirer from "inquirer";
 
 vi.mock("figlet", () => ({
   default: { textSync: vi.fn(() => "TRELLIS") },
@@ -37,7 +38,11 @@ vi.mock("node:child_process", () => ({
 
 import { init } from "../../src/commands/init.js";
 import { update } from "../../src/commands/update.js";
-import { runWorkflowCommand, WorkflowCommandError } from "../../src/commands/workflow.js";
+import {
+  runCreateWorkflowCommand,
+  runWorkflowCommand,
+  WorkflowCommandError,
+} from "../../src/commands/workflow.js";
 import { PATHS } from "../../src/constants/paths.js";
 import { loadHashes } from "../../src/utils/template-hash.js";
 import { workflowMdTemplate } from "../../src/templates/trellis/index.js";
@@ -140,7 +145,8 @@ describe("trellis workflow integration", () => {
         },
       ],
     };
-    const customContent = "# Custom Workflow\n\n## Phase Index\nCustom phase.\n";
+    const customContent =
+      "# Custom Workflow\n\n## Phase Index\nCustom phase.\n";
     vi.stubGlobal(
       "fetch",
       vi.fn(async (input: string | URL) => {
@@ -179,9 +185,7 @@ describe("trellis workflow integration", () => {
   it("trellis workflow --template native refreshes hash after switching from tdd", async () => {
     stubMarketplaceFetch();
     await init({ yes: true, workflow: "tdd" } as Record<string, unknown>);
-    expect(
-      loadHashes(tmpDir)[PATHS.WORKFLOW_GUIDE_FILE],
-    ).toBeUndefined();
+    expect(loadHashes(tmpDir)[PATHS.WORKFLOW_GUIDE_FILE]).toBeUndefined();
 
     // Switching FROM a non-native workflow requires --force because the file
     // has no stored hash → the resolver conservatively flags it as "modified",
@@ -208,6 +212,124 @@ describe("trellis workflow integration", () => {
       replacePythonCommandLiterals(TDD_CONTENT),
     );
     expect(loadHashes(tmpDir)[PATHS.WORKFLOW_GUIDE_FILE]).toBeUndefined();
+  });
+
+  it("workflow create generates a complete native scaffold without changing defaults", async () => {
+    stubMarketplaceFetch();
+    await init({ yes: true, user: "alice" });
+
+    const configPath = path.join(tmpDir, ".trellis", "config.yaml");
+    const developerPath = path.join(tmpDir, ".trellis", ".developer");
+    fs.writeFileSync(developerPath, "name=alice\n", "utf-8");
+    const configBefore = fs.readFileSync(configPath, "utf-8");
+    const developerBefore = fs.readFileSync(developerPath, "utf-8");
+    const workflowBefore = fs.readFileSync(
+      path.join(tmpDir, PATHS.WORKFLOW_GUIDE_FILE),
+      "utf-8",
+    );
+
+    await runCreateWorkflowCommand("review-first", { skipDefaults: true });
+
+    expect(
+      fs.readFileSync(
+        path.join(tmpDir, ".trellis", "workflows", "review-first.md"),
+        "utf-8",
+      ),
+    ).toBe(replacePythonCommandLiterals(workflowMdTemplate));
+    expect(fs.readFileSync(configPath, "utf-8")).toBe(configBefore);
+    expect(fs.readFileSync(developerPath, "utf-8")).toBe(developerBefore);
+    expect(
+      fs.readFileSync(path.join(tmpDir, PATHS.WORKFLOW_GUIDE_FILE), "utf-8"),
+    ).toBe(workflowBefore);
+  });
+
+  it("workflow create prompts for project then personal defaults and writes both", async () => {
+    stubMarketplaceFetch();
+    await init({ yes: true, user: "alice" });
+    const configPath = path.join(tmpDir, ".trellis", "config.yaml");
+    fs.writeFileSync(
+      configPath,
+      fs
+        .readFileSync(configPath, "utf-8")
+        .replace(
+          "# default_workflow: native",
+          "default_workflow: old-workflow",
+        ),
+      "utf-8",
+    );
+    const developerPath = path.join(tmpDir, ".trellis", ".developer");
+    fs.writeFileSync(
+      developerPath,
+      "name=alice\nworkflow=old-workflow\n",
+      "utf-8",
+    );
+    vi.mocked(inquirer.prompt).mockClear();
+    vi.mocked(inquirer.prompt)
+      .mockResolvedValueOnce({ projectDefault: true })
+      .mockResolvedValueOnce({ personalDefault: true });
+
+    const originalIsTTY = process.stdin.isTTY;
+    Object.defineProperty(process.stdin, "isTTY", {
+      configurable: true,
+      value: true,
+    });
+
+    try {
+      await runCreateWorkflowCommand("review-first");
+    } finally {
+      Object.defineProperty(process.stdin, "isTTY", {
+        configurable: true,
+        value: originalIsTTY,
+      });
+    }
+
+    expect(vi.mocked(inquirer.prompt)).toHaveBeenCalledTimes(2);
+    expect(vi.mocked(inquirer.prompt).mock.calls[0]?.[0]).toEqual([
+      expect.objectContaining({
+        name: "projectDefault",
+        type: "confirm",
+      }),
+    ]);
+    expect(vi.mocked(inquirer.prompt).mock.calls[1]?.[0]).toEqual([
+      expect.objectContaining({
+        name: "personalDefault",
+        type: "confirm",
+      }),
+    ]);
+    const config = fs.readFileSync(configPath, "utf-8");
+    expect(config).toContain("default_workflow: review-first");
+    expect(config).not.toContain("old-workflow");
+    expect(config.match(/^default_workflow\s*:/gm)).toHaveLength(1);
+
+    const developer = fs.readFileSync(developerPath, "utf-8");
+    expect(developer).toContain("name=alice");
+    expect(developer).toContain("workflow=review-first");
+    expect(developer).not.toContain("old-workflow");
+    expect(developer.match(/^workflow=/gm)).toHaveLength(1);
+  });
+
+  it("workflow create rejects unsafe ids and preserves an existing variant", async () => {
+    stubMarketplaceFetch();
+    await init({ yes: true });
+
+    await expect(
+      runCreateWorkflowCommand("../outside", { skipDefaults: true }),
+    ).rejects.toThrow(/Invalid workflow id/);
+    expect(fs.existsSync(path.join(tmpDir, "outside.md"))).toBe(false);
+
+    const variantPath = path.join(
+      tmpDir,
+      ".trellis",
+      "workflows",
+      "review-first.md",
+    );
+    fs.mkdirSync(path.dirname(variantPath), { recursive: true });
+    fs.writeFileSync(variantPath, "# local workflow", "utf-8");
+
+    await expect(
+      runCreateWorkflowCommand("review-first", { skipDefaults: true }),
+    ).rejects.toThrow(/already exists/);
+    expect(fs.readFileSync(variantPath, "utf-8")).toBe("# local workflow");
   });
 
   it("non-interactive run with a locally-modified workflow.md fails without --force", async () => {
@@ -400,9 +522,9 @@ describe("trellis workflow integration", () => {
 
     const fetchMock = vi.mocked(globalThis.fetch);
     fetchMock.mockClear();
-    await expect(
-      runWorkflowCommand({ save: "../evil" }),
-    ).rejects.toThrow(/Invalid workflow id/);
+    await expect(runWorkflowCommand({ save: "../evil" })).rejects.toThrow(
+      /Invalid workflow id/,
+    );
     // Rejected before the template pipeline: no marketplace fetch, no write.
     expect(fetchMock).not.toHaveBeenCalled();
     expect(fs.existsSync(path.join(tmpDir, ".trellis", "evil.md"))).toBe(false);

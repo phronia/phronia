@@ -45,6 +45,7 @@ import {
   type ResolvedWorkflowTemplate,
   type WorkflowTemplateListing,
 } from "../utils/workflow-resolver.js";
+import { writeFileAtomic } from "../utils/atomic-write.js";
 
 export interface WorkflowCommandOptions {
   template?: string;
@@ -53,6 +54,10 @@ export interface WorkflowCommandOptions {
   force?: boolean;
   createNew?: boolean;
   save?: string;
+}
+
+export interface CreateWorkflowOptions {
+  skipDefaults?: boolean;
 }
 
 /**
@@ -75,6 +80,10 @@ function workflowFilePath(cwd: string): string {
 
 function workflowsLibraryDir(cwd: string): string {
   return path.join(cwd, WORKFLOWS_LIB_REL);
+}
+
+function workflowLibraryPath(cwd: string, id: string): string {
+  return path.join(workflowsLibraryDir(cwd), `${id}.md`);
 }
 
 function isInteractive(): boolean {
@@ -362,6 +371,138 @@ async function saveWorkflowToLibrary(
   console.log(chalk.green(`  ✓ Saved "${template.id}" to ${destRel}`));
 
   warnAboutMissingMarkers(finalContent, destRel);
+}
+
+function setProjectDefaultWorkflow(cwd: string, id: string): void {
+  const configPath = path.join(cwd, DIR_NAMES.WORKFLOW, "config.yaml");
+  if (!fs.existsSync(configPath)) {
+    throw new WorkflowCommandError(
+      `Cannot set the project default because ${DIR_NAMES.WORKFLOW}/config.yaml is missing.`,
+    );
+  }
+
+  const content = fs.readFileSync(configPath, "utf-8");
+  const line = `default_workflow: ${id}`;
+  let next: string;
+  if (/^default_workflow\s*:/m.test(content)) {
+    next = content.replace(/^default_workflow\s*:.*$/m, line);
+  } else if (/^#\s*default_workflow\s*:/m.test(content)) {
+    next = content.replace(/^#\s*default_workflow\s*:.*$/m, line);
+  } else {
+    next = `${content.trimEnd()}\n\n${line}\n`;
+  }
+  writeFileAtomic(configPath, next);
+}
+
+function setPersonalDefaultWorkflow(cwd: string, id: string): void {
+  const developerPath = path.join(cwd, PATHS.DEVELOPER_FILE);
+  if (!fs.existsSync(developerPath)) {
+    throw new WorkflowCommandError(
+      `Cannot set the personal default because ${PATHS.DEVELOPER_FILE} is missing. Run \`trellis init -u <name>\` first.`,
+    );
+  }
+
+  const content = fs.readFileSync(developerPath, "utf-8");
+  const line = `workflow=${id}`;
+  const next = /^workflow=.*$/m.test(content)
+    ? content.replace(/^workflow=.*$/m, line)
+    : `${content.trimEnd()}\n${line}\n`;
+  writeFileAtomic(developerPath, next);
+}
+
+async function chooseWorkflowDefaults(id: string): Promise<{
+  projectDefault: boolean;
+  personalDefault: boolean;
+}> {
+  const { projectDefault } = await inquirer.prompt<{
+    projectDefault: boolean;
+  }>([
+    {
+      type: "confirm",
+      name: "projectDefault",
+      message: `Set "${id}" as the project default in .trellis/config.yaml?`,
+      default: false,
+    },
+  ]);
+  const { personalDefault } = await inquirer.prompt<{
+    personalDefault: boolean;
+  }>([
+    {
+      type: "confirm",
+      name: "personalDefault",
+      message: `Set "${id}" as your personal default in .trellis/.developer?`,
+      default: false,
+    },
+  ]);
+  return { projectDefault, personalDefault };
+}
+
+/**
+ * Create a user-managed workflow variant from the bundled native workflow.
+ *
+ * Reusing native keeps every parser-sensitive heading, platform marker, and
+ * workflow-state block intact without maintaining a second scaffold template.
+ * The global `.trellis/workflow.md` and its hash entry are never changed.
+ */
+export async function runCreateWorkflowCommand(
+  id: string,
+  options: CreateWorkflowOptions = {},
+): Promise<void> {
+  const cwd = process.cwd();
+  if (!fs.existsSync(path.join(cwd, DIR_NAMES.WORKFLOW))) {
+    throw new WorkflowCommandError(
+      "No .trellis/ directory found. Run `trellis init` first.",
+    );
+  }
+  if (!WORKFLOW_ID_RE.test(id)) {
+    throw new WorkflowCommandError(
+      `Invalid workflow id "${id}". Workflow ids must match [A-Za-z0-9_-]+.`,
+    );
+  }
+
+  const destPath = workflowLibraryPath(cwd, id);
+  const destRel = `${WORKFLOWS_LIB_REL}/${id}.md`;
+  if (fs.existsSync(destPath)) {
+    throw new WorkflowCommandError(
+      `${destRel} already exists. Choose another workflow id or edit the existing file.`,
+    );
+  }
+
+  fs.mkdirSync(path.dirname(destPath), { recursive: true });
+  const native = await resolveWorkflowTemplate(NATIVE_WORKFLOW_ID);
+  writeFileAtomic(destPath, replacePythonCommandLiterals(native.content));
+  console.log(chalk.green(`  ✓ Created ${destRel} from the native workflow`));
+
+  if (options.skipDefaults || !isInteractive()) return;
+
+  const defaults = await chooseWorkflowDefaults(id);
+  if (
+    defaults.projectDefault &&
+    !fs.existsSync(path.join(cwd, DIR_NAMES.WORKFLOW, "config.yaml"))
+  ) {
+    throw new WorkflowCommandError(
+      `Created ${destRel}, but cannot set the project default because ${DIR_NAMES.WORKFLOW}/config.yaml is missing.`,
+    );
+  }
+  if (
+    defaults.personalDefault &&
+    !fs.existsSync(path.join(cwd, PATHS.DEVELOPER_FILE))
+  ) {
+    throw new WorkflowCommandError(
+      `Created ${destRel}, but cannot set the personal default because ${PATHS.DEVELOPER_FILE} is missing. Run \`trellis init -u <name>\` first.`,
+    );
+  }
+
+  if (defaults.projectDefault) {
+    setProjectDefaultWorkflow(cwd, id);
+    console.log(
+      chalk.green(`  ✓ Set default_workflow: ${id} in .trellis/config.yaml`),
+    );
+  }
+  if (defaults.personalDefault) {
+    setPersonalDefaultWorkflow(cwd, id);
+    console.log(chalk.green(`  ✓ Set workflow=${id} in .trellis/.developer`));
+  }
 }
 
 /**
