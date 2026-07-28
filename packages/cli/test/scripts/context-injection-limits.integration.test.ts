@@ -23,10 +23,24 @@ const TEMPLATE_SCRIPTS = path.resolve(
   __dirname,
   "../../src/templates/trellis/scripts",
 );
+const TASK_CONTEXT_PATH = path.join(
+  TEMPLATE_SCRIPTS,
+  "common",
+  "task_context.py",
+);
 const HOOK_PATH = path.resolve(
   __dirname,
   "../../src/templates/shared-hooks/inject-subagent-context.py",
 );
+
+describe("task_context.py Python compatibility", () => {
+  it("avoids the nested multiline f-strings rejected by Python 3.9-3.11 (#476)", () => {
+    const source = fs.readFileSync(TASK_CONTEXT_PATH, "utf-8");
+    expect(
+      source.match(/f"[ ]{2}\{colored\(f'[^'\n]*'\s*\n\s*f?'/g) ?? [],
+    ).toHaveLength(0);
+  });
+});
 
 function hasPython(): boolean {
   try {
@@ -366,6 +380,105 @@ print("all-valid")
         expect(out).not.toContain("[Trellis: not inlined");
       });
 
+      it("keeps binary jsonl references as notices even when limits are unlimited", () => {
+        const taskDir = makeTask(tmp, "task-binary-reference");
+        const binary = Buffer.from([
+          0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a, 0x00, 0x41, 0x42,
+        ]);
+        fs.writeFileSync(path.join(tmp, "design.png"), binary);
+        fs.writeFileSync(
+          path.join(tmp, "invalid.bin"),
+          Buffer.from([0xff, 0xfe, 0xfd]),
+        );
+        fs.writeFileSync(
+          path.join(taskDir, "implement.jsonl"),
+          [
+            JSON.stringify({ file: "design.png", reason: "visual baseline" }),
+            JSON.stringify({ file: "invalid.bin", reason: "legacy export" }),
+          ].join("\n") + "\n",
+          "utf-8",
+        );
+        writeConfig(
+          tmp,
+          [
+            "context_injection:",
+            "  max_file_bytes: 0",
+            "  max_total_bytes: 0",
+          ].join("\n"),
+        );
+        const relTask = path.relative(tmp, taskDir).split(path.sep).join("/");
+
+        const out = runHookProbe(
+          tmp,
+          `print(mod.get_implement_context(REPO_ROOT, ${JSON.stringify(relTask)}))`,
+        );
+
+        expect(out).toContain(
+          "[Trellis: not inlined (binary file) — design.png (10 bytes): visual baseline]",
+        );
+        expect(out).toContain(
+          "[Trellis: not inlined (binary file) — invalid.bin (3 bytes): legacy export]",
+        );
+        expect(out).not.toContain("=== design.png ===");
+        expect(out).not.toContain("=== invalid.bin ===");
+        expect(out).not.toContain("\u0000");
+        expect(out).not.toContain("�");
+      });
+
+      it("does not misclassify legitimate multi-byte UTF-8 content as binary", () => {
+        const taskDir = makeTask(tmp, "task-utf8-not-binary");
+        const multiByteContent =
+          "emoji: 🎉🚀 cjk: 中文测试 bmp: café naïve\n";
+        fs.writeFileSync(
+          path.join(tmp, "multibyte.md"),
+          multiByteContent,
+          "utf-8",
+        );
+        fs.writeFileSync(
+          path.join(taskDir, "implement.jsonl"),
+          JSON.stringify({ file: "multibyte.md", reason: "unicode spec" }) +
+            "\n",
+          "utf-8",
+        );
+        writeConfig(tmp, "");
+        const relTask = path.relative(tmp, taskDir).split(path.sep).join("/");
+
+        const out = runHookProbe(
+          tmp,
+          `print(mod.get_implement_context(REPO_ROOT, ${JSON.stringify(relTask)}))`,
+        );
+
+        expect(out).toContain(`=== multibyte.md ===\n${multiByteContent}`);
+        expect(out).not.toContain("[Trellis: not inlined (binary file)");
+      });
+
+      it("classifies a file as binary when binary bytes appear only at the end", () => {
+        const taskDir = makeTask(tmp, "task-text-head-binary-tail");
+        const mixed = Buffer.concat([
+          Buffer.from("looks like a normal text file up front\n", "utf-8"),
+          Buffer.from([0x00, 0xff, 0xfe]),
+        ]);
+        fs.writeFileSync(path.join(tmp, "mixed.dat"), mixed);
+        fs.writeFileSync(
+          path.join(taskDir, "implement.jsonl"),
+          JSON.stringify({ file: "mixed.dat", reason: "mixed content" }) +
+            "\n",
+          "utf-8",
+        );
+        writeConfig(tmp, "");
+        const relTask = path.relative(tmp, taskDir).split(path.sep).join("/");
+
+        const out = runHookProbe(
+          tmp,
+          `print(mod.get_implement_context(REPO_ROOT, ${JSON.stringify(relTask)}))`,
+        );
+
+        expect(out).toContain(
+          `[Trellis: not inlined (binary file) — mixed.dat (${mixed.length} bytes): mixed content]`,
+        );
+        expect(out).not.toContain("=== mixed.dat ===");
+      });
+
       it("truncates an oversized jsonl-referenced file at max_file_bytes with a notice", () => {
         const taskDir = makeTask(tmp, "task-oversize");
         fs.writeFileSync(
@@ -553,7 +666,11 @@ print("all-valid")
         );
         const { status, stdout } = runValidate(taskDir);
         expect(status).toBe(0);
-        expect(stdout).toContain("looks like a code file");
+        expect(stdout).toContain(
+          "implement.jsonl:1: Warning: src/index.ts looks like a code file — " +
+            "implement/check.jsonl should reference spec/research docs; " +
+            "agents read code themselves",
+        );
         expect(stdout).toContain("All validations passed");
       });
 
@@ -596,8 +713,11 @@ print("all-valid")
         );
         const { status, stdout } = runValidate(taskDir);
         expect(status).toBe(0);
-        expect(stdout).toContain("oversized.md is 200 bytes");
-        expect(stdout).toContain("context_injection.max_file_bytes (100)");
+        expect(stdout).toContain(
+          "implement.jsonl:1: Warning: oversized.md is 200 bytes, " +
+            "exceeds context_injection.max_file_bytes (100); " +
+            "injection will truncate it",
+        );
       });
 
       it("stays warning-free for a clean, under-cap, spec-only manifest", () => {

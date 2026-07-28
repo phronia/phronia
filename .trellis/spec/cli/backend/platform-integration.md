@@ -521,9 +521,13 @@ The native hook path calls this resolver with `platform="codex"`,
 - Implement/check context order is role JSONL, `prd.md`, optional `design.md`,
   then optional `implement.md`. Research receives the resolved `Active task:`
   path and research-only context; it must not read implement/check manifests.
-- Custom Codex role profiles must retain a marker-gated child-side pull path:
-  native injection is preferred, while `Active task:` enables degraded loading
-  when the hook is untrusted or unavailable.
+- Codex may truncate model-visible `SubagentStart.additionalContext`, retain a
+  head/tail preview, and add `Full hook output saved to: <path>`. Custom role
+  profiles must treat this notice as stronger evidence than the marker: read
+  the saved full output first, use the role-specific `Active task:` pull
+  fallback if that read fails, and accept the marker as complete only when no
+  saved-output notice is present. Marker absence without a saved-output notice
+  also uses the pull fallback.
 - Native dispatch (`codex.dispatch_mode: auto`) does not set a model on the
   spawned sub-agent by default — Codex's own precedence (spawn value ->
   `[agents]` default -> parent) means the child **inherits the main
@@ -549,16 +553,21 @@ The native hook path calls this resolver with `platform="codex"`,
 | inherited `TRELLIS_CONTEXT_ID` conflicts with parent session | parent `session_id` wins on this native path |
 | stale/missing task, malformed hook JSON, or unexpected error | fail open; Codex still starts the child      |
 | non-Trellis `agent_type`                                     | no Trellis output                            |
+| complete output contains marker and no saved-output notice   | child uses the injected role context directly |
+| output contains `Full hook output saved to: <path>`          | child reads the referenced full output before role work |
+| referenced full-output file cannot be read                   | child uses its role-specific `Active task:` pull fallback |
+| no saved-output notice and marker is absent                  | child uses its role-specific `Active task:` pull fallback |
 
 #### 5. Good / Base / Bad Cases
 
 - Good: a parent session dispatches `trellis-implement`; the child receives
   its curated implementation context and does not dispatch another role.
+- Good: Codex truncates a long payload but supplies a saved-output path; the
+  child reads that file before using any marker retained in the head preview.
 - Base: project Hook trust is pending; the child reads the dispatch prompt's
   `Active task:` value and follows the marker-absent pull protocol.
-- Bad: resolving an unknown native parent through `TRELLIS_CONTEXT_ID` or a
-  sole unrelated session. This leaks task context across windows and is
-  forbidden.
+- Bad: a retained marker causes the child to ignore a saved-output notice, or
+  research loads `implement.jsonl` / `check.jsonl`.
 
 #### 6. Tests Required
 
@@ -572,6 +581,9 @@ The native hook path calls this resolver with `platform="codex"`,
   Codex workflow-state banner.
 - Assert `configureCodex()` and `collectPlatformTemplates("codex")` remain
   byte-equivalent and distribute the shared injector.
+- Assert all three generated role profiles place the saved-output notice check
+  before marker handling, fall back when the saved file is unreadable or the
+  marker is absent, and preserve implement/check/research role boundaries.
 
 #### 7. Wrong vs Correct
 
@@ -581,6 +593,12 @@ different parent task.
 
 **Correct:** make the strict native call explicit while preserving the defaults
 for legacy shell, hook, and pull-based consumers.
+
+**Wrong:** treat `<!-- trellis-hook-injected -->` as proof that the entire
+model-visible payload survived host truncation.
+
+**Correct:** let `Full hook output saved to: <path>` take precedence, read that
+file first, and use the role-specific pull fallback only when recovery fails.
 
 ### Step 7: Documentation
 
@@ -1296,20 +1314,25 @@ The route depends on task intent, artifact presence, and execution mode. Missing
 
 ### 1. Scope / Trigger
 
-Sub-agent context injection (hook Python + Pi extension TS) caps how much task
-context is inlined into a sub-agent's first prompt. Added for #441 (task
-`07-22-subagent-context-limits`). Any change to injection formatting, caps, or
-config keys MUST be applied to **both** implementations:
+Sub-agent context injection (hook Python + Pi extension TS + OpenCode plugin)
+caps how much task context is inlined into a sub-agent's first prompt. Added for
+#441 (task `07-22-subagent-context-limits`). Any change to injection formatting,
+caps, binary detection, or config keys MUST be applied to **all three**
+implementations:
 
 - `packages/cli/src/templates/shared-hooks/inject-subagent-context.py`
 - `packages/cli/src/templates/pi/extensions/trellis/index.ts.txt`
+- `packages/cli/src/templates/opencode/lib/trellis-context.js`
 
 ### 2. Signatures
 
 - Python: `common.config.get_context_injection_limits() -> dict[str, int]`,
-  `truncate_utf8(data: bytes, cap: int) -> bytes`
+  `truncate_utf8(data: bytes, cap: int) -> bytes`,
+  `_is_binary_content(data: bytes) -> bool`
 - TS: `readContextInjectionLimits(repoRoot: string)`, `truncateUtf8(buf: Buffer, cap: number)`
   (exported for tests via `loadExtensionInternals()` in `pi.test.ts`)
+- OpenCode JS: `readContextInjectionLimits(repoRoot)`, `truncateUtf8(buf, cap)`,
+  `materializeFile(basePath, filePath, reason, limits, budget)`
 
 ### 3. Contracts
 
@@ -1323,13 +1346,18 @@ context_injection:
 ```
 
 - `0` disables that limit; negative / non-int → default + stderr warning.
-- Notice strings (byte-frozen, identical in both implementations):
+- Notice strings (byte-frozen, identical in all three implementations):
   - truncation: `\n[Trellis: truncated at {cap} bytes — read {path} for the full content]`
   - degradation: `[Trellis: not inlined (total context limit reached) — {path} ({size} bytes): {reason}]`
+  - binary reference: `[Trellis: not inlined (binary file) — {path} ({size} bytes): {reason}]`
 - Artifact reasons: `Requirements document` / `Technical design document` / `Execution plan document`.
 - Accounting: `=== path ===` headers and notices count toward `max_total_bytes`.
   Processing order unchanged: jsonl entries first, then prd → design → implement.md.
 - Truncation is UTF-8-safe: back off over continuation bytes; drop an incomplete lead byte.
+- JSONL-referenced files are classified from bytes, not extensions. A NUL byte
+  or invalid UTF-8 marks the file as binary. Binary bytes are never decoded or
+  inlined, including when `max_file_bytes` and `max_total_bytes` are `0`; only
+  the binary-reference notice counts toward the total budget.
 - `task.py validate` emits non-blocking hygiene warnings (yellow, exit code unchanged):
   code-file extension outside `.trellis/spec/`, `docs/`, `docs-site/`, or the task's
   own dir; and entries larger than `max_file_bytes`.
@@ -1340,12 +1368,15 @@ context_injection:
 - file > `max_file_bytes` → truncated + truncation notice
 - artifact > `max_artifact_bytes` → truncated + truncation notice
 - next block would exceed `max_total_bytes` → index line instead of content
+- referenced file contains NUL or invalid UTF-8 → binary-reference notice only
 - invalid config value → default for that key + stderr warning, never a crash
 
 ### 5. Good/Base/Bad Cases
 
 - Good: curated spec files of a few KB — output byte-identical to pre-cap behavior.
 - Base: one 2 MiB file → ≤32 KiB inlined + notice; total payload ≤128 KiB.
+- Binary: PNG or invalid UTF-8 with unlimited caps → path/size/reason notice,
+  with no `=== path ===` block and no decoded bytes.
 - Bad (guarded): setting values via env vars or CLI flags — not supported; config.yaml only.
 
 ### 6. Tests Required
@@ -1355,20 +1386,24 @@ context_injection:
   3-file total overflow / `0` disable / config override / golden under-cap / validate warnings).
 - TS: `packages/cli/test/templates/pi.test.ts` `describe("pi extension: context injection limits (issue #441)")`
   — same matrix, asserts the exact frozen notice strings.
+- OpenCode: `packages/cli/test/templates/opencode.test.ts`
+  `describe("opencode context injection limits (issue #441)")` — same binary
+  and limit behavior through the real prompt-injection plugin seam.
 - Template: `trellis.test.ts` asserts config.yaml's `context_injection` section exists and is fully commented.
 
 ### 7. Wrong vs Correct
 
 #### Wrong
 
-Change a notice string or cap semantics in one implementation only, or account
-only file bodies (not headers/notices) toward the total budget.
+Change a notice string, binary predicate, or cap semantics in one implementation
+only; infer binary content from the extension; or account only file bodies (not
+headers/notices) toward the total budget.
 
 #### Correct
 
-Treat the notice strings, key names, ordering, and accounting rules above as a
-frozen cross-implementation contract; change both sides plus both test suites in
-the same commit.
+Treat the notice strings, byte-based binary predicate, key names, ordering, and
+accounting rules above as a frozen cross-implementation contract; change all
+three loaders plus their regression suites in the same commit.
 
 > **Warning**: Pi's jsonl block format converged to the Python format
 > (`=== path ===` headers) in this change — an approved deviation from Pi's old
