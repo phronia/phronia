@@ -1098,7 +1098,7 @@ The body of the `<workflow-state>` breadcrumb MUST be byte-identical across clas
 Concrete rules:
 
 - **Regex parity**: `templates/pi/extensions/trellis/index.ts.txt:WORKFLOW_STATE_TAG_RE` MUST mirror `templates/shared-hooks/inject-workflow-state.py:_TAG_RE` byte-for-byte. Both use the closing-tag backreference `\1` (or its TS equivalent in `[\/workflow-state:\1\]`) so a tag block parses identically in Python and TypeScript.
-- **Breadcrumb body source**: `loadWorkflowBreadcrumbs()` in the Pi extension reads `.trellis/workflow.md` directly — same source as the Python hook. There is no separate TS-side template for breadcrumb bodies. If the regex drifts, the TS port silently falls back to hardcoded defaults and Pi loses parity.
+- **Breadcrumb body source**: `workflowBreadcrumb()` in the Pi extension reads the path selected by `resolveWorkflowMd()`, which mirrors the Python task → personal → team → global precedence. There is no separate TS-side template for breadcrumb bodies. If the resolver or regex drifts, Pi loses parity.
 - **Status writer parity**: `task.json.status` is the sole input to "which `[workflow-state:STATUS]` block fires". Both the Python hook (`get_active_task` + status read) and the TS port (`readActiveTaskStatus()` in `index.ts.txt`) MUST agree on the status string. Custom statuses pass through both unchanged.
 - **`<session-overview>` parity**: Pi shells out to `python3 .trellis/scripts/get_context.py` rather than re-implementing context generation in TS, so output stays canonical. Don't replace this with an inline TS implementation — that's a parity drift waiting to happen.
 
