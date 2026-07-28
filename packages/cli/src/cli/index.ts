@@ -8,6 +8,7 @@ import { upgrade } from "../commands/upgrade.js";
 import { uninstall } from "../commands/uninstall.js";
 import { runMem } from "../commands/mem.js";
 import {
+  runCreateWorkflowCommand,
   runWorkflowCommand,
   WorkflowCommandError,
 } from "../commands/workflow.js";
@@ -259,7 +260,7 @@ program
     }
   });
 
-program
+const workflowCommand = program
   .command("workflow")
   .description(
     "List or switch the project's .trellis/workflow.md template (native, tdd, channel-driven-subagent-dispatch, or marketplace)",
@@ -307,6 +308,35 @@ program
       process.exit(1);
     }
   });
+
+workflowCommand
+  .command("create <workflow-id>")
+  .description(
+    "Create .trellis/workflows/<workflow-id>.md from the native workflow",
+  )
+  .option(
+    "--skip-defaults",
+    "Create the workflow without project or personal default prompts",
+  )
+  .action(
+    async (
+      workflowId: string,
+      options: { skipDefaults?: boolean },
+    ): Promise<void> => {
+      try {
+        await runCreateWorkflowCommand(workflowId, options);
+      } catch (error) {
+        console.error(
+          chalk.red("Error:"),
+          error instanceof Error ? error.message : error,
+        );
+        if (process.env.DEBUG || process.env.TRELLIS_DEBUG) {
+          console.error(error instanceof Error ? error.stack : error);
+        }
+        process.exit(1);
+      }
+    },
+  );
 
 program
   .command("platforms")
