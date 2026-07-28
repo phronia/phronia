@@ -12,8 +12,9 @@
  *   - `src/templates/trellis/scripts/common/spec_inject.py` — the pure decision
  *     engine (R7): `decide` truth table, `within_window`, `truncate_chars`,
  *     `assemble_payload`'s hard character ceiling
- *   - `src/templates/shared-hooks/inject-spec-context.py` — PostToolUse and
- *     SessionStart hook E2E: character budgets, lifecycle reset markers,
+ *   - `src/templates/shared-hooks/inject-spec-context.py` — Claude
+ *     PostToolUse, Codex PreToolUse, and SessionStart hook E2E: character
+ *     budgets, lifecycle reset markers,
  *     parent/subagent state, the pid-less locked state file, the unwritable
  *     circuit breaker and scoped GC, stateless ticket wording and tools config
  *   - `get_context.py --mode spec --file <path>` — pull mode
@@ -119,7 +120,10 @@ function readShardRecords(shard: string): StateRecord[] {
  * exactly one (R4 pins one file per identity). */
 function soleShard(tmp: string): string {
   const shards = listJsonl(stateBase(tmp));
-  expect(shards.length, `expected exactly one shard, got ${shards.join(", ")}`).toBe(1);
+  expect(
+    shards.length,
+    `expected exactly one shard, got ${shards.join(", ")}`,
+  ).toBe(1);
   return shards[0];
 }
 
@@ -278,12 +282,41 @@ function buildPayload(tmp: string, opts: PayloadOpts): string {
   return JSON.stringify(payload);
 }
 
-function additionalContext(stdout: string): string {
+function buildCodexPatchPayload(
+  tmp: string,
+  patch: string,
+  session = "sess-1",
+): string {
+  return JSON.stringify({
+    hook_event_name: "PreToolUse",
+    cwd: tmp,
+    session_id: session,
+    tool_name: "apply_patch",
+    tool_input: { command: patch },
+  });
+}
+
+function hookOutput(stdout: string): {
+  hookEventName: string;
+  additionalContext: string;
+  permissionDecision?: string;
+  permissionDecisionReason?: string;
+} {
   const parsed = JSON.parse(stdout) as {
-    hookSpecificOutput: { hookEventName: string; additionalContext: string };
+    hookSpecificOutput: {
+      hookEventName: string;
+      additionalContext: string;
+      permissionDecision?: string;
+      permissionDecisionReason?: string;
+    };
   };
-  expect(parsed.hookSpecificOutput.hookEventName).toBe("PostToolUse");
-  return parsed.hookSpecificOutput.additionalContext;
+  return parsed.hookSpecificOutput;
+}
+
+function additionalContext(stdout: string): string {
+  const output = hookOutput(stdout);
+  expect(output.hookEventName).toBe("PostToolUse");
+  return output.additionalContext;
 }
 
 /** Extract the 12-hex sha256 attr the FULL/TICKET tags carry; fail loudly if
@@ -301,7 +334,9 @@ function requireSha(ctx: string): string {
 function fullBlockBody(ctx: string): string {
   const m = /^<spec-context [^\n>]*>\n([\s\S]*)\n<\/spec-context>$/.exec(ctx);
   if (!m) {
-    throw new Error(`expected exactly one <spec-context> block: ${ctx.slice(0, 200)}`);
+    throw new Error(
+      `expected exactly one <spec-context> block: ${ctx.slice(0, 200)}`,
+    );
   }
   return m[1];
 }
@@ -1000,6 +1035,109 @@ print(f"v={rec['v']} version={STATE_VERSION} reset={rec['reset']}")
       expect(requireSha(ctx)).toMatch(/^[0-9a-f]{12}$/);
       expect(ctx).toContain("Command spec body.");
       expect(ctx).toContain("</spec-context>");
+    });
+
+    it("denies the first Codex apply_patch with the full spec, then allows the retry", () => {
+      writeGoverningSpec();
+      const payload = buildCodexPatchPayload(
+        tmp,
+        "*** Begin Patch\n*** Update File: src/commands/update.ts\n@@\n-old\n+new\n*** End Patch\n",
+      );
+
+      const first = runHook(tmp, payload);
+      expect(first.status).toBe(0);
+      const output = hookOutput(first.stdout);
+      expect(output.hookEventName).toBe("PreToolUse");
+      expect(output.permissionDecision).toBe("deny");
+      expect(output.permissionDecisionReason).toContain("retry");
+      expect(output.additionalContext).toContain(
+        `<spec-context file="${EDITED}" spec="${SPEC_REL}" sha256="`,
+      );
+
+      const retry = runHook(tmp, payload);
+      expect(retry.status).toBe(0);
+      expect(retry.stdout.trim()).toBe("");
+    });
+
+    it("allows a Codex apply_patch when only a refresh ticket is due", () => {
+      writeGoverningSpec();
+      const payload = buildCodexPatchPayload(
+        tmp,
+        "*** Begin Patch\n*** Update File: src/commands/update.ts\n@@\n-old\n+new\n*** End Patch\n",
+      );
+      expect(runHook(tmp, payload).status).toBe(0);
+
+      const shard = soleShard(tmp);
+      const record = readShardRecords(shard)[0];
+      fs.writeFileSync(
+        shard,
+        JSON.stringify({ ...record, ts: 0 }) + "\n",
+        "utf-8",
+      );
+
+      const refresh = runHook(tmp, payload);
+      expect(refresh.status).toBe(0);
+      const output = hookOutput(refresh.stdout);
+      expect(output.hookEventName).toBe("PreToolUse");
+      expect(output.permissionDecision).toBeUndefined();
+      expect(output.additionalContext).toContain("<spec-ticket");
+      expect(output.additionalContext).toContain(STATEFUL_TICKET_BODY);
+    });
+
+    it("matches every file in a Codex patch and injects a shared spec once", () => {
+      writeSpec(
+        tmp,
+        "models.md",
+        "---\ndescription: model rules\npaths:\n  - src/models/**\n---\nModel spec body.\n",
+      );
+      writeSpec(
+        tmp,
+        "legacy.md",
+        "---\npaths:\n  - src/legacy/**\n---\nLegacy deletion rules.\n",
+      );
+      writeSpec(
+        tmp,
+        "entities.md",
+        "---\npaths:\n  - src/entities/**\n---\nEntity move rules.\n",
+      );
+      const payload = buildCodexPatchPayload(
+        tmp,
+        [
+          "*** Begin Patch",
+          "*** Update File: README.md",
+          "@@",
+          "-old",
+          "+new",
+          "*** Add File: src/models/account.ts",
+          "+export const account = {};",
+          "*** Delete File: src/legacy/obsolete.ts",
+          "*** Update File: src/models/user.ts",
+          "*** Move to: src/entities/user.ts",
+          "@@",
+          "-old",
+          "+new",
+          "*** End Patch",
+          "",
+        ].join("\n"),
+      );
+
+      const r = runHook(tmp, payload);
+      expect(r.status).toBe(0);
+      const output = hookOutput(r.stdout);
+      expect(output.permissionDecision).toBe("deny");
+      expect(output.additionalContext).toContain(
+        '<spec-context file="src/models/account.ts" spec=".trellis/spec/models.md"',
+      );
+      expect(output.additionalContext).toContain(
+        '<spec-context file="src/legacy/obsolete.ts" spec=".trellis/spec/legacy.md"',
+      );
+      expect(output.additionalContext).toContain(
+        '<spec-context file="src/entities/user.ts" spec=".trellis/spec/entities.md"',
+      );
+      expect(
+        output.additionalContext.match(/spec=".trellis\/spec\/models.md"/g),
+      ).toHaveLength(1);
+      expect(output.additionalContext.match(/<spec-context /g)).toHaveLength(3);
     });
 
     it("goes silent on a second touch of the same session within the refresh window", () => {

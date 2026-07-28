@@ -11,9 +11,14 @@ lives in .trellis/scripts/common/spec_match.py and the decision engine in
 .trellis/scripts/common/spec_inject.py. This file is the IO shell: stdin,
 config, identity, state files, locking, GC, one print.
 
-Trigger: PostToolUse (matcher "Read|Edit|Write|MultiEdit") — registered on
-Claude Code only this iteration. The script keeps the shared-hooks
-platform-neutral shape so later platform registrations are wiring-only.
+Triggers:
+
+* Claude Code PostToolUse (matcher "Read|Edit|Write|MultiEdit") receives one
+  structured file path after the tool runs.
+* Codex PreToolUse (matcher "Edit|Write") receives an ``apply_patch`` command.
+  Every patch header is matched before the patch runs. When a FULL spec is
+  emitted, the patch is denied once so the model can read the injected rules
+  and retry; ticket-only reminders do not block.
 
 Behavior — per matched spec, per event (recency-decay aware):
 
@@ -53,18 +58,19 @@ A once-per-hour GC prunes conforming shards older than 48 h.
 
 Budget (config.yaml `spec_injection:`): per-spec cap `max_spec_chars`
 (default 9400) with code-point truncation + in-body notice; per-event cap
-`max_total_chars` (default 9500 — Claude Code's documented additionalContext
-ceiling is 10,000 characters, stay under with margin). Once the total budget
-is exhausted, remaining FULL bodies degrade to one <spec-index> block; tickets
-are counted last and dropped (with a stderr warning) only if even they do not
-fit.
+`max_total_chars` (default 9500 — below Claude Code's documented
+additionalContext ceiling, and enforced directly for Codex). Once the total
+budget is exhausted, remaining FULL bodies degrade to one <spec-index> block;
+tickets are counted last and dropped (with a stderr warning) only if even they
+do not fit.
 
 Refresh window (config.yaml `spec_injection:`): `refresh_window_seconds`
 (default 2700; `0` = never refresh unchanged content solely because time
 passed).
 
-Never blocks, never crashes: non-matching events, missing file_path, no
-matches, any internal error → exit 0 with no stdout (stderr warnings allowed).
+Fail-open on errors: non-matching events, malformed paths, no matches, or any
+internal error → exit 0 with no stdout (stderr warnings allowed). The only
+deliberate block is a Codex patch that just received a FULL governing spec.
 """
 from __future__ import annotations
 
@@ -141,9 +147,24 @@ GC_PROJECT_DIR_RE = re.compile(r"^[0-9a-f]{16}$")
 # `+` is part of the identity charset: subagent shards use the `+a-<agent_id>`
 # suffix (contract amendment 2 — without it those shards were never pruned).
 GC_SHARD_NAME_RE = re.compile(r"^[A-Za-z0-9_+-]+(\.[0-9]+)?\.jsonl$")
+CODEX_PATCH_PATH_RE = re.compile(
+    r"^\*\*\* (?:(?:Add|Update|Delete) File|Move to): (.+)$"
+)
 
 def _warn(message: str) -> None:
     print(f"[inject-spec-context] WARN: {message}", file=sys.stderr)
+
+
+def _codex_patch_paths(command: str) -> list[str]:
+    """Return file paths from Codex's documented apply_patch grammar."""
+    paths: list[str] = []
+    for line in command.splitlines():
+        match = CODEX_PATCH_PATH_RE.fullmatch(line)
+        if match:
+            path = match.group(1).strip()
+            if path and path not in paths:
+                paths.append(path)
+    return paths
 
 
 def _agent_id(payload: dict) -> str:
@@ -567,16 +588,20 @@ def load_state(
     return result, latest_reset
 
 
-def append_records(fd: int, records: list[dict]) -> None:
-    """Append records as JSONL (O_APPEND). Best-effort — a failure warns and
-    proceeds (the emission already went out)."""
+def append_records(fd: int, records: list[dict]) -> bool:
+    """Append records as JSONL (O_APPEND) and report whether all bytes landed."""
     if not records:
-        return
+        return True
     try:
         blob = "".join(json.dumps(r, ensure_ascii=False) + "\n" for r in records)
-        os.write(fd, blob.encode("utf-8"))
+        encoded = blob.encode("utf-8")
+        if os.write(fd, encoded) != len(encoded):
+            _warn("could not write complete state shard — state may be incomplete")
+            return False
+        return True
     except OSError:
         _warn("could not write state shard — state may be incomplete")
+        return False
 
 
 # =============================================================================
@@ -646,11 +671,14 @@ def main() -> int:
                 pass
         return 0
 
+    event_name = input_data.get("hook_event_name")
     tool_name = input_data.get("tool_name", "") or input_data.get("toolName", "")
     if not isinstance(tool_name, str) or not tool_name:
         return 0
+    is_codex_patch = event_name == "PreToolUse" and tool_name == "apply_patch"
+    logical_tool = "Edit" if is_codex_patch else tool_name
     # An empty `tools` list is the documented "disable every trigger" switch.
-    if not tools or tool_name not in tools:
+    if not tools or logical_tool not in tools:
         return 0
 
     # snake_case is Claude Code's shape; camelCase keeps parity with the
@@ -660,11 +688,6 @@ def main() -> int:
         tool_input = input_data.get("toolInput")
     if not isinstance(tool_input, dict):
         return 0
-    file_path = tool_input.get("file_path")
-    if not isinstance(file_path, str) or not file_path.strip():
-        return 0
-    file_path = file_path.strip()
-
     try:
         from common.spec_match import (  # type: ignore[import-not-found]
             match_specs_for_file,
@@ -676,7 +699,33 @@ def main() -> int:
     except Exception:
         return 0  # matching/decision engine unavailable — degrade to nothing
 
-    matches = match_specs_for_file(root, file_path)
+    if is_codex_patch:
+        command = tool_input.get("command")
+        if not isinstance(command, str):
+            return 0
+        raw_paths = _codex_patch_paths(command)
+    else:
+        file_path = tool_input.get("file_path")
+        if not isinstance(file_path, str) or not file_path.strip():
+            return 0
+        raw_paths = [file_path.strip()]
+
+    file_paths: list[str] = []
+    for raw_path in raw_paths:
+        normalized = normalize_repo_relative(root, raw_path)
+        if normalized is not None and normalized not in file_paths:
+            file_paths.append(normalized)
+    if not file_paths:
+        return 0
+
+    matches = []
+    match_files: dict[str, str] = {}
+    for file_path in file_paths:
+        for match in match_specs_for_file(root, file_path):
+            if match.rel_path in match_files:
+                continue
+            matches.append(match)
+            match_files[match.rel_path] = file_path
     if not matches:
         return 0
 
@@ -733,9 +782,8 @@ def main() -> int:
                         "ts": time.time(),
                     }
 
-    edited_rel = normalize_repo_relative(root, file_path) or str(file_path).replace(
-        "\\", "/"
-    )
+    edited_rel = match_files[matches[0].rel_path]
+    records_persisted = True
     try:
         payload, records = assemble_payload(
             edited_rel,
@@ -746,9 +794,10 @@ def main() -> int:
             max_spec_chars,
             max_total_chars,
             win_seconds,
+            match_files=match_files,
         )
         if fd is not None and records:
-            append_records(fd, records)
+            records_persisted = append_records(fd, records)
     finally:
         if fd is not None:
             unlock_shard(fd)
@@ -760,12 +809,25 @@ def main() -> int:
     if not payload:
         return 0
 
-    output = {
-        "hookSpecificOutput": {
-            "hookEventName": "PostToolUse",
-            "additionalContext": payload,
-        }
+    hook_specific_output = {
+        "hookEventName": "PreToolUse" if is_codex_patch else "PostToolUse",
+        "additionalContext": payload,
     }
+    if (
+        is_codex_patch
+        and records_persisted
+        and any(record.get("mode") == "full" for record in records)
+    ):
+        hook_specific_output.update(
+            {
+                "permissionDecision": "deny",
+                "permissionDecisionReason": (
+                    "Trellis injected governing specs. Review them, then retry "
+                    "this patch."
+                ),
+            }
+        )
+    output = {"hookSpecificOutput": hook_specific_output}
     print(json.dumps(output, ensure_ascii=False))
     return 0
 
@@ -774,5 +836,5 @@ if __name__ == "__main__":
     try:
         sys.exit(main())
     except Exception:
-        # A context hook must never break the tool result or the session.
+        # Hook failures must never break the tool result or the session.
         sys.exit(0)

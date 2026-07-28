@@ -6,8 +6,7 @@ Decision logic for path-scoped spec injection (ticket-refresh model).
 Pure logic only: the per-spec decision engine, block rendering and budgeted
 payload assembly. Importing this module has no side effects; every piece of IO
 orchestration (stdin, config, identity, state files, locking, GC) lives in the
-hook that calls it — ``.claude/hooks/inject-spec-context.py``. Unit tests
-import this module directly.
+platform hook that calls it. Unit tests import this module directly.
 
 Clock
     The periodic refresh window uses epoch seconds. Context resets are
@@ -258,6 +257,7 @@ def assemble_payload(
     max_spec_chars: int,
     max_total_chars: int,
     win_seconds: int,
+    match_files: dict[str, str] | None = None,
 ) -> tuple[str, list[dict[str, Any]]]:
     """Assemble the additionalContext payload from the matched specs.
 
@@ -268,8 +268,15 @@ def assemble_payload(
     Every candidate block is measured against the *assembled* payload string
     (``"\\n\\n".join(...)``), so the per-event character ceiling holds for the
     exact string that is emitted.
+
+    ``match_files`` maps a governing spec to the first matching file in a
+    multi-file tool call. Single-file callers omit it and retain the original
+    ``edited_rel`` behavior.
     """
     blocks: list[str] = []
+
+    def file_for(match: SpecMatch) -> str:
+        return (match_files or {}).get(match.rel_path, edited_rel)
 
     def fits(candidate: str, reserve: int = 0) -> bool:
         """Does ``candidate`` fit the per-event ceiling, keeping ``reserve``
@@ -302,7 +309,7 @@ def assemble_payload(
         return named
 
     index_lines: list[str] = []
-    ticket_pending: list[tuple[str, str]] = []  # (spec_rel, sha256_hex)
+    ticket_pending: list[tuple[str, str, str]] = []  # (file, spec, sha256)
     records: list[dict[str, Any]] = []
 
     for match_idx, match in enumerate(matches):
@@ -335,7 +342,7 @@ def assemble_payload(
 
         if decision == "ticket":
             # Deferred: tickets are counted against the budget last.
-            ticket_pending.append((match.rel_path, sha256_hex))
+            ticket_pending.append((file_for(match), match.rel_path, sha256_hex))
             continue
 
         pending = [*index_lines, *_all_index_lines[match_idx + 1 :]]
@@ -347,7 +354,8 @@ def assemble_payload(
         complete = len(body) >= len(text)
         if not complete:
             body += truncation_notice(match.rel_path, max_spec_chars)
-        block = render_full(edited_rel, match.rel_path, sha12, body)
+        matching_file = file_for(match)
+        block = render_full(matching_file, match.rel_path, sha12, body)
         if not _fits(block):
             # Contract amendment 1: before degrading, truncate FURTHER to the
             # largest body prefix that fits the remaining total budget
@@ -356,7 +364,12 @@ def assemble_payload(
             # wrapper > total cap) and long specs fell straight to an index
             # line — the rejected index-only mode by another route.
             derived = _derive_fitting_full(
-                edited_rel, match.rel_path, sha12, text, max_spec_chars, _fits
+                matching_file,
+                match.rel_path,
+                sha12,
+                text,
+                max_spec_chars,
+                _fits,
             )
             if derived is not None:
                 derived_block, derived_complete = derived
@@ -413,8 +426,10 @@ def assemble_payload(
         if chosen:
             blocks.append(_index_block(chosen))
 
-    for spec_rel, sha256_hex in ticket_pending:
-        ticket = render_ticket(edited_rel, spec_rel, sha256_hex[:12], stateless)
+    for matching_file, spec_rel, sha256_hex in ticket_pending:
+        ticket = render_ticket(
+            matching_file, spec_rel, sha256_hex[:12], stateless
+        )
         if not fits(ticket):
             _warn(f"ticket for {spec_rel} dropped — per-event budget exhausted")
             continue

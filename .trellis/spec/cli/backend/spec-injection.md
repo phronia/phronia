@@ -3,10 +3,14 @@ name: spec-injection
 description: Path-scoped on-demand spec injection — frontmatter contract, glob matching, hook flow, budgets, ticket-refresh state machine, identity ladder, platform matrix
 paths:
   - packages/cli/src/templates/shared-hooks/inject-spec-context.py
+  - packages/cli/src/templates/shared-hooks/index.ts
+  - packages/cli/src/templates/codex/hooks.json
   - packages/cli/src/templates/trellis/scripts/common/git_context.py
   - packages/cli/src/templates/trellis/scripts/common/spec_match.py
   - packages/cli/src/templates/trellis/scripts/common/spec_inject.py
   - packages/cli/test/scripts/spec-injection.integration.test.ts
+  - packages/cli/test/templates/codex.test.ts
+  - packages/cli/test/templates/shared-hooks.test.ts
   - .claude/hooks/inject-spec-context.py
   - .trellis/scripts/common/git_context.py
   - .trellis/scripts/common/spec_match.py
@@ -35,8 +39,8 @@ paths:
 | Matching engine              | `packages/cli/src/templates/trellis/scripts/common/spec_match.py` (live twin `.trellis/scripts/common/spec_match.py`)                                                           |
 | Decision engine (pure logic) | `packages/cli/src/templates/trellis/scripts/common/spec_inject.py` (live twin `.trellis/scripts/common/spec_inject.py`)                                                         |
 | Injection hook (IO shell)    | `packages/cli/src/templates/shared-hooks/inject-spec-context.py` (live twin `.claude/hooks/inject-spec-context.py`)                                                             |
-| Registration                 | `packages/cli/src/templates/claude/settings.json` `PostToolUse` (live twin `.claude/settings.json`)                                                                             |
-| Distribution                 | `packages/cli/src/templates/shared-hooks/index.ts` `SHARED_HOOKS_BY_PLATFORM` (claude only this iteration)                                                                      |
+| Registration                 | Claude: `packages/cli/src/templates/claude/settings.json` `PostToolUse`; Codex: `packages/cli/src/templates/codex/hooks.json` `PreToolUse`                                       |
+| Distribution                 | `packages/cli/src/templates/shared-hooks/index.ts` `SHARED_HOOKS_BY_PLATFORM` (Claude Code and Codex)                                                                           |
 | Config                       | `spec_injection:` section of `.trellis/config.yaml` — shipped commented-out (defaults apply) in both the template (`templates/trellis/config.yaml`) and this repo's live config |
 | Pull mode                    | `get_context.py --mode spec --file <path>` (dispatch in `common/git_context.py`)                                                                                                |
 | Refresh state                | `${TRELLIS_SPEC_STATE_DIR:-~/.trellis/spec-inject}/<project16>/<identity>.jsonl` (user-global, outside the repo)                                                                |
@@ -193,19 +197,26 @@ Contract:
 
 ## 4. Injection hook (`shared-hooks/inject-spec-context.py`)
 
-Registered on **Claude Code only** this iteration: **one** `PostToolUse` entry
-with matcher `"Read|Edit|Write|MultiEdit"` (official pipe-separated
-list-of-exact-strings semantics — the docs' own PostToolUse example uses
-`"Edit|Write"`; re-verified 2026-07-25) running
-`{{PYTHON_CMD}} .claude/hooks/inject-spec-context.py`, timeout 15. Touching a
-governed file — even a `Read` — counts; the miss path stays a fast exit. Which
-tool events trigger is filtered **in-hook** by `spec_injection.tools` (default
-those four), so users can e.g. drop `Read` without editing settings. The
-same hook also runs after `SessionStart(source=clear|compact)` with the
-SessionStart-standard timeout 30 to record a context reset; it is deliberately
-absent from `source=startup`.
-script keeps the shared-hooks platform-neutral shape so later registrations
-are wiring-only.
+Registered on two platforms:
+
+- **Claude Code** uses `PostToolUse` matcher
+  `"Read|Edit|Write|MultiEdit"` and receives one structured
+  `tool_input.file_path` after the tool runs. Touching a governed file — even
+  a `Read` — counts.
+- **Codex** uses `PreToolUse` matcher `"Edit|Write"`; these documented matcher
+  aliases select the native `apply_patch` tool, whose stdin still reports
+  `tool_name: "apply_patch"` and carries the raw patch in
+  `tool_input.command`. The hook parses only patch metadata headers
+  (`Add File`, `Update File`, `Delete File`, `Move to`), never shell text.
+  A FULL emission returns `permissionDecision: "deny"` so Codex reads the
+  injected spec before retrying. Ticket-only reminders are injected without a
+  permission decision, so the patch proceeds. The Codex handler sets
+  `additionalContextLimit: 0`; the hook's own 9,500-character ceiling remains
+  the single budget.
+
+Both platforms register `SessionStart(source=clear|compact)` to record a
+context reset and omit `source=startup`. Which tool events trigger remains
+filtered in-hook by `spec_injection.tools`.
 
 ### Structure: pure logic vs IO shell
 
@@ -231,13 +242,17 @@ read+hashed — it degrades straight to an index line with a stderr warn.
 6. A `SessionStart` with `source=clear|compact` resolves the base session
    identity, appends one reset marker, and exits silently. Other SessionStart
    sources exit silently.
-7. `tool_name` (fallback `toolName`) must be a non-empty string;
-   `tool_input.file_path` must be a non-empty string; `tool_name` not
-   in `spec_injection.tools` → silent exit (`tools: []` disables every
-   trigger — early exit).
+7. `tool_name` (fallback `toolName`) must be a non-empty string and enabled by
+   `spec_injection.tools` (`tools: []` disables every trigger). Claude reads
+   one non-empty `tool_input.file_path`. Codex maps `apply_patch` to the
+   logical `Edit` filter and extracts every path from
+   `tool_input.command`; malformed commands or paths outside the repo exit
+   silently.
 8. Import `common.spec_match` + `common.spec_inject` from `.trellis/scripts`
    (sys.path extension); import failure → degrade to nothing.
-9. Match; no matches → silent exit.
+9. Match every extracted file. A governing spec that matches multiple files
+   in one patch appears once, attributed to its first matching file. No
+   matches → silent exit.
 10. Resolve the base session identity and agent-specific emission identity;
     unless stateless: run GC (hourly gate), read the latest reset marker from
     the base shard, then open the emission identity's state shard for
@@ -248,7 +263,8 @@ read+hashed — it degrades straight to an index line with a stderr warn.
     assemble the budgeted payload; state lines are appended **under the same
     lock**, only for specs that actually emitted (FULL or TICKET) — silent and
     budget-dropped specs record nothing and stay eligible.
-11. Empty payload → silent exit; otherwise print exactly one JSON object:
+11. Empty payload → silent exit; otherwise print exactly one JSON object.
+    Claude emits:
 
 ```json
 {
@@ -259,13 +275,34 @@ read+hashed — it degrades straight to an index line with a stderr warn.
 }
 ```
 
-Top-level `try/except → sys.exit(0)`: the hook **never** blocks the tool
-result, never crashes the session, never exits non-zero. stdout carries hook
-JSON or nothing; all warnings go to stderr.
+    Codex emits the same `additionalContext` under `PreToolUse`. When at least
+    one FULL block was emitted, it also emits:
+
+```json
+{
+  "hookSpecificOutput": {
+    "hookEventName": "PreToolUse",
+    "permissionDecision": "deny",
+    "permissionDecisionReason": "Trellis injected governing specs. Review them, then retry this patch.",
+    "additionalContext": "<payload>"
+  }
+}
+```
+
+State is written before this intentional denial, so the retry is silent for
+unchanged specs. A ticket-only response omits both permission fields and lets
+the patch run.
+
+Top-level `try/except → sys.exit(0)`: failures never crash or block the
+session. Claude never blocks a tool result; Codex blocks only a patch that has
+just received a FULL spec. stdout carries hook JSON or nothing; all warnings
+go to stderr.
 
 ### Payload shape
 
-One block per emitting spec, joined by a blank line. A **FULL** block inlines
+One block per emitting spec, joined by a blank line. In a multi-file Codex
+patch, specs are deduplicated by spec path and the `file` attribute names the
+first patch file governed by that spec. A **FULL** block inlines
 the (budgeted) spec body and carries the `sha256` attribute — the first 12 hex
 of `sha256(spec bytes)` — that the decision engine keys refresh on:
 
@@ -566,8 +603,9 @@ spec_injection:
 - `refresh_window_seconds` sizes the fixed wall-clock refresh window (§4).
   `0` disables time-based reminders; clear/compact reset events still force
   FULL.
-- `tools` filters which tool events trigger the hook (names as the platform
-  reports them). Both grammars are accepted: a block list (`- Edit` items)
+- `tools` filters which logical tool events trigger the hook. Codex
+  `apply_patch` maps to `Edit`; this avoids exposing a Codex-only config name.
+  Both grammars are accepted: a block list (`- Edit` items)
   and a flow sequence (`tools: [Edit, Write]`). An **empty list (`[]`, either
   grammar) is a deliberate "never trigger"** and is respected — early exit;
   unknown tool names warn once to stderr (they can never match); any other
@@ -603,14 +641,15 @@ python3 .trellis/scripts/get_context.py --mode spec --file packages/cli/src/comm
 
 ## 8. Platform matrix
 
-| Platform                                                                                            | Push injection | Notes                                                                                                                                                                                                                                                                                                                                                                                                                                         |
-| --------------------------------------------------------------------------------------------------- | -------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Claude Code                                                                                         | ✅ wired       | PostToolUse fires for **sub-agent tool calls too** — injection lands in the editing agent's own context (desired; complements, never duplicates, JSONL curation — different channel, refresh state is per session identity, and a subagent keeps state separate from its parent). Windows: cosmetic "hook error" display bug on record (claude-code#45065); if PostToolUse ever fails to fire, the feature degrades to nothing — no breakage. |
-| cursor, codex, gemini, qoder, copilot, codebuddy, droid, kiro, trae, zcode, opencode, pi, omp, snow | follow-up      | The hook script is platform-neutral; registering one of these is wiring-only (settings template + `SHARED_HOOKS_BY_PLATFORM` row) **after** verifying the platform has a tool-event hook that consumes `additionalContext`.                                                                                                                                                                                                                   |
-| kilo, antigravity, devin                                                                            | ❌ impossible  | No hook surface at all.                                                                                                                                                                                                                                                                                                                                                                                                                       |
-| grok                                                                                                | ❌ impossible  | Hook stdout `additionalContext` is not consumed (verified 0.2.x).                                                                                                                                                                                                                                                                                                                                                                             |
-| kimi                                                                                                | ❌ impossible  | Hooks are user-level only (`~/.kimi-code/config.toml`); Trellis writes no project-level hook files.                                                                                                                                                                                                                                                                                                                                           |
-| reasonix                                                                                            | ❌ impossible  | No prompt/tool hook surface.                                                                                                                                                                                                                                                                                                                                                                                                                  |
+| Platform                                                                                     | Push injection | Notes                                                                                                                                                                                                                                                                                                                                                                                                                                         |
+| -------------------------------------------------------------------------------------------- | -------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Claude Code                                                                                  | ✅ wired       | PostToolUse fires for **sub-agent tool calls too** — injection lands in the editing agent's own context. Windows: cosmetic "hook error" display bug on record (claude-code#45065); if PostToolUse ever fails to fire, the feature degrades to nothing.                                                                                                                                                                                            |
+| Codex                                                                                        | ✅ wired       | Codex 0.145.0 hook schema and runtime re-verified 2026-07-28: `Edit|Write` aliases select `apply_patch`; PreToolUse accepts `additionalContext` together with `permissionDecision: deny`; `SessionStart(source=compact)` runs before immediate continuation. FULL blocks deny once and the model retries; ticket-only reminders proceed. Project hooks still require Codex trust/review. |
+| cursor, gemini, qoder, copilot, codebuddy, droid, kiro, trae, zcode, opencode, pi, omp, snow | follow-up      | Register only after verifying the platform has a tool-event hook that consumes injected context and, for pre-tool hooks, can return it to the model before retry.                                                                                                                                                                                                                                                                               |
+| kilo, antigravity, devin                                                                     | ❌ impossible  | No hook surface at all.                                                                                                                                                                                                                                                                                                                                                                                                                       |
+| grok                                                                                         | ❌ impossible  | Hook stdout `additionalContext` is not consumed (verified 0.2.x).                                                                                                                                                                                                                                                                                                                                                                             |
+| kimi                                                                                         | ❌ impossible  | Hooks are user-level only (`~/.kimi-code/config.toml`); Trellis writes no project-level hook files.                                                                                                                                                                                                                                                                                                                                           |
+| reasonix                                                                                     | ❌ impossible  | No prompt/tool hook surface.                                                                                                                                                                                                                                                                                                                                                                                                                  |
 
 Pull mode (`--mode spec`) works on **every** platform; "impossible" above
 refers to push injection only.
@@ -655,6 +694,8 @@ checklists, no change to sub-agent JSONL curation or its budgets.
 | SessionStart reset state is unwritable                                    | no state write, exit 0; later tool events retain their normal circuit breaker                                                                                                                                         |
 | Matching/decision engine unimportable                                     | hook degrades to nothing, exit 0                                                                                                                                                                                      |
 | Hook internal bug                                                         | top-level try/except → exit 0, no output                                                                                                                                                                              |
+| Codex patch payload malformed or path outside repo                         | no match, empty stdout, patch proceeds                                                                                                                                                                                |
+| Codex state unavailable                                                    | stateless ticket-only response without `permissionDecision`; patch proceeds instead of entering a deny loop                                                                                                           |
 | Payload near ceiling                                                      | budget enforced on the assembled payload string — ≤ 9,500 characters with separators, index block, summary and tickets all counted; overflow index lines collapse into a `(+N more …)` summary, itself budget-checked |
 | Invalid config values                                                     | stderr warn, per-key defaults                                                                                                                                                                                         |
 | Windows PostToolUse quirk                                                 | cosmetic error display only (#45065); worst case: no injection                                                                                                                                                        |
@@ -701,9 +742,9 @@ decision-engine cases import `common/spec_inject.py` directly):
   block at the head bound warns + skips; an hr-opening prose file is silently
   not-frontmatter; case-insensitive glob match on darwin/win32 (IGNORECASE).
 
-Hook E2E matrix (fabricated PostToolUse stdin; every case asserts exit 0 and
-valid-JSON-or-empty stdout; set `TRELLIS_SPEC_STATE_DIR` per run for
-hermeticity):
+Hook E2E matrix (fabricated Claude PostToolUse and Codex PreToolUse stdin;
+every case asserts exit 0 and valid-JSON-or-empty stdout; set
+`TRELLIS_SPEC_STATE_DIR` per run for hermeticity):
 
 - first touch → FULL `<spec-context>` with a `sha256` attr; second touch within
   the wall-clock window → empty; touch past the fixture-controlled window →
@@ -724,6 +765,9 @@ hermeticity):
   window (the stateful ticket wording is never a lie).
 - malformed `paths:` skipped with stderr warn; `spec_injection.enabled:
 false` → empty; non-trigger tool / missing `file_path` / no `.trellis` → empty.
+- Codex first `apply_patch` FULL → `permissionDecision: deny`; identical retry
+  → empty; refresh ticket → context with no permission decision; multi-file
+  Add/Update/Delete/Move paths all match and a shared spec emits once.
 
 Pull mode:
 
@@ -738,6 +782,9 @@ Template shape:
 - Claude settings template asserts the single `PostToolUse` entry with matcher
   `"Read|Edit|Write|MultiEdit"`, plus the reset hook after clear and compact
   but not startup.
+- Codex hooks template asserts `PreToolUse` matcher `"Edit|Write"`,
+  `additionalContextLimit: 0`, and the clear/compact SessionStart reset hook;
+  the shared-hook capability table distributes the script to both platforms.
 
 ---
 
@@ -753,6 +800,8 @@ Template shape:
 - Re-verify Claude's documented additionalContext ceiling before changing
   budget defaults, and record the verification date here (last verified
   2026-07-25: 10,000 characters, all hook output strings).
+- Re-verify Codex's PreToolUse output schema and matcher aliases when changing
+  the deny/retry contract (last verified 2026-07-28 against Codex 0.145.0).
 - Register any new shared-hook file in `SHARED_HOOKS_BY_PLATFORM` and
   `ALL_HOOK_FILES` in the same commit that creates it.
 
@@ -761,8 +810,9 @@ Template shape:
 - Don't add a YAML dependency — the parser is hand-rolled by design.
 - Don't add a central path mapping to `config.yaml` or cache frontmatter
   scans.
-- Don't make the hook exit non-zero, print errors to stdout, or block the
-  tool result — degrade to nothing instead.
+- Don't make the hook exit non-zero or print errors to stdout. Do not block
+  Claude tools. On Codex, block only when this event emitted a FULL spec;
+  errors, index-only output, tickets, and silent hits must proceed.
 - Don't rely on the refresh state for correctness: it is best-effort by
   design, so duplicate injection must always be safe — and its unwritable
   failure mode is the bounded ticket-only circuit breaker, never silence.
