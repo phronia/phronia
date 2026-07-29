@@ -1015,13 +1015,15 @@ describe("regression: update only configured platforms (beta.16)", () => {
     const result = collectPlatformTemplates("opencode");
     expect(result).toBeInstanceOf(Map);
     if (!result) throw new Error("unreachable");
-    // Sanity: must include the three plugin files — the bug that prompted this
+    // Sanity: must include the plugin files — the bug that prompted this
     // fix was a plugin-shape change that couldn't be delivered via `trellis update`.
     expect(result.has(".opencode/plugins/inject-subagent-context.js")).toBe(
       true,
     );
     expect(result.has(".opencode/plugins/session-start.js")).toBe(true);
     expect(result.has(".opencode/plugins/inject-workflow-state.js")).toBe(true);
+    expect(result.has(".opencode/plugins/inject-spec-context.js")).toBe(true);
+    expect(result.has(".opencode/hooks/inject-spec-context.py")).toBe(true);
     // Plus agents, lib, package.json, at least one command, at least one skill
     expect(result.has(".opencode/agents/trellis-implement.md")).toBe(true);
     expect(result.has(".opencode/lib/trellis-context.js")).toBe(true);

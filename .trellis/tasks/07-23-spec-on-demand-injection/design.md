@@ -531,3 +531,29 @@ Real-state evidence required: shipped scanner run against REAL transcripts on
 this machine (main session, subagent, compacted) with sane counts asserted in
 the gate log; every fixed finding re-run through its original audit repro;
 full suite green; mirrors byte-identical.
+
+---
+
+# OpenCode adapter (2026-07-29)
+
+The existing Python hook remains the only matching, budgeting, refresh, and
+state engine. The OpenCode adapter is a transport shim:
+
+```text
+tool.execute.before(write|edit|apply_patch)
+  -> normalize native args into shared PreToolUse payload
+  -> run .opencode/hooks/inject-spec-context.py
+  -> FULL + persisted state: throw context as tool error
+  -> OpenCode starts another model turn
+  -> retry sees silent shared state and executes
+```
+
+`tool.execute.before` has no typed context-return field in OpenCode 1.17.18.
+The stable error carrier is used instead of
+`experimental.chat.system.transform`, avoiding a second session/digest state
+machine in JavaScript. The adapter respects the Python hook's deny decision;
+ticket-only/stateless output proceeds, so state failures cannot loop.
+
+The same shared hook now treats every `PreToolUse` FULL with persisted records
+as deny-once, not only Codex `apply_patch`. `apply_patch` path extraction stays
+inside the canonical Python parser and covers Add, Update, Delete, and Move.

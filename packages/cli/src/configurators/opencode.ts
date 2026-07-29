@@ -2,6 +2,7 @@ import { readFileSync, readdirSync, statSync } from "node:fs";
 import path from "node:path";
 import { AI_TOOLS } from "../types/ai-tools.js";
 import { getOpenCodeTemplatePath } from "../templates/extract.js";
+import { getSharedHookScriptsForPlatform } from "../templates/shared-hooks/index.js";
 import { ensureDir, writeFile } from "../utils/file-writer.js";
 import { toPosix } from "../utils/posix.js";
 import {
@@ -85,6 +86,12 @@ function walkOpenCodeTemplateDir(): Map<string, string> {
  */
 export function collectOpenCodeTemplates(): Map<string, string> {
   const files = walkOpenCodeTemplateDir();
+  for (const hook of getSharedHookScriptsForPlatform("opencode")) {
+    files.set(
+      `.opencode/hooks/${hook.name}`,
+      replacePythonCommandLiterals(hook.content),
+    );
+  }
   const ctx = AI_TOOLS.opencode.templateContext;
   for (const cmd of resolveCommands(ctx)) {
     files.set(`.opencode/commands/trellis/${cmd.name}.md`, cmd.content);

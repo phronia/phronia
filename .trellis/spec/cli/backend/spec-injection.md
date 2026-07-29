@@ -197,7 +197,7 @@ Contract:
 
 ## 4. Injection hook (`shared-hooks/inject-spec-context.py`)
 
-Registered on two platforms:
+Registered on three platforms:
 
 - **Claude Code** uses `PostToolUse` matcher
   `"Read|Edit|Write|MultiEdit"` and receives one structured
@@ -213,10 +213,18 @@ Registered on two platforms:
   permission decision, so the patch proceeds. The Codex handler sets
   `additionalContextLimit: 0`; the hook's own 9,500-character ceiling remains
   the single budget.
+- **OpenCode** uses the stable `tool.execute.before` plugin hook for `write`,
+  `edit`, and `apply_patch`. The JS adapter maps `filePath` or every
+  `patchText` header into the same Python hook payload. OpenCode has no direct
+  `additionalContext` return channel from a tool hook, so a FULL emission is
+  thrown as a model-visible tool error before mutation. OpenCode continues the
+  session, the model reads the spec and retries, and the shared state makes
+  that retry silent. Ticket-only output has no deny decision and proceeds.
 
-Both platforms register `SessionStart(source=clear|compact)` to record a
-context reset and omit `source=startup`. Which tool events trigger remains
-filtered in-hook by `spec_injection.tools`.
+Claude Code and Codex register `SessionStart(source=clear|compact)` to record a
+context reset and omit `source=startup`. OpenCode maps its documented
+`session.compacted` event to the same compact reset. Which tool events trigger
+remains filtered in-hook by `spec_injection.tools`.
 
 ### Structure: pure logic vs IO shell
 
@@ -275,15 +283,16 @@ read+hashed — it degrades straight to an index line with a stderr warn.
 }
 ```
 
-    Codex emits the same `additionalContext` under `PreToolUse`. When at least
-    one FULL block was emitted, it also emits:
+    Pre-tool providers emit the same `additionalContext` under `PreToolUse`.
+    When at least one FULL block was emitted and its state record persisted,
+    the hook also emits:
 
 ```json
 {
   "hookSpecificOutput": {
     "hookEventName": "PreToolUse",
     "permissionDecision": "deny",
-    "permissionDecisionReason": "Trellis injected governing specs. Review them, then retry this patch.",
+    "permissionDecisionReason": "Trellis injected governing specs. Review them, then retry this tool call.",
     "additionalContext": "<payload>"
   }
 }
@@ -291,12 +300,13 @@ read+hashed — it degrades straight to an index line with a stderr warn.
 
 State is written before this intentional denial, so the retry is silent for
 unchanged specs. A ticket-only response omits both permission fields and lets
-the patch run.
+the tool call run. Codex consumes the permission fields natively; the OpenCode
+adapter turns the same FULL decision into a model-visible thrown error.
 
 Top-level `try/except → sys.exit(0)`: failures never crash or block the
-session. Claude never blocks a tool result; Codex blocks only a patch that has
-just received a FULL spec. stdout carries hook JSON or nothing; all warnings
-go to stderr.
+session. Claude never blocks a tool result; Codex and OpenCode block only a
+mutation that has just received a FULL spec with persisted state. stdout
+carries hook JSON or nothing; all warnings go to stderr.
 
 ### Payload shape
 
@@ -645,7 +655,8 @@ python3 .trellis/scripts/get_context.py --mode spec --file packages/cli/src/comm
 | -------------------------------------------------------------------------------------------- | -------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | Claude Code                                                                                  | ✅ wired       | PostToolUse fires for **sub-agent tool calls too** — injection lands in the editing agent's own context. Windows: cosmetic "hook error" display bug on record (claude-code#45065); if PostToolUse ever fails to fire, the feature degrades to nothing.                                                                                                                                                                                            |
 | Codex                                                                                        | ✅ wired       | Codex 0.145.0 hook schema and runtime re-verified 2026-07-28: `Edit|Write` aliases select `apply_patch`; PreToolUse accepts `additionalContext` together with `permissionDecision: deny`; `SessionStart(source=compact)` runs before immediate continuation. FULL blocks deny once and the model retries; ticket-only reminders proceed. Project hooks still require Codex trust/review. |
-| cursor, gemini, qoder, copilot, codebuddy, droid, kiro, trae, zcode, opencode, pi, omp, snow | follow-up      | Register only after verifying the platform has a tool-event hook that consumes injected context and, for pre-tool hooks, can return it to the model before retry.                                                                                                                                                                                                                                                                               |
+| OpenCode                                                                                     | ✅ wired       | OpenCode 1.17.18 stable plugin API verified 2026-07-29: `tool.execute.before` exposes `write`/`edit` `filePath` and complete `apply_patch.patchText`. Throwing blocks mutation, persists a model-visible tool error, and starts another model turn. FULL blocks once and retry proceeds; `session.compacted` resets exposure.                                                       |
+| cursor, gemini, qoder, copilot, codebuddy, droid, kiro, trae, zcode, pi, omp, snow           | follow-up      | Register only after verifying the platform has a tool-event hook that consumes injected context and, for pre-tool hooks, can return it to the model before retry.                                                                                                                                                                                                                                                                               |
 | kilo, antigravity, devin                                                                     | ❌ impossible  | No hook surface at all.                                                                                                                                                                                                                                                                                                                                                                                                                       |
 | grok                                                                                         | ❌ impossible  | Hook stdout `additionalContext` is not consumed (verified 0.2.x).                                                                                                                                                                                                                                                                                                                                                                             |
 | kimi                                                                                         | ❌ impossible  | Hooks are user-level only (`~/.kimi-code/config.toml`); Trellis writes no project-level hook files.                                                                                                                                                                                                                                                                                                                                           |
@@ -696,6 +707,8 @@ checklists, no change to sub-agent JSONL curation or its budgets.
 | Hook internal bug                                                         | top-level try/except → exit 0, no output                                                                                                                                                                              |
 | Codex patch payload malformed or path outside repo                         | no match, empty stdout, patch proceeds                                                                                                                                                                                |
 | Codex state unavailable                                                    | stateless ticket-only response without `permissionDecision`; patch proceeds instead of entering a deny loop                                                                                                           |
+| OpenCode hook script missing or subprocess/JSON parsing fails              | JS plugin logs only in debug mode and lets the tool call proceed                                                                                                                                                       |
+| OpenCode state unavailable                                                 | stateless ticket-only response without `permissionDecision`; tool call proceeds instead of entering a retry loop                                                                                                       |
 | Payload near ceiling                                                      | budget enforced on the assembled payload string — ≤ 9,500 characters with separators, index block, summary and tickets all counted; overflow index lines collapse into a `(+N more …)` summary, itself budget-checked |
 | Invalid config values                                                     | stderr warn, per-key defaults                                                                                                                                                                                         |
 | Windows PostToolUse quirk                                                 | cosmetic error display only (#45065); worst case: no injection                                                                                                                                                        |
@@ -768,6 +781,10 @@ false` → empty; non-trigger tool / missing `file_path` / no `.trellis` → emp
 - Codex first `apply_patch` FULL → `permissionDecision: deny`; identical retry
   → empty; refresh ticket → context with no permission decision; multi-file
   Add/Update/Delete/Move paths all match and a shared spec emits once.
+- OpenCode first `write` / `edit` / `apply_patch` FULL → model-visible tool
+  error containing the spec; identical retry → empty and mutation proceeds;
+  `session.compacted` resets the state so the next governed mutation loads the
+  full spec again.
 
 Pull mode:
 

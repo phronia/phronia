@@ -19,6 +19,9 @@ Triggers:
   Every patch header is matched before the patch runs. When a FULL spec is
   emitted, the patch is denied once so the model can read the injected rules
   and retry; ticket-only reminders do not block.
+* OpenCode ``tool.execute.before`` adapts ``write``, ``edit``, and
+  ``apply_patch`` into the same PreToolUse payload. FULL delivery uses the same
+  deny-once decision before the JS plugin surfaces context as a tool error.
 
 Behavior — per matched spec, per event (recency-decay aware):
 
@@ -147,7 +150,7 @@ GC_PROJECT_DIR_RE = re.compile(r"^[0-9a-f]{16}$")
 # `+` is part of the identity charset: subagent shards use the `+a-<agent_id>`
 # suffix (contract amendment 2 — without it those shards were never pruned).
 GC_SHARD_NAME_RE = re.compile(r"^[A-Za-z0-9_+-]+(\.[0-9]+)?\.jsonl$")
-CODEX_PATCH_PATH_RE = re.compile(
+PATCH_PATH_RE = re.compile(
     r"^\*\*\* (?:(?:Add|Update|Delete) File|Move to): (.+)$"
 )
 
@@ -155,11 +158,11 @@ def _warn(message: str) -> None:
     print(f"[inject-spec-context] WARN: {message}", file=sys.stderr)
 
 
-def _codex_patch_paths(command: str) -> list[str]:
-    """Return file paths from Codex's documented apply_patch grammar."""
+def _patch_paths(command: str) -> list[str]:
+    """Return file paths from the shared apply_patch grammar."""
     paths: list[str] = []
     for line in command.splitlines():
-        match = CODEX_PATCH_PATH_RE.fullmatch(line)
+        match = PATCH_PATH_RE.fullmatch(line)
         if match:
             path = match.group(1).strip()
             if path and path not in paths:
@@ -675,8 +678,9 @@ def main() -> int:
     tool_name = input_data.get("tool_name", "") or input_data.get("toolName", "")
     if not isinstance(tool_name, str) or not tool_name:
         return 0
-    is_codex_patch = event_name == "PreToolUse" and tool_name == "apply_patch"
-    logical_tool = "Edit" if is_codex_patch else tool_name
+    is_pre_tool_use = event_name == "PreToolUse"
+    is_patch_tool = event_name == "PreToolUse" and tool_name == "apply_patch"
+    logical_tool = "Edit" if is_patch_tool else tool_name
     # An empty `tools` list is the documented "disable every trigger" switch.
     if not tools or logical_tool not in tools:
         return 0
@@ -699,11 +703,11 @@ def main() -> int:
     except Exception:
         return 0  # matching/decision engine unavailable — degrade to nothing
 
-    if is_codex_patch:
+    if is_patch_tool:
         command = tool_input.get("command")
         if not isinstance(command, str):
             return 0
-        raw_paths = _codex_patch_paths(command)
+        raw_paths = _patch_paths(command)
     else:
         file_path = tool_input.get("file_path")
         if not isinstance(file_path, str) or not file_path.strip():
@@ -810,11 +814,11 @@ def main() -> int:
         return 0
 
     hook_specific_output = {
-        "hookEventName": "PreToolUse" if is_codex_patch else "PostToolUse",
+        "hookEventName": "PreToolUse" if is_pre_tool_use else "PostToolUse",
         "additionalContext": payload,
     }
     if (
-        is_codex_patch
+        is_pre_tool_use
         and records_persisted
         and any(record.get("mode") == "full" for record in records)
     ):
@@ -823,7 +827,7 @@ def main() -> int:
                 "permissionDecision": "deny",
                 "permissionDecisionReason": (
                     "Trellis injected governing specs. Review them, then retry "
-                    "this patch."
+                    "this tool call."
                 ),
             }
         )

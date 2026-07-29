@@ -247,3 +247,27 @@ Verification commands used across the stages:
   real compacted transcript (grep compact_boundary) re-scanned; every audit
   repro re-run before (git HEAD) vs after per finding
 - Mirrors: `diff -q` template vs live twin after every edit — byte-identical
+
+---
+
+# Stage OC — OpenCode dynamic spec loading (2026-07-29)
+
+- [x] OC1. Verify the OpenCode 1.17.18 stable plugin contract and real runtime:
+      pre-tool hooks expose `write` / `edit` `filePath` and full
+      `apply_patch.patchText`; thrown errors prevent mutation, remain
+      model-visible, and continue the model loop.
+- [x] OC2. Add `inject-spec-context.js` as a thin adapter over the shared
+      Python engine, including `session.compacted` reset handling and
+      fail-open subprocess/JSON parsing.
+- [x] OC3. Distribute `inject-spec-context.py` through
+      `SHARED_HOOKS_BY_PLATFORM.opencode` and the shared OpenCode init/update
+      collector.
+- [x] OC4. Add automated coverage for write block/retry/compact, native
+      multi-file `apply_patch` forwarding, generic PreToolUse deny-once, and
+      generated file presence.
+- [x] OC5. Update the executable spec and beta EN/ZH documentation.
+- [x] OC6. Run focused/full gates, build the CLI, install into an isolated
+      project, and repeat the real OpenCode write-and-retry probe. The full
+      suite passed (CLI 1711; core 333 with 1 skipped), as did lint, typecheck,
+      build, and docs lint. OpenCode blocked `WRONG`, returned the governing
+      spec to the model, and accepted the corrected retry.
