@@ -71,13 +71,13 @@ describe("shared-hooks capability table", () => {
     );
   });
 
-  it("inject-spec-context.py is distributed to Claude Code and Codex", () => {
+  it("inject-spec-context.py is distributed to Claude Code, Codex, and OpenCode", () => {
     const providers = Object.entries(SHARED_HOOKS_BY_PLATFORM)
       .filter(([, hooks]) => hooks.includes("inject-spec-context.py"))
       .map(([platform]) => platform)
       .sort();
 
-    expect(providers).toEqual(["claude", "codex"]);
+    expect(providers).toEqual(["claude", "codex", "opencode"]);
   });
 
   it("codex + copilot do not take the shared session-start.py (they bundle their own)", () => {

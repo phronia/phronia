@@ -1059,6 +1059,30 @@ print(f"v={rec['v']} version={STATE_VERSION} reset={rec['reset']}")
       expect(retry.stdout.trim()).toBe("");
     });
 
+    it("denies a generic PreToolUse write with the full spec, then allows the retry", () => {
+      writeGoverningSpec();
+      const payload = JSON.stringify({
+        hook_event_name: "PreToolUse",
+        cwd: tmp,
+        session_id: "opencode-session",
+        tool_name: "Write",
+        tool_input: { file_path: EDITED },
+      });
+
+      const first = runHook(tmp, payload);
+      expect(first.status).toBe(0);
+      const output = hookOutput(first.stdout);
+      expect(output.hookEventName).toBe("PreToolUse");
+      expect(output.permissionDecision).toBe("deny");
+      expect(output.additionalContext).toContain(
+        `<spec-context file="${EDITED}" spec="${SPEC_REL}" sha256="`,
+      );
+
+      const retry = runHook(tmp, payload);
+      expect(retry.status).toBe(0);
+      expect(retry.stdout.trim()).toBe("");
+    });
+
     it("allows a Codex apply_patch when only a refresh ticket is due", () => {
       writeGoverningSpec();
       const payload = buildCodexPatchPayload(

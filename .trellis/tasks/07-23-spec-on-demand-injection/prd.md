@@ -213,3 +213,32 @@ else:                            emit TICKET          # refresh attention cheapl
 - [ ] `Read` tool event triggers exactly like Edit.
 - [ ] State lands under `TRELLIS_SPEC_STATE_DIR` when set; stale files pruned by GC.
 - [ ] Full gate green (lint, typecheck, lint:py, full test suite vs baseline).
+
+## OpenCode extension (2026-07-29)
+
+OpenCode 1.17.18 exposes target paths in `tool.execute.before`, but the stable
+hook contract cannot return `additionalContext` and resume the same tool call.
+Trellis therefore uses the platform's documented blocking behavior:
+
+1. Intercept `write`, `edit`, and `apply_patch` before execution.
+2. Adapt `filePath` / `patchText` to the existing shared Python spec engine.
+3. When a FULL spec was emitted and its state record persisted, throw a
+   model-visible tool error containing the context.
+4. Let OpenCode continue the model loop; the shared state makes the model's
+   retry silent and executable.
+5. Map `session.compacted` to `SessionStart(source=compact)`.
+
+Ticket-only and failure responses do not block. This prevents an unwritable
+state directory from creating an infinite retry loop. Bash, MCP, custom tools,
+and non-Trellis subagents remain outside this adapter's mutation boundary.
+
+Acceptance:
+
+- [x] Fresh `write` / `edit` / multi-file `apply_patch` sees the governing
+      FULL spec before any mutation and succeeds on retry.
+- [x] `session.compacted` resets exposure so the next governed mutation
+      receives the FULL spec again.
+- [x] Missing hook, subprocess failure, malformed output, stateless ticket, and
+      ordinary refresh ticket all proceed without blocking.
+- [x] Init and update both install `.opencode/plugins/inject-spec-context.js`
+      and `.opencode/hooks/inject-spec-context.py`.

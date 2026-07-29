@@ -35,6 +35,7 @@ export type SharedHookPlatform =
   | "claude"
   | "cursor"
   | "codex"
+  | "opencode"
   | "gemini"
   | "qoder"
   | "copilot"
@@ -70,8 +71,10 @@ export type SharedHookPlatform =
  *   spawn). The scripts emit a plain-text Kiro branch — Kiro adds a hook's
  *   stdout directly to the conversation context (no JSON envelope).
  * - `inject-spec-context.py` — path-scoped spec injection. Claude Code uses
- *   PostToolUse Read/Edit/Write/MultiEdit; Codex uses PreToolUse Edit|Write
- *   and parses the native apply_patch payload. Class-2 platforms use
+ *   PostToolUse Read/Edit/Write/MultiEdit; Codex and OpenCode use PreToolUse.
+ *   Codex passes the native apply_patch payload directly. OpenCode's plugin
+ *   adapts write/edit/apply_patch calls and blocks a FULL emission once so the
+ *   model sees the specs before retrying. Class-2 platforms use
  *   `get_context.py --mode spec` pull mode instead.
  * - Claude Code `statusLine` is intentionally not installed by default.
  *   Users can add their own statusLine command in `.claude/settings.json`,
@@ -104,6 +107,7 @@ export const SHARED_HOOKS_BY_PLATFORM: Record<
     "inject-subagent-context.py",
     "inject-spec-context.py",
   ],
+  opencode: ["inject-spec-context.py"],
   gemini: ["session-start.py", "inject-workflow-state.py"],
   qoder: ["session-start.py", "inject-workflow-state.py"],
   copilot: ["inject-workflow-state.py"],
