@@ -1341,3 +1341,41 @@ Shipped the quick-fix tier of #415 after production evidence confirmed the diagn
 
 - Structural #415 fix (per-session files, index.md as derived non-git cache) still queued pending user decision
 - Mid-session: commit accidentally landed on a stray local feat/v0.7-beta checkout (not created by me) instead of main; cherry-picked onto main, dropped an unrelated stray assets/claude.md that got swept in by git add -A, and restored feat/v0.7-beta to its original remote position
+
+
+## Session 175: Fix Pi concurrent session isolation
+
+**Date**: 2026-08-01
+**Task**: Fix Pi concurrent session isolation
+**Package**: cli
+**Branch**: `fix/512-pi-session-isolation`
+
+### Summary
+
+Fixed Issue #512 by making Pi native session identity authoritative and removing unsafe runtime-pointer adoption.
+
+### Main Changes
+
+- Bound Pi session-manager method calls to their receiver so Pi 0.83.0 native IDs resolve correctly.
+- Removed ambient main-session overrides and singleton runtime-pointer adoption from both Pi extension copies.
+- Replaced the shallow Bash assertion with an event-level foreign-context regression test.
+
+### Git Commits
+
+| Hash | Message |
+|------|---------|
+| `93f43713` | (see git log) |
+
+### Testing
+
+- [OK] Pi 0.83.0: two concurrent RPC processes exported distinct native-derived Trellis context keys through real Bash tool calls.
+- [OK] Core: 333 passed, 1 skipped; CLI: 1586 passed.
+- [OK] CLI build, typecheck, and lint passed.
+
+### Status
+
+[OK] **Completed**
+
+### Next Steps
+
+- Open and review the GitHub PR linked to Issue #512.
