@@ -20,7 +20,8 @@
   "subtasks": [],
   "children": [
     "08-05-opencode-shell-env",
-    "08-05-session-identity-hardening"
+    "08-05-session-identity-hardening",
+    "08-05-purge-fake-env-names"
   ],
   "parent": null,
   "relatedFiles": [],
