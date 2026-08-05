@@ -21,7 +21,8 @@
   "children": [
     "08-05-opencode-shell-env",
     "08-05-session-identity-hardening",
-    "08-05-purge-fake-env-names"
+    "08-05-purge-fake-env-names",
+    "08-05-shell-ticket-bridge"
   ],
   "parent": null,
   "relatedFiles": [],
