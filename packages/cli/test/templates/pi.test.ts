@@ -1,6 +1,6 @@
 import { describe, expect, it, vi } from "vitest";
 import { createRequire } from "node:module";
-import { existsSync } from "node:fs";
+import { existsSync, readFileSync, rmSync } from "node:fs";
 import { mkdtempSync, writeFileSync, mkdirSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
@@ -32,22 +32,44 @@ interface ContextInjectionLimits {
   max_total_bytes: number;
 }
 
+interface RegisteredPiTool {
+  execute: (
+    id: string,
+    input: { agent?: string; prompt?: string },
+    signal?: AbortSignal,
+    onUpdate?: (result: unknown) => void,
+    ctx?: { model?: { provider?: string; id?: string } },
+  ) => Promise<{ content: { type: "text"; text: string }[] }>;
+}
+
 interface PiExtensionInternals {
   normalizeAgent: (agent: string | undefined) => string;
   isTrellisAgent: (root: string, agent: string) => boolean;
   parseAgentFM: (content: string) => AgentConfig;
   buildPiArgs: (config: PiRunConfig) => string[];
+  splitModelThinking: (
+    model?: string,
+    fallbackThinking?: string,
+  ) => { model?: string; thinking?: string };
   resolveRunCfg: (
     input: { model?: string; thinking?: string },
     agentCfg: AgentConfig,
     inheritedThinking?: string,
+    inheritedModel?: string,
   ) => PiRunConfig;
+  contextModelRef: (ctx?: {
+    model?: { provider?: string; id?: string };
+  }) => string | undefined;
   cmdHasTrellisCtx: (cmd: string) => boolean;
   shellQuote: (v: string) => string;
   trellisExtension: (pi: {
     registerTool?: (tool: unknown) => void;
     registerShortcut?: (key: string, opts: unknown) => void;
-    on?: (event: string, handler: (event: unknown, ctx?: unknown) => unknown) => void;
+    getThinkingLevel?: () => string;
+    on?: (
+      event: string,
+      handler: (event: unknown, ctx?: unknown) => unknown,
+    ) => void;
   }) => void;
   truncateUtf8: (buf: Buffer, cap: number) => Buffer;
   readContextInjectionLimits: (repoRoot: string) => ContextInjectionLimits;
@@ -59,24 +81,16 @@ interface PiExtensionInternals {
   workflowBreadcrumbForTest: (root: string, key: string | null) => string;
 }
 
-function loadExtensionInternals(cwd = process.cwd()): PiExtensionInternals {
-  const source = `${getExtensionTemplate()}
+type MaxThinkingInternals = Pick<
+  PiExtensionInternals,
+  "buildPiArgs" | "resolveRunCfg" | "splitModelThinking"
+>;
 
-export {
-  normalizeAgent,
-  isTrellisAgent,
-  parseAgentFM,
-  buildPiArgs,
-  resolveRunCfg,
-  cmdHasTrellisCtx,
-  shellQuote,
-  trellisExtension,
-  truncateUtf8,
-  readContextInjectionLimits,
-  buildContext as buildContextForTest,
-  workflowBreadcrumb as workflowBreadcrumbForTest,
-};
-`;
+function evaluateExtension<T>(
+  source: string,
+  cwd: string,
+  env: NodeJS.ProcessEnv,
+): T {
   const compiled = ts.transpileModule(source, {
     compilerOptions: {
       esModuleInterop: true,
@@ -87,7 +101,7 @@ export {
   const require = createRequire(import.meta.url);
   const moduleObject: { exports: Record<string, unknown> } = { exports: {} };
   const sandboxProcess = Object.create(process) as NodeJS.Process;
-  const sandboxEnv = { ...process.env };
+  const sandboxEnv = { ...process.env, ...env };
   delete sandboxEnv.TRELLIS_SUBAGENT_CHILD;
   Object.defineProperty(sandboxProcess, "cwd", { value: () => cwd });
   Object.defineProperty(sandboxProcess, "env", { value: sandboxEnv });
@@ -100,7 +114,47 @@ export {
     require,
   });
   vm.runInContext(compiled, sandbox);
-  return moduleObject.exports as unknown as PiExtensionInternals;
+  return moduleObject.exports as T;
+}
+
+function loadExtensionInternals(
+  cwd = process.cwd(),
+  env: NodeJS.ProcessEnv = {},
+): PiExtensionInternals {
+  const source = `${getExtensionTemplate()}
+
+export {
+  normalizeAgent,
+  isTrellisAgent,
+  parseAgentFM,
+  buildPiArgs,
+  splitModelThinking,
+  resolveRunCfg,
+  contextModelRef,
+  cmdHasTrellisCtx,
+  shellQuote,
+  trellisExtension,
+  truncateUtf8,
+  readContextInjectionLimits,
+  buildContext as buildContextForTest,
+  workflowBreadcrumb as workflowBreadcrumbForTest,
+};
+`;
+  return evaluateExtension<PiExtensionInternals>(source, cwd, env);
+}
+
+function loadMaxThinkingInternals(
+  extensionSource: string,
+): MaxThinkingInternals {
+  const source = `${extensionSource}
+
+export { buildPiArgs, resolveRunCfg, splitModelThinking };
+`;
+  return evaluateExtension<MaxThinkingInternals>(
+    source,
+    process.cwd(),
+    {},
+  );
 }
 
 function createMinimalTrellisRoot(): string {
@@ -200,7 +254,7 @@ describe("pi templates", () => {
       'enum: ["single", "parallel", "chain"]',
     );
     expect(extension).toContain(
-      'enum: ["off", "minimal", "low", "medium", "high", "xhigh"]',
+      'enum: ["off", "minimal", "low", "medium", "high", "xhigh", "max"]',
     );
 
     // Dispatch protocol carries the "Active task: <path>" prefix rule.
@@ -619,8 +673,44 @@ fallbackModels:
     ]);
   });
 
-  it("resolveRunCfg lets per-call input override agent frontmatter defaults", () => {
-    const { resolveRunCfg } = loadExtensionInternals();
+  it("supports max thinking for GPT-5.6 subagents (#470)", () => {
+    const agentCfg: AgentConfig = {
+      model: "openai/gpt-5.6-sol",
+      thinking: "max",
+      fallbackModels: [],
+    };
+    const dogfoodExtension = readFileSync(
+      join(process.cwd(), "..", "..", ".pi", "extensions", "trellis", "index.ts"),
+      "utf-8",
+    );
+
+    for (const extensionSource of [getExtensionTemplate(), dogfoodExtension]) {
+      const { buildPiArgs, resolveRunCfg, splitModelThinking } =
+        loadMaxThinkingInternals(extensionSource);
+      const config = resolveRunCfg({}, agentCfg);
+
+      expect(config).toEqual({
+        model: "openai/gpt-5.6-sol:max",
+        thinking: "max",
+      });
+      expect(buildPiArgs(config)).toEqual([
+        "--mode",
+        "json",
+        "-p",
+        "--no-session",
+        "--model",
+        "openai/gpt-5.6-sol:max",
+      ]);
+      expect(splitModelThinking(config.model)).toEqual({
+        model: "openai/gpt-5.6-sol",
+        thinking: "max",
+      });
+    }
+  });
+
+  it("inherits the invoking Pi model after per-call and agent defaults", () => {
+    const { buildPiArgs, contextModelRef, resolveRunCfg } =
+      loadExtensionInternals();
 
     const agentCfg: AgentConfig = {
       model: "anthropic/claude-sonnet-4",
@@ -634,24 +724,107 @@ fallbackModels:
       resolveRunCfg(
         { model: "openai/gpt-5", thinking: "xhigh" },
         agentCfg,
+        "medium",
+        "google/gemini-2.5-pro",
       ),
-    ).toEqual({ model: "openai/gpt-5:xhigh", thinking: "xhigh", tools: agentCfg.tools });
+    ).toEqual({
+      model: "openai/gpt-5:xhigh",
+      thinking: "xhigh",
+      tools: agentCfg.tools,
+    });
 
-    // No overrides → fall back to agent config
-    expect(resolveRunCfg({}, agentCfg)).toEqual({
+    // Agent config wins over the invoking session model.
+    expect(
+      resolveRunCfg({}, agentCfg, "medium", "google/gemini-2.5-pro"),
+    ).toEqual({
       model: "anthropic/claude-sonnet-4:high",
       thinking: "high",
       tools: agentCfg.tools,
     });
 
-    // Inherited thinking is the last fallback
-    expect(
-      resolveRunCfg(
-        {},
-        { model: "gpt-5", fallbackModels: [] },
-        "medium",
-      ),
-    ).toEqual({ model: "gpt-5:medium", thinking: "medium" });
+    // With no stronger model, use the provider-qualified invoking session model.
+    const inheritedModel = contextModelRef({
+      model: { provider: "openai-proxy", id: "gpt-5.6-sol" },
+    });
+    const inheritedCfg = resolveRunCfg(
+      {},
+      { fallbackModels: [] },
+      "xhigh",
+      inheritedModel,
+    );
+    expect(inheritedCfg).toEqual({
+      model: "openai-proxy/gpt-5.6-sol:xhigh",
+      thinking: "xhigh",
+    });
+    expect(buildPiArgs(inheritedCfg)).toEqual([
+      "--mode",
+      "json",
+      "-p",
+      "--no-session",
+      "--model",
+      "openai-proxy/gpt-5.6-sol:xhigh",
+    ]);
+
+    // Incomplete context preserves the previous no-model behavior.
+    expect(contextModelRef()).toBeUndefined();
+    expect(contextModelRef({ model: { id: "gpt-5.6-sol" } })).toBeUndefined();
+  });
+
+  it("passes the invoking Pi model to the spawned child process", async () => {
+    const root = createMinimalTrellisRoot();
+    const agentDir = join(root, ".pi", "agents");
+    const fakeCli = join(root, "fake-pi.cjs");
+    const capturedArgs = join(root, "child-args.json");
+    mkdirSync(agentDir, { recursive: true });
+    writeFileSync(
+      join(agentDir, "trellis-implement.md"),
+      "---\nname: trellis-implement\n---\nImplement the task.\n",
+    );
+    writeFileSync(
+      fakeCli,
+      [
+        'const { writeFileSync } = require("node:fs");',
+        `writeFileSync(${JSON.stringify(capturedArgs)}, JSON.stringify(process.argv.slice(2)));`,
+        'process.stdout.write(JSON.stringify({ message: { role: "assistant", content: [{ type: "text", text: "fake child ok" }] } }) + "\\n");',
+        "",
+      ].join("\n"),
+    );
+
+    try {
+      const { trellisExtension } = loadExtensionInternals(root, {
+        TRELLIS_PI_CLI_JS: fakeCli,
+      });
+      let registeredTool: RegisteredPiTool | undefined;
+      trellisExtension({
+        registerTool(tool) {
+          registeredTool = tool as RegisteredPiTool;
+        },
+        getThinkingLevel: () => "xhigh",
+      });
+      expect(registeredTool).toBeDefined();
+      if (!registeredTool)
+        throw new Error("trellis_subagent was not registered");
+
+      const result = await registeredTool.execute(
+        "model-inheritance-test",
+        { agent: "trellis-implement", prompt: "Implement the task" },
+        undefined,
+        undefined,
+        { model: { provider: "openai-proxy", id: "gpt-5.6-sol" } },
+      );
+
+      expect(result.content[0]?.text).toBe("fake child ok");
+      expect(JSON.parse(readFileSync(capturedArgs, "utf-8"))).toEqual([
+        "--mode",
+        "json",
+        "-p",
+        "--no-session",
+        "--model",
+        "openai-proxy/gpt-5.6-sol:xhigh",
+      ]);
+    } finally {
+      rmSync(root, { recursive: true, force: true });
+    }
   });
 
   it("cmdHasTrellisCtx detects already-prefixed bash commands", () => {

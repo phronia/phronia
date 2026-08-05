@@ -1509,6 +1509,99 @@ describe("regression: issue #252 polyrepo Git context", () => {
     expect(output).toContain("init module b");
   });
 
+  it("skips automatic Git status when too many child repos are discovered", () => {
+    writeConfigYaml("# no packages configured\n");
+    for (let i = 0; i < 9; i++) {
+      fs.mkdirSync(path.join(tmpDir, `repo-${i}`, ".git"), {
+        recursive: true,
+      });
+    }
+
+    const output = runSessionContext("text");
+    const rerun = spawnSync(
+      pythonCmd,
+      [path.join(tmpDir, "run-context.py")],
+      {
+        cwd: tmpDir,
+        encoding: "utf-8",
+      },
+    );
+
+    expect(output).not.toContain("## GIT STATUS (repo-");
+    expect(rerun.status).toBe(0);
+    expect(rerun.stderr).toContain(
+      "found more than 8 child Git repositories",
+    );
+    expect(rerun.stderr).toContain(
+      "Configure explicit packages entries with path and git: true",
+    );
+  });
+
+  it("passes probe timeouts through the shared Git runner", () => {
+    const runnerPath = path.join(tmpDir, "run-git-timeout.py");
+    fs.writeFileSync(
+      runnerPath,
+      [
+        "import json",
+        "import subprocess",
+        "import sys",
+        "from pathlib import Path",
+        "sys.path.insert(0, str(Path.cwd() / '.trellis' / 'scripts'))",
+        "from common.git import run_git",
+        "captured = {}",
+        "def fake_run(*args, **kwargs):",
+        "    captured['timeout'] = kwargs.get('timeout')",
+        "    raise subprocess.TimeoutExpired(args[0], kwargs.get('timeout'))",
+        "subprocess.run = fake_run",
+        "rc, out, err = run_git(['status'], timeout=0.25)",
+        "from common import session_context",
+        "root_calls = []",
+        "def fake_git(args, cwd=None, timeout=None):",
+        "    root_calls.append({'args': args, 'timeout': timeout})",
+        "    if args == ['status', '--porcelain']:",
+        "        return (1, '', 'timed out')",
+        "    return (0, 'true\\n' if args[0] == 'rev-parse' else '', '')",
+        "session_context.run_git = fake_git",
+        "root_info = session_context._collect_root_git_info(Path.cwd())",
+        "print(json.dumps({'rc': rc, 'out': out, 'err': err, 'rootCalls': root_calls, 'rootInfo': root_info, **captured}))",
+        "",
+      ].join("\n"),
+      "utf-8",
+    );
+
+    const result = JSON.parse(
+      execSync(`${pythonCmd} ${JSON.stringify(runnerPath)}`, {
+        cwd: tmpDir,
+        encoding: "utf-8",
+      }),
+    ) as {
+      rc: number;
+      out: string;
+      err: string;
+      timeout: number;
+      rootCalls: { args: string[]; timeout: number }[];
+      rootInfo: { isClean: boolean };
+    };
+
+    expect(result).toEqual(
+      expect.objectContaining({
+        rc: 1,
+        out: "",
+        timeout: 0.25,
+      }),
+    );
+    expect(result.err).toContain("timed out");
+    expect(result.rootCalls.map((call) => call.args[0])).toEqual([
+      "rev-parse",
+      "branch",
+      "status",
+      "status",
+      "log",
+    ]);
+    expect(result.rootCalls.every((call) => call.timeout === 2)).toBe(true);
+    expect(result.rootInfo.isClean).toBe(false);
+  });
+
   it("marks JSON root Git state as non-repo instead of clean", () => {
     writeConfigYaml(
       [
@@ -1682,6 +1775,31 @@ describe("regression: current-task path normalization", () => {
       encoding: "utf-8",
       env: sessionEnv(envOverrides),
     });
+  }
+
+  function runPythonWithLegacyStdinLocale(
+    relativeScriptPath: string,
+    input: string,
+  ): string {
+    const scriptPath = path.join(tmpDir, relativeScriptPath);
+    const result = spawnSync(
+      pythonCmd,
+      [
+        "-c",
+        "import runpy, sys; sys.stdout.reconfigure(encoding='utf-8', errors='replace'); runpy.run_path(sys.argv[1], run_name='__main__')",
+        scriptPath,
+      ],
+      {
+        cwd: tmpDir,
+        input,
+        encoding: "utf-8",
+        env: sessionEnv({ PYTHONIOENCODING: "gbk" }),
+      },
+    );
+    if (result.status !== 0) {
+      throw new Error(result.stderr);
+    }
+    return result.stdout;
   }
 
   function expectTemplateContent(
@@ -2758,11 +2876,11 @@ print(json.dumps({
     );
 
     const nowSecs = Math.floor(Date.now() / 1000);
-    const output = runPython(
+    const output = runPythonWithLegacyStdinLocale(
       path.join(".claude", "hooks", "statusline.py"),
       JSON.stringify({
         session_id: "status-a",
-        model: { display_name: "Test" },
+        model: { display_name: "中文模型" },
         context_window: { used_percentage: 1, context_window_size: 1000 },
         cost: { total_duration_ms: 0 },
         rate_limits: {
@@ -2779,6 +2897,7 @@ print(json.dumps({
     );
 
     expect(output).toContain("Session scoped task");
+    expect(output).toContain("中文模型");
     expect(output).toContain("[session]");
     expect(output).not.toContain("Issue 106 task");
     // Rate-limit display with reset countdown (opt-in statusline enhancement)
@@ -2979,20 +3098,37 @@ print(json.dumps({
     );
 
     const taskScriptPath = path.join(tmpDir, ".trellis", "scripts", "task.py");
-    const hookOutput = runPython(
+    const unicodeProbe = "测试质量。\n第二行";
+    const hookOutput = runPythonWithLegacyStdinLocale(
       path.join(".cursor", "hooks", "inject-shell-session-context.py"),
       JSON.stringify({
         cursor_version: "3.1.17",
         conversation_id: "cursor-shell-a",
         generation_id: "gen-a",
         cwd: tmpDir,
-        command: `${pythonCmd} ./.trellis/scripts/task.py start .trellis/tasks/issue-106 && ${pythonCmd} ./.trellis/scripts/task.py current --source`,
+        command: `${pythonCmd} ./.trellis/scripts/task.py start .trellis/tasks/issue-106 && ${pythonCmd} ./.trellis/scripts/task.py current --source && echo '${unicodeProbe}'`,
         hook_event_name: "beforeShellExecution",
       }),
     );
     expect(JSON.parse(hookOutput) as { permission?: string }).toMatchObject({
       permission: "allow",
     });
+    const [ticketName] = fs.readdirSync(
+      path.join(tmpDir, ".trellis", ".runtime", "cursor-shell"),
+    );
+    const ticket = JSON.parse(
+      fs.readFileSync(
+        path.join(
+          tmpDir,
+          ".trellis",
+          ".runtime",
+          "cursor-shell",
+          ticketName,
+        ),
+        "utf-8",
+      ),
+    ) as { command: string };
+    expect(ticket.command).toContain(unicodeProbe);
 
     const startOutput = execSync(
       `${pythonCmd} ${JSON.stringify(taskScriptPath)} start ${JSON.stringify(".trellis/tasks/issue-106")}`,
@@ -3056,14 +3192,16 @@ print(json.dumps({
       ),
     );
 
-    const hookOutput = runPython(
+    const unicodePrompt =
+      "检查测试质量。\n第二行 TOKEN_CURSOR_HOOK_TEST";
+    const hookOutput = runPythonWithLegacyStdinLocale(
       path.join(".cursor", "hooks", "inject-subagent-context.py"),
       JSON.stringify({
         cursor_version: "3.2.11",
         hook_event_name: "preToolUse",
         tool_name: "Subagent",
         tool_input: {
-          prompt: "Report whether TOKEN_CURSOR_HOOK_TEST is visible.",
+          prompt: unicodePrompt,
           subagent_type: {
             custom: {
               name: "trellis-implement",
@@ -3086,7 +3224,7 @@ print(json.dumps({
     expect(prompt).toContain(
       "=== .trellis/tasks/issue-106/prd.md (Requirements) ===",
     );
-    expect(prompt).toContain("TOKEN_CURSOR_HOOK_TEST");
+    expect(prompt).toContain(unicodePrompt);
     expect(parsed.hookSpecificOutput?.updatedInput?.prompt).toBe(prompt);
   });
 
