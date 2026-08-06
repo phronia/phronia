@@ -8,8 +8,8 @@
 
 <!-- @@@auto:current-status -->
 - **Active File**: `journal-5.md`
-- **Total Sessions**: 174
-- **Last Active**: 2026-07-27
+- **Total Sessions**: 175
+- **Last Active**: 2026-08-01
 <!-- @@@/auto:current-status -->
 
 ---
@@ -19,7 +19,7 @@
 <!-- @@@auto:active-documents -->
 | File | Lines | Status |
 |------|-------|--------|
-| `journal-5.md` | ~1328 | Active |
+| `journal-5.md` | ~1502 | Active |
 | `journal-4.md` | ~1975 | Archived |
 | `journal-3.md` | ~1988 | Archived |
 | `journal-2.md` | ~1963 | Archived |
@@ -33,7 +33,9 @@
 <!-- @@@auto:session-history -->
 | # | Date | Title | Commits | Branch |
 |---|------|-------|---------|--------|
+| 175 | 2026-08-01 | Release v0.6.12: Pi concurrent session isolation | `58f51a04`, `43e82239`, `516b34e3` | `main` |
 | 174 | 2026-07-27 | Replace transcript parsing with lifecycle resets | `037d130d` | `pr-468-specificity` |
+| 174 | 2026-07-24 | Journal merge=union quick fix (#415 partial) + branch mixup recovery | `a5374864` | `main` |
 | 173 | 2026-07-23 | Snow merge + codex model keys + channel trusted dirs (#443/#459/#414) | `ee4bffcc`, `3dc7ba07`, `530d2091` | `main` |
 | 172 | 2026-07-22 | Script QoL batch: journal flags, task tree, meta flag (#394, #402) | `53a29d41` | `main` |
 | 171 | 2026-07-22 | no-trellis skip keyword (#427) + stale task cleanup | `64df8759` | `main` |

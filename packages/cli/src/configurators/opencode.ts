@@ -3,7 +3,6 @@ import path from "node:path";
 import { AI_TOOLS } from "../types/ai-tools.js";
 import { getOpenCodeTemplatePath } from "../templates/extract.js";
 import { getSharedHookScriptsForPlatform } from "../templates/shared-hooks/index.js";
-import { ensureDir, writeFile } from "../utils/file-writer.js";
 import { toPosix } from "../utils/posix.js";
 import {
   collectSkillTemplates,
@@ -78,11 +77,7 @@ function walkOpenCodeTemplateDir(): Map<string, string> {
 }
 
 /**
- * Collect all opencode template files that `trellis update` should track.
- *
- * Must stay in sync with `configureOpenCode`: both paths produce the same
- * `Map<relPath, content>`. If they drift, update will spuriously flag newly
- * init'd files as modifications on the next run.
+ * The opencode file set — written at init and diffed by `trellis update`.
  */
 export function collectOpenCodeTemplates(): Map<string, string> {
   const files = walkOpenCodeTemplateDir();
@@ -104,16 +99,4 @@ export function collectOpenCodeTemplates(): Map<string, string> {
     files.set(filePath, content);
   }
   return files;
-}
-
-/**
- * Configure OpenCode at init time by writing the same file set enumerated
- * by `collectOpenCodeTemplates`.
- */
-export async function configureOpenCode(cwd: string): Promise<void> {
-  for (const [relPath, content] of collectOpenCodeTemplates()) {
-    const absPath = path.join(cwd, relPath);
-    ensureDir(path.dirname(absPath));
-    await writeFile(absPath, content);
-  }
 }
