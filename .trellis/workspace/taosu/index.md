@@ -19,7 +19,7 @@
 <!-- @@@auto:active-documents -->
 | File | Lines | Status |
 |------|-------|--------|
-| `journal-5.md` | ~1381 | Active |
+| `journal-5.md` | ~1491 | Active |
 | `journal-4.md` | ~1975 | Archived |
 | `journal-3.md` | ~1988 | Archived |
 | `journal-2.md` | ~1963 | Archived |
@@ -33,7 +33,7 @@
 <!-- @@@auto:session-history -->
 | # | Date | Title | Commits | Branch |
 |---|------|-------|---------|--------|
-| 175 | 2026-08-01 | Fix Pi concurrent session isolation | `93f43713` | `fix/512-pi-session-isolation` |
+| 175 | 2026-08-01 | Release v0.6.12: Pi concurrent session isolation | `58f51a04`, `43e82239`, `516b34e3` | `main` |
 | 174 | 2026-07-24 | Journal merge=union quick fix (#415 partial) + branch mixup recovery | `a5374864` | `main` |
 | 173 | 2026-07-23 | Snow merge + codex model keys + channel trusted dirs (#443/#459/#414) | `ee4bffcc`, `3dc7ba07`, `530d2091` | `main` |
 | 172 | 2026-07-22 | Script QoL batch: journal flags, task tree, meta flag (#394, #402) | `53a29d41` | `main` |

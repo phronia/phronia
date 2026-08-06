@@ -1359,6 +1359,108 @@ Fixed Issue #512 by making Pi native session identity authoritative and removing
 - Bound Pi session-manager method calls to their receiver so Pi 0.83.0 native IDs resolve correctly.
 - Removed ambient main-session overrides and singleton runtime-pointer adoption from both Pi extension copies.
 - Replaced the shallow Bash assertion with an event-level foreign-context regression test.
+## Session 175: Spec on-demand injection — research, PR #468 review, cross-platform provider design
+
+**Date**: 2026-07-25
+**Task**: (no Trellis task — exploratory research + review)
+**Package**: cli
+**Branch**: `feat/v0.7-beta` (created this session)
+
+### Summary
+
+Started as "study how maka-agent returns tool results to the agent", ended as a full design + adversarial review cycle for spec on-demand injection. Produced: a v2 architecture artifact, two review comments on PR #468, GitHub Discussion #474, and a repo branch. Three of my own proposals were overturned by evidence during the session — that churn is the substance of this entry.
+
+### Main Changes
+
+- Created remote branch `feat/v0.7-beta` off `origin/main` (PR #468 targets it)
+- Published artifact (v2) — Trellis hook unified architecture + spec injection design
+- `tmp/pr-468-review.md` — 47 verified findings + three follow-up empirical sections (gitignored)
+- `tmp/trellis-hook-architecture-v2.html` — standalone copy of the artifact
+- PR #468: two comments (findings review; transcript-as-state proposal), plus a pointer comment scoping the PR back to Claude Code
+- Discussion #474 (Ideas) — cross-platform provider design
+
+### Key decisions and why
+
+**Dropped content fingerprinting from the ticket protocol.** Maka's placeholder carries a `bodySha256`; I mirrored it. User pushed back: specs rarely change mid-session, and computing the digest means reading the whole spec file on the hottest path (PostToolUse fires on every Read). Removing it deletes one decision branch and makes *first injection* the only path that opens the spec file — silent and ticket paths become pure table lookups.
+
+**v1 five-layer microkernel → v2 subprocess ABI.** v1 assumed the mess came from platform divergence, so it proposed a descriptor table + adapter layers. Measured: only **9** `platform ==` branches across the three shared hooks, each with a 3-5 line comment explaining why. The actual mess is **7 parallel implementations, ~8300 lines, ~1700 of them pure fork copies**. Layering fixes none of that; a subprocess ABI (thin adapters delegating to one core) fixes both Python-side duplication and the cross-language mirrors.
+
+**Transcript-as-state proposal → event-driven state.** I proposed reading the platform transcript instead of keeping our own state (it self-corrects across compaction, needs no identity resolution). Then the docs research killed the foundation: Claude Code's sessions doc says entry format "is internal to Claude Code and changes between versions, so scripts that parse these files directly can break on any release"; Codex says "the transcript format isn't a stable interface for hooks". `compact_boundary` — the record my design keyed on — **appears nowhere in official docs**; I had reverse-engineered it from real files. Replacement: subscribe to `PreCompact`/`preCompact` and record "context was reset at T" in our own state file. Works on all three file-based platforms, uses only documented surface, and vindicates #468's state file as the correct substrate (what changes is *what goes in it*).
+
+### Technical insights worth remembering
+
+**Maka's archive-before-placeholder.** Serialize → hash → size → *archive first* → only on a non-empty artifact id, substitute a source-bearing placeholder; any failure keeps the original payload. Threshold 2048 est. tokens, runs in `prepareStep` between provider steps, never rewrites the persisted ledger. Author's measured A/B (121 tasks): performance **+2.48pp**, tokens **−41.7%**, cost **−31.6%**. His stated reason it's lossless: the semantics were already distilled into the assistant message that followed the tool result. Counter-case he documents: **thinking blocks cannot be pruned the same way** — the reasoning chain isn't restated in the visible reply, so dropping it is a correctness problem, not an efficiency one.
+
+**Cutting history ≠ saving money.** Same author measured that trimming old turns *raised* cache-miss rate and total cost, so sliding-window trim went opt-in. This is why the injection protocol must be append-only: rewriting history invalidates the prompt prefix cache.
+
+**Platform injection ceilings are per-platform and use different units.** Claude Code: 10,000 **characters**, overflow → saved to file + preview (not silent truncation). Codex: ~2,500 **tokens**, per entry, same spill behavior. Cursor: **undocumented**. So budget must be a provider property; #468's global 8192-byte constant is both too small for Claude Code and the wrong unit for Codex. CJK is hit hardest on Codex (~1200-2500 chars for 2500 tokens vs 10000 chars on Claude Code).
+
+**`PostToolBatch` exists on Claude Code** — fires once per batch of parallel tool calls, before the next model call, no matcher filtering. That is the documented fix for duplicate injection under parallel tool use. It does not exist on Codex or Cursor, and neither documents parallel-tool hook semantics, so the portable answer is still a lock around the state read/write.
+
+**Injected text is replayed on resume, not regenerated.** Claude Code saves `additionalContext` in the transcript; `--continue`/`--resume` replays the saved text rather than re-running the hook, so timestamps and commit SHAs go stale. Time-sensitive content belongs in `SessionStart` (which does re-run, with `source` = resume/fork/compact).
+
+**Subagent transcripts are real and documented.** `projects/<project>/<session>/subagents/`; `SubagentStop`'s `transcript_path` points at the subagent's own file; `agent_id` is documented as "present only when the hook fires inside a subagent". Cursor has the parallel field `agent_transcript_path`. But in mid-session events the payload's `transcript_path` is the **parent's**.
+
+**In-process platforms may not need file access at all.** Pi's `ctx.sessionManager.buildContextEntries()` returns the current branch with compaction already applied; OpenCode's `experimental.chat.messages.transform` receives the full message array. The two platforms I assumed were hardest are the easiest.
+
+**Python stdlib reads SQLite; the Node CLI is what got burned.** Trellis's `trellis mem` OpenCode reader is disabled because `better-sqlite3` (native) fails to install on Windows. That does **not** transfer to hooks: `import sqlite3` is stdlib. Measured on Cursor's 797MB `state.vscdb`, opened read-only via `file:...?mode=ro&immutable=1`: targeted lookup of 20 messages = **1 ms**. (Moot in the end — Cursor hands `transcript_path` in the payload — but the reasoning error is worth remembering: I generalized a Node-side constraint to a Python context.)
+
+### Gotchas discovered
+
+**Transcript line count is not turn count — off by ~50x.** Real session here: 1112 lines, **9** real user turns (~124 lines/turn; the rest is assistant messages, tool results, attachments, snapshots). #468's `refresh_window_lines: 300` documented as "~30 turns" is in practice **≈2.4 turns**. Turn count is directly computable: `type == "user"` AND `message.content` is a string (not a `tool_result` array) AND no `isMeta`.
+
+**Claude Code transcripts never shrink.** Compaction appends a `compact_boundary` record and keeps writing. Scanned 2917 real transcripts: 51 contain a boundary, **zero** ever shortened. So #468's "negative line delta ⇒ /compact happened" branch can never fire — the ticket model's core scenario is dead code on its only wired platform.
+
+**Per-pid state sharding solves nothing.** #468 shards state files by pid to avoid write races without locking. Measured: 12 processes each appending **38,633 bytes in one `os.write()`** (far past PIPE_BUF) to a single `O_APPEND` file → 2400 lines, **zero corruption**. Real records are 200-600 bytes. Worse, each hook run is a fresh process, so pid differs every time → sharding degrades into *one file per emission*, and `load_state` globs and merges all of them every event. And it doesn't address the actual race, which is read-before-write (concurrent hooks all read empty state, all decide "first touch" — measured 2-5 duplicate full injections in one turn, 17-43KB).
+
+**"Full injection" is often the first 5%.** 13 specs got `paths:` frontmatter in #468; **11 exceed** the 8192-byte per-spec cap. `platform-integration.md` is 162,692 bytes → injects 5.0%, cut mid-markdown-table, followed by a notice telling the model to go read a 162KB file. That is the index-only mode the design doc explicitly rejects, reached by another route.
+
+**Pre-existing UTF-8 truncation bug still live.** `inject-subagent-context.py`'s `truncate_utf8` splits multi-byte characters when the cut lands exactly on a boundary: `你好世界` capped at 6 bytes → `你␦`. #468's derived copy fixed it; the original was never back-ported. Our specs are Chinese, so subagent context truncation corrupts the last character today.
+
+**`_maybe_gc` deletes by extension only.** `rglob("*.jsonl")` + mtime check, no shard-name validation, no depth limit, on a `base_dir` taken straight from `TRELLIS_SPEC_STATE_DIR` with no validation. Point that variable anywhere and it silently deletes user `.jsonl` files.
+
+**State-write failure has no circuit breaker.** `append_records` warns and returns, but `stateless` stays `False` — so every subsequent event reads empty state, decides "first touch", re-emits the full body. Reproduced: 8,986 bytes, three runs in a row. The stateless ticket-only mode already exists; this path just never falls into it.
+
+**`ZCode` has never been tested.** `registry-invariants.test.ts` loops over a **hand-written** list of 8 platforms; the registry has **21**, and 9 platforms actually have per-turn hook wiring. ZCode is the ninth and isn't in the list. Tests stay green. This is exactly the failure maka's provider-contract matrix guards against — their code comment records the same accident (a hand-written list silently dropped GitHub Copilot).
+
+**Dogfood is six versions behind.** `.trellis/.version` = 0.6.2, CLI = 0.6.8; 5 of 11 tracked hook/wiring files differ from templates. Any "we use it ourselves and it's fine" claim is unfounded until that's reconciled.
+
+**Workflow `args` must be a JSON value, not a JSON string.** Passing a stringified object made `args.draft` `undefined`, so four critique agents reviewed a draft that literally read "undefined". Worse: the resume cache keys on `(prompt, opts)`, so re-running with the same broken args replayed the same useless results. Fix was inlining the draft as a script const.
+
+**Background agents can loop.** One research agent kept re-notifying "waiting on the last agent" with rising token counts (77k→83k) after already delivering its full result. `TaskStop` ended it; watch cumulative tokens across repeat notifications as the tell.
+
+### Testing
+
+- No source changes; nothing to run. All claims reproduced against `origin/feat/spec-on-demand-injection` with real `python3`, and against real transcripts under `~/.claude/projects`.
+
+### Status
+
+[OK] **Research + review delivered** — implementation not started
+
+### Next Steps
+
+- Rewrite Discussion #474: remove the `compact_boundary` recommendation (undocumented internal format), replace with event-driven state; add per-platform injection ceilings and stability grading with doc links
+- Pi/OpenCode docs research still running — needed to confirm the compaction-event pattern holds for in-process platforms
+- PR #468: author has not responded to either comment yet
+- Unfixed and unfiled: channel orphan processes (`kill.ts:77/84/104/121`, `guard.ts:536`, `rm.ts:228` signal positive pids while `spawn.ts:312` uses `detached: true`); maka's `process-tree-terminator.ts` is a drop-in reference (217 lines, no native deps)
+- Also unfiled: ZCode wiring untested; `truncate_utf8` fix not back-ported; dogfood version drift
+
+
+## Session 175: Release v0.6.12: Pi concurrent session isolation
+
+**Date**: 2026-08-01
+**Task**: Release v0.6.12: Pi concurrent session isolation
+**Package**: cli
+**Branch**: `main`
+
+### Summary
+
+Released the Pi concurrent-session isolation fix as Trellis v0.6.12.
+
+### Main Changes
+
+- Merged PR #515 and published v0.6.12 through GitHub Actions.
+- Published matching CLI and Core packages with the latest npm dist-tag.
 
 ### Git Commits
 
@@ -1371,6 +1473,14 @@ Fixed Issue #512 by making Pi native session identity authoritative and removing
 - [OK] Pi 0.83.0: two concurrent RPC processes exported distinct native-derived Trellis context keys through real Bash tool calls.
 - [OK] Core: 333 passed, 1 skipped; CLI: 1586 passed.
 - [OK] CLI build, typecheck, and lint passed.
+| `58f51a04` | (see git log) |
+| `43e82239` | (see git log) |
+| `516b34e3` | (see git log) |
+
+### Testing
+
+- [OK] Local build, lint, typecheck, full test suite, manifest continuity, pack, and fresh-init smoke checks passed.
+- [OK] GitHub publish workflow 30701189857 passed and public CLI execution returned 0.6.12.
 
 ### Status
 
