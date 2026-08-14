@@ -36,8 +36,9 @@ The Trellis adapter does not install a DSH profile plugin. Before dispatching a
 role, check whether the `trellis_wait` tool is available:
 
 - If available, use DSH's default continuable background mode, continue
-  independent work, then call `trellis_wait` once with the returned child id.
-- If unavailable, dispatch the child initially with `run_in_background: false`
+  independent work, then call `trellis_wait` once per dependent child id and
+  consume each native settlement notice before entering the dependent gate.
+- If unavailable, dispatch every child with `run_in_background: false` from the outset
   so the dependent workflow gate cannot overtake it.
 
 Never replace either path with shell sleep, polling loops, `job_output`, or
