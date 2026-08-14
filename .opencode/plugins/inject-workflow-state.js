@@ -30,6 +30,7 @@
 
 import { existsSync, readFileSync, statSync } from "fs"
 import { join } from "path"
+import { findUserTextPart, insertSyntheticTextPart } from "../lib/context-visibility.js"
 import { TrellisContext, debugLog, isTrellisSubagent } from "../lib/trellis-context.js"
 
 // Supports STATUS values with letters, digits, underscores, hyphens
@@ -281,8 +282,8 @@ export default async ({ directory }) => {
   debugLog("workflow-state", "Plugin loaded, directory:", directory)
 
   return {
-      // chat.message fires on every user message. Inject breadcrumb in-place
-      // so it persists in conversation history.
+      // chat.message fires on every user message. Insert a complete synthetic
+      // breadcrumb part so it persists without changing the user prompt.
       "chat.message": async (input, output) => {
         try {
           // Skip Trellis sub-agent turns — the per-turn breadcrumb is for the
@@ -303,10 +304,8 @@ export default async ({ directory }) => {
           }
 
           const parts = output?.parts || []
-          const textPartIndex = parts.findIndex(
-            p => p.type === "text" && p.text !== undefined,
-          )
-          const originalText = textPartIndex !== -1 ? (parts[textPartIndex].text || "") : ""
+          const userTextPart = findUserTextPart(parts)
+          const originalText = userTextPart?.text || ""
 
           // Escape hatch (issue #427): user prompt contains the skip keyword
           // as a standalone word — emit nothing for this turn only.
@@ -321,11 +320,7 @@ export default async ({ directory }) => {
             ? buildBreadcrumb(task.id, task.status, templates, task.source)
             : buildBreadcrumb(null, "no_task", templates)
 
-          if (textPartIndex !== -1) {
-            parts[textPartIndex].text = `${breadcrumb}\n\n${originalText}`
-          } else {
-            parts.unshift({ type: "text", text: breadcrumb })
-          }
+          insertSyntheticTextPart(parts, breadcrumb, "workflowState")
           debugLog(
             "workflow-state",
             "Injected breadcrumb for task",

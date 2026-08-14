@@ -1017,6 +1017,7 @@ interface InitOptions {
   codebuddy?: boolean;
   copilot?: boolean;
   droid?: boolean;
+  dsh?: boolean;
   pi?: boolean;
   reasonix?: boolean;
   zcode?: boolean;
@@ -1025,7 +1026,6 @@ interface InitOptions {
   grok?: boolean;
   kimi?: boolean;
   snow?: boolean;
-  dsh?: boolean;
   yes?: boolean;
   user?: string;
   force?: boolean;

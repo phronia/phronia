@@ -1034,6 +1034,7 @@ describe("regression: update only configured platforms (beta.16)", () => {
     expect(result.has(".opencode/hooks/inject-spec-context.py")).toBe(true);
     // Plus agents, lib, package.json, at least one command, at least one skill
     expect(result.has(".opencode/agents/trellis-implement.md")).toBe(true);
+    expect(result.has(".opencode/lib/context-visibility.js")).toBe(true);
     expect(result.has(".opencode/lib/trellis-context.js")).toBe(true);
     expect(result.has(".opencode/package.json")).toBe(true);
   });
@@ -3232,6 +3233,16 @@ print(json.dumps({
           { CLAUDE_CODE_SESSION_ID: "real", CLAUDE_SESSION_ID: "legacy" },
           "zcode",
         ],
+        ["dsh", { DSH_SESSION_ID: "probe" }, "dsh"],
+        // DSH ships no hook, so the shell path resolves with no platform hint
+        // and walks the whole table. A DSH launched from Codex inherits
+        // CODEX_THREAD_ID; without DSH sitting first this returned a foreign
+        // `codex_outer` pointer (reported by @SajoLuo against DSH 0.1.0-rc.6).
+        [
+          "dsh-inherits-codex",
+          { DSH_SESSION_ID: "own", CODEX_THREAD_ID: "outer" },
+          null,
+        ],
       ],
     );
 
@@ -3253,6 +3264,8 @@ print(json.dumps({
       "zcode-real": "claude_probe",
       "zcode-legacy": "claude_probe",
       "zcode-prefers-real": "claude_real",
+      dsh: "dsh_probe",
+      "dsh-inherits-codex": "dsh_own",
     });
   });
 
@@ -4343,6 +4356,92 @@ print(json.dumps({
     expect(prompt).toContain(
       "=== .trellis/tasks/issue-106/prd.md (Requirements) ===",
     );
+    expect(prompt).toContain(unicodePrompt);
+    expect(parsed.hookSpecificOutput?.updatedInput?.prompt).toBe(prompt);
+  });
+
+  it("[session-current-task] CodeBuddy preToolUse injects context for subagent_name Task subagents", () => {
+    // CodeBuddy's Task tool names its sub-agent parameter `subagent_name`
+    // (not `subagent_type`). The shared hook must accept both spellings.
+    setupTaskRepo();
+    writeProjectFile(path.join(".git", "HEAD"), "ref: refs/heads/main\n");
+    const injectSubagentContextScript = getSharedHookScripts().find(
+      (hook) => hook.name === "inject-subagent-context.py",
+    )?.content;
+    writeProjectFile(
+      path.join(".codebuddy", "hooks", "inject-subagent-context.py"),
+      expectTemplateContent(
+        injectSubagentContextScript,
+        "inject-subagent-context hook",
+      ),
+    );
+    writeProjectFile(
+      path.join(".trellis", ".runtime", "sessions", "codebuddy_parent-a.json"),
+      JSON.stringify(
+        {
+          current_task: ".trellis/tasks/issue-106",
+          current_run: null,
+          platform: "codebuddy",
+        },
+        null,
+        2,
+      ),
+    );
+    // Decoy: CodeBuddy exports CLAUDE_PROJECT_DIR as a compatibility alias
+    // alongside its own variable, so a hook that probes the alias first
+    // resolves the key `claude_parent-a` and reads THIS pointer instead. Both
+    // files use the same session id on purpose — that is what the real host
+    // produces, and it is why the collision is invisible without a decoy.
+    writeProjectFile(
+      path.join(".trellis", "tasks", "issue-999", "prd.md"),
+      "# Wrong task\n\nTOKEN_WRONG_TASK_MUST_NOT_APPEAR\n",
+    );
+    writeProjectFile(
+      path.join(".trellis", ".runtime", "sessions", "claude_parent-a.json"),
+      JSON.stringify(
+        {
+          current_task: ".trellis/tasks/issue-999",
+          current_run: null,
+          platform: "claude",
+        },
+        null,
+        2,
+      ),
+    );
+
+    const unicodePrompt =
+      "检查测试质量。\n第二行 TOKEN_CODEBUDDY_HOOK_TEST";
+    const hookOutput = runPython(
+      path.join(".codebuddy", "hooks", "inject-subagent-context.py"),
+      JSON.stringify({
+        hook_event_name: "preToolUse",
+        tool_name: "task",
+        tool_input: {
+          prompt: unicodePrompt,
+          subagent_name: "trellis-implement",
+        },
+        session_id: "parent-a",
+        cwd: tmpDir,
+      }),
+      // Both variables are set, as CodeBuddy really does. Setting only
+      // CODEBUDDY_PROJECT_DIR would keep the test hermetic but let a wrong
+      // probe order pass, which is how the ordering bug survived here after
+      // it was fixed in the other two shared hooks.
+      { CODEBUDDY_PROJECT_DIR: tmpDir, CLAUDE_PROJECT_DIR: tmpDir },
+    );
+
+    const parsed = JSON.parse(hookOutput) as {
+      permission?: string;
+      updated_input?: { prompt?: string };
+      hookSpecificOutput?: { updatedInput?: { prompt?: string } };
+    };
+    const prompt = parsed.updated_input?.prompt ?? "";
+
+    expect(parsed.permission).toBe("allow");
+    expect(prompt).toContain(
+      "=== .trellis/tasks/issue-106/prd.md (Requirements) ===",
+    );
+    expect(prompt).not.toContain("TOKEN_WRONG_TASK_MUST_NOT_APPEAR");
     expect(prompt).toContain(unicodePrompt);
     expect(parsed.hookSpecificOutput?.updatedInput?.prompt).toBe(prompt);
   });
@@ -6913,7 +7012,8 @@ print(len(entries))
         "  'codex_invalid_mode': resolve_effective_platform('codex', {'codex': {'dispatch_mode': 'invalid'}}),",
         "  'codex_invalid_config': resolve_effective_platform('codex', {'codex': True}),",
         "  'dsh_alias': resolve_effective_platform('dsh', {}),",
-        "  'claude_passthrough': resolve_effective_platform('claude', {'codex': {'dispatch_mode': 'inline'}}),",
+        "  'cursor_passthrough': resolve_effective_platform('cursor', {'codex': {'dispatch_mode': 'inline'}}),",
+        "  'claude_label': resolve_effective_platform('claude', {'codex': {'dispatch_mode': 'inline'}}),",
         "}",
         "print(json.dumps(result))",
       ].join("\n"),
@@ -6937,8 +7037,12 @@ print(len(entries))
     // A malformed codex section must match config.py's safe inline fallback.
     expect(result.codex_invalid_config).toBe("codex-inline");
     expect(result.dsh_alias).toBe("DeepSeek Harness");
-    // Non-codex platforms ignore the codex.dispatch_mode setting.
-    expect(result.claude_passthrough).toBe("claude");
+    // Non-codex platforms ignore the codex.dispatch_mode setting. cursor has no
+    // marker-label alias, so it is the pure passthrough case.
+    expect(result.cursor_passthrough).toBe("cursor");
+    // claude does have one: its marker label in workflow.md is "Claude Code",
+    // and resolving to the bare id used to strip its routing blocks silently.
+    expect(result.claude_label).toBe("Claude Code");
   });
 
   it("[dsh] get_context phase filtering keeps DeepSeek Harness instructions", () => {
