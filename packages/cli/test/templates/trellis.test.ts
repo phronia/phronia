@@ -182,7 +182,7 @@ describe("trellis template constants", () => {
       "[Claude Code, Cursor, OpenCode, codex-sub-agent, CodeBuddy, Droid, Pi, ZCode, Snow, Oh My Pi]",
     );
     const pullBasedMarker =
-      "[Gemini, Qoder, Copilot, Reasonix, Trae, Grok, Kimi Code]";
+      "[Gemini, Qoder, Copilot, Reasonix, Trae, Grok, Kimi Code, DeepSeek Harness]";
     const pullBasedBlock = platformBlock(implement, pullBasedMarker);
 
     const workflowLabelByPlatform: Partial<Record<AITool, string>> = {
@@ -192,6 +192,7 @@ describe("trellis template constants", () => {
       trae: "Trae",
       grok: "Grok",
       kimi: "Kimi Code",
+      dsh: "DeepSeek Harness",
     };
     // Pi templates keep a pull-based fallback, but workflow 2.1 routes Pi
     // through the extension-backed context path.
@@ -237,6 +238,19 @@ describe("trellis template constants", () => {
     }
     expect(pullBasedBlock).toContain(
       "The pull-based sub-agent definition auto-handles the context load requirement",
+    );
+    expect(workflowMdTemplate).toContain("default continuable background mode");
+    expect(workflowMdTemplate).toContain("native settlement notice");
+    expect(workflowMdTemplate).toContain("optional companion plugin");
+    expect(workflowMdTemplate).toContain("Without `trellis_wait`");
+    expect(workflowMdTemplate).toContain("run_in_background: false");
+    expect(workflowMdTemplate).toContain(
+      "Never simulate waiting with shell sleep, polling loops",
+    );
+    expect(workflowMdTemplate).not.toContain("Start-Sleep");
+    expect(workflowMdTemplate).toContain("trellis-agent-<role>");
+    expect(workflowMdTemplate).toContain(
+      "on Claude Code: use the Task/Agent tool, never the Skill tool",
     );
     expect(hookAutoBlock).toContain("codex-sub-agent");
     expect(hookAutoBlock).toContain("SubagentStart");

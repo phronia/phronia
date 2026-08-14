@@ -55,15 +55,25 @@ _KNOWN_PLATFORMS = {
     "kimi",
     "zcode",
     "snow",
+    "dsh",
 }
 
 # Every name below records how it was checked. Do NOT add a name by analogy
-# with a neighbour: a 2026-08-05 audit of all 21 platforms found 12 of the 21
-# declared names had never existed anywhere — they were pattern-guessed from a
+# with a neighbour: a 2026-08-05 audit of the then-current 21 platforms found
+# 12 declared names had never existed anywhere — they were pattern-guessed from
 # `<PLATFORM>_SESSION_ID` shape no vendor agreed to, and the uniformity was the
 # only "evidence" behind them. A platform with no verified name belongs in no
 # table; it resolves through TRELLIS_CONTEXT_ID or its hook/plugin bridge.
 _ENV_SESSION_KEYS: tuple[tuple[str, tuple[str, ...]], ...] = (
+    # REAL (reported 2026-08-13 against DSH 0.1.0-rc.6 by @SajoLuo, from a live
+    # run: DSH exports DSH_SESSION_ID plus DSH_SHELL=1 into its managed shell).
+    # MUST STAY FIRST. A DSH session can inherit an outer host's identity — a
+    # DSH launched from Codex still carries CODEX_THREAD_ID — and the untargeted
+    # lookup below walks this table in order, so any earlier entry would claim
+    # the session and write a foreign `codex_<thread>` pointer for DSH work.
+    # DSH_SESSION_ID is the only name here no other vendor sets, so first place
+    # is safe: it cannot mis-claim a non-DSH session.
+    ("dsh", ("DSH_SESSION_ID",)),
     # REAL, undocumented (verified 2026-08-05 in a live Claude Code 2.1.221 bash
     # child; absent from code.claude.com/docs/en/env-vars). CLAUDE_SESSION_ID
     # was removed here — verified absent from that same live environment.
@@ -477,6 +487,28 @@ def resolve_context_key(
     scripts and subprocesses. It does not store the task itself.
     """
     if allow_environment_context:
+        # The optional dsh-trellis plugin contributes this managed DSH_* value
+        # per shell execution from the current DSH session header. DSH scrubs
+        # ambient DSH_* values before rebuilding that namespace, so this value
+        # cannot be inherited from an outer Claude/Codex Trellis session. It
+        # must outrank the generic override below, which ordinary child
+        # processes inherit indiscriminately.
+        dsh_override = _string_value(os.environ.get("DSH_TRELLIS_CONTEXT_ID"))
+        if dsh_override:
+            return _sanitize_key(dsh_override) or _hash_value(dsh_override)
+
+        # A real DSH managed shell rebuilds the complete DSH_* namespace: the
+        # paired sentinel and session id cannot be inherited from an outer
+        # Trellis host. Prefer that canonical env-table identity over
+        # a generic override that ordinary process inheritance may carry in.
+        if (
+            _string_value(os.environ.get("DSH_SHELL")) == "1"
+            and _string_value(os.environ.get("DSH_SESSION_ID"))
+        ):
+            dsh_context_key = _lookup_env_context_key("dsh")
+            if dsh_context_key:
+                return dsh_context_key
+
         override = _string_value(os.environ.get("TRELLIS_CONTEXT_ID"))
         if override:
             return _sanitize_key(override) or _hash_value(override)

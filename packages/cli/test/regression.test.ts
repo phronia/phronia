@@ -54,6 +54,7 @@ import {
   commonGitContext,
   commonSessionContext,
   getAllScripts,
+  workflowMdTemplate,
 } from "../src/templates/trellis/index.js";
 import {
   collectPlatformTemplates,
@@ -796,6 +797,9 @@ describe("regression: task auto-activation failure diagnostics (issue #430)", ()
   // scenario — scrub every platform session/transcript key before overlay.
   const AMBIENT_SESSION_ENV_KEYS = [
     "TRELLIS_CONTEXT_ID",
+    "DSH_TRELLIS_CONTEXT_ID",
+    "DSH_SESSION_ID",
+    "DSH_SHELL",
     "CLAUDE_SESSION_ID",
     "CLAUDE_CODE_SESSION_ID",
     "CODEX_SESSION_ID",
@@ -1054,6 +1058,7 @@ describe("regression: update only configured platforms (beta.16)", () => {
       "omp",
       "grok",
       "kimi",
+      "dsh",
     ] as const;
     for (const id of withTracking) {
       const result = collectPlatformTemplates(id);
@@ -1694,6 +1699,9 @@ describe("regression: current-task path normalization", () => {
 
   const SESSION_ENV_KEYS = [
     "TRELLIS_CONTEXT_ID",
+    "DSH_TRELLIS_CONTEXT_ID",
+    "DSH_SESSION_ID",
+    "DSH_SHELL",
     "CLAUDE_SESSION_ID",
     "CLAUDE_CODE_SESSION_ID",
     "CODEX_SESSION_ID",
@@ -2695,6 +2703,47 @@ print(json.dumps({
     });
   });
 
+  it("[dsh] Python CLIAdapter executes DSH paths, commands, and detection", () => {
+    setupTaskRepo();
+    fs.mkdirSync(path.join(tmpDir, ".dsh"), { recursive: true });
+    const probe = `
+import json
+import sys
+from pathlib import Path
+
+root = Path.cwd()
+sys.path.insert(0, str(root / ".trellis" / "scripts"))
+from common.cli_adapter import CLIAdapter, detect_platform
+
+adapter = CLIAdapter("dsh")
+print(json.dumps({
+    "config_dir_name": adapter.config_dir_name,
+    "commands_path": adapter.get_commands_path(root, "trellis", "start.md").relative_to(root).as_posix(),
+    "command_path": adapter.get_trellis_command_path("start"),
+    "agent_path": adapter.get_agent_path("trellis-implement", root).relative_to(root).as_posix(),
+    "run": adapter.build_run_command("implement", "test prompt"),
+    "resume": adapter.build_resume_command("session-abc"),
+    "detected": detect_platform(root),
+}))
+`;
+
+    const result = spawnSync(pythonCmd, ["-c", probe], {
+      cwd: tmpDir,
+      encoding: "utf-8",
+      env: sessionEnv(),
+    });
+    expect(result.status, result.stderr).toBe(0);
+    expect(JSON.parse(result.stdout)).toEqual({
+      config_dir_name: ".dsh",
+      commands_path: ".dsh/skills/trellis-start/SKILL.md",
+      command_path: ".dsh/skills/trellis-start/SKILL.md",
+      agent_path: ".dsh/skills/trellis-agent-implement/SKILL.md",
+      run: ["dsh", "--profile", "headless", "test prompt"],
+      resume: ["dsh", "--profile", "tui", "--resume", "session-abc"],
+      detected: "dsh",
+    });
+  });
+
   it("[grok] task.py start ignores GROK_SESSION_ID and enters degraded mode", () => {
     // GROK_SESSION_ID is a real Grok Build env var, but it is only injected
     // into hook script processes (confirmed against docs.x.ai and a real
@@ -2748,6 +2797,139 @@ print(json.dumps({
       current_task: string;
     };
     expect(context.current_task).toBe(".trellis/tasks/issue-106");
+  });
+
+  it("[session-current-task] task.py start uses DeepSeek Harness DSH_SESSION_ID", () => {
+    setupTaskRepo();
+    const taskScriptPath = path.join(tmpDir, ".trellis", "scripts", "task.py");
+
+    const output = execSync(
+      `${pythonCmd} ${JSON.stringify(taskScriptPath)} start ${JSON.stringify(".trellis/tasks/issue-106")}`,
+      {
+        cwd: tmpDir,
+        encoding: "utf-8",
+        env: sessionEnv({ DSH_SESSION_ID: "session-a" }),
+      },
+    );
+
+    expect(output).toContain("Source: session:dsh_session-a");
+    const contextPath = path.join(
+      tmpDir,
+      ".trellis",
+      ".runtime",
+      "sessions",
+      "dsh_session-a.json",
+    );
+    const context = JSON.parse(fs.readFileSync(contextPath, "utf-8")) as {
+      current_task: string;
+    };
+    expect(context.current_task).toBe(".trellis/tasks/issue-106");
+  });
+
+  it("[session-current-task] DSH_SESSION_ID outranks an inherited outer Codex identity", () => {
+    setupTaskRepo();
+    const taskScriptPath = path.join(tmpDir, ".trellis", "scripts", "task.py");
+
+    const output = execSync(
+      `${pythonCmd} ${JSON.stringify(taskScriptPath)} start ${JSON.stringify(".trellis/tasks/issue-106")}`,
+      {
+        cwd: tmpDir,
+        encoding: "utf-8",
+        env: sessionEnv({
+          CODEX_THREAD_ID: "outer-codex",
+          DSH_SESSION_ID: "inner-dsh",
+        }),
+      },
+    );
+
+    expect(output).toContain("Source: session:dsh_inner-dsh");
+    const sessionsDir = path.join(tmpDir, ".trellis", ".runtime", "sessions");
+    expect(fs.existsSync(path.join(sessionsDir, "dsh_inner-dsh.json"))).toBe(
+      true,
+    );
+    expect(fs.existsSync(path.join(sessionsDir, "codex_outer-codex.json"))).toBe(
+      false,
+    );
+  });
+
+  it("[session-current-task] managed DSH context outranks an inherited outer Trellis override", () => {
+    setupTaskRepo();
+    const taskScriptPath = path.join(tmpDir, ".trellis", "scripts", "task.py");
+
+    const output = execSync(
+      `${pythonCmd} ${JSON.stringify(taskScriptPath)} start ${JSON.stringify(".trellis/tasks/issue-106")}`,
+      {
+        cwd: tmpDir,
+        encoding: "utf-8",
+        env: sessionEnv({
+          TRELLIS_CONTEXT_ID: "claude_outer-session",
+          DSH_TRELLIS_CONTEXT_ID: "dsh_inner-session",
+          DSH_SESSION_ID: "inner-session",
+        }),
+      },
+    );
+
+    expect(output).toContain("Source: session:dsh_inner-session");
+    const sessionsDir = path.join(tmpDir, ".trellis", ".runtime", "sessions");
+    expect(fs.existsSync(path.join(sessionsDir, "dsh_inner-session.json"))).toBe(
+      true,
+    );
+    expect(
+      fs.existsSync(path.join(sessionsDir, "claude_outer-session.json")),
+    ).toBe(false);
+  });
+
+  it("[session-current-task] managed DSH shell outranks an inherited outer Trellis override without the plugin", () => {
+    setupTaskRepo();
+    const taskScriptPath = path.join(tmpDir, ".trellis", "scripts", "task.py");
+
+    const output = execSync(
+      `${pythonCmd} ${JSON.stringify(taskScriptPath)} start ${JSON.stringify(".trellis/tasks/issue-106")}`,
+      {
+        cwd: tmpDir,
+        encoding: "utf-8",
+        env: sessionEnv({
+          TRELLIS_CONTEXT_ID: "claude_outer-session",
+          DSH_SHELL: "1",
+          DSH_SESSION_ID: "inner-session",
+        }),
+      },
+    );
+
+    expect(output).toContain("Source: session:dsh_inner-session");
+    const sessionsDir = path.join(tmpDir, ".trellis", ".runtime", "sessions");
+    expect(fs.existsSync(path.join(sessionsDir, "dsh_inner-session.json"))).toBe(
+      true,
+    );
+    expect(
+      fs.existsSync(path.join(sessionsDir, "claude_outer-session.json")),
+    ).toBe(false);
+  });
+
+  it("[session-current-task] DSH_SESSION_ID alone does not displace an explicit Trellis override", () => {
+    setupTaskRepo();
+    const taskScriptPath = path.join(tmpDir, ".trellis", "scripts", "task.py");
+
+    const output = execSync(
+      `${pythonCmd} ${JSON.stringify(taskScriptPath)} start ${JSON.stringify(".trellis/tasks/issue-106")}`,
+      {
+        cwd: tmpDir,
+        encoding: "utf-8",
+        env: sessionEnv({
+          TRELLIS_CONTEXT_ID: "claude_outer-session",
+          DSH_SESSION_ID: "unmanaged-session",
+        }),
+      },
+    );
+
+    expect(output).toContain("Source: session:claude_outer-session");
+    const sessionsDir = path.join(tmpDir, ".trellis", ".runtime", "sessions");
+    expect(
+      fs.existsSync(path.join(sessionsDir, "claude_outer-session.json")),
+    ).toBe(true);
+    expect(
+      fs.existsSync(path.join(sessionsDir, "dsh_unmanaged-session.json")),
+    ).toBe(false);
   });
 
   it("[session-current-task] task.py start ignores OPENCODE_RUN_ID and enters degraded mode", () => {
@@ -2856,6 +3038,8 @@ print(json.dumps({
         "        for _key in _entry_keys:",
         "            os.environ.pop(_key, None)",
         'os.environ.pop("TRELLIS_CONTEXT_ID", None)',
+        'os.environ.pop("DSH_TRELLIS_CONTEXT_ID", None)',
+        'os.environ.pop("DSH_SHELL", None)',
         ...bodyLines,
       ].join("\n"),
     );
@@ -5648,6 +5832,35 @@ print(json.dumps({
     }
   });
 
+  it("[dsh] task.py create seeds jsonl when DSH is the only sub-agent platform", () => {
+    setupTaskRepo();
+    fs.mkdirSync(path.join(tmpDir, ".dsh"), { recursive: true });
+    const taskScriptPath = path.join(tmpDir, ".trellis", "scripts", "task.py");
+    execSync(
+      `${pythonCmd} ${JSON.stringify(taskScriptPath)} create "dsh task" --slug dsh-task --assignee test-dev`,
+      {
+        cwd: tmpDir,
+        encoding: "utf-8",
+        env: sessionEnv({ DSH_SESSION_ID: "create-jsonl" }),
+      },
+    );
+
+    const tasksDir = path.join(tmpDir, ".trellis", "tasks");
+    const taskName = fs
+      .readdirSync(tasksDir)
+      .find((name) => name.includes("dsh-task"));
+    expect(taskName).toBeDefined();
+    const taskDir = path.join(tasksDir, taskName as string);
+
+    for (const jsonlName of ["implement.jsonl", "check.jsonl"]) {
+      const seed = JSON.parse(
+        fs.readFileSync(path.join(taskDir, jsonlName), "utf-8").trim(),
+      ) as Record<string, unknown>;
+      expect(seed).toHaveProperty("_example");
+      expect(seed).not.toHaveProperty("file");
+    }
+  });
+
   it("[issue-373] task.py create does NOT seed jsonl for Codex inline mode", () => {
     setupTaskRepo();
     fs.mkdirSync(path.join(tmpDir, ".codex"), { recursive: true });
@@ -6699,6 +6912,7 @@ print(len(entries))
         "  'codex_inline': resolve_effective_platform('codex', {'codex': {'dispatch_mode': 'inline'}}),",
         "  'codex_invalid_mode': resolve_effective_platform('codex', {'codex': {'dispatch_mode': 'invalid'}}),",
         "  'codex_invalid_config': resolve_effective_platform('codex', {'codex': True}),",
+        "  'dsh_alias': resolve_effective_platform('dsh', {}),",
         "  'claude_passthrough': resolve_effective_platform('claude', {'codex': {'dispatch_mode': 'inline'}}),",
         "}",
         "print(json.dumps(result))",
@@ -6722,8 +6936,24 @@ print(len(entries))
     expect(result.codex_invalid_mode).toBe("codex-inline");
     // A malformed codex section must match config.py's safe inline fallback.
     expect(result.codex_invalid_config).toBe("codex-inline");
+    expect(result.dsh_alias).toBe("DeepSeek Harness");
     // Non-codex platforms ignore the codex.dispatch_mode setting.
     expect(result.claude_passthrough).toBe("claude");
+  });
+
+  it("[dsh] get_context phase filtering keeps DeepSeek Harness instructions", () => {
+    setupTaskRepo();
+    writeTrellisScripts();
+    writeProjectFile(path.join(".trellis", "workflow.md"), workflowMdTemplate);
+
+    const output = execSync(
+      `${pythonCmd} ${JSON.stringify(path.join(tmpDir, ".trellis", "scripts", "get_context.py"))} --mode phase --step 2.1 --platform dsh`,
+      { cwd: tmpDir, encoding: "utf-8", env: sessionEnv() },
+    );
+
+    expect(output).toContain("Spawn the implement sub-agent");
+    expect(output).toContain("DeepSeek Harness");
+    expect(output).not.toMatch(/^\[DeepSeek Harness/m);
   });
 
   it("[issue-codex-dispatch-mode] codex hook injects <codex-mode> banner reflecting dispatch_mode", () => {
