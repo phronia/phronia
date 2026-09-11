@@ -73,7 +73,10 @@ Both regexes MUST use the `\1` backreference variant — `[workflow-state:([A-Za
 3. It calls `common.active_task.resolve_active_task()` to look up the
    per-session active task. If absent → status is the pseudo `no_task`. If
    the pointer is stale (task dir deleted) → status is `stale_<source_type>`.
-4. Otherwise it reads `task.json.status` from the resolved task directory.
+4. Otherwise it reads `task.json.status` from the resolved task directory. If
+   the task directory exists but `task.json` is missing, malformed, or has no
+   usable status, the hook emits the `task_error` pseudo-status and keeps the
+   task directory name in the breadcrumb header.
 5. It resolves the workflow file (per-task resolution order below: the
    active task's `.trellis/workflows/<id>.md` when selected, else
    `.trellis/workflow.md`) and parses every `[workflow-state:STATUS]` block.
@@ -107,7 +110,7 @@ Both regexes MUST use the `\1` backreference variant — `[workflow-state:([A-Za
    When adding a new hook-capable platform whose per-turn event name is not
    `UserPromptSubmit`, extend `_detect_platform()` and the `hook_event_name`
    selector in `inject-workflow-state.py` (and the OpenCode `.js` plugin if
-   the new platform shares its `chat.message`-style envelope). Do NOT
+   the new platform shares its transform envelope). Do NOT
    hardcode `UserPromptSubmit` at any new emission site.
 
 ---
@@ -176,6 +179,104 @@ project without the feature.
 Variant files must satisfy the same parser contract as `workflow.md` (marker
 syntax above, `## Phase Index`, `#### X.Y` step headings, platform markers);
 `trellis workflow --save` warns at save time when markers are missing.
+
+---
+
+## OpenCode messages.transform contract
+
+### 1. Scope / Trigger
+
+OpenCode SessionStart and per-turn workflow-state plugins inject Trellis
+context through `experimental.chat.messages.transform`. That hook runs on
+the in-memory transcript OpenCode is about to convert to model messages
+(`SessionPrompt.run` and compaction). It does not write SQLite / TUI /
+Web history. `chat.message` remains the persist path and must not be used
+for Trellis context (issue #553, replacing the persisted-synthetic-part
+contract from #524).
+
+### 2. Signatures
+
+- `findLatestUserMessageIndex(messages) -> number`
+- `latestUserPromptText(messages) -> string`
+- `platformInputFromMessages(messages) -> { sessionID, agent } | null`
+- `prependEphemeralText(messages, text) -> boolean`
+- Hook name: `experimental.chat.messages.transform`
+- Hook input from OpenCode is `{}`; session identity is read from the
+  latest user message `info`.
+
+### 3. Contracts
+
+- Only the latest `info.role === "user"` message is cloned. Earlier user
+  and assistant messages stay the original object references.
+- The clone prepends `{ type: "text", text, synthetic: true }` parts.
+  Ordinary parts on the clone keep their original objects; the original
+  message's `parts` array is not mutated.
+- Injection does not require a persisted `prt_...` identity. Attachment-only
+  latest user messages still receive the ephemeral text parts.
+- Workflow-state checks the skip keyword only against ordinary user text
+  (`findUserTextPart`), never against ephemeral or stored synthetic parts.
+- SessionStart injects rebuilt compact context onto the latest user message
+  every model call. `<first-reply-notice>` is included only when the
+  transcript has no assistant message.
+- Plugin error handling leaves `output.messages` unchanged (prepend is the
+  last step).
+- Trellis sub-agent turns (`info.agent` matching `trellis-implement` /
+  `trellis-check` / `trellis-research`) skip both plugins.
+
+### 4. Validation & Error Matrix
+
+| Condition | Required behavior |
+|---|---|
+| `messages` is missing or has no user message | No-op |
+| Latest user message has no ordinary text part | Still prepend ephemeral text (attachment-only turns) |
+| Skip keyword present in ordinary latest-user text | Workflow-state no-op; SessionStart still injects |
+| `TRELLIS_HOOKS=0` / `TRELLIS_DISABLE_HOOKS=1` / `OPENCODE_NON_INTERACTIVE=1` | Both plugins no-op |
+| Plugin order is reversed | Both ephemeral parts still precede ordinary latest-user parts |
+
+### 5. Good / Base / Bad Cases
+
+- Good: a two-turn transcript's first user message is byte-identical after
+  transform; only the latest user message clone carries `<session-context>`
+  and `<workflow-state>`.
+- Base: an attachment-only latest user message gets ephemeral text parts
+  prepended; the file part object is unchanged.
+- Bad: mutating `chat.message` `output.parts` persists Trellis context into
+  history and makes revert restore it into the prompt box.
+
+### 6. Tests Required
+
+- Helper tests cover latest-user selection, clone-not-mutate, and prepend
+  onto attachment-only messages.
+- Real plugin tests run both plugin orders against a multi-turn transcript
+  and deep-compare every historical message.
+- SessionStart tests cover first-reply-notice presence vs absence after an
+  assistant turn. Workflow tests cover default/custom/disabled skip keywords.
+- Existing hook-disable, non-interactive, and Trellis sub-agent exclusion
+  tests remain mandatory, aimed at the transform hook.
+- Template collection tests assert the helper ships through both fresh init
+  and `trellis update`; dogfood `.opencode/` copies must match template bytes.
+
+### 7. Wrong vs Correct
+
+#### Wrong
+
+```javascript
+parts[0].text = `${breadcrumb}\n\n${parts[0].text}`
+insertSyntheticTextPart(parts, breadcrumb, "workflowState")
+```
+
+Both persist machine context into OpenCode history. The first also rewrites
+the user's visible message.
+
+#### Correct
+
+```javascript
+if (promptHasSkipKeyword(latestUserPromptText(messages), skipKeyword)) return
+prependEphemeralText(messages, breadcrumb)
+```
+
+This changes only the in-memory model payload. Stored history and the TUI
+keep the original user message.
 
 ---
 

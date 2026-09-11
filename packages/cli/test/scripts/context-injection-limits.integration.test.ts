@@ -663,6 +663,114 @@ print("all-valid")
       });
     });
 
+    describe("inject-subagent-context.py: jsonl file reference containment (#580)", () => {
+      it("does not read a file outside base_path via an absolute jsonl reference", () => {
+        const taskDir = makeTask(tmp, "task-absolute-escape");
+        const secretDir = fs.mkdtempSync(
+          path.join(os.tmpdir(), "trellis-580-secret-"),
+        );
+        const secretPath = path.join(secretDir, "secret.txt");
+        fs.writeFileSync(secretPath, "TOP SECRET CONTENT", "utf-8");
+        fs.writeFileSync(
+          path.join(taskDir, "implement.jsonl"),
+          JSON.stringify({ file: secretPath, reason: "escape" }) + "\n",
+          "utf-8",
+        );
+        const relTask = path.relative(tmp, taskDir).split(path.sep).join("/");
+        const out = runHookProbe(
+          tmp,
+          `print(mod.get_implement_context(REPO_ROOT, ${JSON.stringify(relTask)}))`,
+        );
+        expect(out).not.toContain("TOP SECRET CONTENT");
+        fs.rmSync(secretDir, { recursive: true, force: true });
+      });
+
+      it("does not read a file outside base_path via a ../ traversal jsonl reference", () => {
+        const taskDir = makeTask(tmp, "task-traversal-escape");
+        const secretDir = fs.mkdtempSync(
+          path.join(os.tmpdir(), "trellis-580-secret-"),
+        );
+        fs.writeFileSync(
+          path.join(secretDir, "secret.txt"),
+          "TOP SECRET CONTENT",
+          "utf-8",
+        );
+        const traversal =
+          path.relative(tmp, secretDir).split(path.sep).join("/") +
+          "/secret.txt";
+        fs.writeFileSync(
+          path.join(taskDir, "implement.jsonl"),
+          JSON.stringify({ file: traversal, reason: "escape" }) + "\n",
+          "utf-8",
+        );
+        const relTask = path.relative(tmp, taskDir).split(path.sep).join("/");
+        const out = runHookProbe(
+          tmp,
+          `print(mod.get_implement_context(REPO_ROOT, ${JSON.stringify(relTask)}))`,
+        );
+        expect(out).not.toContain("TOP SECRET CONTENT");
+        fs.rmSync(secretDir, { recursive: true, force: true });
+      });
+
+      it("still reads a legitimate jsonl reference inside base_path (control)", () => {
+        const taskDir = makeTask(tmp, "task-contained-control");
+        fs.writeFileSync(
+          path.join(tmp, "inside.md"),
+          "not secret",
+          "utf-8",
+        );
+        fs.writeFileSync(
+          path.join(taskDir, "implement.jsonl"),
+          JSON.stringify({ file: "inside.md", reason: "control" }) + "\n",
+          "utf-8",
+        );
+        const relTask = path.relative(tmp, taskDir).split(path.sep).join("/");
+        const out = runHookProbe(
+          tmp,
+          `print(mod.get_implement_context(REPO_ROOT, ${JSON.stringify(relTask)}))`,
+        );
+        expect(out).toContain("=== inside.md ===\nnot secret");
+      });
+    });
+
+    describe("inject-subagent-context.py: empty-manifest notice (#573)", () => {
+      it("puts a visible notice in the prompt when the manifest has no curated entries", () => {
+        // The stderr WARN never reaches any session; the sub-agent must see
+        // in its own prompt that no spec context was injected.
+        const taskDir = makeTask(tmp, "task-seed-only");
+        fs.writeFileSync(path.join(taskDir, "implement.jsonl"), "", "utf-8");
+        fs.writeFileSync(path.join(taskDir, "prd.md"), "prd body\n", "utf-8");
+        const relTask = path.relative(tmp, taskDir).split(path.sep).join("/");
+        const out = runHookProbe(
+          tmp,
+          `print(mod.get_implement_context(REPO_ROOT, ${JSON.stringify(relTask)}))`,
+        );
+        expect(out).toContain(
+          `[Trellis] ${relTask}/implement.jsonl has no curated entries`,
+        );
+        expect(out).toContain(".trellis/spec/");
+        // Task artifacts still follow the notice.
+        expect(out).toContain("prd body");
+      });
+
+      it("does not add the notice when curated entries exist", () => {
+        const taskDir = makeTask(tmp, "task-curated");
+        fs.writeFileSync(path.join(tmp, "spec.md"), "spec body\n", "utf-8");
+        fs.writeFileSync(
+          path.join(taskDir, "implement.jsonl"),
+          JSON.stringify({ file: "spec.md", reason: "spec" }) + "\n",
+          "utf-8",
+        );
+        const relTask = path.relative(tmp, taskDir).split(path.sep).join("/");
+        const out = runHookProbe(
+          tmp,
+          `print(mod.get_implement_context(REPO_ROOT, ${JSON.stringify(relTask)}))`,
+        );
+        expect(out).toContain("spec body");
+        expect(out).not.toContain("has no curated entries");
+      });
+    });
+
     describe("task.py validate: JSONL hygiene warnings", () => {
       it("warns (does not error) on a jsonl entry that looks like a code file", () => {
         const taskDir = makeTask(tmp, "task-code-warn");
@@ -731,6 +839,64 @@ print("all-valid")
             "exceeds context_injection.max_file_bytes (100); " +
             "injection will truncate it",
         );
+      });
+
+      it("survives a file that disappears between is_file() and stat()", () => {
+        // The size check is advisory, so it must never be what fails
+        // `validate`. Its `stat()` sits after an `is_file()` check, and the
+        // gap between them is a real window: the file can be removed, or the
+        // directory can lose traversal permission, in between.
+        //
+        // The race cannot be won from outside the process, so it is staged
+        // in-process: `is_file()` is forced True for a path that is really
+        // gone, which is exactly the state the loser of that race observes.
+        const taskDir = makeTask(tmp, "task-size-race");
+        fs.writeFileSync(path.join(tmp, "present.md"), "X".repeat(200), "utf-8");
+        fs.writeFileSync(
+          path.join(taskDir, "implement.jsonl"),
+          JSON.stringify({ file: "present.md", reason: "big" }) +
+            "\n" +
+            JSON.stringify({ file: "vanished.md", reason: "raced" }) +
+            "\n",
+          "utf-8",
+        );
+        writeConfig(
+          tmp,
+          ["context_injection:", "  max_file_bytes: 100"].join("\n"),
+        );
+
+        const harness = [
+          "import sys",
+          "from pathlib import Path",
+          `sys.path.insert(0, ${JSON.stringify(
+            path.join(tmp, ".trellis", "scripts"),
+          )})`,
+          "from common import task_context",
+          "_real = Path.is_file",
+          "Path.is_file = lambda self: True if self.name == 'vanished.md' else _real(self)",
+          `task_dir = Path(${JSON.stringify(taskDir)})`,
+          `repo = Path(${JSON.stringify(tmp)})`,
+          "errors = task_context._validate_jsonl(task_dir / 'implement.jsonl', repo, task_dir)",
+          "print('ERRORS=%d' % errors)",
+        ].join("\n");
+
+        const r = spawnSync("python3", ["-c", harness], {
+          cwd: tmp,
+          encoding: "utf-8",
+        });
+
+        // No traceback, and the advisory check contributed no errors.
+        expect(r.stderr).not.toContain("Traceback");
+        expect(r.status).toBe(0);
+        expect(r.stdout).toContain("ERRORS=0");
+        // The readable file is still measured and still warned about.
+        expect(r.stdout).toContain(
+          "implement.jsonl:1: Warning: present.md is 200 bytes, " +
+            "exceeds context_injection.max_file_bytes (100); " +
+            "injection will truncate it",
+        );
+        // The vanished one produces no size warning at all.
+        expect(r.stdout).not.toContain("vanished.md is");
       });
 
       it("stays warning-free for a clean, under-cap, spec-only manifest", () => {
