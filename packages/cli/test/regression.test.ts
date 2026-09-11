@@ -7183,7 +7183,7 @@ print(json.dumps({
     fs.mkdirSync(path.join(tmpDir, ".dsh"), { recursive: true });
     const taskScriptPath = path.join(tmpDir, ".trellis", "scripts", "task.py");
     execSync(
-      `${pythonCmd} ${JSON.stringify(taskScriptPath)} create "dsh task" --slug dsh-task --assignee test-dev`,
+      `${pythonCmd} ${JSON.stringify(taskScriptPath)} create "dsh task" --description "dsh jsonl seed" --slug dsh-task --assignee test-dev`,
       {
         cwd: tmpDir,
         encoding: "utf-8",
@@ -7199,11 +7199,10 @@ print(json.dumps({
     const taskDir = path.join(tasksDir, taskName as string);
 
     for (const jsonlName of ["implement.jsonl", "check.jsonl"]) {
-      const seed = JSON.parse(
-        fs.readFileSync(path.join(taskDir, jsonlName), "utf-8").trim(),
-      ) as Record<string, unknown>;
-      expect(seed).toHaveProperty("_example");
-      expect(seed).not.toHaveProperty("file");
+      const jsonlPath = path.join(taskDir, jsonlName);
+      expect(fs.existsSync(jsonlPath), `${jsonlName} should exist`).toBe(true);
+      // 0.6.16+ seeds empty manifests (not a placeholder `_example` row).
+      expect(fs.readFileSync(jsonlPath, "utf-8"), jsonlName).toBe("");
     }
   });
 
@@ -10156,15 +10155,34 @@ describe("regression: parse_simple_yaml Python execution (0.3.8)", () => {
     expect(stderr).toContain(":1:");
   });
 
-  it("anchors, aliases, merge keys and flow collections are reported", () => {
+  it("anchors, aliases, merge keys and flow mappings are reported", () => {
     const { result, stderr } = runPythonYamlFull(
-      "base: &b\nuse: *b\nlist: [a, b]\nmap: {a: 1}\nkeep: ok\n",
+      "base: &b\nuse: *b\nmap: {a: 1}\nkeep: ok\n",
     );
     expect(result).toEqual({ keep: "ok" });
     expect(stderr).toContain("YAML anchors are not supported");
     expect(stderr).toContain("YAML aliases are not supported");
-    expect(stderr).toContain("flow sequences are not supported");
     expect(stderr).toContain("flow mappings are not supported");
+  });
+
+  it("simple flow sequences of scalars parse as lists (spec_injection.tools)", () => {
+    const { result, stderr } = runPythonYamlFull(
+      "spec_injection:\n  tools: []\nnames: [Edit, Frobnicate]\nkeep: ok\n",
+    );
+    expect(result).toEqual({
+      spec_injection: { tools: [] },
+      names: ["Edit", "Frobnicate"],
+      keep: "ok",
+    });
+    expect(stderr).not.toContain("flow sequences");
+  });
+
+  it("nested flow sequences are still reported and skipped", () => {
+    const { result, stderr } = runPythonYamlFull(
+      "nested: [a, [b]]\nkeep: ok\n",
+    );
+    expect(result).toEqual({ keep: "ok" });
+    expect(stderr).toContain("nested or invalid flow sequences are not supported");
   });
 
   it("quoted values that look like YAML constructs stay untouched", () => {

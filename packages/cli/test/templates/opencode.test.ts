@@ -1439,11 +1439,11 @@ describe("opencode inject-workflow-state layered default (parity with Python)", 
   // End-to-end parity for the personal/team default layers so the JS port
   // cannot silently drift from common/workflow_selection.py. OpenCode plugins
   // expose only a default export (regression #212), so we drive the real
-  // chat.message handler: with no active task the breadcrumb comes from the
-  // resolved workflow file's [workflow-state:no_task] block. Each candidate
-  // file carries a distinct marker, so the emitted breadcrumb reveals which
-  // file the layered resolver picked. (The per-task pin layer is 467's
-  // unchanged code, covered by the Python matrix.)
+  // experimental.chat.messages.transform handler: with no active task the
+  // breadcrumb comes from the resolved workflow file's [workflow-state:no_task]
+  // block. Each candidate file carries a distinct marker, so the emitted
+  // breadcrumb reveals which file the layered resolver picked. (The per-task
+  // pin layer is 467's unchanged code, covered by the Python matrix.)
   let dir: string;
 
   const noTaskBlock = (marker: string): string =>
@@ -1483,17 +1483,15 @@ describe("opencode inject-workflow-state layered default (parity with Python)", 
   async function breadcrumb(): Promise<string> {
     const hooks = (await injectWorkflowStatePlugin({
       directory: dir,
-    })) as ChatMessageHooks;
+    })) as TransformHooks;
     // The breadcrumb arrives as its own synthetic part rather than being
     // prepended to the user's text (#524), and insertSyntheticTextPart refuses
     // to run unless an ordinary part carries a persisted identity — so the
     // prompt has to be a realistic OpenCode part, not a bare {type,text}.
-    const parts: ChatMessagePart[] = [createUserTextPart("user prompt")];
-    await hooks["chat.message"](
-      { sessionID: "main-session", agent: "build" },
-      { parts },
-    );
-    return parts
+    const latest = userTurn("user prompt");
+    const messages = [latest];
+    await hooks[MESSAGES_TRANSFORM_HOOK]({}, { messages });
+    return messages[0].parts
       .filter((part) => part.text !== undefined)
       .map((part) => part.text)
       .join("\n\n");

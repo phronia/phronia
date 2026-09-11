@@ -51,6 +51,7 @@ from common.active_task import (
 from common.git import current_branch_name
 from common.io import (
     describe_json_read_failure,
+    read_json,
     read_json_checked,
     write_json,
 )
