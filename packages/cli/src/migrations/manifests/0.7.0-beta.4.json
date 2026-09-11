@@ -1,0 +1,9 @@
+{
+  "version": "0.7.0-beta.4",
+  "description": "Sync v0.6.15–v0.6.17; dsh native sub-agents; YAML flow lists; task.py workflow NameError",
+  "breaking": false,
+  "recommendMigrate": false,
+  "changelog": "**Enhancements:**\n- Synced from main: v0.6.15 (DeepSeek Harness `trellis init --dsh`), v0.6.16 (context-manifest gate, task lifecycle, ablation, OpenCode mem, hook/channel fixes), v0.6.17 (Devin CLI `--platform devin`, lazy SQLite pages, Pi headless ask, active-task isolation, archive unlink restore).\n- On beta, `trellis init --dsh` installs native research/implement/check sub-agents (`trellis-agent-{research,implement,check}`). Stable 0.6.15 still runs those phases inline. (#548)\n\n**Bug Fixes:**\n- `parse_simple_yaml` accepts scalar flow sequences such as `spec_injection.tools: []`.\n- `task.py workflow` imports `read_json` from `common.io` (no `NameError` when pinning a workflow).",
+  "migrations": [],
+  "notes": "Run `npm install -g @mindfoldhq/trellis@beta` then `trellis update`. No `--migrate` required."
+}
