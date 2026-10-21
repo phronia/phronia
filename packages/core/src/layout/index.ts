@@ -41,6 +41,8 @@ export interface WorkspacePaths {
   readonly adapterManifest: string;
   /** `.runtime/harness/`. */
   readonly handshakes: string;
+  /** `.runtime/rules.json` (compiled rule ledger). */
+  readonly rulesCompiled: string;
   /** `.version`. */
   readonly version: string;
   /** `.developer`. */
@@ -88,6 +90,7 @@ export const LAYOUT: WorkspaceLayout = Object.freeze({
     manifest: `${ROOT}/.template-hashes.json`,
     adapterManifest: `${ROOT}/manifest.json`,
     handshakes: `${ROOT}/.runtime/harness`,
+    rulesCompiled: `${ROOT}/.runtime/rules.json`,
     version: `${ROOT}/.version`,
     developer: `${ROOT}/.developer`,
     currentTask: `${ROOT}/.current-task`,

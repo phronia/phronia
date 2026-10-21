@@ -108,7 +108,17 @@ Batches that must update this file:
   - ZCode schema mismatch is now `zcode-db-schema-unsupported`, distinct
     from an unreadable database. `--limit` rejects values below 1, `-h`
     works, and `--until` keeps an explicit time instead of forcing end-of-day.
-- **B9**: check output gains a machine-readable verdict file.
+- **B9**: spec rules become a ledger.
+  - `rules.md` files under `.phronia/spec/**` can declare a table between
+    `<!-- phronia:rules:start -->` and `<!-- phronia:rules:end -->` with
+    `ID | Rule | Scope | Severity | Check | Fix | Status | Rationale`.
+    `phronia rules compile` writes `.phronia/.runtime/rules.json`;
+    `phronia rules list` filters by severity/status.
+  - Edit/Write tool calls receive only the verified rules whose scope
+    matches the target path (`<rules-for-path>`), capped at 8. Draft and
+    deprecated rules are reported but never injected or enforced.
+  - check output is still prose; the machine-readable verdict file is not
+    part of this change yet.
 - **B10**: hooks stop invoking Python; a platform package is used when
   available.
 - **B12**: `phronia init` no longer creates `00-bootstrap-guidelines` or

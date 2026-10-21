@@ -21,6 +21,7 @@
     "manifest": ".phronia/.template-hashes.json",
     "adapterManifest": ".phronia/manifest.json",
     "handshakes": ".phronia/.runtime/harness",
+    "rulesCompiled": ".phronia/.runtime/rules.json",
     "version": ".phronia/.version",
     "developer": ".phronia/.developer",
     "currentTask": ".phronia/.current-task"

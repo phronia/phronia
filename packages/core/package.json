@@ -37,6 +37,11 @@
       "import": "./dist/platform/index.js",
       "default": "./dist/platform/index.js"
     },
+    "./rules": {
+      "types": "./dist/rules/index.d.ts",
+      "import": "./dist/rules/index.js",
+      "default": "./dist/rules/index.js"
+    },
     "./context": {
       "types": "./dist/context/index.d.ts",
       "import": "./dist/context/index.js",

@@ -11,6 +11,7 @@ import { uninstall } from "../commands/uninstall.js";
 import { adopt, printAdoptReport } from "../commands/adopt.js";
 import { runContextCommand } from "../commands/context.js";
 import { runDoctorCommand, runZcodeDetectCommand } from "../commands/doctor.js";
+import { runRulesCompile, runRulesList } from "../commands/rules.js";
 import { ablate, restore } from "../commands/ablate.js";
 import { runMem } from "../commands/mem.js";
 import {
@@ -449,6 +450,30 @@ program
       refreshManifest: Boolean(options.refreshManifest),
       check: Boolean(options.check),
     });
+    if (exitCode !== 0) process.exit(exitCode);
+  });
+
+const rulesCommand = program
+  .command("rules")
+  .description("Compile and inspect the specification rule ledger");
+
+rulesCommand
+  .command("compile")
+  .option("--json", "Output machine-readable JSON")
+  .option("--check", "Exit non-zero when the ledger has errors")
+  .action((options: Record<string, unknown>) => {
+    const exitCode = runRulesCompile({ cwd, ...options });
+    if (exitCode !== 0) process.exit(exitCode);
+  });
+
+rulesCommand
+  .command("list")
+  .option("--severity <level>", "Filter by severity")
+  .option("--status <status>", "Filter by status")
+  .option("--json", "Output machine-readable JSON")
+  .option("--check", "Exit non-zero when the ledger has errors")
+  .action((options: Record<string, unknown>) => {
+    const exitCode = runRulesList({ cwd, ...options });
     if (exitCode !== 0) process.exit(exitCode);
   });
 

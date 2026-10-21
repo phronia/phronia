@@ -81,6 +81,7 @@ import {
   PHRONIA_BLOCK_END,
   PHRONIA_BLOCK_START,
 } from "../utils/managed-paths.js";
+import { writeCompiledRules } from "@phronia/core";
 import { refreshAdapterManifest } from "./adapter-manifest.js";
 
 export {
@@ -2970,6 +2971,7 @@ export async function update(options: UpdateOptions): Promise<void> {
   // Refresh the runtime adapter record; probing failures degrade, never throw.
   try {
     refreshAdapterManifest(cwd)
+    writeCompiledRules(cwd)
   } catch {
     // manifest is diagnostic state, not required for the update to succeed
   }

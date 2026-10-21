@@ -12,6 +12,7 @@ import { CONTEXT_SCHEMA_VERSION } from "./types.js";
 import { buildSessionStart } from "./session-start.js";
 import { buildUserPrompt } from "./user-prompt.js";
 import { buildPreShell } from "./pre-shell.js";
+import { buildPreEdit, isEditTool } from "./pre-edit.js";
 import { buildSubagentSpawn } from "./subagent/index.js";
 import { CORE_VERSION } from "../version.js";
 import { diagnostic, type Diagnostic } from "../state/diagnostics.js";
@@ -21,6 +22,7 @@ export * from "./constants.js";
 export * from "./session-start.js";
 export * from "./user-prompt.js";
 export * from "./pre-shell.js";
+export * from "./pre-edit.js";
 export * from "./subagent/index.js";
 export * from "./subagent/materialize.js";
 export * from "./subagent/prompts.js";
@@ -48,6 +50,9 @@ export function handleContext(request: ContextRequest): ContextResponse {
       return buildSubagentSpawn(request);
     case "pre-tool-use": {
       const toolName = readToolName(request.input);
+      if (isEditTool(toolName)) {
+        return buildPreEdit(request);
+      }
       if (toolName === "bash" || toolName === "shell") {
         return buildPreShell(request);
       }

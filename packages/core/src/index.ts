@@ -11,3 +11,4 @@ export * from "./state/index.js";
 export * from "./platform/index.js";
 export * from "./context/index.js";
 export * from "./version.js";
+export * from "./rules/index.js";
