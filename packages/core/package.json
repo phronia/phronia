@@ -37,6 +37,11 @@
       "import": "./dist/platform/index.js",
       "default": "./dist/platform/index.js"
     },
+    "./context": {
+      "types": "./dist/context/index.d.ts",
+      "import": "./dist/context/index.js",
+      "default": "./dist/context/index.js"
+    },
     "./task": {
       "types": "./dist/task/index.d.ts",
       "import": "./dist/task/index.js",

@@ -8,6 +8,7 @@ import { update } from "../commands/update.js";
 import { upgrade } from "../commands/upgrade.js";
 import { uninstall } from "../commands/uninstall.js";
 import { adopt, printAdoptReport } from "../commands/adopt.js";
+import { runContextCommand } from "../commands/context.js";
 import { ablate, restore } from "../commands/ablate.js";
 import { runMem } from "../commands/mem.js";
 import {
@@ -400,6 +401,29 @@ program
       }
       process.exit(1);
     }
+  });
+
+program
+  .command("context")
+  .description("Build harness-neutral context for an event (session-start, user-prompt, ...)")
+  .option("--event <event>", "Context event")
+  .option("--platform <id>", "Platform id (claude-code, cursor, opencode, ...)")
+  .option("--project-root <path>", "Explicit project root")
+  .option("--input <path>", "Input JSON file, or - for stdin", "-")
+  .option("--render", "Render the harness envelope instead of JSON")
+  .option("--schema", "Print the context JSON Schema and exit")
+  .option("--json", "Output the versioned JSON plan (default)")
+  .action((options: Record<string, unknown>) => {
+    const exitCode = runContextCommand({
+      event: (options.event as never) ?? ("session-start" as never),
+      platform: (options.platform as string) ?? "",
+      projectRoot: options.projectRoot as string | undefined,
+      input: (options.input as string) ?? "-",
+      render: Boolean(options.render),
+      schema: Boolean(options.schema),
+      json: Boolean(options.json),
+    });
+    if (exitCode !== 0) process.exit(exitCode);
   });
 
 program

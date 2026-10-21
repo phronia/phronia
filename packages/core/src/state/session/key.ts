@@ -117,7 +117,8 @@ export function detectPlatform(
   platformHint?: string | null,
 ): string {
   if (platformHint) {
-    return sanitizeKey(platformHint) || "session";
+    const normalized = envPlatformName(platformHint) ?? platformHint;
+    return sanitizeKey(normalized) || "session";
   }
   if (input) {
     for (const key of ["_phronia_platform", "phronia_platform", "platform", "source"]) {
