@@ -1,3 +1,6 @@
+// phronia-shim: opencode@v1
+// shim-version: 0.6.17
+// DO NOT EDIT. Regenerate with: phronia update --regenerate-shims
 import { createHash } from "node:crypto"
 
 const PART_ID_PATTERN = /^prt_([0-9a-f]{12})[0-9A-Za-z]{14}$/

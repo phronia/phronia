@@ -1,4 +1,8 @@
 #!/usr/bin/env python3
+# phronia-shim: shared@v1
+# shim-version: 0.6.17
+# DO NOT EDIT. Regenerate with: phronia update --regenerate-shims
+
 """Phronia hook shim — the only harness adapter for Python-hook platforms.
 
 It reads the harness payload, calls the core (`phronia context`), applies the

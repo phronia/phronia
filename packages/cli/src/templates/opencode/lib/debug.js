@@ -1,4 +1,7 @@
 /* global process */
+// phronia-shim: opencode@v1
+// shim-version: 0.6.17
+// DO NOT EDIT. Regenerate with: phronia update --regenerate-shims
 /**
  * Optional debug log shared by the OpenCode plugins. Writes nothing unless
  * PHRONIA_DEBUG is set, and never throws.

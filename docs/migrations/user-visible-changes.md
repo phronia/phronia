@@ -64,6 +64,13 @@ Batches that must update this file:
     `Sub-agent checklist (...)` headings must read the task artifacts instead.
 - **B5/B6**: unknown harness versions may switch to `degraded` fallback;
   shim files become managed artifacts and are no longer overwritten silently.
+  - **B6 now**: shim sources carry a `phronia-shim: <adapter>` /
+    `shim-version` stamp; `pnpm check:shims` enforces per-file line ceilings
+    and rejects shared-assembly markers. `@phronia/testing` gained contract
+    fixture replay: a recorded payload plus minimal project is replayed
+    through `phronia context`, and payload/envelope key drift fails the test.
+    The interactive "keep my modified shim + write .new" update flow is not
+    part of this change yet; shims are still handled as managed templates.
   - **B5 now**: `phronia doctor` reports the selected adapter, harness version
     and source, status, and last handshake per platform; `--json`,
     `--no-probe`, `--refresh-manifest`, and `--check` are available.

@@ -1,3 +1,6 @@
+// phronia-shim: opencode@v1
+// shim-version: 0.6.17
+// DO NOT EDIT. Regenerate with: phronia update --regenerate-shims
 /**
  * Persisted-context markers for OpenCode message parts.
  *

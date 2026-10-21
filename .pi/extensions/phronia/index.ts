@@ -1,3 +1,6 @@
+// phronia-shim: pi@v1
+// shim-version: 0.6.17
+// DO NOT EDIT. Regenerate with: phronia update --regenerate-shims
 import {
   existsSync,
   readFileSync,

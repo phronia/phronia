@@ -1,0 +1,7 @@
+{
+  "schemaVersion": 1,
+  "event": "session-start",
+  "platform": { "id": "opencode" },
+  "projectRoot": "<PROJECT_ROOT>",
+  "input": { "sessionID": "demo" }
+}

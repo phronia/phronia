@@ -1,5 +1,9 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
+# phronia-shim: snow@v1
+# shim-version: 0.6.17
+# DO NOT EDIT. Regenerate with: phronia update --regenerate-shims
+
 """Snow CLI Phronia context writer + additionalContext emitter.
 
 Used by onSessionStart / onUserMessage / beforeSubAgentStart hooks.

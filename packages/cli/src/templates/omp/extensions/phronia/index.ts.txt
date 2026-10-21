@@ -1,3 +1,6 @@
+// phronia-shim: omp@v1
+// shim-version: 0.6.17
+// DO NOT EDIT. Regenerate with: phronia update --regenerate-shims
 import type { ExtensionAPI } from "@oh-my-pi/pi-coding-agent";
 import { existsSync } from "node:fs";
 import { dirname, join } from "node:path";

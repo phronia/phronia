@@ -1,0 +1,11 @@
+{
+  "platform": "opencode",
+  "adapterId": "opencode@v1",
+  "event": "session-start",
+  "harnessVersion": "1.14.39",
+  "recordedAt": "2026-10-21T00:00:00Z",
+  "source": "synthetic",
+  "redactionVersion": 1,
+  "payloadKeys": ["sessionID"],
+  "notes": "Shape-only fixture: asserts the harness payload and response envelope keys, not injected text."
+}

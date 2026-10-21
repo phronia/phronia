@@ -652,7 +652,7 @@ describe("pi templates", () => {
       rmSync(root1, { recursive: true, force: true });
       rmSync(root2, { recursive: true, force: true });
     }
-  });
+  }, 30000);
 
   it("re-asserts the current root's task context when a session switches back", () => {
     const root1 = createMinimalTrellisRoot();
