@@ -56,7 +56,7 @@ import {
 // Platform Functions Registry
 // =============================================================================
 
-interface PlatformFunctions {
+export interface PlatformFunctions {
   /** Configure platform during init (copy templates to project) */
   configure: (cwd: string, options?: PlatformConfigureOptions) => Promise<void>;
   /** Collect template files for update tracking. Undefined = platform skipped during update. */
@@ -109,6 +109,13 @@ const PLATFORM_FUNCTIONS: Record<AITool, PlatformFunctions> = {
   kimi: fromTemplates(collectKimiTemplates),
   snow: fromTemplates(collectSnowTemplates),
 };
+
+/** Platform file-set functions, exposed for `phronia adopt`. */
+export function getPlatformFunctions(): Readonly<
+  Record<AITool, PlatformFunctions>
+> {
+  return PLATFORM_FUNCTIONS;
+}
 
 // =============================================================================
 // Derived Helpers — all derived from AI_TOOLS registry

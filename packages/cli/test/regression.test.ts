@@ -9297,7 +9297,7 @@ describe("regression: cli_adapter platform support (beta.9, beta.13, beta.16)", 
       fs.readFileSync(
         path.join(
           path.resolve(__dirname, ".."),
-          "src/migrations/manifests/0.5.0-beta.0.json",
+          "src/migrations/upstream/0.5.0-beta.0.json",
         ),
         "utf-8",
       ),
@@ -9319,7 +9319,7 @@ describe("regression: cli_adapter platform support (beta.9, beta.13, beta.16)", 
     // migrationGuide. create-manifest.js also rejects new ones without it.
     const manifestsDir = path.join(
       path.resolve(__dirname, ".."),
-      "src/migrations/manifests",
+      "src/migrations/upstream",
     );
     const files = fs
       .readdirSync(manifestsDir)
@@ -9437,7 +9437,7 @@ describe("regression: migration manifest consistency", () => {
   it("all manifest JSON files are loaded", () => {
     const manifestDir = path.join(
       path.dirname(fileURLToPath(import.meta.url)),
-      "../src/migrations/manifests",
+      "../src/migrations/upstream",
     );
     const jsonFiles = fs
       .readdirSync(manifestDir)
@@ -9650,7 +9650,7 @@ describe("regression: migration manifest consistency", () => {
       // by running `trellis update` without `--migrate`.
       const manifestPath = path.join(
         path.dirname(fileURLToPath(import.meta.url)),
-        "../src/migrations/manifests/0.5.0-beta.0.json",
+        "../src/migrations/upstream/0.5.0-beta.0.json",
       );
       const manifest = JSON.parse(fs.readFileSync(manifestPath, "utf-8")) as {
         breaking?: boolean;
@@ -11038,7 +11038,7 @@ describe("regression: configSectionsAdded (issue-codex-dispatch-mode)", () => {
       "..",
       "src",
       "migrations",
-      "manifests",
+      "upstream",
       "0.5.7.json",
     );
     const manifest = JSON.parse(fs.readFileSync(manifestPath, "utf-8")) as {

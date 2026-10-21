@@ -575,13 +575,13 @@ describe("cross-platform hash storage (POSIX keys + v2 schema)", () => {
     }
   });
 
-  it("saveHashes writes schema v2 envelope with __version + hashes", () => {
+  it("saveHashes writes schema v3 envelope with __version + hashes", () => {
     saveHashes(tmpDir, { foo: "abc", "bar/baz": "def" });
 
     const raw = fs.readFileSync(path.join(tmpDir, HASHES_REL), "utf-8");
     const parsed = JSON.parse(raw);
 
-    expect(parsed).toHaveProperty("__version", 2);
+    expect(parsed).toHaveProperty("__version", 3);
     expect(parsed).toHaveProperty("hashes");
     expect(parsed.hashes).toEqual({ foo: "abc", "bar/baz": "def" });
   });
@@ -657,7 +657,7 @@ describe("cross-platform hash storage (POSIX keys + v2 schema)", () => {
     const raw = fs.readFileSync(path.join(tmpDir, HASHES_REL), "utf-8");
     const parsed = JSON.parse(raw);
 
-    expect(parsed.__version).toBe(2);
+    expect(parsed.__version).toBe(3);
     // Legacy bogus key is gone
     expect(parsed.hashes).not.toHaveProperty(".phronia\\config.yaml");
     expect(parsed.hashes).not.toHaveProperty(".phronia/config.yaml");

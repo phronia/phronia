@@ -28,6 +28,8 @@ that removes or rewrites upstream code.
 | 2026-10-21 | B1/T4 | `packages/*/package.json`, imports, release scripts, workflows | rewritten | `f089cb32` | npm identity renamed to `@phronia/core`, `@phronia/cli`, `@phronia/testing`; historical notices and migration manifests keep upstream names. |
 | 2026-10-21 | B1/T4 | `TRELLIS_*` environment reads across product, templates, and tests | rewritten | `f089cb32` | New prefix is `PHRONIA_*`; CLI and Python package startup map legacy names for one major version. |
 | 2026-10-21 | B1/T5 | skill/agent/command identifiers and managed markers | renamed/rewritten | `f089cb32` | `trellis-*` -> `phronia-*`; `commands/trellis/` -> `commands/phronia/`; `TRELLIS:START/END` -> `PHRONIA:START/END`; `templates/trellis/` -> `templates/workflow/`. Legacy names accepted for one major version. |
+| 2026-10-21 | B1/T6 | `packages/cli/src/commands/adopt.ts` | added | — | One-time upstream adoption: backup, rename, hash-verified regeneration, auditable report. |
+| 2026-10-21 | B1/T7 | `packages/cli/src/migrations/manifests/*` -> `migrations/upstream/*` | renamed | `f089cb32` | Upstream migration history archived and no longer replayed; Phronia history starts at 1.0.0. |
 
 ## Not yet modified
 

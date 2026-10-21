@@ -7,6 +7,7 @@ import { init } from "../commands/init.js";
 import { update } from "../commands/update.js";
 import { upgrade } from "../commands/upgrade.js";
 import { uninstall } from "../commands/uninstall.js";
+import { adopt, printAdoptReport } from "../commands/adopt.js";
 import { ablate, restore } from "../commands/ablate.js";
 import { runMem } from "../commands/mem.js";
 import {
@@ -220,9 +221,42 @@ program
   });
 
 program
+  .command("adopt")
+  .description(
+    "Adopt an upstream Trellis project (rename the workflow root and regenerate platform files)",
+  )
+  .option("--dry-run", "Report what would change without touching files")
+  .option("--force", "Proceed even when the git working tree is dirty")
+  .option("--json", "Print the adoption report as JSON")
+  .action(async (options: Record<string, unknown>) => {
+    try {
+      const report = await adopt({
+        cwd: process.cwd(),
+        dryRun: options.dryRun as boolean,
+        force: options.force as boolean,
+        json: options.json as boolean,
+      });
+      if (options.json) {
+        process.stdout.write(`${JSON.stringify(report, null, 2)}\n`);
+      } else {
+        printAdoptReport(report);
+      }
+    } catch (error) {
+      console.error(
+        chalk.red("Error:"),
+        error instanceof Error ? error.message : error,
+      );
+      if (process.env.DEBUG || process.env.PHRONIA_DEBUG) {
+        console.error(error instanceof Error ? error.stack : error);
+      }
+      process.exit(1);
+    }
+  });
+
+program
   .command("uninstall")
   .description(
-    "Remove all trellis files (managed platform files + .phronia/) from this project",
+    "Remove all Phronia files (managed platform files + .phronia/) from this project",
   )
   .option("-y, --yes", "Skip confirmation prompt")
   .option("--dry-run", "List what would be removed without changing anything")

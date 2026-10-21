@@ -8,9 +8,9 @@
  * - All hash dictionary keys are POSIX style (`/`), never `\`.
  * - Hashes are computed against LF-normalized content, so CRLF and LF
  *   versions of the same logical content produce the same hash.
- * - Persisted JSON uses schema `{ __version: 2, hashes: { ... } }`. Old
- *   flat-format files (no `__version`) are silently discarded; the hash
- *   set is regenerated on next init/update.
+ * - Persisted JSON uses schema `{ __version: 3, brand: "phronia", hashes }`.
+ *   Upstream v2 files are accepted and rewritten as v3 on the next save.
+ *   Flat-format files (no `__version`) are discarded.
  */
 
 import { createHash } from "node:crypto";
@@ -26,11 +26,16 @@ import { toPosix } from "./posix.js";
 const HASHES_FILE = ".template-hashes.json";
 
 /** Current schema version for `.template-hashes.json` */
-const HASHES_SCHEMA_VERSION = 2;
+const HASHES_SCHEMA_VERSION = 3;
 
-/** Persisted shape of the hashes file (v2). */
-interface StoredHashesV2 {
+/** Versions this build can read. v2 is the upstream pre-rename schema. */
+const ACCEPTED_HASHES_VERSIONS = new Set([2, 3]);
+
+/** Persisted shape of the hashes file. */
+interface StoredHashes {
   __version: number;
+  brand?: string;
+  adoptedFrom?: string;
   hashes: TemplateHashes;
 }
 
@@ -86,12 +91,15 @@ export function loadHashes(cwd: string): TemplateHashes {
       parsed !== null &&
       typeof parsed === "object" &&
       "__version" in parsed &&
-      (parsed as { __version: unknown }).__version === HASHES_SCHEMA_VERSION &&
+      typeof (parsed as { __version: unknown }).__version === "number" &&
+      ACCEPTED_HASHES_VERSIONS.has(
+        (parsed as { __version: number }).__version,
+      ) &&
       "hashes" in parsed &&
       typeof (parsed as { hashes: unknown }).hashes === "object" &&
       (parsed as { hashes: unknown }).hashes !== null
     ) {
-      const stored = parsed as StoredHashesV2;
+      const stored = parsed as StoredHashes;
       // Defensive: enforce POSIX keys even if a writer slipped through.
       return normalizeHashKeys(stored.hashes);
     }
@@ -106,12 +114,13 @@ export function loadHashes(cwd: string): TemplateHashes {
 /**
  * Save template hashes.
  *
- * Always writes the v2 schema with POSIX-normalized keys.
+ * Always writes the v3 schema with POSIX-normalized keys.
  */
 export function saveHashes(cwd: string, hashes: TemplateHashes): void {
   const hashesPath = getHashesPath(cwd);
-  const payload: StoredHashesV2 = {
+  const payload: StoredHashes = {
     __version: HASHES_SCHEMA_VERSION,
+    brand: "phronia",
     hashes: normalizeHashKeys(hashes),
   };
   writeFileAtomic(hashesPath, JSON.stringify(payload, null, 2));

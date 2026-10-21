@@ -1,7 +1,17 @@
 // Strip host-shell session env vars so the OpenCode / Trellis context
 // resolvers under test fall through to platform-input-derived keys
 // instead of picking up whatever the dev's terminal happens to export.
+import path from "node:path";
+import { fileURLToPath } from "node:url";
+
 delete process.env.PHRONIA_CONTEXT_ID;
+
+// Historical migration-engine tests exercise the archived upstream manifests.
+// Production loads only `migrations/manifests/` (Phronia's own history).
+process.env.PHRONIA_MIGRATION_MANIFESTS_DIR = path.resolve(
+  path.dirname(fileURLToPath(import.meta.url)),
+  "../src/migrations/upstream",
+);
 
 // Strip CLAUDE_ENV_FILE: session-start.py appends `export PHRONIA_CONTEXT_ID=…`
 // to it, so a dev running the suite inside a Claude Code session would write

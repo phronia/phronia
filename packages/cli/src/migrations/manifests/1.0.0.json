@@ -1,0 +1,5 @@
+{
+  "version": "1.0.0",
+  "description": "Phronia 1.0 baseline. Upstream Trellis migration history is archived under migrations/upstream/ and is not replayed; existing projects use `phronia adopt`.",
+  "migrations": []
+}
