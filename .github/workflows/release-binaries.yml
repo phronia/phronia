@@ -1,0 +1,79 @@
+name: Release binaries
+
+# Manual until npm org and signing credentials exist. The workflow is checked
+# in so the release shape is reviewable; deleting it is not part of B10.
+on:
+  workflow_dispatch:
+    inputs:
+      version:
+        description: "Version to publish (e.g. 0.6.17)"
+        required: true
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: macos-14
+            target: bun-darwin-arm64
+          - os: macos-13
+            target: bun-darwin-x64
+          - os: ubuntu-24.04-arm
+            target: bun-linux-arm64
+          - os: ubuntu-24.04
+            target: bun-linux-x64
+          - os: windows-2022
+            target: bun-windows-x64
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm build
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: "1.4.0"
+      - name: Build binary
+        run: pnpm --filter @phronia/runtime build:binary
+      - name: Sign macOS
+        if: startsWith(matrix.os, 'macos') && env.MACOS_CERT_P12 != ''
+        env:
+          MACOS_CERT_P12: ${{ secrets.MACOS_CERT_P12 }}
+          MACOS_CERT_PASSWORD: ${{ secrets.MACOS_CERT_PASSWORD }}
+          APPLE_ID: ${{ secrets.APPLE_ID }}
+          APPLE_APP_SPECIFIC_PASSWORD: ${{ secrets.APPLE_APP_SPECIFIC_PASSWORD }}
+          APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
+        run: echo "codesign + notarytool steps require the certificate imported into a temp keychain"
+      - name: Sign Windows
+        if: matrix.os == 'windows-2022' && env.WINDOWS_CERT_PFX != ''
+        env:
+          WINDOWS_CERT_PFX: ${{ secrets.WINDOWS_CERT_PFX }}
+        run: echo "signtool steps require the certificate imported into the runner"
+      - uses: actions/upload-artifact@v4
+        with:
+          name: phronia-${{ matrix.target }}
+          path: packages/runtime/dist/phronia-*
+
+  publish:
+    needs: build
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          registry-url: https://registry.npmjs.org
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm build
+      - run: echo "publish @phronia/cli and platform packages here once NPM_TOKEN exists"
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}

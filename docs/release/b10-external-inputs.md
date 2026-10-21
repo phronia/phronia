@@ -58,6 +58,9 @@ that only the maintainer can supply. This file is the exact checklist.
 
 ## Current decision
 
-**B10 is deferred, not cancelled.** The repository implements B0–B9 and the
-research/engineering parts of B11–B13. Re-open B10 when section A and at least
-one of B/C are supplied.
+**B10 is deferred at the release step, not unstarted.** The repository now
+contains `packages/runtime` (launcher, JS fallback, Bun/Deno compile script)
+and `.github/workflows/release-binaries.yml` (manual matrix, signing steps
+gated on secrets). The JS fallback builds and runs today; native binaries and
+publishing stop at the missing credentials/toolchain above. Re-open B10 when
+section A and at least one of B/C are supplied.
