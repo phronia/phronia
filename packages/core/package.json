@@ -27,6 +27,11 @@
       "import": "./dist/layout/index.js",
       "default": "./dist/layout/index.js"
     },
+    "./state": {
+      "types": "./dist/state/index.d.ts",
+      "import": "./dist/state/index.js",
+      "default": "./dist/state/index.js"
+    },
     "./task": {
       "types": "./dist/task/index.d.ts",
       "import": "./dist/task/index.js",
