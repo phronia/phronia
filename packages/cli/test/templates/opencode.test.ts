@@ -3,19 +3,16 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { afterEach, beforeAll, beforeEach, describe, expect, it } from "vitest";
 import {
-  contextCollector,
-  isTrellisSubagent,
-  readContextInjectionLimits,
-  TrellisContext,
-  truncateUtf8,
-} from "../../src/templates/opencode/lib/phronia-context.js";
-import {
   findUserTextPart,
   insertSyntheticTextPart,
   MESSAGES_TRANSFORM_HOOK,
   prependEphemeralText,
 } from "../../src/templates/opencode/lib/context-visibility.js";
-import { hasInjectedTrellisContext } from "../../src/templates/opencode/lib/session-utils.js";
+import {
+  contextCollector,
+  hasInjectedTrellisContext,
+  isTrellisSubagent,
+} from "../../src/templates/opencode/lib/session-utils.js";
 import injectSubagentContextPlugin from "../../src/templates/opencode/plugins/inject-subagent-context.js";
 import sessionStartPlugin from "../../src/templates/opencode/plugins/session-start.js";
 import injectWorkflowStatePlugin from "../../src/templates/opencode/plugins/inject-workflow-state.js";
@@ -684,60 +681,6 @@ describe("opencode subagent helper", () => {
   });
 });
 
-describe("opencode TrellisContext single-session fallback", () => {
-  let dir: string;
-
-  beforeEach(() => {
-    dir = setupTrellisProject();
-  });
-
-  afterEach(() => {
-    rmSync(dir, { recursive: true, force: true });
-  });
-
-  it("returns the only session file when exactly one exists", () => {
-    writeSessionFile(dir, "opencode_sole", ".phronia/tasks/demo-task");
-    const ctx = new TrellisContext(dir);
-    const active = ctx.getActiveTask({ sessionID: "missing-key" });
-
-    expect(active.taskPath).toBe(".phronia/tasks/demo-task");
-    expect(active.source).toBe("session-fallback:opencode_sole");
-    expect(active.stale).toBe(false);
-  });
-
-  it("refuses to guess when two or more session files exist", () => {
-    writeSessionFile(dir, "opencode_a", ".phronia/tasks/demo-task");
-    writeSessionFile(dir, "opencode_b", ".phronia/tasks/demo-task");
-    const ctx = new TrellisContext(dir);
-    const active = ctx.getActiveTask({ sessionID: "missing-key" });
-
-    expect(active.taskPath).toBeNull();
-    expect(active.source).toBe("none");
-  });
-
-  it("returns no task when zero session files exist (Python parity)", () => {
-    // sessions/ exists from setupTrellisProject but contains no files
-    const ctx = new TrellisContext(dir);
-    const active = ctx.getActiveTask({ sessionID: "missing-key" });
-
-    expect(active.taskPath).toBeNull();
-    expect(active.source).toBe("none");
-  });
-
-  it("prefers an exact context-key match over the fallback", () => {
-    writeSessionFile(dir, "opencode_session_exact", ".phronia/tasks/demo-task");
-    writeSessionFile(dir, "opencode_other", ".phronia/tasks/demo-task");
-    const ctx = new TrellisContext(dir);
-    const active = ctx.getActiveTask({ sessionID: "exact" });
-
-    // sessionID="exact" maps to "opencode_exact" via buildContextKey; we
-    // wrote "opencode_session_exact" so the exact lookup misses, but the
-    // presence of ≥2 files means fallback should also refuse — proving
-    // exact match is attempted first.
-    expect(active.taskPath).toBeNull();
-  });
-});
-
 describe("opencode inject-subagent-context (issue #264)", () => {
   let dir: string;
   let hooks: TaskToolHooks;
@@ -855,7 +798,7 @@ describe("opencode inject-subagent-context (issue #264)", () => {
     expect(output.args.prompt).not.toContain("Demo PRD");
   });
 
-  it("emits the phronia-hook-injected marker for research agent too", async () => {
+  it("emits the core research prompt without the role-hook marker", async () => {
     const output: TaskToolOutput = {
       args: {
         subagent_type: "phronia-research",
@@ -868,7 +811,9 @@ describe("opencode inject-subagent-context (issue #264)", () => {
       output,
     );
 
-    expect(output.args.prompt).toContain("<!-- phronia-hook-injected -->");
+    // Research is a documentation role; Python's hook never marks it, and
+    // B3 converged OpenCode on that output.
+    expect(output.args.prompt).not.toContain("<!-- phronia-hook-injected -->");
     expect(output.args.prompt).toContain("# Research Agent Task");
   });
 
@@ -1220,93 +1165,6 @@ describe("opencode context injection limits (issue #441)", () => {
     );
     return output.args.prompt ?? "";
   }
-
-  describe("truncateUtf8", () => {
-    it("leaves data untouched when cap is 0 (unlimited)", () => {
-      const data = Buffer.from("X".repeat(1000));
-      expect(truncateUtf8(data, 0)).toEqual(data);
-    });
-
-    it("leaves data untouched when data is at or under the cap", () => {
-      const data = Buffer.from("hello world");
-      expect(truncateUtf8(data, data.length)).toEqual(data);
-      expect(truncateUtf8(data, data.length + 5)).toEqual(data);
-    });
-
-    it("truncates ASCII data exactly at the cap (1 byte over cap)", () => {
-      const data = Buffer.from("abcdefghij"); // 10 bytes
-      expect(truncateUtf8(data, 9)).toEqual(Buffer.from("abcdefghi"));
-    });
-
-    it("never splits a 2-byte UTF-8 sequence at the boundary (café)", () => {
-      const data = Buffer.from("café", "utf-8");
-      for (let cap = 0; cap <= data.length; cap++) {
-        // Buffer#toString replaces invalid sequences with U+FFFD; a correct
-        // cut never produces one.
-        expect(truncateUtf8(data, cap).toString("utf-8")).not.toContain("�");
-      }
-      expect(truncateUtf8(data, 4).toString("utf-8")).toBe("caf");
-    });
-
-    it("never splits a 3-byte UTF-8 sequence at the boundary (euro sign)", () => {
-      const data = Buffer.from("x€", "utf-8"); // x + 3-byte euro sign
-      for (let cap = 0; cap <= data.length; cap++) {
-        expect(truncateUtf8(data, cap).toString("utf-8")).not.toContain("�");
-      }
-    });
-  });
-
-  describe("readContextInjectionLimits", () => {
-    it("returns built-in defaults when config.yaml is absent", () => {
-      expect(readContextInjectionLimits(dir)).toEqual({
-        max_file_bytes: 32768,
-        max_artifact_bytes: 65536,
-        max_total_bytes: 131072,
-      });
-    });
-
-    it("returns built-in defaults when config.yaml has no context_injection section", () => {
-      writeConfig("session_auto_commit: true\n");
-      expect(readContextInjectionLimits(dir)).toEqual({
-        max_file_bytes: 32768,
-        max_artifact_bytes: 65536,
-        max_total_bytes: 131072,
-      });
-    });
-
-    it("applies explicit overrides for all three keys", () => {
-      writeConfig(
-        [
-          "context_injection:",
-          "  max_file_bytes: 100",
-          "  max_artifact_bytes: 200",
-          "  max_total_bytes: 300",
-        ].join("\n"),
-      );
-      expect(readContextInjectionLimits(dir)).toEqual({
-        max_file_bytes: 100,
-        max_artifact_bytes: 200,
-        max_total_bytes: 300,
-      });
-    });
-
-    it("0 means unlimited and is preserved as-is (not replaced by default)", () => {
-      writeConfig(["context_injection:", "  max_total_bytes: 0"].join("\n"));
-      expect(readContextInjectionLimits(dir).max_total_bytes).toBe(0);
-    });
-
-    it("falls back to default for a negative value", () => {
-      writeConfig(["context_injection:", "  max_file_bytes: -5"].join("\n"));
-      expect(readContextInjectionLimits(dir).max_file_bytes).toBe(32768);
-    });
-
-    it("falls back to default for a non-integer value", () => {
-      writeConfig(
-        ["context_injection:", "  max_artifact_bytes: not-a-number"].join("\n"),
-      );
-      expect(readContextInjectionLimits(dir).max_artifact_bytes).toBe(65536);
-    });
-  });
 
   describe("inject-subagent-context plugin", () => {
     it("inlines under-cap content unchanged with no notices (golden)", async () => {

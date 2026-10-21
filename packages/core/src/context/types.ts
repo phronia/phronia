@@ -41,6 +41,10 @@ export interface ContextRequest {
     prompt?: string;
     /** Return materialized context without the agent-role prompt wrapper. */
     contextOnly?: boolean;
+    /** Explicit task reference from the harness; wins over session state. */
+    taskRef?: string;
+    /** Defaults to true for sub-agent dispatch; native hosts may opt out. */
+    allowSingleSessionFallback?: boolean;
     cwd?: string;
     filePath?: string;
     hasAssistantMessages?: boolean;

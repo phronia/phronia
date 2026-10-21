@@ -74,6 +74,10 @@ export function buildSubagentSpawn(request: ContextRequest): ContextResponse {
 
   const active = state.sessions.active(request.input, {
     platform: request.platform.id,
+    taskRef: readTaskRef(request),
+    // Python's sub-agent hook opts in; native dispatchers that own an exact
+    // session id can opt out to avoid borrowing a sibling window.
+    allowSingleSessionFallback: readAllowSingleSessionFallback(request),
   });
   if (
     (agentType === "implement" || agentType === "check" || agentType === "session") &&
@@ -195,6 +199,41 @@ export function readAgentType(request: ContextRequest): AgentType | null {
       const type = normalizeAgentType(stringField(toolInput[key]));
       if (type) return type;
     }
+  }
+  return null;
+}
+
+function readAllowSingleSessionFallback(request: ContextRequest): boolean {
+  if (request.hints?.allowSingleSessionFallback !== undefined) {
+    return request.hints.allowSingleSessionFallback;
+  }
+  const input = objectInput(request.input);
+  if (input) {
+    if (typeof input.allow_single_session_fallback === "boolean") {
+      return input.allow_single_session_fallback;
+    }
+    if (typeof input.allowSingleSessionFallback === "boolean") {
+      return input.allowSingleSessionFallback;
+    }
+  }
+  return true;
+}
+
+function readTaskRef(request: ContextRequest): string | null {
+  if (typeof request.hints?.taskRef === "string" && request.hints.taskRef.trim()) {
+    return request.hints.taskRef.trim();
+  }
+  const input = objectInput(request.input);
+  if (!input) return null;
+  for (const key of ["task_ref", "taskRef", "active_task", "activeTask"]) {
+    const value = stringField(input[key]);
+    if (value) return value;
+  }
+  const toolInput = objectInput(input.tool_input) ?? objectInput(input.toolInput);
+  if (!toolInput) return null;
+  for (const key of ["task_ref", "taskRef"]) {
+    const value = stringField(toolInput[key]);
+    if (value) return value;
   }
   return null;
 }

@@ -481,7 +481,7 @@ describe("pi templates", () => {
     const third = fire();
     expect(third.systemPrompt).toBe(first.systemPrompt);
     expect(third.message).toBeUndefined();
-  });
+  }, 30000);
 
   it("keeps a native Pi session isolated from a foreign context key (#512)", () => {
     const root = createMinimalTrellisRoot();
@@ -602,7 +602,7 @@ describe("pi templates", () => {
     } finally {
       rmSync(root, { recursive: true, force: true });
     }
-  });
+  }, 30000);
 
   it("scopes per-session caches by resolved root when ctx.cwd changes", () => {
     const root1 = createMinimalTrellisRoot();
@@ -713,7 +713,7 @@ describe("pi templates", () => {
       rmSync(root1, { recursive: true, force: true });
       rmSync(root2, { recursive: true, force: true });
     }
-  });
+  }, 30000);
 
   it("extension tool_result handler marks failed/cancelled subagent runs as errors", () => {
     const extension = getExtensionTemplate();

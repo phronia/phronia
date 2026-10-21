@@ -55,7 +55,10 @@ Batches that must update this file:
     snapshot stays in `systemPrompt`.
   - **OpenCode**: the session-start plugin now injects context, so the
     generated `.opencode/commands/phronia/start.md` fallback is no longer
-    written; existing copies are harmless and can be deleted.
+    written; existing copies are harmless and can be deleted. Sub-agent
+    prompts come from the core role templates; the research prompt no longer
+    carries the `<!-- phronia-hook-injected -->` marker (Python never emitted
+    it for research).
   - Why: one assembly implementation; OMP/Pi/Snow had three drifting copies.
   - Migration: no action for users; custom text that matched Snow's
     `Sub-agent checklist (...)` headings must read the task artifacts instead.

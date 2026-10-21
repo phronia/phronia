@@ -69,7 +69,6 @@ import {
   workspaceIndexContent,
 } from "../src/templates/markdown/index.js";
 import * as markdownExports from "../src/templates/markdown/index.js";
-import { TrellisContext } from "../src/templates/opencode/lib/phronia-context.js";
 
 afterEach(() => {
   clearManifestCache();
@@ -2190,7 +2189,7 @@ describe("regression: update only configured platforms (beta.16)", () => {
     // Plus agents, lib, package.json, at least one command, at least one skill
     expect(result.has(".opencode/agents/phronia-implement.md")).toBe(true);
     expect(result.has(".opencode/lib/context-visibility.js")).toBe(true);
-    expect(result.has(".opencode/lib/phronia-context.js")).toBe(true);
+    expect(result.has(".opencode/lib/debug.js")).toBe(true);
     expect(result.has(".opencode/package.json")).toBe(true);
   });
 
@@ -5814,113 +5813,6 @@ print(json.dumps({
     );
   });
 
-  it("[session-current-task] OpenCode resolver ignores legacy .current-task and uses plugin sessionID", () => {
-    setupTaskRepo();
-    writeLegacyCurrentTask(".phronia/tasks/issue-106");
-    writeProjectFile(
-      path.join(".phronia", "tasks", "opencode-task", "task.json"),
-      JSON.stringify(
-        {
-          title: "OpenCode task",
-          status: "in_progress",
-        },
-        null,
-        2,
-      ),
-    );
-    writeProjectFile(
-      path.join(".phronia", ".runtime", "sessions", "opencode_oc-a.json"),
-      JSON.stringify(
-        {
-          current_task: ".phronia/tasks/opencode-task",
-          platform: "opencode",
-        },
-        null,
-        2,
-      ),
-    );
-
-    const ctx = new TrellisContext(tmpDir);
-    // With no input, legacy `.current-task` MUST still be ignored. Issue #264
-    // adds a single-session fallback that mirrors Python's
-    // `_resolve_single_session_fallback` — with exactly one session file
-    // present, the resolver picks it up (NOT the legacy file).
-    const none = ctx.getActiveTask();
-    expect(none.taskPath).toBe(".phronia/tasks/opencode-task");
-    expect(none.source).toBe("session-fallback:opencode_oc-a");
-    expect(none.stale).toBe(false);
-
-    const active = ctx.getActiveTask({
-      sessionID: "oc-a",
-    });
-
-    expect(active.taskPath).toBe(".phronia/tasks/opencode-task");
-    expect(active.source).toBe("session:opencode_oc-a");
-    expect(active.stale).toBe(false);
-  });
-
-  it("[session-current-task] OpenCode resolver ignores OPENCODE_RUN_ID and uses the plugin sessionID", () => {
-    // Inverted from "prefers OPENCODE_RUN_ID" on 2026-08-06, matching the
-    // Python-side inversion in `PURGED_ENV_NAMES` and in "task.py start
-    // ignores OPENCODE_RUN_ID". The name is absent from OpenCode 1.18.13's
-    // source and from the 1.17.18 binary (82 OPENCODE_* literals, no RUN_ID),
-    // so the only way it was ever set was a stray host-shell export — which
-    // hijacked the resolver rather than helping it.
-    setupTaskRepo();
-    writeProjectFile(
-      path.join(".phronia", "tasks", "opencode-run-task", "task.json"),
-      JSON.stringify(
-        {
-          title: "OpenCode run task",
-          status: "in_progress",
-          priority: "P1",
-        },
-        null,
-        2,
-      ),
-    );
-    writeProjectFile(
-      path.join(".phronia", ".runtime", "sessions", "opencode_run-a.json"),
-      JSON.stringify(
-        {
-          current_task: ".phronia/tasks/opencode-run-task",
-          platform: "opencode",
-        },
-        null,
-        2,
-      ),
-    );
-    writeProjectFile(
-      path.join(".phronia", ".runtime", "sessions", "opencode_oc-a.json"),
-      JSON.stringify(
-        {
-          current_task: ".phronia/tasks/issue-106",
-          platform: "opencode",
-        },
-        null,
-        2,
-      ),
-    );
-
-    const previous = process.env.OPENCODE_RUN_ID;
-    process.env.OPENCODE_RUN_ID = "run-a";
-    try {
-      const active = new TrellisContext(tmpDir).getActiveTask({
-        sessionID: "oc-a",
-      });
-
-      expect(active.source).toBe("session:opencode_oc-a");
-      expect(active.taskPath).toBe(".phronia/tasks/issue-106");
-      expect(active.stale).toBe(false);
-    } finally {
-      if (previous === undefined) {
-        delete process.env.OPENCODE_RUN_ID;
-      } else {
-        process.env.OPENCODE_RUN_ID = previous;
-      }
-    }
-  });
-
   it("[#412] shared and Codex contexts include an adaptive one-shot notice without changing payload shape", () => {
     setupTaskRepo();
 
@@ -6172,23 +6064,6 @@ print(json.dumps({
       { PHRONIA_DISABLE_HOOKS: "1" },
     );
     expect(gatedAlt.trim()).toBe("");
-  });
-
-  it("[session-current-task] OpenCode context layer normalizes backslash refs for downstream plugins", () => {
-    setupTaskRepo();
-    writeSessionContext("opencode_oc-a", ".phronia\\tasks\\issue-106");
-
-    const ctx = new TrellisContext(tmpDir) as TrellisContext & {
-      getCurrentTask: (platformInput?: object | null) => string | null;
-      resolveTaskDir: (taskRef: string) => string | null;
-    };
-
-    expect(ctx.getCurrentTask({ sessionID: "oc-a" })).toBe(
-      ".phronia/tasks/issue-106",
-    );
-    expect(ctx.resolveTaskDir(".phronia\\tasks\\issue-106")).toBe(
-      path.join(tmpDir, ".phronia", "tasks", "issue-106"),
-    );
   });
 
   // ------------------------------------------------------------

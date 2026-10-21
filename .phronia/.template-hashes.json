@@ -101,7 +101,6 @@
     ".opencode/agents/phronia-check.md": "d33805c37d1e9ec3da18f0a5f504b30688804ae4d3d4f7b7d522d0bb9de81e8d",
     ".opencode/agents/phronia-implement.md": "08452fa9012fc2cab88a2866a52379bae2319cf9c842bc55c0880f4b4c52ba26",
     ".opencode/agents/phronia-research.md": "eb7fae15a6c01c653f1570ec4dd516bc4d51cec6867ae638f6d5f8530ff804e9",
-    ".opencode/lib/phronia-context.js": "7c0b2bd038e708d9c03219e53553e16782e5bdc99a2345bce7e469248a9fe2e6",
     ".opencode/package.json": "4b155e844fde1467e331e898b378e66820c323110ef1ecae6fce3844358535ea",
     ".opencode/commands/phronia/continue.md": "2d99b72af0303a8a50f759d00199c2660356739a733340a0de97123397613c59",
     ".opencode/commands/phronia/finish-work.md": "3ab07a89a3c91a0169fc184cb5b93ba6c6f9dae78c2f44ef7c5d2142c611c482",
@@ -339,8 +338,8 @@
     ".cursor/hooks/session-start.py": "df307bc62d68828b9d7d7cf4ffe6e678f01ae9e8eedf3187cd4b80e25613f617",
     ".cursor/hooks.json": "92d3209db9404a88a1ac88164b03e01033fa43842245c14ef05c448f5eb463ca",
     ".opencode/lib/context-visibility.js": "27c9608fa4b0c986d8cb92c25b4c1380597bc442058670bf97d9798f68374c91",
-    ".opencode/lib/session-utils.js": "41cc9054e5e291a6a8be555bda917d5d497977faa8c7d8a592d3e9f8326889a0",
-    ".opencode/plugins/inject-subagent-context.js": "31aedeb87fe49e97284e59419535dc5eddc513cb13fe3af3294c212e690d034f",
+    ".opencode/lib/session-utils.js": "ba74d2e6cb549a55828d2437546471e2bbe7fd49abfa3204f2f57a2220e9eae4",
+    ".opencode/plugins/inject-subagent-context.js": "67b934ff4935bb9c96565cd0816a2d46ae0999ab3d93e35e9d7ac1d69785f149",
     ".opencode/plugins/inject-workflow-state.js": "32a1b776e74deefcc0478dcae59aa053feb7bb708cb3a6a4b3fdb34ab0a0cb3b",
     ".opencode/plugins/session-start.js": "8db12aff1365cc74bd73fee472a97d2d40fe5e2ccf666618da81615ae209a8b1",
     ".codex/hooks/session-start.py": "a920f1fd186df0835c210690c1f176476afd25c778a1e31f25b035bf0feec958",
@@ -349,11 +348,12 @@
     ".codex/hooks.json": "54cc7d86c32f52adeb644925459b316c9ebaa0798c54631a451863d5e09af13c",
     ".codex/config.toml": "7705ed51c4e5ef103b405492fe27b58166909a3214ecca944f4e2629279059a8",
     ".pi/settings.json": "edf17ecb293eb1adab9873f77e698d8ec5a61943cd8f1651f51d7a899e533ff8",
-    ".pi/extensions/phronia/index.ts": "9f92ce65a6e9fcd15f44a2a0e0e363238361bffda952463b53684de2e32575a1",
+    ".pi/extensions/phronia/index.ts": "2e269631f727d052577f47d04d853ade007f5521676e53630d7f0e8ebd8d62f2",
     ".omp/extensions/phronia/index.ts": "39000dbe1c4ee1c33f8afdfe7512b4f70c7c232ae59f17073c417f31f0ebaa6e",
     ".claude/hooks/phronia-hook.py": "a513a353aecb2a31703b26d3fba887981ea86f3919e5c0f36e22eb3e4d70c265",
     ".cursor/hooks/phronia-hook.py": "a513a353aecb2a31703b26d3fba887981ea86f3919e5c0f36e22eb3e4d70c265",
     ".codex/hooks/phronia-hook.py": "a513a353aecb2a31703b26d3fba887981ea86f3919e5c0f36e22eb3e4d70c265",
-    ".opencode/lib/phronia-client.js": "2682e2a7f65c25f3edf275b151cd392ff1f54b8470e7f936bc2a9299929c9420"
+    ".opencode/lib/phronia-client.js": "2682e2a7f65c25f3edf275b151cd392ff1f54b8470e7f936bc2a9299929c9420",
+    ".opencode/lib/debug.js": "61fb994a6ef539b4aed80c8ebd480caae668316df2e8f88879e229ba4f8d09a3"
   }
 }

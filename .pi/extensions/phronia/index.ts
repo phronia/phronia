@@ -911,6 +911,7 @@ function coreTaskContext(root: string, key: string | null): string {
   const response = runCoreContext(root, key, "subagent-spawn", {
     subagent_type: "phronia-implement",
     prompt: "",
+    allow_single_session_fallback: false,
   });
   if (!response || !Array.isArray(response.mutations) || response.mutations.length === 0) {
     return "No active Phronia task found. Read .phronia/ before proceeding.";
@@ -929,6 +930,7 @@ function buildPrompt(
   const response = runCoreContext(root, key, "subagent-spawn", {
     subagent_type: agent,
     prompt: input.prompt ?? "",
+    allow_single_session_fallback: false,
   });
   if (!response || !Array.isArray(response.mutations) || response.mutations.length === 0) {
     return "";

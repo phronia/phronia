@@ -79,6 +79,8 @@ export interface SessionReadOptions {
   platform?: string | null;
   allowSingleSessionFallback?: boolean;
   allowEnvironmentContext?: boolean;
+  /** Explicit harness-provided task reference; wins over session state. */
+  taskRef?: string | null;
 }
 
 export interface StateReader {
@@ -179,6 +181,7 @@ export function openState(options: StateReaderOptions): StateReader {
           now: options.now?.() ?? Date.now() / 1000,
           allowSingleSessionFallback: sessionOptions.allowSingleSessionFallback,
           allowEnvironmentContext: sessionOptions.allowEnvironmentContext,
+          taskRef: sessionOptions.taskRef,
         });
         collected.addAll(state.diagnostics);
         return state;

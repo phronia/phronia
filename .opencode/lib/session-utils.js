@@ -6,7 +6,36 @@
  * injected session-start in persisted history.
  */
 
-import { debugLog } from "./phronia-context.js"
+import { debugLog } from "./debug.js"
+
+const PHRONIA_SUBAGENT_RE = /^phronia-(implement|check|research)$/
+
+/** True when the OpenCode chat input is a Phronia sub-agent turn. */
+export function isTrellisSubagent(input) {
+  if (!input || typeof input !== "object") return false
+  const agent = typeof input.agent === "string" ? input.agent.trim() : ""
+  return PHRONIA_SUBAGENT_RE.test(agent)
+}
+
+class ContextCollector {
+  constructor() {
+    this.processed = new Set()
+  }
+
+  markProcessed(sessionID) {
+    this.processed.add(sessionID)
+  }
+
+  isProcessed(sessionID) {
+    return this.processed.has(sessionID)
+  }
+
+  clear(sessionID) {
+    this.processed.delete(sessionID)
+  }
+}
+
+export const contextCollector = new ContextCollector()
 
 function getTrellisMetadata(metadata) {
   if (!metadata || typeof metadata !== "object") {

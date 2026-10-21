@@ -66,6 +66,8 @@ export function contextJsonSchema(): Record<string, unknown> {
           agentType: { type: "string" },
           prompt: { type: "string" },
           contextOnly: { type: "boolean" },
+          taskRef: { type: "string" },
+          allowSingleSessionFallback: { type: "boolean" },
           cwd: { type: "string" },
           filePath: { type: "string" },
           hasAssistantMessages: { type: "boolean" },

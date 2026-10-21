@@ -29,7 +29,7 @@ export interface RawSessionFile {
   raw: Record<string, unknown>;
 }
 
-export type ActiveTaskSource = "session" | "session-fallback" | "none";
+export type ActiveTaskSource = "session" | "session-fallback" | "hint" | "none";
 
 export interface ActiveTaskState {
   taskPath: string | null;
@@ -52,6 +52,12 @@ export interface ResolveActiveTaskOptions {
   now?: number;
   allowSingleSessionFallback?: boolean;
   allowEnvironmentContext?: boolean;
+  /**
+   * Explicit task reference from the harness payload (for example an
+   * `Active task: <path>` line in a dispatch prompt). It wins over the
+   * session pointer and never falls back to inference.
+   */
+  taskRef?: string | null;
 }
 
 export function resolveActiveTask(
@@ -90,6 +96,20 @@ export function resolveActiveTask(
         "no session identity was available; the active task cannot be resolved",
       ),
     );
+  }
+
+  if (options.taskRef) {
+    const hinted = activeFromRef(
+      options.taskRef,
+      options.root,
+      "hint",
+      resolved.key,
+      options.io,
+      diagnostics,
+    );
+    if (hinted.taskPath) {
+      return hinted;
+    }
   }
 
   if (resolved.key) {
