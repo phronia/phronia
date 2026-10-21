@@ -30,6 +30,12 @@ export interface ContextInjectionLimits {
   maxTotalBytes: number;
 }
 
+export interface PackageConfig {
+  path: string;
+  type?: string;
+  git?: boolean;
+}
+
 export interface ConfigView {
   sessionCommitMessage: string;
   maxJournalLines: number;
@@ -37,6 +43,11 @@ export interface ConfigView {
   codexDispatchMode: "auto" | "inline";
   contextInjection: ContextInjectionLimits;
   promptInjection: { skipKeyword: string };
+  /** null means single-repo mode. */
+  packages: Record<string, PackageConfig> | null;
+  defaultPackage: string | null;
+  /** "active_task", an explicit package list, or null for a full scan. */
+  specScope: string | string[] | null;
 }
 
 export interface ConfigReadResult {
@@ -95,6 +106,9 @@ export function readConfig(
       promptInjection: {
         skipKeyword: readSkipKeyword(raw.prompt_injection),
       },
+      packages: readPackages(raw.packages),
+      defaultPackage: stringOrNull(raw.default_package),
+      specScope: readSpecScope(raw.session),
     },
     diagnostics,
     raw,
@@ -233,6 +247,46 @@ function intOrDefault(raw: YamlValue | undefined, fallback: number): number {
 
 function stringOrDefault(raw: YamlValue | undefined, fallback: string): string {
   return typeof raw === "string" ? raw : fallback;
+}
+
+function stringOrNull(raw: YamlValue | undefined): string | null {
+  return typeof raw === "string" && raw.trim().length > 0 ? raw.trim() : null;
+}
+
+function readPackages(raw: YamlValue | undefined): Record<string, PackageConfig> | null {
+  if (!isObject(raw)) {
+    return null;
+  }
+  const packages: Record<string, PackageConfig> = {};
+  for (const [name, value] of Object.entries(raw)) {
+    if (!isObject(value)) {
+      continue;
+    }
+    packages[name] = {
+      path: stringOrDefault(value.path, name),
+      ...(typeof value.type === "string" ? { type: value.type } : {}),
+      ...(typeof value.git === "boolean"
+        ? { git: value.git }
+        : value.git === "true"
+          ? { git: true }
+          : {}),
+    };
+  }
+  return Object.keys(packages).length > 0 ? packages : null;
+}
+
+function readSpecScope(raw: YamlValue | undefined): string | string[] | null {
+  if (!isObject(raw)) {
+    return null;
+  }
+  const scope = raw.spec_scope;
+  if (typeof scope === "string") {
+    return scope;
+  }
+  if (Array.isArray(scope)) {
+    return scope.filter((item): item is string => typeof item === "string");
+  }
+  return null;
 }
 
 function isObject(value: YamlValue | undefined): value is YamlObject {

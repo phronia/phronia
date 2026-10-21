@@ -8,7 +8,7 @@
 
 import path from "node:path";
 import { LAYOUT } from "../layout/index.js";
-import { DiagnosticCollector, type Diagnostic } from "./diagnostics.js";
+import { DiagnosticCollector, diagnostic, type Diagnostic } from "./diagnostics.js";
 import { nodeFs, isDirectory, type FsLike } from "./fs.js";
 import { readConfig, type ConfigView } from "./config/readers.js";
 import {
@@ -20,6 +20,27 @@ import {
 } from "./session/active-task.js";
 import { resolveContextKey, type ContextKeyResult } from "./session/key.js";
 import { lookupShellTicketContextKey } from "./session/tickets.js";
+import { readTaskRecord, type TaskRecordView } from "./tasks/record.js";
+import {
+  countCuratedEntries,
+  inspectTaskArtifacts,
+  type ContextKind,
+  type TaskArtifacts,
+} from "./tasks/artifacts.js";
+import { listTasks, type ListTasksOptions, type TaskSummary } from "./tasks/list.js";
+import {
+  parseBreadcrumbs,
+  resolveBreadcrumbKey,
+  promptHasSkipKeyword,
+} from "./workflow/breadcrumb.js";
+import { buildWorkflowOverview } from "./workflow/phase.js";
+import {
+  collectSpecIndexPaths,
+  legacySpecWarning,
+  resolveSpecScope,
+  type SpecScopeResult,
+} from "./spec/index.js";
+import { readText } from "./fs.js";
 
 export * from "./diagnostics.js";
 export * from "./fs.js";
@@ -30,6 +51,12 @@ export * from "./session/key.js";
 export * from "./session/tickets.js";
 export * from "./session/active-task.js";
 export * from "./tasks/refs.js";
+export * from "./tasks/record.js";
+export * from "./tasks/artifacts.js";
+export * from "./tasks/list.js";
+export * from "./workflow/breadcrumb.js";
+export * from "./workflow/phase.js";
+export * from "./spec/index.js";
 
 export interface StateReaderOptions {
   /** Explicit project root. The state layer never infers it from cwd. */
@@ -59,6 +86,23 @@ export interface StateReader {
     read(key: string): RawSessionFile | null;
     list(): readonly RawSessionFile[];
   };
+  readonly tasks: {
+    read(ref: string): TaskRecordView | null;
+    artifacts(ref: string): TaskArtifacts;
+    curatedCount(ref: string, kind: ContextKind): number;
+    list(options?: ListTasksOptions): readonly TaskSummary[];
+  };
+  readonly workflow: {
+    overview(): string;
+    breadcrumbs(): Readonly<Record<string, string>>;
+    breadcrumbKey(status: string): string;
+    shouldSkipPrompt(prompt: string): boolean;
+  };
+  readonly spec: {
+    scope(taskPackage?: string | null): SpecScopeResult;
+    indexPaths(taskPackage?: string | null): readonly string[];
+    legacyWarning(): Diagnostic | null;
+  };
   diagnostics(): readonly Diagnostic[];
 }
 
@@ -71,6 +115,16 @@ export function openState(options: StateReaderOptions): StateReader {
   const collected = new DiagnosticCollector();
   let configCache: ConfigView | null = null;
   let configLoaded = false;
+
+  function configView(): ConfigView {
+    if (!configLoaded) {
+      const result = readConfig(root, io);
+      configCache = result.value;
+      collected.addAll(result.diagnostics);
+      configLoaded = true;
+    }
+    return configCache as ConfigView;
+  }
 
   function shellTicketReader(): (() => string | null) | undefined {
     const argv = options.argv;
@@ -94,13 +148,7 @@ export function openState(options: StateReaderOptions): StateReader {
       return isDirectory(io, path.join(root, LAYOUT.rootDirName));
     },
     config(): ConfigView {
-      if (!configLoaded) {
-        const result = readConfig(root, io);
-        configCache = result.value;
-        collected.addAll(result.diagnostics);
-        configLoaded = true;
-      }
-      return configCache as ConfigView;
+      return configView();
     },
     sessions: {
       resolveKey(input: unknown, sessionOptions: SessionReadOptions = {}): ContextKeyResult {
@@ -133,10 +181,87 @@ export function openState(options: StateReaderOptions): StateReader {
         return listSessionFiles(root, io);
       },
     },
+    tasks: {
+      read(ref: string): TaskRecordView | null {
+        const diagnostics: Diagnostic[] = [];
+        const record = readTaskRecord(root, ref, io, diagnostics);
+        collected.addAll(diagnostics);
+        return record;
+      },
+      artifacts(ref: string): TaskArtifacts {
+        return inspectTaskArtifacts(root, ref, io);
+      },
+      curatedCount(ref: string, kind: ContextKind): number {
+        const diagnostics: Diagnostic[] = [];
+        const count = countCuratedEntries(root, ref, kind, io, diagnostics);
+        collected.addAll(diagnostics);
+        return count;
+      },
+      list(taskOptions: ListTasksOptions = {}): readonly TaskSummary[] {
+        const diagnostics: Diagnostic[] = [];
+        const tasks = listTasks(root, io, taskOptions, diagnostics);
+        collected.addAll(diagnostics);
+        return tasks;
+      },
+    },
+    workflow: {
+      overview(): string {
+        const workflowFile = path.join(root, LAYOUT.paths.workflow);
+        const content = readText(io, workflowFile);
+        if (content === null) {
+          collected.add(
+            diagnostic("state.workflow.file_missing", "info", "workflow.md not found", {
+              path: workflowFile,
+            }),
+          );
+        }
+        return buildWorkflowOverview(content, LAYOUT.paths.workflow);
+      },
+      breadcrumbs(): Readonly<Record<string, string>> {
+        const content = readText(io, path.join(root, LAYOUT.paths.workflow));
+        return content === null ? {} : parseBreadcrumbs(content);
+      },
+      breadcrumbKey(status: string): string {
+        return resolveBreadcrumbKey(status, configView().codexDispatchMode);
+      },
+      shouldSkipPrompt(prompt: string): boolean {
+        return promptHasSkipKeyword(
+          prompt,
+          configView().promptInjection.skipKeyword,
+        );
+      },
+    },
+    spec: {
+      scope(taskPackage: string | null = null): SpecScopeResult {
+        const config = configView();
+        const result = resolveSpecScope({
+          packages: config.packages,
+          scope: config.specScope,
+          taskPackage,
+          defaultPackage: config.defaultPackage,
+        });
+        collected.addAll(result.diagnostics);
+        return result;
+      },
+      indexPaths(taskPackage: string | null = null): readonly string[] {
+        const config = configView();
+        const scope = resolveSpecScope({
+          packages: config.packages,
+          scope: config.specScope,
+          taskPackage,
+          defaultPackage: config.defaultPackage,
+        });
+        collected.addAll(scope.diagnostics);
+        return collectSpecIndexPaths(root, io, scope.packages);
+      },
+      legacyWarning(): Diagnostic | null {
+        return legacySpecWarning(root, io, configView().packages);
+      },
+    },
     diagnostics(): readonly Diagnostic[] {
       if (!configLoaded) {
         // Force a load so diagnostics are complete.
-        this.config();
+        configView();
       }
       return collected.all();
     },
