@@ -10,6 +10,9 @@
 # Runtime adapter manifest (machine-local detection result)
 manifest.json
 
+# Task worktrees (each contains its own checkout)
+worktrees/
+
 # Ralph Loop state file
 .ralph-state.json
 

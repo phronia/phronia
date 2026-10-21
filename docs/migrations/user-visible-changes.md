@@ -121,5 +121,16 @@ Batches that must update this file:
     part of this change yet.
 - **B10**: hooks stop invoking Python; a platform package is used when
   available.
+- **B11**: task worktrees and session GC.
+  - `phronia task worktree add|list|remove <task-ref>` creates a per-task
+    git worktree under `.phronia/worktrees/<task-id>` (gitignored), records
+    `worktree_path`/`branch` in `task.json`, and keeps a
+    `.phronia/.runtime/worktrees.json` registry. Dirty checkouts require
+    `--force`; missing tasks are refused.
+  - `phronia session gc [--ttl-days N] [--dry-run]` removes stale taskless
+    session pointers. Session files are read from the v2
+    `sessions/<worktreeId>/` namespace first, then the legacy flat path.
+  - Session writes now use an exclusive lock and a revision CAS; a lost
+    update retries instead of silently overwriting another window.
 - **B12**: `phronia init` no longer creates `00-bootstrap-guidelines` or
   `00-join-*` tasks; `docs/` is generated on demand.

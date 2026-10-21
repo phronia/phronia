@@ -43,6 +43,10 @@ export interface WorkspacePaths {
   readonly handshakes: string;
   /** `.runtime/rules.json` (compiled rule ledger). */
   readonly rulesCompiled: string;
+  /** `worktrees/` (task workspaces, gitignored). */
+  readonly worktrees: string;
+  /** `.runtime/worktrees.json` (worktree registry). */
+  readonly worktreeRegistry: string;
   /** `.version`. */
   readonly version: string;
   /** `.developer`. */
@@ -91,6 +95,8 @@ export const LAYOUT: WorkspaceLayout = Object.freeze({
     adapterManifest: `${ROOT}/manifest.json`,
     handshakes: `${ROOT}/.runtime/harness`,
     rulesCompiled: `${ROOT}/.runtime/rules.json`,
+    worktrees: `${ROOT}/worktrees`,
+    worktreeRegistry: `${ROOT}/.runtime/worktrees.json`,
     version: `${ROOT}/.version`,
     developer: `${ROOT}/.developer`,
     currentTask: `${ROOT}/.current-task`,

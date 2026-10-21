@@ -52,6 +52,7 @@ export * from "./platform/env-tables.js";
 export * from "./session/key.js";
 export * from "./session/tickets.js";
 export * from "./session/active-task.js";
+export * from "./session/store.js";
 export * from "./tasks/refs.js";
 export * from "./tasks/record.js";
 export * from "./tasks/artifacts.js";

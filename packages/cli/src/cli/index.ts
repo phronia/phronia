@@ -12,6 +12,12 @@ import { adopt, printAdoptReport } from "../commands/adopt.js";
 import { runContextCommand } from "../commands/context.js";
 import { runDoctorCommand, runZcodeDetectCommand } from "../commands/doctor.js";
 import { runRulesCompile, runRulesList } from "../commands/rules.js";
+import {
+  addWorktree,
+  listWorktrees,
+  removeWorktree,
+} from "../commands/worktree.js";
+import { SessionStore } from "@phronia/core";
 import { ablate, restore } from "../commands/ablate.js";
 import { runMem } from "../commands/mem.js";
 import {
@@ -451,6 +457,102 @@ program
       check: Boolean(options.check),
     });
     if (exitCode !== 0) process.exit(exitCode);
+  });
+
+const sessionCommand = program
+  .command("session")
+  .description("Session runtime operations");
+
+sessionCommand
+  .command("gc")
+  .option("--ttl-days <n>", "Delete entries older than N days", "30")
+  .option("--dry-run", "Report without deleting")
+  .option("--json", "Output machine-readable JSON")
+  .action((options: Record<string, unknown>) => {
+    const report = new SessionStore(cwd).gc({
+      ttlDays: Number(options.ttlDays ?? 30),
+      dryRun: Boolean(options.dryRun),
+    });
+    if (options.json) {
+      console.log(JSON.stringify(report, null, 2));
+      return;
+    }
+    console.log(
+      `${report.dryRun ? "would remove" : "removed"} ${report.removed.length} session(s); kept ${report.kept}.`,
+    );
+    for (const file of report.removed) console.log(`  ${file}`);
+  });
+
+const taskCommand = program
+  .command("task")
+  .description("Task-scoped operations");
+
+const worktreeCommand = taskCommand
+  .command("worktree")
+  .description("Create, list, and remove per-task git worktrees");
+
+worktreeCommand
+  .command("add <task-ref>")
+  .option("--path <dir>", "Worktree directory")
+  .option("--branch <name>", "Branch to create or reuse")
+  .option("--base <ref>", "Base revision for a new branch")
+  .option("--force", "Allow a dirty main checkout")
+  .option("--json", "Output machine-readable JSON")
+  .action((taskRef: string, options: Record<string, unknown>) => {
+    const result = addWorktree(taskRef, {
+      cwd,
+      path: options.path as string | undefined,
+      branch: options.branch as string | undefined,
+      base: options.base as string | undefined,
+      force: Boolean(options.force),
+      json: Boolean(options.json),
+    });
+    if (options.json) {
+      console.log(JSON.stringify(result, null, 2));
+    } else {
+      (result.ok ? console.log : console.error)(result.message);
+    }
+    if (!result.ok) process.exit(1);
+  });
+
+worktreeCommand
+  .command("list")
+  .option("--json", "Output machine-readable JSON")
+  .action((options: Record<string, unknown>) => {
+    const records = listWorktrees({ cwd, json: Boolean(options.json) });
+    if (options.json) {
+      console.log(JSON.stringify({ worktrees: records }, null, 2));
+      return;
+    }
+    if (records.length === 0) {
+      console.log("No task worktrees.");
+      return;
+    }
+    for (const record of records) {
+      console.log(
+        `${record.taskRef.padEnd(40)} ${record.branch.padEnd(30)} ${record.path}`,
+      );
+    }
+  });
+
+worktreeCommand
+  .command("remove <task-ref>")
+  .option("--force", "Remove even with uncommitted changes")
+  .option("--delete-branch", "Delete the task branch after removal")
+  .option("--json", "Output machine-readable JSON")
+  .action((taskRef: string, options: Record<string, unknown>) => {
+    const result = removeWorktree(taskRef, {
+      cwd,
+      force: Boolean(options.force),
+      deleteBranch: Boolean(options.deleteBranch),
+      json: Boolean(options.json),
+    });
+    if (options.json) {
+      console.log(JSON.stringify(result, null, 2));
+    } else {
+      (result.ok ? console.log : console.error)(result.message);
+    }
+    if (!result.ok) process.exit(1);
   });
 
 const rulesCommand = program
