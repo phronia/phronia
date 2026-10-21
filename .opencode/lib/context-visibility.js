@@ -88,6 +88,15 @@ export function insertSyntheticTextPart(parts, text, kind) {
 /** OpenCode hook that mutates the in-memory model payload, not stored history. */
 export const MESSAGES_TRANSFORM_HOOK = "experimental.chat.messages.transform"
 
+const PHRONIA_SUBAGENT_RE = /^(?:phronia|trellis)-/i
+
+/** True for turns produced by a Phronia sub-agent. */
+export function isPhroniaSubagent(input) {
+  if (!input || typeof input !== "object") return false
+  const agent = typeof input.agent === "string" ? input.agent.trim() : ""
+  return PHRONIA_SUBAGENT_RE.test(agent)
+}
+
 /**
  * Index of the last user message in an OpenCode `{info, parts}[]` transcript.
  * Compaction and prompt both pass that shape to messages.transform.

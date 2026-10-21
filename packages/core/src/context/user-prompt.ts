@@ -27,6 +27,22 @@ export function buildUserPrompt(request: ContextRequest): ContextResponse {
   const root = path.resolve(request.projectRoot);
   const state = openState({ root, env: request.env });
   const prompt = readPrompt(request);
+  if (!state.exists()) {
+    return baseResponse(
+      request,
+      root,
+      state.sessions.active(request.input, { platform: request.platform.id }),
+      [],
+      "none",
+      [
+        {
+          code: "context.user_prompt.not_a_project",
+          severity: "info",
+          message: "no .phronia directory; no breadcrumb emitted",
+        },
+      ],
+    );
+  }
   const config = state.config();
 
   if (state.workflow.shouldSkipPrompt(prompt)) {

@@ -339,11 +339,11 @@
     ".cursor/hooks/inject-subagent-context.py": "c0a8f84b1110cfc113d74cc611f9ba6850e187e79fd6caea9d840177ab17eaa6",
     ".cursor/hooks/session-start.py": "df307bc62d68828b9d7d7cf4ffe6e678f01ae9e8eedf3187cd4b80e25613f617",
     ".cursor/hooks.json": "92d3209db9404a88a1ac88164b03e01033fa43842245c14ef05c448f5eb463ca",
-    ".opencode/lib/context-visibility.js": "b33d76e2fcad043d5427afc78e81a064365b4a5522b95f085de5bd80fc544f25",
-    ".opencode/lib/session-utils.js": "e1799582227e9d5fc44f8cfc336f77aca1637cf43579bff23adc0ab7c13bcaf9",
+    ".opencode/lib/context-visibility.js": "27c9608fa4b0c986d8cb92c25b4c1380597bc442058670bf97d9798f68374c91",
+    ".opencode/lib/session-utils.js": "719b3fbbce787e125d2c442ba75df6d0206e776603712265de687ef62e5d3ad0",
     ".opencode/plugins/inject-subagent-context.js": "31aedeb87fe49e97284e59419535dc5eddc513cb13fe3af3294c212e690d034f",
-    ".opencode/plugins/inject-workflow-state.js": "0ce0415b3a36cf6ddac9e1c2b090276e41549dcac6fe4f66827079987a9e01b4",
-    ".opencode/plugins/session-start.js": "d61d79732f84c42edc14f43e90f9f29d429f6622d8ee3182c50f390416056114",
+    ".opencode/plugins/inject-workflow-state.js": "32a1b776e74deefcc0478dcae59aa053feb7bb708cb3a6a4b3fdb34ab0a0cb3b",
+    ".opencode/plugins/session-start.js": "8db12aff1365cc74bd73fee472a97d2d40fe5e2ccf666618da81615ae209a8b1",
     ".codex/hooks/session-start.py": "a920f1fd186df0835c210690c1f176476afd25c778a1e31f25b035bf0feec958",
     ".codex/hooks/inject-subagent-context.py": "c0a8f84b1110cfc113d74cc611f9ba6850e187e79fd6caea9d840177ab17eaa6",
     ".codex/hooks/inject-workflow-state.py": "6e61c1bb357b49915d550d5b9e61ac82f9f414f66da9b8eff61cd1d60c91c379",
@@ -354,6 +354,7 @@
     ".omp/extensions/phronia/index.ts": "3ddc738c98cc1be7bf2da3b0ec85d3412bd99131627a8ac769b9850673a7780e",
     ".claude/hooks/phronia-hook.py": "a513a353aecb2a31703b26d3fba887981ea86f3919e5c0f36e22eb3e4d70c265",
     ".cursor/hooks/phronia-hook.py": "a513a353aecb2a31703b26d3fba887981ea86f3919e5c0f36e22eb3e4d70c265",
-    ".codex/hooks/phronia-hook.py": "a513a353aecb2a31703b26d3fba887981ea86f3919e5c0f36e22eb3e4d70c265"
+    ".codex/hooks/phronia-hook.py": "a513a353aecb2a31703b26d3fba887981ea86f3919e5c0f36e22eb3e4d70c265",
+    ".opencode/lib/phronia-client.js": "2682e2a7f65c25f3edf275b151cd392ff1f54b8470e7f936bc2a9299929c9420"
   }
 }

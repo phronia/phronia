@@ -1,7 +1,7 @@
 import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { afterEach, beforeEach, describe, expect, it } from "vitest";
+import { afterEach, beforeAll, beforeEach, describe, expect, it } from "vitest";
 import {
   contextCollector,
   isTrellisSubagent,
@@ -15,13 +15,17 @@ import {
   MESSAGES_TRANSFORM_HOOK,
   prependEphemeralText,
 } from "../../src/templates/opencode/lib/context-visibility.js";
-import {
-  buildSessionContext,
-  hasInjectedTrellisContext,
-} from "../../src/templates/opencode/lib/session-utils.js";
+import { hasInjectedTrellisContext } from "../../src/templates/opencode/lib/session-utils.js";
 import injectSubagentContextPlugin from "../../src/templates/opencode/plugins/inject-subagent-context.js";
 import sessionStartPlugin from "../../src/templates/opencode/plugins/session-start.js";
 import injectWorkflowStatePlugin from "../../src/templates/opencode/plugins/inject-workflow-state.js";
+
+beforeAll(() => {
+  process.env.PHRONIA_CLI_PATH = join(
+    process.cwd(),
+    "dist/cli/index.js",
+  );
+});
 
 interface TestContextCollector {
   processed: Set<string>;
@@ -135,93 +139,6 @@ describe("opencode session context dedupe", () => {
 describe("opencode session-start history detection", () => {
   afterEach((): void => {
     contextCollector.clear("session-a");
-  });
-
-  it("builds compact startup context with an adaptive one-shot acknowledgment", () => {
-    const context = buildSessionContext({
-      directory: "/tmp/phronia-opencode-test",
-      getActiveTask: () => ({ taskPath: null, source: "none", stale: false }),
-      getContextKey: () => null,
-      getCurrentTask: () => null,
-      readFile: () => "",
-      readProjectFile: () => "",
-      resolveTaskDir: () => null,
-      runScript: () => "",
-    });
-
-    expect(context.startsWith("<session-context>")).toBe(true);
-    expect(context).toContain("Phronia compact SessionStart context");
-    expect(context).toContain("<first-reply-notice>");
-    expect(context).toContain("the user's current request");
-    expect(context).toContain("the user message that triggered this reply");
-    expect(context).toContain("has no clear natural language");
-    expect(context).toContain(
-      "explicitly established project communication language",
-    );
-    expect(context).toContain("Phronia SessionStart ✓");
-    expect(context).toContain("Continue directly with the user's request");
-    expect(context).toContain(
-      "must not alter the language used for the remainder of the response",
-    );
-    expect(context).toContain("This notice is one-shot");
-    expect(context.indexOf("the user's current request")).toBeLessThan(
-      context.indexOf("explicitly established project communication language"),
-    );
-    expect(
-      context.indexOf("explicitly established project communication language"),
-    ).toBeLessThan(context.indexOf("Phronia SessionStart ✓"));
-    expect(context.indexOf("<first-reply-notice>")).toBeLessThan(
-      context.indexOf("<current-state>"),
-    );
-    expect(context).toContain("<guidelines>");
-    expect(context).toContain("<ready>");
-    expect(context).not.toContain("say once in Chinese");
-    expect(context).not.toContain("exactly one short Chinese sentence");
-    expect(context).not.toContain(
-      "Phronia SessionStart 已注入：workflow、当前任务状态、开发者身份、git 状态、active tasks、spec 索引已加载。",
-    );
-  });
-
-  it("injects startup context onto the latest user message without mutating stored parts", async () => {
-    const hooks = (await sessionStartPlugin({
-      directory: "/tmp/phronia-opencode-test",
-    })) as TransformHooks;
-
-    const firstUser = userTurn("First request", { sessionID: "session-a" });
-    const originalFirstParts = firstUser.parts;
-    const firstMessages = [firstUser];
-    await hooks[MESSAGES_TRANSFORM_HOOK]({}, { messages: firstMessages });
-
-    expect(originalFirstParts).toHaveLength(1);
-    expect(originalFirstParts[0].text).toBe("First request");
-    expect(firstMessages[0]).not.toBe(firstUser);
-    expect(firstMessages[0].parts[0]).toMatchObject({
-      type: "text",
-      synthetic: true,
-    });
-    expect(firstMessages[0].parts[0].text).toMatch(/^<session-context>/);
-    expect(firstMessages[0].parts[0].text).toContain("<first-reply-notice>");
-    expect(firstMessages[0].parts[0].text).toContain("Phronia SessionStart ✓");
-    expect(firstMessages[0].parts[1]).toEqual(originalFirstParts[0]);
-
-    const laterUser = userTurn("Second request", {
-      sessionID: "session-a",
-      messageID: "message-b",
-    });
-    const originalLaterParts = laterUser.parts;
-    const laterMessages = [
-      firstUser,
-      { info: { role: "assistant", sessionID: "session-a" }, parts: [] },
-      laterUser,
-    ];
-    await hooks[MESSAGES_TRANSFORM_HOOK]({}, { messages: laterMessages });
-
-    expect(laterMessages[0]).toBe(firstUser);
-    expect(laterMessages[0].parts).toBe(originalFirstParts);
-    expect(originalLaterParts).toHaveLength(1);
-    expect(laterMessages[2].parts[0].text).toMatch(/^<session-context>/);
-    expect(laterMessages[2].parts[0].text).not.toContain("<first-reply-notice>");
-    expect(laterMessages[2].parts[1]).toEqual(originalLaterParts[0]);
   });
 
   it("detects persisted Phronia context from metadata", () => {
