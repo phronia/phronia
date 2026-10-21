@@ -1,0 +1,31 @@
+{
+  "schemaVersion": 1,
+  "coreVersion": "0.6.17",
+  "buildId": "553800c1d0ba",
+  "artifacts": [
+    {
+      "path": "opencode/session-start.js",
+      "adapterId": "opencode@v1",
+      "shimVersion": "0.6.17",
+      "buildId": "553800c1d0ba",
+      "sha256": "11b8405666fe8d870aa6a9d18bf3d49f225d38f5aef05ca1c6f7a360b5722cb7",
+      "lines": 153
+    },
+    {
+      "path": "opencode/inject-workflow-state.js",
+      "adapterId": "opencode@v1",
+      "shimVersion": "0.6.17",
+      "buildId": "553800c1d0ba",
+      "sha256": "2f0d7814e28df9a6895b7703f0eeb1292b68b231e8a312439e31f2a61b73af1e",
+      "lines": 155
+    },
+    {
+      "path": "opencode/inject-subagent-context.js",
+      "adapterId": "opencode@v1",
+      "shimVersion": "0.6.17",
+      "buildId": "553800c1d0ba",
+      "sha256": "8cb176cb8837a9d1bda4adbe7089ce918ca50e363110adc91d82db31840523e7",
+      "lines": 215
+    }
+  ]
+}

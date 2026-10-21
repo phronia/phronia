@@ -1,4 +1,4 @@
-import { readFileSync, readdirSync, statSync } from "node:fs";
+import fs, { readFileSync, readdirSync, statSync } from "node:fs";
 import path from "node:path";
 import { AI_TOOLS } from "../types/ai-tools.js";
 import { getOpenCodeTemplatePath } from "../templates/extract.js";
@@ -72,6 +72,20 @@ function walkOpenCodeTemplateDir(): Map<string, string> {
   }
 
   walk("");
+
+  // Prefer the build-time single-file artifacts. They replace the source
+  // plugins (and their lib imports) in the generated file set. If the build
+  // step has not run yet, keep the source files so local development works.
+  const generated = path.resolve(sourcePath, "..", "_generated/shims/opencode");
+  if (fs.existsSync(generated)) {
+    for (const entry of fs.readdirSync(generated)) {
+      if (!entry.endsWith(".js")) continue;
+      files.set(
+        `.opencode/plugins/${entry}`,
+        fs.readFileSync(path.join(generated, entry), "utf-8"),
+      );
+    }
+  }
   return files;
 }
 

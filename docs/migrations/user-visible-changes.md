@@ -69,7 +69,11 @@ Batches that must update this file:
     and rejects shared-assembly markers. `@phronia/testing` gained contract
     fixture replay: a recorded payload plus minimal project is replayed
     through `phronia context`, and payload/envelope key drift fails the test.
-    A locally modified shim is never overwritten: `update` writes
+    OpenCode plugins are now build-time single-file artifacts under
+    `templates/_generated/shims/opencode/` with adapter, shim version,
+    source-based build id, and content hash in the header; a manifest records
+    every artifact. `pnpm build:shims` regenerates them and `check:shims`
+    fails on drift. A locally modified shim is never overwritten: `update` writes
     `<path>.new`, keeps the installed file, and prints the adopt/reset
     commands. `--force` remains the explicit overwrite path.
   - **B5 now**: `phronia doctor` reports the selected adapter, harness version
