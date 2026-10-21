@@ -52,10 +52,10 @@ describe("settingsTemplate SessionStart matchers", () => {
     expect(matchers).toContain("compact");
   });
 
-  it("all SessionStart entries invoke the same session-start.py hook", () => {
+  it("all SessionStart entries invoke the same phronia-hook session-start shim", () => {
     for (const entry of sessionStartEntries) {
       expect(entry.hooks).toHaveLength(1);
-      expect(entry.hooks[0].command).toContain("session-start.py");
+      expect(entry.hooks[0].command).toContain("phronia-hook.py --event session-start");
     }
   });
 

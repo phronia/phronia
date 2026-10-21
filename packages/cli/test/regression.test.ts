@@ -2331,13 +2331,13 @@ describe("regression: SessionStart reinject on clear/compact (MIN-231)", () => {
     );
   });
 
-  it("[MIN-231] all SessionStart matchers invoke session-start.py", () => {
+  it("[MIN-231] all SessionStart matchers invoke the session-start shim", () => {
     const settings = JSON.parse(claudeSettingsTemplate);
     for (const entry of settings.hooks.SessionStart) {
       expect(
         entry.hooks[0].command,
-        `claude ${entry.matcher} should invoke session-start.py`,
-      ).toContain("session-start.py");
+        `claude ${entry.matcher} should invoke the session-start shim`,
+      ).toContain("phronia-hook.py --event session-start");
     }
   });
 });

@@ -12,6 +12,7 @@
  * does not matter — we just look for the manifest-relative file path.
  */
 
+import path from "node:path";
 import { getConfigTemplate as getCodexConfigTemplate } from "../templates/codex/index.js";
 
 export interface ScrubResult {
@@ -40,16 +41,28 @@ function commandMatchesDeletedPath(
   const trimmed = command.trim();
   if (trimmed.length === 0) return false;
 
-  const tokens = trimmed.split(/\s+/);
-  const lastToken = tokens[tokens.length - 1].replace(/^["']|["']$/g, "");
-  if (lastToken.length === 0) return false;
-
-  for (const p of deletedPaths) {
-    if (lastToken === p || lastToken.endsWith("/" + p)) {
-      return true;
+  const tokens = trimmed.split(/\s+/).map((token) => token.replace(/^["']|["']$/g, ""));
+  const interpreters = new Set(["python", "python3", "py", "node", "bash", "sh", "zsh"]);
+  let index = 0;
+  if (interpreters.has(path.basename(tokens[0] ?? ""))) {
+    index = 1;
+  }
+  // Python flags with a value (`-X utf8`, `-W ignore`) sit before the script.
+  const flagsWithValue = new Set(["-X", "-W", "-c", "-m"]);
+  while ((tokens[index] ?? "").startsWith("-")) {
+    const flag = tokens[index];
+    index += 1;
+    if (flagsWithValue.has(flag ?? "")) {
+      index += 1;
     }
   }
-  return false;
+  const scriptToken = tokens[index] ?? "";
+  if (scriptToken.length === 0) return false;
+
+  return deletedPaths.some(
+    (deletedPath) =>
+      scriptToken === deletedPath || scriptToken.endsWith("/" + deletedPath),
+  );
 }
 
 /**

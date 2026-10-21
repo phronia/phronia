@@ -24,6 +24,7 @@ import {
 import {
   CONTEXT_SCHEMA_VERSION,
   type ContextBlock,
+  type Effect,
   type ContextRequest,
   type ContextResponse,
 } from "./types.js";
@@ -89,6 +90,15 @@ export function buildSessionStart(request: ContextRequest): ContextResponse {
   const disabled = new Set(request.options?.disableBlocks ?? []);
   const enabledBlocks = blocks.filter((block) => !disabled.has(block.id));
   const diagnostics = state.diagnostics();
+  const env = request.env ?? process.env;
+  const effects: Effect[] = [];
+  if (env.CLAUDE_ENV_FILE && active.contextKey) {
+    effects.push({
+      type: "env-export",
+      file: env.CLAUDE_ENV_FILE,
+      line: `export PHRONIA_CONTEXT_ID=${shellQuote(active.contextKey)}`,
+    });
+  }
 
   return {
     schemaVersion: CONTEXT_SCHEMA_VERSION,
@@ -105,7 +115,7 @@ export function buildSessionStart(request: ContextRequest): ContextResponse {
     },
     blocks: enabledBlocks,
     mutations: [],
-    effects: [],
+    effects,
     envelope: envelopeFor(request.platform.id),
     degraded: !state.exists() || diagnostics.some((item) => item.severity === "error"),
     diagnostics: [...diagnostics],
@@ -267,6 +277,10 @@ function emptyArtifacts(): TaskArtifacts {
     research: false,
     sizes: {},
   };
+}
+
+function shellQuote(value: string): string {
+  return `'${value.replace(/'/g, `'\\''`)}'`;
 }
 
 function envelopeFor(platform: ContextRequest["platform"]["id"]): string {

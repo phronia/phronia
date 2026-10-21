@@ -331,7 +331,7 @@
     ".phronia/scripts/init_developer.py": "689c59f9dd29e5ed3467d138272b4ebc800cec8db68571edf0fe9254dd52c840",
     ".phronia/scripts/task.py": "33294eac2d9551f52ce77a6c34279af6e087ad1cc49dba7b509bd52be9576600",
     ".phronia/workflow.md": "38eb2f5d7669c7f7465dad573f48dbeac958a69813f89415c5090621a088d632",
-    ".claude/settings.json": "d13cd05659281a287d7f50c7e25eb6a89c2a6597773511bd6885538acced2855",
+    ".claude/settings.json": "48bc90ae2ca2a2162441a577b10647aa69582b51eafd889868e0911fd7201468",
     ".claude/hooks/inject-subagent-context.py": "c0a8f84b1110cfc113d74cc611f9ba6850e187e79fd6caea9d840177ab17eaa6",
     ".claude/hooks/inject-workflow-state.py": "6e61c1bb357b49915d550d5b9e61ac82f9f414f66da9b8eff61cd1d60c91c379",
     ".claude/hooks/session-start.py": "df307bc62d68828b9d7d7cf4ffe6e678f01ae9e8eedf3187cd4b80e25613f617",
@@ -351,6 +351,7 @@
     ".codex/config.toml": "7705ed51c4e5ef103b405492fe27b58166909a3214ecca944f4e2629279059a8",
     ".pi/settings.json": "edf17ecb293eb1adab9873f77e698d8ec5a61943cd8f1651f51d7a899e533ff8",
     ".pi/extensions/phronia/index.ts": "2512f751ca589cac414e2f34a6c0076623ca178c75dbe7ad720facec63ad9388",
-    ".omp/extensions/phronia/index.ts": "3ddc738c98cc1be7bf2da3b0ec85d3412bd99131627a8ac769b9850673a7780e"
+    ".omp/extensions/phronia/index.ts": "3ddc738c98cc1be7bf2da3b0ec85d3412bd99131627a8ac769b9850673a7780e",
+    ".claude/hooks/phronia-hook.py": "a513a353aecb2a31703b26d3fba887981ea86f3919e5c0f36e22eb3e4d70c265"
   }
 }

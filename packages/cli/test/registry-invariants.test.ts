@@ -158,7 +158,7 @@ describe("UserPromptSubmit hook wiring", () => {
       };
       expect(parsed.hooks).toBeDefined();
       expect(Object.keys(parsed.hooks ?? {})).toContain(event);
-      expect(raw).toContain("inject-workflow-state.py");
+      expect(raw).toMatch(/inject-workflow-state\.py|phronia-hook\.py --event user-prompt/);
     });
   }
 

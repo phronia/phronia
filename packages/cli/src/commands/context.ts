@@ -15,7 +15,7 @@ import {
   type ContextEvent,
   type ContextRequest,
 } from "@phronia/core";
-import { isPlatformId } from "@phronia/core/platform";
+import { normalizePlatformId } from "@phronia/core/platform";
 
 export interface ContextCommandOptions {
   event: ContextEvent;
@@ -41,7 +41,8 @@ export function runContextCommand(options: ContextCommandOptions): number {
     process.stdout.write(`${JSON.stringify(contextJsonSchema(), null, 2)}\n`);
     return 0;
   }
-  if (!isPlatformId(options.platform)) {
+  const platform = normalizePlatformId(options.platform);
+  if (!platform) {
     process.stderr.write(`Unknown platform: ${options.platform}\n`);
     return 2;
   }
@@ -64,7 +65,7 @@ export function runContextCommand(options: ContextCommandOptions): number {
   const request: ContextRequest = {
     schemaVersion: 1,
     event: options.event,
-    platform: { id: options.platform },
+    platform: { id: platform },
     projectRoot: path.resolve(options.projectRoot ?? process.cwd()),
     input,
   };

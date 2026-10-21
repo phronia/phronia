@@ -971,7 +971,7 @@ describe("init() integration", () => {
       "utf-8",
     );
     expect(settings).toContain(
-      `"${expectedPythonCmd} .claude/hooks/session-start.py"`,
+      `"${expectedPythonCmd} .claude/hooks/phronia-hook.py --event session-start --platform claude"`,
     );
     expect(console.log).toHaveBeenCalledWith(
       expect.stringContaining(

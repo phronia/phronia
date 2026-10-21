@@ -61,3 +61,17 @@ export const PLATFORM_SHORT_IDS: Record<PlatformId, string> = {
 export function isPlatformId(value: string): value is PlatformId {
   return (PLATFORM_IDS as readonly string[]).includes(value);
 }
+
+/** Map harness short names to canonical platform ids. */
+const SHORT_TO_ID: Record<string, PlatformId> = {
+  claude: "claude-code",
+  factory: "droid",
+  "github-copilot": "copilot",
+};
+
+export function normalizePlatformId(value: string): PlatformId | null {
+  if (isPlatformId(value)) {
+    return value;
+  }
+  return SHORT_TO_ID[value] ?? null;
+}

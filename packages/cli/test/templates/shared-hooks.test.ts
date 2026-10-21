@@ -12,6 +12,7 @@ import {
 } from "../../src/configurators/index.js";
 
 const ALL_HOOK_FILES = [
+  "phronia-hook.py",
   "session-start.py",
   "inject-shell-session-context.py",
   "inject-workflow-state.py",
