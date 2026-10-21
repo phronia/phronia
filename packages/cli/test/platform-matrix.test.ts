@@ -7,6 +7,8 @@ import { CAPABILITIES, PLATFORM_IDS } from "@phronia/core";
 import { AI_TOOLS } from "../src/types/ai-tools.js";
 import { resolveCommands } from "../src/configurators/shared.js";
 import { collectDoctorReport } from "../src/commands/doctor.js";
+import { refreshAdapterManifest } from "../src/commands/adapter-manifest.js";
+import { readAdapterManifest } from "@phronia/core";
 
 describe("platform registry derivation", () => {
   it("covers PLATFORM_IDS exactly", () => {
@@ -65,7 +67,7 @@ describe("doctor report", () => {
   it("reports git-dependent features as unavailable outside a repo", () => {
     const root = fs.mkdtempSync(path.join(os.tmpdir(), "phronia-doctor-nogit-"));
     try {
-      const report = collectDoctorReport({ cwd: root, platform: "claude-code" });
+      const report = collectDoctorReport({ cwd: root, platform: "claude-code", probe: false });
       expect(report.platforms[0]?.id).toBe("claude-code");
       const byId = new Map(report.platforms[0]?.features.map((f) => [f.id, f]));
       expect(byId.get("task.branch")).toMatchObject({ available: false });
@@ -81,7 +83,7 @@ describe("doctor report", () => {
     const root = fs.mkdtempSync(path.join(os.tmpdir(), "phronia-doctor-git-"));
     try {
       execFileSync("git", ["init", "-q"], { cwd: root });
-      const report = collectDoctorReport({ cwd: root, platform: "claude-code" });
+      const report = collectDoctorReport({ cwd: root, platform: "claude-code", probe: false });
       expect(report.environment).toEqual({ gitRepo: true, gitRemote: false });
       const byId = new Map(report.platforms[0]?.features.map((f) => [f.id, f]));
       expect(byId.get("task.branch")).toMatchObject({ available: true });
@@ -91,15 +93,38 @@ describe("doctor report", () => {
     }
   });
 
+  it("writes a degraded adapter record when probing is disabled", () => {
+    const root = fs.mkdtempSync(path.join(os.tmpdir(), "phronia-doctor-manifest-"));
+    try {
+      const result = refreshAdapterManifest(root, {
+        platforms: ["claude-code"],
+        probe: false,
+      });
+      expect(result[0]).toMatchObject({
+        id: "claude-code",
+        adapterId: "claude-code@v1",
+        status: "degraded",
+        source: "none",
+      });
+      const manifest = readAdapterManifest(root);
+      expect(manifest.platforms["claude-code"]?.status).toBe("degraded");
+      expect(manifest.platforms["claude-code"]?.harnessVersion).toBeNull();
+    } finally {
+      fs.rmSync(root, { recursive: true, force: true });
+    }
+  });
+
   it("explains platform-level unavailability", () => {
     const root = fs.mkdtempSync(path.join(os.tmpdir(), "phronia-doctor-kilo-"));
     try {
-      const report = collectDoctorReport({ cwd: root, platform: "kilo" });
+      const report = collectDoctorReport({ cwd: root, platform: "kilo", probe: false });
       const session = report.platforms[0]?.features.find(
         (feature) => feature.id === "context.sessionStart",
       );
       expect(session?.available).toBe(false);
       expect(session?.reason).toContain("class-2");
+      expect(report.platforms[0]?.adapter.adapterId).toBe("kilo@v1");
+      expect(report.platforms[0]?.adapter.status).toBe("degraded");
     } finally {
       fs.rmSync(root, { recursive: true, force: true });
     }

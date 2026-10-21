@@ -37,6 +37,10 @@ export interface WorkspacePaths {
   readonly shellTickets: string;
   /** `.template-hashes.json`. */
   readonly manifest: string;
+  /** Runtime adapter manifest (`manifest.json`). */
+  readonly adapterManifest: string;
+  /** `.runtime/harness/`. */
+  readonly handshakes: string;
   /** `.version`. */
   readonly version: string;
   /** `.developer`. */
@@ -82,6 +86,8 @@ export const LAYOUT: WorkspaceLayout = Object.freeze({
     sessions: `${ROOT}/.runtime/sessions`,
     shellTickets: `${ROOT}/.runtime/shell-tickets`,
     manifest: `${ROOT}/.template-hashes.json`,
+    adapterManifest: `${ROOT}/manifest.json`,
+    handshakes: `${ROOT}/.runtime/harness`,
     version: `${ROOT}/.version`,
     developer: `${ROOT}/.developer`,
     currentTask: `${ROOT}/.current-task`,

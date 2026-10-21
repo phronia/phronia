@@ -437,11 +437,17 @@ program
   .description("Report platform capability and environment feature availability")
   .option("--platform <id>", "Inspect one platform instead of configured ones")
   .option("--json", "Output machine-readable JSON")
+  .option("--no-probe", "Skip `harness --version` probes")
+  .option("--refresh-manifest", "Rewrite .phronia/manifest.json from this run")
+  .option("--check", "Exit non-zero on unsupported or schema-drift adapters")
   .action((options: Record<string, unknown>) => {
     const exitCode = runDoctorCommand({
       cwd,
       platform: options.platform as string | undefined,
       json: Boolean(options.json),
+      probe: options.probe !== false,
+      refreshManifest: Boolean(options.refreshManifest),
+      check: Boolean(options.check),
     });
     if (exitCode !== 0) process.exit(exitCode);
   });
@@ -454,9 +460,19 @@ program
   .option("--json", "Output machine-readable JSON")
   .option("--matrix", "Print the full capability matrix")
   .option("--markdown", "Print the capability matrix as Markdown (for docs)")
+  .option("--detect", "Probe harness versions and rewrite .phronia/manifest.json")
   .option("--check", "Validate capability coverage and exit non-zero on failure")
   .action((options: Record<string, unknown>) => {
     try {
+      if (options.detect) {
+        const exitCode = runDoctorCommand({
+          cwd,
+          json: Boolean(options.json),
+          refreshManifest: true,
+        });
+        if (exitCode !== 0) process.exit(exitCode);
+        return;
+      }
       if (options.check) {
         const problems = checkMatrixStructure().problems;
         for (const violation of validateCapabilities()) {

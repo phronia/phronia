@@ -11,7 +11,10 @@ import {
   ContextContractError,
   contextJsonSchema,
   handleContext,
+  LAYOUT,
   renderContext,
+  runtimeAdapter,
+  writeHandshake,
   type ContextEvent,
   type ContextRequest,
 } from "@phronia/core";
@@ -72,6 +75,17 @@ export function runContextCommand(options: ContextCommandOptions): number {
 
   try {
     const response = handleContext(request);
+    // Shims never write the adapter manifest (concurrent runs); this file is
+    // proof that the harness actually invoked us. It stores payload keys only.
+    if (fs.existsSync(path.join(request.projectRoot, LAYOUT.rootDirName))) {
+      writeHandshake(
+        request.projectRoot,
+        platform,
+        request.event,
+        runtimeAdapter(platform).id,
+        input,
+      );
+    }
     if (options.render) {
       process.stdout.write(renderContext(response));
     } else {

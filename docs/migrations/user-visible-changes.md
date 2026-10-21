@@ -64,6 +64,16 @@ Batches that must update this file:
     `Sub-agent checklist (...)` headings must read the task artifacts instead.
 - **B5/B6**: unknown harness versions may switch to `degraded` fallback;
   shim files become managed artifacts and are no longer overwritten silently.
+  - **B5 now**: `phronia doctor` reports the selected adapter, harness version
+    and source, status, and last handshake per platform; `--json`,
+    `--no-probe`, `--refresh-manifest`, and `--check` are available.
+    `phronia platforms --detect` probes configured platforms and writes
+    `.phronia/manifest.json` (gitignored, machine-local). Every `phronia
+    context` call records a per-platform handshake under
+    `.phronia/.runtime/harness/`, storing payload key names only — a plugin
+    that loads but never runs now shows `last handshake never` instead of
+    silently doing nothing. OpenCode 2.x selects an unimplemented `@v2`
+    shard and reports `unsupported` rather than reusing the v1 plugin.
 - **B7**: ZCode may select `bridge` or `prelude` instead of project hooks; the
   doctor reports the reason.
 - **B9**: check output gains a machine-readable verdict file.

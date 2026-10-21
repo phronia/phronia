@@ -81,6 +81,7 @@ import {
   PHRONIA_BLOCK_END,
   PHRONIA_BLOCK_START,
 } from "../utils/managed-paths.js";
+import { refreshAdapterManifest } from "./adapter-manifest.js";
 
 export {
   cleanupEmptyDirs,
@@ -2963,5 +2964,13 @@ export async function update(options: UpdateOptions): Promise<void> {
 
       console.log(chalk.cyan("═".repeat(60)));
     }
+  }
+
+
+  // Refresh the runtime adapter record; probing failures degrade, never throw.
+  try {
+    refreshAdapterManifest(cwd)
+  } catch {
+    // manifest is diagnostic state, not required for the update to succeed
   }
 }

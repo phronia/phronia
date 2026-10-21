@@ -7,6 +7,9 @@
 # Session/window scoped runtime state
 .runtime/
 
+# Runtime adapter manifest (machine-local detection result)
+manifest.json
+
 # Ralph Loop state file
 .ralph-state.json
 

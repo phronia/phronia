@@ -19,6 +19,8 @@
     "sessions": ".phronia/.runtime/sessions",
     "shellTickets": ".phronia/.runtime/shell-tickets",
     "manifest": ".phronia/.template-hashes.json",
+    "adapterManifest": ".phronia/manifest.json",
+    "handshakes": ".phronia/.runtime/harness",
     "version": ".phronia/.version",
     "developer": ".phronia/.developer",
     "currentTask": ".phronia/.current-task"

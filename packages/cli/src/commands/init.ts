@@ -1,6 +1,7 @@
 import { execSync } from "node:child_process";
 import fs from "node:fs";
 import path from "node:path";
+import { refreshAdapterManifest } from "./adapter-manifest.js";
 import readline from "node:readline";
 import chalk from "chalk";
 import figlet from "figlet";
@@ -2048,6 +2049,14 @@ export async function init(options: InitOptions): Promise<void> {
         );
       }
     }
+  }
+
+  // Record the adapter choice next to the generated files. Best-effort:
+  // a probe must never turn a successful init into a failure.
+  try {
+    refreshAdapterManifest(cwd)
+  } catch {
+    // manifest is diagnostic state, not required for the project to work
   }
 }
 
