@@ -2,7 +2,7 @@
 """
 Trellis configuration reader.
 
-Reads settings from .trellis/config.yaml with sensible defaults.
+Reads settings from .phronia/config.yaml with sensible defaults.
 """
 
 from __future__ import annotations
@@ -122,7 +122,7 @@ def get_session_auto_commit(repo_root: Path | None = None) -> bool:
     ``task_store.py:_auto_commit_archive``.
 
     Default: ``True`` (existing behavior — auto-stage + auto-commit).
-    Set ``session_auto_commit: false`` in ``.trellis/config.yaml`` to skip
+    Set ``session_auto_commit: false`` in ``.phronia/config.yaml`` to skip
     auto-staging entirely; the journal/archive files are still written to
     disk, but the user manages ``git add`` / ``git commit`` themselves.
 
@@ -181,7 +181,7 @@ DEFAULT_CONTEXT_INJECTION_MAX_TOTAL_BYTES = 131072
 def get_context_injection_limits(repo_root: Path | None = None) -> dict[str, int]:
     """Return sub-agent context injection byte limits.
 
-    Reads the ``context_injection:`` section of ``.trellis/config.yaml``:
+    Reads the ``context_injection:`` section of ``.phronia/config.yaml``:
 
         context_injection:
           max_file_bytes: 32768
@@ -235,7 +235,7 @@ DEFAULT_PROMPT_INJECTION_SKIP_KEYWORD = "no-trellis"
 def get_prompt_injection_config(repo_root: Path | None = None) -> dict[str, str]:
     """Return per-turn prompt injection config.
 
-    Reads the ``prompt_injection:`` section of ``.trellis/config.yaml``:
+    Reads the ``prompt_injection:`` section of ``.phronia/config.yaml``:
 
         prompt_injection:
           skip_keyword: "no-trellis"   # "" disables the escape hatch entirely
@@ -394,7 +394,7 @@ def is_monorepo(repo_root: Path | None = None) -> bool:
 
 
 def get_spec_base(package: str | None = None, repo_root: Path | None = None) -> str:
-    """Get the spec directory base path relative to .trellis/.
+    """Get the spec directory base path relative to .phronia/.
 
     Single-repo: returns "spec"
     Monorepo with package: returns "spec/<package>"

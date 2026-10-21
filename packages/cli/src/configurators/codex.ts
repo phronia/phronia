@@ -22,7 +22,7 @@ import {
  * User-set `model` / `model_reasoning_effort` top-level keys on a generated
  * `trellis-*.toml` agent profile. Users configure sub-agent models by
  * editing these files directly (matches Codex's own docs) — there is no
- * `.trellis/config.yaml` indirection.
+ * `.phronia/config.yaml` indirection.
  */
 export interface CodexAgentModelKeys {
   model?: string;

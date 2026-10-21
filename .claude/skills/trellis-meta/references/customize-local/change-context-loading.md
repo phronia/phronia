@@ -4,11 +4,11 @@ Context loading determines when AI reads workflow, task, spec, research, workspa
 
 ## Read These Files First
 
-1. `.trellis/workflow.md`
-2. `.trellis/scripts/get_context.py`
-3. `.trellis/scripts/common/session_context.py`
-4. `.trellis/scripts/common/task_context.py`
-5. `.trellis/scripts/common/active_task.py`
+1. `.phronia/workflow.md`
+2. `.phronia/scripts/get_context.py`
+3. `.phronia/scripts/common/session_context.py`
+4. `.phronia/scripts/common/task_context.py`
+5. `.phronia/scripts/common/active_task.py`
 6. Current platform hooks or agent files
 7. The current task's `implement.jsonl` / `check.jsonl`
 
@@ -16,14 +16,14 @@ Context loading determines when AI reads workflow, task, spec, research, workspa
 
 | Source | Purpose |
 | --- | --- |
-| `.trellis/workflow.md` | Workflow and next-action hints. |
-| `.trellis/tasks/<task>/prd.md` | Current task requirements. |
-| `.trellis/tasks/<task>/design.md` | Complex task technical design. |
-| `.trellis/tasks/<task>/implement.md` | Complex task execution plan. |
-| `.trellis/tasks/<task>/implement.jsonl` | Spec/research to read before implementation. |
-| `.trellis/tasks/<task>/check.jsonl` | Spec/research to read during checking. |
-| `.trellis/spec/` | Project specs. |
-| `.trellis/workspace/` | Session records. |
+| `.phronia/workflow.md` | Workflow and next-action hints. |
+| `.phronia/tasks/<task>/prd.md` | Current task requirements. |
+| `.phronia/tasks/<task>/design.md` | Complex task technical design. |
+| `.phronia/tasks/<task>/implement.md` | Complex task execution plan. |
+| `.phronia/tasks/<task>/implement.jsonl` | Spec/research to read before implementation. |
+| `.phronia/tasks/<task>/check.jsonl` | Spec/research to read during checking. |
+| `.phronia/spec/` | Project specs. |
+| `.phronia/workspace/` | Session records. |
 | git status | Current working tree changes. |
 
 ## Common Needs And Edit Points
@@ -31,7 +31,7 @@ Context loading determines when AI reads workflow, task, spec, research, workspa
 | Need | Edit point |
 | --- | --- |
 | Inject more/less information in new sessions | `session_context.py` or the platform `session-start` hook. |
-| Change hints on each user input | `[workflow-state:STATUS]` block in `.trellis/workflow.md`. The `inject-workflow-state` hook is parser-only and reads the block verbatim. |
+| Change hints on each user input | `[workflow-state:STATUS]` block in `.phronia/workflow.md`. The `inject-workflow-state` hook is parser-only and reads the block verbatim. |
 | Agent did not read specs | Task JSONL, agent prelude, `inject-subagent-context` hook. |
 | Active task is lost | `active_task.py` and platform session identity propagation. |
 | Change JSONL validation rules | `task_context.py`. |
@@ -41,8 +41,8 @@ Context loading determines when AI reads workflow, task, spec, research, workspa
 `implement.jsonl` / `check.jsonl` are the key context loading interface:
 
 ```jsonl
-{"file": ".trellis/spec/backend/index.md", "reason": "Backend conventions"}
-{"file": ".trellis/tasks/04-28-x/research/api.md", "reason": "API research"}
+{"file": ".phronia/spec/backend/index.md", "reason": "Backend conventions"}
+{"file": ".phronia/tasks/04-28-x/research/api.md", "reason": "API research"}
 ```
 
 Include only spec/research files. Do not put code files that will be modified into these manifests; agents read code files themselves during implementation.
@@ -51,7 +51,7 @@ Include only spec/research files. Do not put code files that will be modified in
 
 If the user wants every new session to see more project state, edit:
 
-- `.trellis/scripts/common/session_context.py`
+- `.phronia/scripts/common/session_context.py`
 - the corresponding platform `session-start` hook
 
 Context cannot grow without bound. Prefer injecting indexes and paths so the AI can read detailed files on demand.
@@ -75,10 +75,10 @@ In both modes, make sure the agent ultimately reads:
 ## Troubleshooting Order
 
 ```bash
-python3 ./.trellis/scripts/task.py current --source
-python3 ./.trellis/scripts/task.py list-context <task>
-python3 ./.trellis/scripts/task.py validate <task>
-python3 ./.trellis/scripts/get_context.py --mode packages
+python3 ./.phronia/scripts/task.py current --source
+python3 ./.phronia/scripts/task.py list-context <task>
+python3 ./.phronia/scripts/task.py validate <task>
+python3 ./.phronia/scripts/get_context.py --mode packages
 ```
 
 Confirm the task and JSONL are correct before editing hooks/agents.

@@ -63,7 +63,7 @@ function jailedRealpath(
   ) {
     process.stderr.write(
       `[channel spawn] context path escapes cwd, refusing: ${path.relative(cwd, target) || target} ` +
-        `(add its real directory to channel.trusted_context_dirs in .trellis/config.yaml to allow)\n`,
+        `(add its real directory to channel.trusted_context_dirs in .phronia/config.yaml to allow)\n`,
     );
     return null;
   }

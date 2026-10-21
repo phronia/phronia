@@ -128,7 +128,7 @@ function renderAblatePlan(
   console.log(chalk.gray(`\nRecovery transaction: ${transactionDir}`));
   console.log(
     chalk.yellow(
-      "Recovery copies exact .trellis task/spec/workspace bytes, which may contain user-authored sensitive text. " +
+      "Recovery copies exact .phronia task/spec/workspace bytes, which may contain user-authored sensitive text. " +
         "The private transaction is retained until verified restore.\n",
     ),
   );

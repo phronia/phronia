@@ -1095,7 +1095,7 @@ describe("update() integration", () => {
     await update({ force: true });
 
     const content = fs.readFileSync(gitattributesPath, "utf-8");
-    expect(content).toContain(".trellis/workspace/*/journal-*.md merge=union");
+    expect(content).toContain(".phronia/workspace/*/journal-*.md merge=union");
   });
 
   it("#15b does not duplicate an existing user journal merge=union rule (#415)", async () => {
@@ -1103,7 +1103,7 @@ describe("update() integration", () => {
 
     const gitattributesPath = path.join(tmpDir, ".gitattributes");
     const userContent =
-      "# my own rules\n*.png binary\n.trellis/workspace/*/journal-*.md merge=union\n";
+      "# my own rules\n*.png binary\n.phronia/workspace/*/journal-*.md merge=union\n";
     fs.writeFileSync(gitattributesPath, userContent);
 
     await update({ force: true });
@@ -1197,6 +1197,9 @@ describe("update() integration", () => {
   });
 
   // Original template content for check-backend.md (deleted in 0.4.0-beta.1).
+  // Historical content of a file removed by an upstream migration manifest.
+  // The `.trellis` paths are intentional: the fixture must hash to the
+  // manifest's allowed_hashes, which describe the pre-rename tree.
   // Hash: 4e81a28d681ea770f780df55a212fd504ce21ee49b44ba16023b74b5c243cef3
   const ORIGINAL_CHECK_BACKEND_CONTENT = [
     "Check if the code you just wrote follows the backend development guidelines.",
@@ -1423,7 +1426,7 @@ describe("update() integration", () => {
   // The [b] Backup-rename path in the confirm prompt promises "keeps a .backup
   // copy". Previously it was identical to [r] (both relied on the full project
   // snapshot). We now write an INLINE .backup next to the new path so users can
-  // diff/merge their customizations without digging through .trellis/.backup-*/.
+  // diff/merge their customizations without digging through .phronia/.backup-*/.
   /** Install a mock that returns a specific migration choice for the per-file prompt
    *  and {proceed: true} for the top-level confirm. Resolves the flakiness of
    *  matching on `name` field in the dynamic import path. */
@@ -1442,7 +1445,7 @@ describe("update() integration", () => {
   // The [b] Backup-rename path in the confirm prompt promises "keeps a .backup
   // copy". Previously it was identical to [r] (both relied on the full project
   // snapshot). We now write an INLINE .backup next to the new path so users can
-  // diff/merge their customizations without digging through .trellis/.backup-*/.
+  // diff/merge their customizations without digging through .phronia/.backup-*/.
   it("#25 backup-rename leaves inline <new-path>.backup with original content", async () => {
     await setupProject();
     stageLegacy040Project();
@@ -1494,7 +1497,7 @@ describe("update() integration", () => {
       ".claude/skills/trellis-before-dev/SKILL.md",
     );
     expect(fs.existsSync(newPath)).toBe(true);
-    // No inline .backup — the full-project snapshot under .trellis/.backup-*
+    // No inline .backup — the full-project snapshot under .phronia/.backup-*
     // is the single source of recovery for this mode.
     expect(fs.existsSync(newPath + ".backup")).toBe(false);
   });

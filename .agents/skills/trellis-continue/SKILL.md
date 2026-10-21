@@ -5,14 +5,14 @@ description: "Resume work on the current task. Loads the workflow Phase Index, f
 
 # Continue Current Task
 
-Resume work on the current task — pick up at the right phase/step in `.trellis/workflow.md`.
+Resume work on the current task — pick up at the right phase/step in `.phronia/workflow.md`.
 
 ---
 
 ## Step 1: Load Current Context
 
 ```bash
-python3 ./.trellis/scripts/get_context.py
+python3 ./.phronia/scripts/get_context.py
 ```
 
 Confirms: current task, git state, recent commits.
@@ -20,7 +20,7 @@ Confirms: current task, git state, recent commits.
 ## Step 2: Load the Phase Index
 
 ```bash
-python3 ./.trellis/scripts/get_context.py --mode phase
+python3 ./.phronia/scripts/get_context.py --mode phase
 ```
 
 Shows the Phase Index (Plan / Execute / Finish) with routing + skill mapping.
@@ -38,7 +38,7 @@ Shows the Phase Index (Plan / Execute / Finish) with routing + skill mapping.
 - `status=in_progress` + check passed → **3.3** (spec update) → **3.4** (commit)
 - `status=completed` (rare; usually archived immediately) → archive flow
 
-Phase rules (full detail in `.trellis/workflow.md`):
+Phase rules (full detail in `.phronia/workflow.md`):
 
 1. Run steps **in order** within a phase — `[required]` steps must not be skipped
 2. `[once]` steps are already done if the required output exists. `prd.md` alone can be enough only for lightweight tasks; complex tasks also need `design.md` and `implement.md`.
@@ -49,7 +49,7 @@ Phase rules (full detail in `.trellis/workflow.md`):
 Once you know which step to resume at:
 
 ```bash
-python3 ./.trellis/scripts/get_context.py --mode phase --step <X.X> --platform codex
+python3 ./.phronia/scripts/get_context.py --mode phase --step <X.X> --platform codex
 ```
 
 Follow the loaded instructions. After each `[required]` step completes, move to the next.
@@ -58,4 +58,4 @@ Follow the loaded instructions. After each `[required]` step completes, move to 
 
 ## Reference
 
-Full workflow and detailed phase steps live in `.trellis/workflow.md`. This command is only an entry point — the canonical guidance is there.
+Full workflow and detailed phase steps live in `.phronia/workflow.md`. This command is only an entry point — the canonical guidance is there.

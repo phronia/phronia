@@ -131,7 +131,10 @@ describe("trellis template constants", () => {
     expect(workflowMdTemplate).toContain("#");
   });
 
-  it("marketplace native workflow mirror matches the bundled workflow", () => {
+  it("marketplace native workflow keeps the bundled section structure", () => {
+    // The fork renames `.trellis` to `.phronia`, so byte equality with the
+    // upstream marketplace submodule no longer holds. Section headings are the
+    // stable contract: they catch structural drift without pinning paths.
     const repoRoot = fs.existsSync(path.join(process.cwd(), "marketplace"))
       ? process.cwd()
       : path.resolve(process.cwd(), "../..");
@@ -139,7 +142,9 @@ describe("trellis template constants", () => {
       path.join(repoRoot, "marketplace/workflows/native/workflow.md"),
       "utf-8",
     );
-    expect(marketplaceNative).toBe(workflowMdTemplate);
+    const headings = (text: string): string[] =>
+      [...text.matchAll(/^##\s+(.+)$/gm)].map((match) => match[1].trim());
+    expect(headings(marketplaceNative)).toEqual(headings(workflowMdTemplate));
   });
 
   it("marketplace TDD workflow planning breadcrumbs include behavior gates", () => {
@@ -385,7 +390,7 @@ describe("getAllScripts", () => {
 
 // =============================================================================
 // getAllAgents — channel runtime agent definitions dispatched at init/update.
-// agent-loader.ts loads `.trellis/agents/<name>.md` and requires `---` YAML
+// agent-loader.ts loads `.phronia/agents/<name>.md` and requires `---` YAML
 // frontmatter at the top with a flat `name: <name>` field. These tests pin the
 // contract so a future template edit can't silently break channel spawn.
 // =============================================================================

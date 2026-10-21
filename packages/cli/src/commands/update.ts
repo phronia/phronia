@@ -5,6 +5,7 @@ import chalk from "chalk";
 import inquirer from "inquirer";
 
 import { DIR_NAMES, FILE_NAMES, PATHS } from "../constants/paths.js";
+import { LAYOUT } from "@mindfoldhq/trellis-core/layout";
 import type { AITool } from "../types/ai-tools.js";
 import { VERSION, PACKAGE_NAME } from "../constants/version.js";
 import {
@@ -473,7 +474,7 @@ function executeSafeFileDeletes(
 }
 
 /**
- * Load update.skip paths from .trellis/config.yaml
+ * Load update.skip paths from .phronia/config.yaml
  *
  * Parses simple YAML structure:
  *   update:
@@ -611,11 +612,15 @@ export function applyConfigSectionsAdded(
   let appended = 0;
 
   for (const entry of entries) {
-    const dedupeKey = `${entry.file}::${entry.sentinel}`;
+    // Manifests were written when the workflow root was `.trellis`; the
+    // section must land in the project's current root and resolve against the
+    // current template key.
+    const targetFile = normalizeLegacyWorkflowPath(entry.file);
+    const dedupeKey = `${targetFile}::${entry.sentinel}`;
     if (seen.has(dedupeKey)) continue;
     seen.add(dedupeKey);
 
-    const targetPath = path.join(cwd, entry.file);
+    const targetPath = path.join(cwd, targetFile);
     if (!fs.existsSync(targetPath)) continue;
 
     let userContent: string;
@@ -626,7 +631,7 @@ export function applyConfigSectionsAdded(
     }
     if (userContent.includes(entry.sentinel)) continue;
 
-    const template = bundledTemplates.get(entry.file);
+    const template = bundledTemplates.get(targetFile);
     if (!template) continue;
 
     const section = extractConfigSection(template, entry.sectionHeading);
@@ -641,13 +646,25 @@ export function applyConfigSectionsAdded(
     }
     console.log(
       chalk.green(
-        `  + Added config section "${entry.sectionHeading}" to ${entry.file}`,
+        `  + Added config section "${entry.sectionHeading}" to ${targetFile}`,
       ),
     );
     appended++;
   }
 
   return { appended };
+}
+
+/** Rewrite a manifest's historical workflow-root prefix to the current one. */
+export function normalizeLegacyWorkflowPath(relativePath: string): string {
+  const legacy = LAYOUT.legacyRootDirName;
+  if (relativePath === legacy) {
+    return LAYOUT.rootDirName;
+  }
+  if (relativePath.startsWith(`${legacy}/`)) {
+    return `${LAYOUT.rootDirName}/${relativePath.slice(legacy.length + 1)}`;
+  }
+  return relativePath;
 }
 
 /**
@@ -750,7 +767,7 @@ function preserveExistingRegistryConfig(cwd: string, template: string): string {
     "#-------------------------------------------------------------------------------\n" +
     "# Registry\n" +
     "#-------------------------------------------------------------------------------\n\n" +
-    "# Source used to install .trellis/spec. trellis update refreshes this\n" +
+    "# Source used to install .phronia/spec. trellis update refreshes this\n" +
     "# hash-tracked spec template while preserving local edits through the\n" +
     "# normal update conflict flow.\n" +
     "registry:\n" +
@@ -772,7 +789,7 @@ async function collectRegistrySpecTemplates(
   } catch (error) {
     console.log(
       chalk.yellow(
-        `Warning: invalid registry.spec.source in .trellis/config.yaml: ${
+        `Warning: invalid registry.spec.source in .phronia/config.yaml: ${
           error instanceof Error ? error.message : String(error)
         }`,
       ),
@@ -1062,7 +1079,7 @@ function analyzeChanges(
  * `changedFiles`, and is never seen by this function.
  *
  * That also leaves the mixed-ownership paths — `AGENTS.md`,
- * `.github/copilot-instructions.md`, `.trellis/config.yaml` — free to differ
+ * `.github/copilot-instructions.md`, `.phronia/config.yaml` — free to differ
  * from their recorded hash, which for them is the correct state: once the
  * repository has appended its own content they are no longer `unchanged`.
  */
@@ -1079,7 +1096,7 @@ function collectUnchangedFileHashRepairs(
     if (recorded === undefined) {
       // A missing entry is only an omission for a path the receipt is meant
       // to carry. `EXCLUDE_FROM_HASH` holds paths deliberately left out —
-      // `.trellis/.gitignore` among them — and adding those here would put
+      // `.phronia/.gitignore` among them — and adding those here would put
       // this path in disagreement with `initializeHashes` about what the
       // receipt tracks at all.
       if (!shouldExcludeFromHash(key)) {
@@ -1580,7 +1597,7 @@ export function classifyMigrations(
       continue;
     }
     // For non-rename types, also block writing TO protected paths
-    // rename/rename-dir are allowed to target protected paths (e.g., 0.2.0 renames into .trellis/workspace)
+    // rename/rename-dir are allowed to target protected paths (e.g., 0.2.0 renames into .phronia/workspace)
     if (
       item.to &&
       isProtectedPath(item.to) &&
@@ -1976,7 +1993,7 @@ export async function executeMigrations(
 
     // For `backup-rename`, leave an inline .backup copy of the user's modified
     // original next to the new location (for rename) or in place (for delete).
-    // This is in addition to the full project snapshot at .trellis/.backup-*/;
+    // This is in addition to the full project snapshot at .phronia/.backup-*/;
     // the inline copy is more discoverable when the user wants to diff or merge
     // their customizations against the new template.
     if (item.type === "rename" && item.to) {
@@ -2007,7 +2024,7 @@ export async function executeMigrations(
 
       if (action === "backup-rename") {
         // Keep a .backup copy in place before deletion so the user can recover
-        // inline without digging through .trellis/.backup-*/.
+        // inline without digging through .phronia/.backup-*/.
         fs.copyFileSync(filePath, filePath + ".backup");
       }
 
@@ -2058,7 +2075,7 @@ function printMigrationResult(result: MigrationResult): void {
  * developer workspace directory.
  *
  * Never overwrites an existing `journal-N.md`: a newer session may already
- * have created it, and `.trellis/workspace/` is excluded from the update
+ * have created it, and `.phronia/workspace/` is excluded from the update
  * backup (see `BACKUP_EXCLUDE_PATTERNS`), so clobbering it would be
  * unrecoverable data loss. Conflicting `traces-N.md` files are left in place
  * and reported instead.
@@ -2578,7 +2595,7 @@ export async function update(options: UpdateOptions): Promise<void> {
 
     // Hardcoded: Rename traces-*.md to journal-*.md in workspace directories
     // Why hardcoded: The migration system only supports fixed path renames, not pattern-based.
-    // traces-*.md files are in .trellis/workspace/{developer}/ with variable developer names
+    // traces-*.md files are in .phronia/workspace/{developer}/ with variable developer names
     // and variable file numbers (traces-1.md, traces-2.md, etc.), so we can't enumerate them
     // in the migration manifest. This is a one-time migration for the 0.2.0 naming redesign.
     const workspaceDir = path.join(cwd, PATHS.WORKSPACE);

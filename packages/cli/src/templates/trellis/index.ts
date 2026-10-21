@@ -2,7 +2,7 @@
  * Trellis workflow templates
  *
  * These are GENERIC templates for user projects.
- * Do NOT use Trellis project's own .trellis/ directory (which may be customized).
+ * Do NOT use Trellis project's own .phronia/ directory (which may be customized).
  *
  * Directory structure:
  *   trellis/
@@ -78,7 +78,7 @@ export const gitignoreTemplate = readTemplate("gitignore.txt");
 export const gitattributesTemplate = readTemplate("gitattributes.txt");
 
 // Channel runtime agent definitions (loaded by
-// `packages/cli/src/commands/channel/agent-loader.ts` from `.trellis/agents/`).
+// `packages/cli/src/commands/channel/agent-loader.ts` from `.phronia/agents/`).
 // These are platform-agnostic Trellis runtime files dispatched at `trellis init`
 // and refreshed by `trellis update`.
 export const implementAgentTemplate = readTemplate("agents/implement.md");
@@ -128,7 +128,7 @@ export function getAllScripts(): Map<string, string> {
 
 /**
  * Get all channel runtime agent definitions as a map of relative path
- * (under `.trellis/agents/`) to content.
+ * (under `.phronia/agents/`) to content.
  *
  * Consumed by `trellis init` (to dispatch on first install) and by
  * `trellis update` (to backfill missing files and surface conflicts on edited

@@ -28,7 +28,7 @@ custom agent's ``hooks.userPromptSubmit`` and the IDE ``.kiro.hook``
 (Kiro adds hook stdout directly to the conversation context).
 
 Silent exit 0 case (no output):
-  - No .trellis/ directory found (not a Trellis project)
+  - No .phronia/ directory found (not a Trellis project)
 
 When a session points at a task directory whose task.json is missing, malformed,
 or missing a usable status, the hook emits a task_error breadcrumb instead of
@@ -81,14 +81,14 @@ If you have not already loaded Trellis context this session, read the `trellis-s
 # ---------------------------------------------------------------------------
 
 def find_trellis_root(start: Path) -> Optional[Path]:
-    """Walk up from start to find directory containing .trellis/.
+    """Walk up from start to find directory containing .phronia/.
 
     Handles CWD drift: subdirectory launches, monorepo packages, etc.
-    Returns None if no .trellis/ found (silent no-op).
+    Returns None if no .phronia/ found (silent no-op).
     """
     cur = start.resolve()
     while cur != cur.parent:
-        if (cur / ".trellis").is_dir():
+        if (cur / ".phronia").is_dir():
             return cur
         cur = cur.parent
     return None
@@ -150,7 +150,7 @@ def _detect_platform(input_data: dict) -> str | None:
 
 
 def _resolve_active_task(root: Path, input_data: dict):
-    scripts_dir = root / ".trellis" / "scripts"
+    scripts_dir = root / ".phronia" / "scripts"
     if str(scripts_dir) not in sys.path:
         sys.path.insert(0, str(scripts_dir))
     from common.active_task import resolve_active_task  # type: ignore[import-not-found]
@@ -215,7 +215,7 @@ def load_breadcrumbs(root: Path) -> dict[str, str]:
     in build_breadcrumb so users see the broken state and fix
     workflow.md, rather than the hook silently masking the issue.
     """
-    workflow = root / ".trellis" / "workflow.md"
+    workflow = root / ".phronia" / "workflow.md"
     if not workflow.is_file():
         return {}
     try:
@@ -233,12 +233,12 @@ def load_breadcrumbs(root: Path) -> dict[str, str]:
 
 
 def _read_trellis_config(root: Path) -> dict:
-    """Load .trellis/config.yaml via the bundled trellis_config helper.
+    """Load .phronia/config.yaml via the bundled trellis_config helper.
 
-    The helper lives in .trellis/scripts/common; the hook lives outside the
+    The helper lives in .phronia/scripts/common; the hook lives outside the
     scripts tree, so we extend sys.path before importing.
     """
-    scripts_dir = root / ".trellis" / "scripts"
+    scripts_dir = root / ".phronia" / "scripts"
     if str(scripts_dir) not in sys.path:
         sys.path.insert(0, str(scripts_dir))
     try:
@@ -255,7 +255,7 @@ DEFAULT_PROMPT_INJECTION_SKIP_KEYWORD = "no-trellis"
 
 
 def _resolve_skip_keyword(config: dict) -> str:
-    """Read `prompt_injection.skip_keyword` from parsed .trellis/config.yaml.
+    """Read `prompt_injection.skip_keyword` from parsed .phronia/config.yaml.
 
     Mirrors `common.config.get_prompt_injection_config()`. Defaults to
     "no-trellis"; "" disables the escape hatch entirely. A non-string value
@@ -284,7 +284,7 @@ def prompt_has_skip_keyword(prompt: str, keyword: str) -> bool:
 
 
 def _resolve_codex_dispatch_mode(config: dict) -> str:
-    """Normalize `codex.dispatch_mode` from .trellis/config.yaml to "auto" or "inline".
+    """Normalize `codex.dispatch_mode` from .phronia/config.yaml to "auto" or "inline".
 
     Defaults to `auto`. The legacy `sub-agent` value is an alias for `auto`.
     Any other explicit value (including invalid ones) falls back to `inline`
@@ -309,7 +309,7 @@ def _resolve_codex_dispatch_mode(config: dict) -> str:
 def _codex_mode_banner(config: dict) -> str:
     """Emit a `<codex-mode>` banner for the additionalContext payload.
 
-    Reads `codex.dispatch_mode` from .trellis/config.yaml; defaults to
+    Reads `codex.dispatch_mode` from .phronia/config.yaml; defaults to
     `auto`, which dispatches Trellis sub-agents using native Codex context
     injection with a child-side fallback. This does not rely on inherited
     parent transcripts: `fork_turns` remains caller-controlled, and

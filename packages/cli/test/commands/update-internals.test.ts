@@ -64,26 +64,26 @@ describe("cleanupEmptyDirs", () => {
     expect(fs.existsSync(path.join(tmpDir, ".claude"))).toBe(true);
   });
 
-  it("[CR#1] does not delete .trellis root even if empty", () => {
-    fs.mkdirSync(path.join(tmpDir, ".trellis"), { recursive: true });
-    cleanupEmptyDirs(tmpDir, ".trellis");
-    expect(fs.existsSync(path.join(tmpDir, ".trellis"))).toBe(true);
+  it("[CR#1] does not delete .phronia root even if empty", () => {
+    fs.mkdirSync(path.join(tmpDir, ".phronia"), { recursive: true });
+    cleanupEmptyDirs(tmpDir, ".phronia");
+    expect(fs.existsSync(path.join(tmpDir, ".phronia"))).toBe(true);
   });
 
   it("recursively cleans parent directories but stops at root", () => {
-    // Create .trellis/scripts/multi_agent/ (all empty)
-    fs.mkdirSync(path.join(tmpDir, ".trellis", "scripts", "multi_agent"), {
+    // Create .phronia/scripts/multi_agent/ (all empty)
+    fs.mkdirSync(path.join(tmpDir, ".phronia", "scripts", "multi_agent"), {
       recursive: true,
     });
-    cleanupEmptyDirs(tmpDir, ".trellis/scripts/multi_agent");
+    cleanupEmptyDirs(tmpDir, ".phronia/scripts/multi_agent");
 
     // multi_agent and scripts should be removed (both empty)
     expect(
-      fs.existsSync(path.join(tmpDir, ".trellis", "scripts", "multi_agent")),
+      fs.existsSync(path.join(tmpDir, ".phronia", "scripts", "multi_agent")),
     ).toBe(false);
-    expect(fs.existsSync(path.join(tmpDir, ".trellis", "scripts"))).toBe(false);
-    // .trellis root must survive
-    expect(fs.existsSync(path.join(tmpDir, ".trellis"))).toBe(true);
+    expect(fs.existsSync(path.join(tmpDir, ".phronia", "scripts"))).toBe(false);
+    // .phronia root must survive
+    expect(fs.existsSync(path.join(tmpDir, ".phronia"))).toBe(true);
   });
 
   it("handles non-existent directory gracefully", () => {
@@ -95,8 +95,8 @@ describe("cleanupEmptyDirs", () => {
     const userDir = path.join(tmpDir, "user-empty-dir");
     fs.mkdirSync(userDir);
 
-    cleanupEmptyDirs(tmpDir, ".trellis/../user-empty-dir");
-    cleanupEmptyDirs(tmpDir, ".trellis/./../user-empty-dir");
+    cleanupEmptyDirs(tmpDir, ".phronia/../user-empty-dir");
+    cleanupEmptyDirs(tmpDir, ".phronia/./../user-empty-dir");
 
     expect(fs.existsSync(userDir)).toBe(true);
   });
@@ -109,11 +109,11 @@ describe("cleanupEmptyDirs", () => {
       );
       const externalEmpty = path.join(external, "empty");
       fs.mkdirSync(externalEmpty);
-      fs.mkdirSync(path.join(tmpDir, ".trellis"));
-      fs.symlinkSync(external, path.join(tmpDir, ".trellis", "linked"), "dir");
+      fs.mkdirSync(path.join(tmpDir, ".phronia"));
+      fs.symlinkSync(external, path.join(tmpDir, ".phronia", "linked"), "dir");
 
       try {
-        cleanupEmptyDirs(tmpDir, ".trellis/linked/empty");
+        cleanupEmptyDirs(tmpDir, ".phronia/linked/empty");
         expect(fs.existsSync(externalEmpty)).toBe(true);
       } finally {
         fs.rmSync(external, { recursive: true, force: true });
@@ -131,7 +131,7 @@ describe("loadUpdateSkipPaths", () => {
 
   beforeEach(() => {
     tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), "trellis-skip-"));
-    fs.mkdirSync(path.join(tmpDir, ".trellis"), { recursive: true });
+    fs.mkdirSync(path.join(tmpDir, ".phronia"), { recursive: true });
   });
 
   afterEach(() => {
@@ -140,7 +140,7 @@ describe("loadUpdateSkipPaths", () => {
 
   it("strips double quotes from skip paths", () => {
     fs.writeFileSync(
-      path.join(tmpDir, ".trellis", "config.yaml"),
+      path.join(tmpDir, ".phronia", "config.yaml"),
       'update:\n  skip:\n    - ".claude/commands/"\n',
     );
     const paths = loadUpdateSkipPaths(tmpDir);
@@ -149,7 +149,7 @@ describe("loadUpdateSkipPaths", () => {
 
   it("strips single quotes from skip paths", () => {
     fs.writeFileSync(
-      path.join(tmpDir, ".trellis", "config.yaml"),
+      path.join(tmpDir, ".phronia", "config.yaml"),
       "update:\n  skip:\n    - '.claude/commands/'\n",
     );
     const paths = loadUpdateSkipPaths(tmpDir);
@@ -158,7 +158,7 @@ describe("loadUpdateSkipPaths", () => {
 
   it("handles unquoted skip paths", () => {
     fs.writeFileSync(
-      path.join(tmpDir, ".trellis", "config.yaml"),
+      path.join(tmpDir, ".phronia", "config.yaml"),
       "update:\n  skip:\n    - .claude/commands/\n",
     );
     const paths = loadUpdateSkipPaths(tmpDir);
@@ -183,7 +183,7 @@ describe("sortMigrationsForExecution", () => {
   it("puts rename-dir before rename and delete", () => {
     const items = [
       { type: "rename" as const, from: ".claude/a.md", to: ".claude/b.md" },
-      { type: "rename-dir" as const, from: ".trellis/old", to: ".trellis/new" },
+      { type: "rename-dir" as const, from: ".phronia/old", to: ".phronia/new" },
       { type: "delete" as const, from: ".claude/c.md" },
     ];
     const sorted = sortMigrationsForExecution(items);
@@ -192,18 +192,18 @@ describe("sortMigrationsForExecution", () => {
 
   it("sorts rename-dir by path depth (deeper first)", () => {
     const items = [
-      { type: "rename-dir" as const, from: ".trellis/a", to: ".trellis/x" },
+      { type: "rename-dir" as const, from: ".phronia/a", to: ".phronia/x" },
       {
         type: "rename-dir" as const,
-        from: ".trellis/a/b/c",
-        to: ".trellis/x/y/z",
+        from: ".phronia/a/b/c",
+        to: ".phronia/x/y/z",
       },
-      { type: "rename-dir" as const, from: ".trellis/a/b", to: ".trellis/x/y" },
+      { type: "rename-dir" as const, from: ".phronia/a/b", to: ".phronia/x/y" },
     ];
     const sorted = sortMigrationsForExecution(items);
-    expect(sorted[0].from).toBe(".trellis/a/b/c"); // depth 4
-    expect(sorted[1].from).toBe(".trellis/a/b"); // depth 3
-    expect(sorted[2].from).toBe(".trellis/a"); // depth 2
+    expect(sorted[0].from).toBe(".phronia/a/b/c"); // depth 4
+    expect(sorted[1].from).toBe(".phronia/a/b"); // depth 3
+    expect(sorted[2].from).toBe(".phronia/a"); // depth 2
   });
 
   it("preserves relative order of rename and delete items", () => {
@@ -255,32 +255,32 @@ describe("shouldExcludeFromBackup", () => {
 
   it.each([
     ".opencode/node_modules/@opencode-ai/sdk/package.json",
-    ".trellis/.backup-2026-04-22T10-24-27/.opencode/node_modules/zod/index.js",
+    ".phronia/.backup-2026-04-22T10-24-27/.opencode/node_modules/zod/index.js",
   ])("excludes dependency tree %s", (p) => {
     expect(shouldExcludeFromBackup(p)).toBe(true);
   });
 
   it.each([
-    ".trellis/workspace/developer/journal-1.md",
-    ".trellis/tasks/04-17-foo/prd.md",
-    ".trellis/spec/cli/backend/index.md",
-    ".trellis/backlog/idea.md",
-    ".trellis/agent-traces/trace.jsonl",
+    ".phronia/workspace/developer/journal-1.md",
+    ".phronia/tasks/04-17-foo/prd.md",
+    ".phronia/spec/cli/backend/index.md",
+    ".phronia/backlog/idea.md",
+    ".phronia/agent-traces/trace.jsonl",
   ])("excludes user data %s", (p) => {
     expect(shouldExcludeFromBackup(p)).toBe(true);
   });
 
   it("excludes previous backups", () => {
     expect(
-      shouldExcludeFromBackup(".trellis/.backup-2026-04-20T01-00-00/x"),
+      shouldExcludeFromBackup(".phronia/.backup-2026-04-20T01-00-00/x"),
     ).toBe(true);
   });
 
   it.each([
     ".claude/commands/trellis/continue.md",
     ".claude/skills/trellis-check/SKILL.md",
-    ".trellis/workflow.md",
-    ".trellis/scripts/get_context.py",
+    ".phronia/workflow.md",
+    ".phronia/scripts/get_context.py",
     ".agents/skills/trellis-check/SKILL.md",
   ])("includes managed file %s", (p) => {
     expect(shouldExcludeFromBackup(p)).toBe(false);
@@ -300,8 +300,8 @@ describe("shouldExcludeFromBackup", () => {
   // `trellis update --migrate`, late April 2026).
   it.each([
     ".claude\\worktrees\\feat-x\\src\\main.ts",
-    ".trellis\\tasks\\04-17-foo\\prd.md",
-    ".trellis\\workspace\\dev\\journal-1.md",
+    ".phronia\\tasks\\04-17-foo\\prd.md",
+    ".phronia\\workspace\\dev\\journal-1.md",
     ".opencode\\node_modules\\zod\\index.js",
   ])("excludes Windows-style backslash path %s", (p) => {
     expect(shouldExcludeFromBackup(p)).toBe(true);

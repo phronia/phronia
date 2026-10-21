@@ -12,7 +12,7 @@
  * - `.snow/hooks/` — inject hooks (session / user / beforeSubAgentStart)
  * - `.snow/SNOW.md` — operator guide
  *
- * Modern Snow does NOT ship `.snow/sub-agents.trellis.json` (legacy merge
+ * Modern Snow does NOT ship `.snow/sub-agents.phronia.json` (legacy merge
  * fragment for older hosts without project-agent discovery).
  *
  * hasHooks=true → filterCommands drops `start`; SessionStart injects context.

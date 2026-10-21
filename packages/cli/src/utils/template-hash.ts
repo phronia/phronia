@@ -259,7 +259,7 @@ export function getModificationStatus(
 }
 
 /**
- * Patterns to exclude from hash tracking (only applied to the .trellis/ walk).
+ * Patterns to exclude from hash tracking (only applied to the .phronia/ walk).
  */
 const EXCLUDE_FROM_HASH = [
   ".template-hashes.json", // Hash file itself
@@ -348,8 +348,8 @@ export interface InitializeHashesOptions {
  * where a blind directory walk of `.codex/` / `.claude/` swept up
  * user-owned runtime data (chat history, session JSONLs).
  *
- * `.trellis/` is still walked recursively (with `EXCLUDE_FROM_HASH`) because
- * uninstall removes `.trellis/` wholesale via `rm -rf` regardless of manifest
+ * `.phronia/` is still walked recursively (with `EXCLUDE_FROM_HASH`) because
+ * uninstall removes `.phronia/` wholesale via `rm -rf` regardless of manifest
  * content — accuracy there doesn't affect data-loss, only `trellis update`
  * 3-way-merge fidelity (preserved by the existing walk).
  *
@@ -383,9 +383,9 @@ export function initializeHashes(
     }
   }
 
-  // .trellis/ workflow tree: still walked recursively. Accuracy here is for
+  // .phronia/ workflow tree: still walked recursively. Accuracy here is for
   // `trellis update`'s 3-way merge of workflow.md / config.yaml / scripts;
-  // uninstall removes .trellis/ wholesale so it does not matter for the
+  // uninstall removes .phronia/ wholesale so it does not matter for the
   // data-loss bug this contract addresses.
   const files = collectFiles(cwd, DIR_NAMES.WORKFLOW);
   for (const relativePath of files) {

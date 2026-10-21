@@ -5,14 +5,14 @@ describe("redact", () => {
   it("replaces the project root and home directory", () => {
     const result = redact(
       {
-        cwd: "/repo/project/.trellis",
+        cwd: "/repo/project/.phronia",
         transcript_path: "/home/alice/.claude/session.jsonl",
       },
       { projectRoot: "/repo/project", homeDir: "/home/alice" },
     );
 
     expect(result.value).toEqual({
-      cwd: "<PROJECT_ROOT>/.trellis",
+      cwd: "<PROJECT_ROOT>/.phronia",
       transcript_path: "<HOME>/.claude/session.jsonl",
     });
     expect(result.replacements).toBeGreaterThanOrEqual(2);

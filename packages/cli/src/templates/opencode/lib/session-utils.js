@@ -54,7 +54,7 @@ function getTaskStatus(ctx, platformInput = null) {
   const taskDir = ctx.resolveTaskDir(taskRef)
 
   if (active.stale || !taskDir || !existsSync(taskDir)) {
-    return `Status: STALE POINTER\nTask: ${taskRef}\nNext-Action: Task directory not found. Run: python3 ./.trellis/scripts/task.py finish`
+    return `Status: STALE POINTER\nTask: ${taskRef}\nNext-Action: Task directory not found. Run: python3 ./.phronia/scripts/task.py finish`
   }
 
   let taskData = {}
@@ -118,7 +118,7 @@ function getTaskStatus(ctx, platformInput = null) {
 }
 
 function loadTrellisConfig(directory, contextKey = null) {
-  const scriptPath = join(directory, ".trellis", "scripts", "get_context.py")
+  const scriptPath = join(directory, ".phronia", "scripts", "get_context.py")
   if (!existsSync(scriptPath)) {
     return { isMonorepo: false, packages: {}, specScope: null, activeTaskPackage: null, defaultPackage: null }
   }
@@ -159,7 +159,7 @@ function checkLegacySpec(directory, config) {
     return null
   }
 
-  const specDir = join(directory, ".trellis", "spec")
+  const specDir = join(directory, ".phronia", "spec")
   if (!existsSync(specDir)) return null
 
   let hasLegacy = false
@@ -222,12 +222,12 @@ function resolveSpecScope(config) {
 }
 
 function collectSpecIndexPaths(directory, allowedPkgs) {
-  const specDir = join(directory, ".trellis", "spec")
+  const specDir = join(directory, ".phronia", "spec")
   const paths = []
 
   const guidesIndex = join(specDir, "guides", "index.md")
   if (existsSync(guidesIndex)) {
-    paths.push(".trellis/spec/guides/index.md")
+    paths.push(".phronia/spec/guides/index.md")
   }
 
   if (!existsSync(specDir)) return paths
@@ -245,7 +245,7 @@ function collectSpecIndexPaths(directory, allowedPkgs) {
     for (const sub of subs) {
       const indexFile = join(specDir, sub, "index.md")
       if (existsSync(indexFile)) {
-        paths.push(`.trellis/spec/${sub}/index.md`)
+        paths.push(`.phronia/spec/${sub}/index.md`)
       } else {
         if (allowedPkgs !== null && !allowedPkgs.has(sub)) continue
         try {
@@ -259,7 +259,7 @@ function collectSpecIndexPaths(directory, allowedPkgs) {
           for (const layer of nested) {
             const nestedIndex = join(specDir, sub, layer, "index.md")
             if (existsSync(nestedIndex)) {
-              paths.push(`.trellis/spec/${sub}/${layer}/index.md`)
+              paths.push(`.phronia/spec/${sub}/${layer}/index.md`)
             }
           }
         } catch {
@@ -276,7 +276,7 @@ function collectSpecIndexPaths(directory, allowedPkgs) {
 
 function readDeveloper(directory) {
   try {
-    const content = readFileSync(join(directory, ".trellis", ".developer"), "utf-8")
+    const content = readFileSync(join(directory, ".phronia", ".developer"), "utf-8")
     for (const line of content.split(/\r?\n/)) {
       if (line.startsWith("name=")) return line.slice("name=".length).trim()
     }
@@ -327,19 +327,19 @@ function buildCompactCurrentState(ctx, platformInput, specIndexPaths) {
     lines.push("Current task: none.")
   }
 
-  const tasksDir = join(directory, ".trellis", "tasks")
+  const tasksDir = join(directory, ".phronia", "tasks")
   if (existsSync(tasksDir)) {
     try {
       const activeTasks = readdirSync(tasksDir, { withFileTypes: true })
         .filter(entry => entry.isDirectory() && entry.name !== "archive" && existsSync(join(tasksDir, entry.name, "task.json")))
-      lines.push(`Active tasks: ${activeTasks.length} total. Use \`python3 ./.trellis/scripts/task.py list --mine\` only if needed.`)
+      lines.push(`Active tasks: ${activeTasks.length} total. Use \`python3 ./.phronia/scripts/task.py list --mine\` only if needed.`)
     } catch {
       // Ignore task list errors
     }
   }
 
   const developer = readDeveloper(directory)
-  const workspaceDir = join(directory, ".trellis", "workspace", developer)
+  const workspaceDir = join(directory, ".phronia", "workspace", developer)
   if (developer !== "(not initialized)" && existsSync(workspaceDir)) {
     try {
       const journals = readdirSync(workspaceDir)
@@ -349,7 +349,7 @@ function buildCompactCurrentState(ctx, platformInput, specIndexPaths) {
       if (journal) {
         const journalPath = join(workspaceDir, journal)
         const lineCount = readFileSync(journalPath, "utf-8").split(/\r?\n/).length
-        lines.push(`Journal: .trellis/workspace/${developer}/${journal}, ${lineCount} / 2000 lines.`)
+        lines.push(`Journal: .phronia/workspace/${developer}/${journal}, ${lineCount} / 2000 lines.`)
       }
     } catch {
       // Ignore journal errors
@@ -389,12 +389,12 @@ Trellis compact SessionStart context. Use it to orient the session; load details
   parts.push(buildCompactCurrentState(ctx, platformInput, paths))
   parts.push("</current-state>")
 
-  const workflowContent = ctx.readProjectFile(".trellis/workflow.md")
+  const workflowContent = ctx.readProjectFile(".phronia/workflow.md")
   if (workflowContent) {
     const allLines = workflowContent.split("\n")
     const overviewLines = [
       "# Development Workflow - Session Summary",
-      "Full guide: .trellis/workflow.md. Step detail: `python3 ./.trellis/scripts/get_context.py --mode phase --step <X.Y>`.",
+      "Full guide: .phronia/workflow.md. Step detail: `python3 ./.phronia/scripts/get_context.py --mode phase --step <X.Y>`.",
       "",
     ]
 
@@ -442,7 +442,7 @@ Trellis compact SessionStart context. Use it to orient the session; load details
 
   parts.push(
     "Discover more via: " +
-    "`python3 ./.trellis/scripts/get_context.py --mode packages`"
+    "`python3 ./.phronia/scripts/get_context.py --mode packages`"
   )
   parts.push("</guidelines>")
 
@@ -461,7 +461,9 @@ function getTrellisMetadata(metadata) {
     return {}
   }
 
-  const trellis = metadata.trellis
+  // `phronia` is the current marker; `trellis` is read for sessions that
+  // started before the rename (persisted message parts outlive the upgrade).
+  const trellis = metadata.phronia ?? metadata.trellis
   if (!trellis || typeof trellis !== "object") {
     return {}
   }
@@ -475,7 +477,7 @@ function markPartAsSessionStart(part) {
     : {}
   part.metadata = {
     ...metadata,
-    trellis: {
+    phronia: {
       ...getTrellisMetadata(metadata),
       sessionStart: true,
     },

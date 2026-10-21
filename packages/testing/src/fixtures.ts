@@ -1,7 +1,7 @@
 /**
  * Fixture layout and I/O.
  *
- * A fixture is a recorded harness payload plus the smallest `.trellis/`
+ * A fixture is a recorded harness payload plus the smallest `.phronia/`
  * snapshot needed to reproduce its context, and the expected outputs of the
  * core and of the harness envelope. Everything is plain files so a fixture
  * can be reviewed in a pull request.
@@ -165,7 +165,7 @@ export interface MinimalProjectOptions {
 }
 
 /**
- * Write a minimal, deterministic `.trellis/` project used by fixtures and
+ * Write a minimal, deterministic `.phronia/` project used by fixtures and
  * tool self-tests. It intentionally contains only what context assembly reads.
  */
 export async function writeMinimalProject(
@@ -173,17 +173,17 @@ export async function writeMinimalProject(
   options: MinimalProjectOptions = {},
 ): Promise<void> {
   const taskId = options.taskId ?? "01-01-fixture-task";
-  const taskDir = path.join(root, ".trellis", "tasks", taskId);
-  await mkdir(path.join(root, ".trellis", ".runtime", "sessions"), { recursive: true });
+  const taskDir = path.join(root, ".phronia", "tasks", taskId);
+  await mkdir(path.join(root, ".phronia", ".runtime", "sessions"), { recursive: true });
   await mkdir(taskDir, { recursive: true });
 
   await writeFile(
-    path.join(root, ".trellis", "config.yaml"),
+    path.join(root, ".phronia", "config.yaml"),
     options.config ?? "session_auto_commit: false\n",
     "utf8",
   );
   await writeFile(
-    path.join(root, ".trellis", "workflow.md"),
+    path.join(root, ".phronia", "workflow.md"),
     [
       "# Workflow",
       "",
@@ -233,18 +233,18 @@ export async function writeMinimalProject(
   await writeFile(path.join(taskDir, "prd.md"), "# Fixture task\n\nSynthetic PRD.\n", "utf8");
   await writeFile(
     path.join(taskDir, "implement.jsonl"),
-    `${JSON.stringify({ file: ".trellis/spec/guides/index.md", reason: "fixture" })}\n`,
+    `${JSON.stringify({ file: ".phronia/spec/guides/index.md", reason: "fixture" })}\n`,
     "utf8",
   );
   await writeFile(path.join(taskDir, "check.jsonl"), "", "utf8");
 
   const sessionKey = options.sessionKey ?? "fixture-session";
-  await writeJson(path.join(root, ".trellis", ".runtime", "sessions", `${sessionKey}.json`), {
+  await writeJson(path.join(root, ".phronia", ".runtime", "sessions", `${sessionKey}.json`), {
     platform: "fixture",
     last_seen_at: "2026-01-01T00:00:00Z",
     current_task:
       options.currentTask === undefined
-        ? `.trellis/tasks/${taskId}`
+        ? `.phronia/tasks/${taskId}`
         : options.currentTask,
     current_run: null,
   });

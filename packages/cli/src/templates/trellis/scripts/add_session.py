@@ -286,7 +286,7 @@ def warn_if_parallel_worktree(repo_root: Path) -> None:
             "journal-*.md files auto-merge via .gitattributes, but index.md "
             "conflicts across parallel worktrees/branches are expected and safe "
             "to resolve by picking either side (task state lives in task.json, "
-            "not index.md). See .trellis/spec/cli/backend/directory-structure.md "
+            "not index.md). See .phronia/spec/cli/backend/directory-structure.md "
             '("Workspace Journal Merge Behavior").',
             Colors.YELLOW,
         ),
@@ -711,7 +711,7 @@ def content_at_head(repo_root: Path, path: Path) -> str | None:
 
     The `./` prefix makes the path cwd-relative. `HEAD:<path>` alone is
     relative to the *git* toplevel, which is not always `repo_root` — the
-    Trellis root is the nearest directory holding `.trellis/`, which can sit
+    Trellis root is the nearest directory holding `.phronia/`, which can sit
     below the git root. Without it, every lookup in that layout fails and a
     committed record looks pending.
     """
@@ -1072,17 +1072,17 @@ def _auto_commit_workspace(repo_root: Path) -> str:
 
     Path scope is restricted to specific products: the current developer's
     journal files + index.md, and ONLY the current task directory (resolved
-    via ``get_current_task``). We never `git add` the whole `.trellis/` tree
+    via ``get_current_task``). We never `git add` the whole `.phronia/` tree
     or iterate over all active task dirs (#303: parallel-window dirty task
     dirs must not be bundled into the session auto-commit). If `.gitignore`
     blocks the specific paths we warn + skip — never retry with ``-f``.
 
-    Honors ``session_auto_commit`` in ``.trellis/config.yaml``: when set to
+    Honors ``session_auto_commit`` in ``.phronia/config.yaml``: when set to
     ``false``, this function returns immediately without touching git
     (journal/index files are still written to disk by the caller).
 
     Returns one of ``COMMIT_DONE`` / ``COMMIT_SKIPPED`` / ``COMMIT_BLOCKED`` /
-    ``COMMIT_FAILED``. ``COMMIT_BLOCKED`` is the gitignored-`.trellis/` case:
+    ``COMMIT_FAILED``. ``COMMIT_BLOCKED`` is the gitignored-`.phronia/` case:
     the user has told git to stay out of this tree, so it is a configured skip
     like ``session_auto_commit: false``, not a failure to retry.
     """
@@ -1107,7 +1107,7 @@ def _auto_commit_workspace(repo_root: Path) -> str:
 
     commit_msg = get_session_commit_message(repo_root)
     # Resolve the current task so staging is scoped to its dir only. The ref
-    # is ``.trellis/tasks/<name>`` (or under archive/) — pass the bare name.
+    # is ``.phronia/tasks/<name>`` (or under archive/) — pass the bare name.
     current = get_current_task(repo_root)
     if current:
         task_name = Path(current).name

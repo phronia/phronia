@@ -809,13 +809,13 @@ function unquoteYaml(s: string): string {
 }
 
 /** Line-based parser for ONLY the `context_injection:` block of
- * `.trellis/config.yaml`. Not a general YAML parser — mirrors
+ * `.phronia/config.yaml`. Not a general YAML parser — mirrors
  * `common.config.get_context_injection_limits()` semantics for this
  * section only (missing keys keep the default; invalid/negative values
  * fall back to the default for that key). */
 function readContextInjectionLimits(repoRoot: string): ContextInjectionLimits {
   const limits: ContextInjectionLimits = { ...DEFAULT_CONTEXT_INJECTION_LIMITS };
-  const text = readText(join(repoRoot, ".trellis", "config.yaml"));
+  const text = readText(join(repoRoot, ".phronia", "config.yaml"));
   if (!text) return limits;
 
   let inSection = false;
@@ -971,7 +971,7 @@ function readJsonlEntries(basePath: string, jsonlPath: string): JsonlEntry[] {
 function findRoot(start: string): string {
   let c = resolve(start);
   while (true) {
-    if (existsSync(join(c, ".trellis")) || existsSync(join(c, ".pi"))) return c;
+    if (existsSync(join(c, ".phronia")) || existsSync(join(c, ".pi"))) return c;
     const p = dirname(c);
     if (p === c) return resolve(start);
     c = p;
@@ -1080,18 +1080,18 @@ function readTaskDir(root: string, key: string | null): string | null {
   if (!key) return null;
   try {
     const ctx = JSON.parse(
-      readText(join(root, ".trellis", ".runtime", "sessions", `${key}.json`)),
+      readText(join(root, ".phronia", ".runtime", "sessions", `${key}.json`)),
     ) as JsonObject;
     let ref = str(ctx.current_task);
     if (!ref) return null;
     ref = ref;
     ref = ref.replace(/\\/g, "/").replace(/^\.\//, "");
-    if (ref.startsWith("tasks/")) ref = `.trellis/${ref}`;
-    const candidate = ref.startsWith(".trellis/")
+    if (ref.startsWith("tasks/")) ref = `.phronia/${ref}`;
+    const candidate = ref.startsWith(".phronia/")
       ? join(root, ref)
       : isAbsolute(ref)
         ? ref
-        : join(root, ".trellis", "tasks", ref);
+        : join(root, ".phronia", "tasks", ref);
     return containInRoot(root, candidate);
   } catch {
     return null;
@@ -1102,7 +1102,7 @@ function readTaskDir(root: string, key: string | null): string | null {
 const WF_RE =
   /\[workflow-state:([A-Za-z0-9_-]+)\]\s*\n([\s\S]*?)\n\s*\[\/workflow-state:\1\]/g;
 function workflowBreadcrumb(root: string, key: string | null): string {
-  const wf = readText(join(root, ".trellis", "workflow.md"));
+  const wf = readText(join(root, ".phronia", "workflow.md"));
   if (!wf) return "";
   const templates: Record<string, string> = {};
   for (const m of wf.matchAll(WF_RE)) {
@@ -1130,7 +1130,7 @@ function workflowBreadcrumb(root: string, key: string | null): string {
 
 // ── Session Overview ───────────────────────────────────────────────────
 function runContextScript(root: string, key: string | null, args: string[]): string {
-  const script = join(root, ".trellis", "scripts", "get_context.py");
+  const script = join(root, ".phronia", "scripts", "get_context.py");
   if (!exists(script)) return "";
   try {
     const py = process.platform === "win32" ? "python" : "python3";
@@ -1184,7 +1184,7 @@ function buildStartupContext(
 function buildContext(root: string, agent: string, key: string | null): string {
   const dir = readTaskDir(root, key);
   if (!dir)
-    return "No active Trellis task found. Read .trellis/ before proceeding.";
+    return "No active Trellis task found. Read .phronia/ before proceeding.";
   const relTaskDir = relative(root, dir).replace(/\\/g, "/");
   const limits = readContextInjectionLimits(root);
   const budget = new ContextBudget(limits.max_total_bytes);

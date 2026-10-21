@@ -93,7 +93,7 @@ function readConfiguredFile(root: string, relativePath: string): string {
  * would force-install the statusline onto projects that opted out.
  *
  * Known consequence, documented but deliberately NOT fixed here (see
- * `.trellis/tasks/08-06-converge-platform-templates/research/configure-vs-collect-inventory.md`):
+ * `.phronia/tasks/08-06-converge-platform-templates/research/configure-vs-collect-inventory.md`):
  * init records the file in `.template-hashes.json`, then
  * `pruneOrphanManifestKeys` drops it as an orphan because it is in neither
  * `collectTemplates` nor a migration — so an opted-in user's `statusline.py`
@@ -210,7 +210,7 @@ describe("getConfiguredPlatforms", () => {
       } finally {
         stopRecordingWrites();
       }
-      fs.mkdirSync(path.join(platformRoot, ".trellis"), { recursive: true });
+      fs.mkdirSync(path.join(platformRoot, ".phronia"), { recursive: true });
       initializeHashes(platformRoot, { trackedPaths: written });
 
       expect([...getConfiguredPlatforms(platformRoot)]).toEqual([id]);
@@ -543,7 +543,7 @@ describe("configurePlatform", () => {
     expect(trellis.hooks?.agentSpawn?.[0].command).toBe(
       `${expectedPythonCmd} .kiro/hooks/session-start.py`,
     );
-    expect(trellis.resources).toContain("file://.trellis/workflow.md");
+    expect(trellis.resources).toContain("file://.phronia/workflow.md");
 
     // 3 sub-agents keep their inject-subagent-context.py spawn hook.
     for (const name of [
@@ -867,7 +867,7 @@ describe("configurePlatform", () => {
     ) as { type: string; command: string; location: string };
     expect(continueCmd.type).toBe("prompt");
     expect(continueCmd.location).toBe("project");
-    expect(continueCmd.command).toContain(".trellis");
+    expect(continueCmd.command).toContain(".phronia");
 
     expect(
       fs.existsSync(
@@ -932,7 +932,7 @@ describe("configurePlatform", () => {
     expect(templates?.has(".snow/commands/trellis-continue.json")).toBe(true);
     expect(templates?.has(".snow/agents/trellis-implement.md")).toBe(true);
     expect(templates?.has(".snow/agents/trellis-research.md")).toBe(true);
-    expect(templates?.has(".snow/sub-agents.trellis.json")).toBe(false);
+    expect(templates?.has(".snow/sub-agents.phronia.json")).toBe(false);
     expect(templates?.has(".snow/hooks/onSessionStart.json")).toBe(true);
     expect(templates?.has(".snow/hooks/onUserMessage.json")).toBe(true);
     expect(templates?.has(".snow/hooks/beforeSubAgentStart.json")).toBe(true);
@@ -982,7 +982,7 @@ describe("configurePlatform", () => {
     expect(snowGuide).toContain("class-1 hook inject");
     expect(snowGuide.toLowerCase()).not.toContain("snocli");
     expect(snowGuide.toLowerCase()).not.toContain("snow-cli");
-    expect(snowGuide).not.toContain("sub-agents.trellis.json");
+    expect(snowGuide).not.toContain("sub-agents.phronia.json");
     expect(snowGuide).toContain("Session identity");
     expect(snowGuide).toContain("SNOW_SESSION_ID");
     expect(snowGuide).toContain("TRELLIS_CONTEXT_ID");
@@ -1003,7 +1003,7 @@ describe("configurePlatform", () => {
     expect(implementAgent).toContain("terminal-execute");
 
     expect(
-      fs.existsSync(path.join(tmpDir, ".snow", "sub-agents.trellis.json")),
+      fs.existsSync(path.join(tmpDir, ".snow", "sub-agents.phronia.json")),
     ).toBe(false);
     expect(
       fs.existsSync(path.join(tmpDir, ".snow", "hooks", "onSessionStart.json")),
@@ -1026,7 +1026,7 @@ describe("configurePlatform", () => {
     expect(AI_TOOLS.snow.templateContext.hasHooks).toBe(true);
     expect(AI_TOOLS.snow.hasPythonHooks).toBe(true);
     expect(AI_TOOLS.snow.extraManagedPaths ?? []).not.toContain(
-      ".snow/sub-agents.trellis.json",
+      ".snow/sub-agents.phronia.json",
     );
   });
 
@@ -1553,7 +1553,7 @@ describe("configurePlatform", () => {
     expect(extension).not.toContain("inject-workflow-state.py");
     expect(extension).not.toContain("inject-subagent-context.py");
     expect(extension).not.toContain("session-start.py");
-    // get_context.py is allowed: it lives in .trellis/scripts/ and is the
+    // get_context.py is allowed: it lives in .phronia/scripts/ and is the
     // shared session-overview script invoked by every platform's hook.
 
     const settings = JSON.parse(

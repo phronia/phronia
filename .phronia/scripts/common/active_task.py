@@ -2,7 +2,7 @@
 """Session-scoped active task resolution.
 
 The user-facing concept is a single "active task". Trellis stores that pointer
-per AI session/window under `.trellis/.runtime/sessions/`; without a stable
+per AI session/window under `.phronia/.runtime/sessions/`; without a stable
 session key there is no active task.
 """
 
@@ -19,8 +19,8 @@ from pathlib import Path
 from typing import Any
 
 from .io import read_json as _io_read_json, write_json as _io_write_json
+from .paths import DIR_WORKFLOW
 
-DIR_WORKFLOW = ".trellis"
 DIR_TASKS = "tasks"
 DIR_RUNTIME = ".runtime"
 DIR_SESSIONS = "sessions"
@@ -238,7 +238,7 @@ def resolve_task_ref(task_ref: str, repo_root: Path) -> Path | None:
     except ValueError:
         pass
 
-    # `.trellis` may itself be a symlink into a store outside the repo (#567).
+    # `.phronia` may itself be a symlink into a store outside the repo (#567).
     # The workflow dir's own real location is then a second legitimate
     # containment base; a ref that escapes BOTH bases is still refused. Map
     # back to the in-repo (lexical) form so callers store a repo-relative ref.
@@ -617,7 +617,7 @@ def _relative_task_ref(task_path: str, repo_root: Path) -> str:
     except ValueError:
         pass
     # Same dual-base containment as resolve_task_ref: a path through a
-    # symlinked `.trellis` (#567) maps back to its in-repo form; anything
+    # symlinked `.phronia` (#567) maps back to its in-repo form; anything
     # outside both bases is refused rather than stored as an absolute pointer.
     try:
         rel = resolved.relative_to(workflow_real)

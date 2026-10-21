@@ -143,7 +143,7 @@ function unquoteYaml(s) {
 
 /**
  * Line-based parser for ONLY the `context_injection:` block of
- * `.trellis/config.yaml`. Not a general YAML parser — mirrors
+ * `.phronia/config.yaml`. Not a general YAML parser — mirrors
  * `common.config.get_context_injection_limits()` semantics for this
  * section only (missing keys keep the default; invalid/negative values
  * fall back to the default for that key with a debugLog warning).
@@ -152,7 +152,7 @@ function readContextInjectionLimits(repoRoot) {
   const limits = { ...DEFAULT_CONTEXT_INJECTION_LIMITS }
   let text = null
   try {
-    text = readFileSync(join(repoRoot, ".trellis", "config.yaml"), "utf-8")
+    text = readFileSync(join(repoRoot, ".phronia", "config.yaml"), "utf-8")
   } catch {
     return limits
   }
@@ -327,7 +327,7 @@ export class TrellisContext {
   // ============================================================
 
   isTrellisProject() {
-    return existsSync(join(this.directory, ".trellis"))
+    return existsSync(join(this.directory, ".phronia"))
   }
 
   // OpenCode exports no session identity into the environment: no OPENCODE_*
@@ -360,7 +360,7 @@ export class TrellisContext {
 
   readContext(contextKey) {
     try {
-      const contextPath = join(this.directory, ".trellis", ".runtime", "sessions", `${contextKey}.json`)
+      const contextPath = join(this.directory, ".phronia", ".runtime", "sessions", `${contextKey}.json`)
       if (!existsSync(contextPath)) return null
       return JSON.parse(readFileSync(contextPath, "utf-8"))
     } catch {
@@ -406,7 +406,7 @@ export class TrellisContext {
    * else null.
    */
   _resolveSingleSessionFallback() {
-    const sessionsDir = join(this.directory, ".trellis", ".runtime", "sessions")
+    const sessionsDir = join(this.directory, ".phronia", ".runtime", "sessions")
     if (!existsSync(sessionsDir)) return null
 
     let files
@@ -457,7 +457,7 @@ export class TrellisContext {
     }
 
     if (normalized.startsWith("tasks/")) {
-      return `.trellis/${normalized}`
+      return `.phronia/${normalized}`
     }
 
     return normalized
@@ -495,9 +495,9 @@ export class TrellisContext {
 
     const candidate = isAbsolute(normalized)
       ? normalized
-      : normalized.startsWith(".trellis/")
+      : normalized.startsWith(".phronia/")
         ? join(this.directory, normalized)
-        : join(this.directory, ".trellis", "tasks", normalized)
+        : join(this.directory, ".phronia", "tasks", normalized)
 
     return this.containInProject(candidate)
   }

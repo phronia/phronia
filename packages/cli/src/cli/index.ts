@@ -53,7 +53,7 @@ function checkForUpdates(cwd: string): void {
   }
 }
 
-// Check for updates at CLI startup (only if .trellis exists)
+// Check for updates at CLI startup (only if .phronia exists)
 const cwd = process.cwd();
 if (fs.existsSync(path.join(cwd, DIR_NAMES.WORKFLOW))) {
   checkForUpdates(cwd);
@@ -122,7 +122,7 @@ program
   )
   .option(
     "--workflow <id>",
-    "Workflow template id for .trellis/workflow.md (default: native; e.g., tdd, channel-driven-subagent-dispatch)",
+    "Workflow template id for .phronia/workflow.md (default: native; e.g., tdd, channel-driven-subagent-dispatch)",
   )
   .option(
     "--workflow-source <source>",
@@ -213,7 +213,7 @@ program
 program
   .command("uninstall")
   .description(
-    "Remove all trellis files (managed platform files + .trellis/) from this project",
+    "Remove all trellis files (managed platform files + .phronia/) from this project",
   )
   .option("-y, --yes", "Skip confirmation prompt")
   .option("--dry-run", "List what would be removed without changing anything")
@@ -312,7 +312,7 @@ program
 program
   .command("workflow")
   .description(
-    "List or switch the project's .trellis/workflow.md template (native, tdd, channel-driven-subagent-dispatch, or marketplace)",
+    "List or switch the project's .phronia/workflow.md template (native, tdd, channel-driven-subagent-dispatch, or marketplace)",
   )
   .option(
     "-t, --template <id>",
@@ -326,7 +326,7 @@ program
   .option("-f, --force", "Overwrite a modified workflow.md without asking")
   .option(
     "-n, --create-new",
-    "Write .trellis/workflow.md.new instead of replacing the active workflow",
+    "Write .phronia/workflow.md.new instead of replacing the active workflow",
   )
   .action(async (options: Record<string, unknown>) => {
     try {

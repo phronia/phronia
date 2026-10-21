@@ -70,7 +70,7 @@ describe("fixtures", () => {
     const materialized = await materializeProject(fixtureDir, destination);
     const sessionFile = path.join(
       materialized.root,
-      ".trellis",
+      ".phronia",
       ".runtime",
       "sessions",
       "fixture-session.json",
@@ -78,7 +78,7 @@ describe("fixtures", () => {
     const session = JSON.parse(await readFile(sessionFile, "utf8")) as {
       current_task: string;
     };
-    expect(session.current_task).toBe(".trellis/tasks/01-01-fixture");
+    expect(session.current_task).toBe(".phronia/tasks/01-01-fixture");
     expect(materialized.home.startsWith(destination)).toBe(true);
   });
 
@@ -86,12 +86,12 @@ describe("fixtures", () => {
     const root = await tempDir("stale-");
     await writeMinimalProject(root, {
       taskId: "01-01-fixture",
-      currentTask: ".trellis/tasks/99-99-missing",
+      currentTask: ".phronia/tasks/99-99-missing",
     });
-    const sessionFile = path.join(root, ".trellis", ".runtime", "sessions", "fixture-session.json");
+    const sessionFile = path.join(root, ".phronia", ".runtime", "sessions", "fixture-session.json");
     const session = JSON.parse(await readFile(sessionFile, "utf8")) as {
       current_task: string;
     };
-    expect(session.current_task).toBe(".trellis/tasks/99-99-missing");
+    expect(session.current_task).toBe(".phronia/tasks/99-99-missing");
   });
 });

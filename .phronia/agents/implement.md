@@ -18,11 +18,11 @@ Before implementing, read in this order:
 2. `<task-path>/prd.md` — requirements
 3. `<task-path>/design.md` if present — technical design
 4. `<task-path>/implement.md` if present — execution plan
-5. `.trellis/spec/` — project-wide guidelines (load only what is relevant to the diff you are about to write)
+5. `.phronia/spec/` — project-wide guidelines (load only what is relevant to the diff you are about to write)
 
 ## Core Responsibilities
 
-1. **Understand specs** — read relevant spec files in `.trellis/spec/`
+1. **Understand specs** — read relevant spec files in `.phronia/spec/`
 2. **Understand task artifacts** — read the artifacts listed above
 3. **Implement features** — write code that follows specs and existing patterns
 4. **Self-check** — run lint and typecheck on the changed scope before reporting

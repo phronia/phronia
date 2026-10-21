@@ -58,7 +58,7 @@ Active task: <path from task.py current>
 
 Before checking, read:
 
-- `.trellis/spec/` - Development guidelines
+- `.phronia/spec/` - Development guidelines
 - Pre-commit checklist for quality standards
 - Task `prd.md` / `design.md` / `implement.md` if present
 - `check.jsonl` when curated (skip rows without a `file` field, e.g. legacy `_example` placeholders)
@@ -90,7 +90,7 @@ git diff
 
 ### Step 2: Check Against Specs and Task Artifacts
 
-Read the task's prd.md, design.md if present, and implement.md if present, then read relevant specs in `.trellis/spec/` to check code.
+Read the task's prd.md, design.md if present, and implement.md if present, then read relevant specs in `.phronia/spec/` to check code.
 
 ### Step 3: Self-Fix
 

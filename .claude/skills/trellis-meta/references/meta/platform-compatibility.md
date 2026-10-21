@@ -53,13 +53,13 @@ These features work on all platforms because they're file-based.
 
 | Feature | Location | Description |
 |---------|----------|-------------|
-| Workspace system | `.trellis/workspace/` | Journals, session history |
-| Task system | `.trellis/tasks/` | Task tracking, requirements |
-| Spec system | `.trellis/spec/` | Coding guidelines |
+| Workspace system | `.phronia/workspace/` | Journals, session history |
+| Task system | `.phronia/tasks/` | Task tracking, requirements |
+| Spec system | `.phronia/spec/` | Coding guidelines |
 | Slash commands | `.claude/commands/` | Command prompts (read manually on Cursor) |
 | JSONL context | `*.jsonl` in task dirs | Context file lists |
-| Developer identity | `.trellis/.developer` | Who is working |
-| Current task | `.trellis/.runtime/sessions/` | Session-scoped active task state |
+| Developer identity | `.phronia/.developer` | Who is working |
+| Current task | `.phronia/.runtime/sessions/` | Session-scoped active task state |
 
 **Cursor workaround**: Manually read these files at session start.
 
@@ -148,8 +148,8 @@ For teams using Cursor, here's how to get partial Trellis benefits:
 
 ```
 1. Session Start
-   - Read .trellis/workflow.md
-   - Read relevant specs from .trellis/spec/
+   - Read .phronia/workflow.md
+   - Read relevant specs from .phronia/spec/
    - Run `task.py current --source`
 
 2. Before Implementation

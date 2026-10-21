@@ -19,81 +19,81 @@
 On first use, initialize your identity:
 
 ```bash
-python3 ./.trellis/scripts/init_developer.py <your-name>
+python3 ./.phronia/scripts/init_developer.py <your-name>
 ```
 
-Creates `.trellis/.developer` (gitignored) + `.trellis/workspace/<your-name>/`.
+Creates `.phronia/.developer` (gitignored) + `.phronia/workspace/<your-name>/`.
 
 ### Spec System
 
-`.trellis/spec/` holds coding guidelines organized by package and layer.
+`.phronia/spec/` holds coding guidelines organized by package and layer.
 
-- `.trellis/spec/<package>/<layer>/index.md` — entry point with **Pre-Development Checklist** + **Quality Check**. Actual guidelines live in the `.md` files it points to.
-- `.trellis/spec/guides/index.md` — cross-package thinking guides.
+- `.phronia/spec/<package>/<layer>/index.md` — entry point with **Pre-Development Checklist** + **Quality Check**. Actual guidelines live in the `.md` files it points to.
+- `.phronia/spec/guides/index.md` — cross-package thinking guides.
 
 ```bash
-python3 ./.trellis/scripts/get_context.py --mode packages   # list packages / layers
+python3 ./.phronia/scripts/get_context.py --mode packages   # list packages / layers
 ```
 
 **When to update spec**: new pattern/convention found · bug-fix prevention to codify · new technical decision.
 
 ### Task System
 
-Every task has its own directory under `.trellis/tasks/{MM-DD-name}/` holding `task.json`, `prd.md`, optional `design.md`, optional `implement.md`, optional `research/`, and context manifests (`implement.jsonl`, `check.jsonl`) for sub-agent-capable platforms.
+Every task has its own directory under `.phronia/tasks/{MM-DD-name}/` holding `task.json`, `prd.md`, optional `design.md`, optional `implement.md`, optional `research/`, and context manifests (`implement.jsonl`, `check.jsonl`) for sub-agent-capable platforms.
 
 ```bash
 # Task lifecycle
-python3 ./.trellis/scripts/task.py create "<title>" [--slug <name>] [--parent <dir>]
-python3 ./.trellis/scripts/task.py start <name>          # set active task (session-scoped when available)
-python3 ./.trellis/scripts/task.py current --source      # show active task and source
-python3 ./.trellis/scripts/task.py finish                # clear active task (triggers after_finish hooks)
-python3 ./.trellis/scripts/task.py archive <name>        # move to archive/{year-month}/
-python3 ./.trellis/scripts/task.py list [--mine] [--status <s>]
-python3 ./.trellis/scripts/task.py list-archive
+python3 ./.phronia/scripts/task.py create "<title>" [--slug <name>] [--parent <dir>]
+python3 ./.phronia/scripts/task.py start <name>          # set active task (session-scoped when available)
+python3 ./.phronia/scripts/task.py current --source      # show active task and source
+python3 ./.phronia/scripts/task.py finish                # clear active task (triggers after_finish hooks)
+python3 ./.phronia/scripts/task.py archive <name>        # move to archive/{year-month}/
+python3 ./.phronia/scripts/task.py list [--mine] [--status <s>]
+python3 ./.phronia/scripts/task.py list-archive
 
 # Code-spec context (injected into implement/check agents via JSONL).
 # `implement.jsonl` / `check.jsonl` are seeded (empty) on `task create` for sub-agent-capable
 # platforms; the AI curates real spec + research entries during planning. `validate` fails
 # and `start` refuses while a seeded manifest is still empty — sub-agents would run with
 # zero spec context. Pass `start --allow-empty-context` when that is intentional.
-python3 ./.trellis/scripts/task.py add-context <name> <action> <file> <reason>
-python3 ./.trellis/scripts/task.py list-context <name> [action]
-python3 ./.trellis/scripts/task.py validate <name>
+python3 ./.phronia/scripts/task.py add-context <name> <action> <file> <reason>
+python3 ./.phronia/scripts/task.py list-context <name> [action]
+python3 ./.phronia/scripts/task.py validate <name>
 
 # Task metadata
-python3 ./.trellis/scripts/task.py set-branch <name> <branch>
-python3 ./.trellis/scripts/task.py set-base-branch <name> <branch>    # PR target
-python3 ./.trellis/scripts/task.py set-scope <name> <scope>
+python3 ./.phronia/scripts/task.py set-branch <name> <branch>
+python3 ./.phronia/scripts/task.py set-base-branch <name> <branch>    # PR target
+python3 ./.phronia/scripts/task.py set-scope <name> <scope>
 
 # Hierarchy (parent/child)
-python3 ./.trellis/scripts/task.py add-subtask <parent> <child>
-python3 ./.trellis/scripts/task.py remove-subtask <parent> <child>
+python3 ./.phronia/scripts/task.py add-subtask <parent> <child>
+python3 ./.phronia/scripts/task.py remove-subtask <parent> <child>
 
 # PR creation
-python3 ./.trellis/scripts/task.py create-pr [name] [--dry-run]
+python3 ./.phronia/scripts/task.py create-pr [name] [--dry-run]
 ```
 
-> Run `python3 ./.trellis/scripts/task.py --help` to see the authoritative, up-to-date list.
+> Run `python3 ./.phronia/scripts/task.py --help` to see the authoritative, up-to-date list.
 
-**Current-task mechanism**: `task.py create` creates the task directory and (when session identity is available) auto-sets the per-session active-task pointer so the planning breadcrumb fires immediately. `task.py start` writes the same pointer (idempotent if already set) and flips `task.json.status` from `planning` to `in_progress`. State is stored under `.trellis/.runtime/sessions/`. If no context key is available from hook input, `TRELLIS_CONTEXT_ID`, or a platform-native session environment variable, there is no active task and `task.py start` fails with a session identity hint. `task.py finish` deletes the current session file (status unchanged). `task.py archive <task>` writes `status=completed`, moves the directory to `archive/`, and deletes any runtime session files that still point at the archived task.
+**Current-task mechanism**: `task.py create` creates the task directory and (when session identity is available) auto-sets the per-session active-task pointer so the planning breadcrumb fires immediately. `task.py start` writes the same pointer (idempotent if already set) and flips `task.json.status` from `planning` to `in_progress`. State is stored under `.phronia/.runtime/sessions/`. If no context key is available from hook input, `TRELLIS_CONTEXT_ID`, or a platform-native session environment variable, there is no active task and `task.py start` fails with a session identity hint. `task.py finish` deletes the current session file (status unchanged). `task.py archive <task>` writes `status=completed`, moves the directory to `archive/`, and deletes any runtime session files that still point at the archived task.
 
 ### Workspace System
 
-Records every AI session for cross-session tracking under `.trellis/workspace/<developer>/`.
+Records every AI session for cross-session tracking under `.phronia/workspace/<developer>/`.
 
 - `journal-N.md` — session log. **Max 2000 lines per file**; a new `journal-(N+1).md` is auto-created when exceeded.
 - `index.md` — personal index (total sessions, last active).
 
 ```bash
-python3 ./.trellis/scripts/add_session.py --title "Title" --commit "hash" --summary "Summary"
+python3 ./.phronia/scripts/add_session.py --title "Title" --commit "hash" --summary "Summary"
 ```
 
 ### Context Script
 
 ```bash
-python3 ./.trellis/scripts/get_context.py                            # full session runtime
-python3 ./.trellis/scripts/get_context.py --mode packages            # available packages + spec layers
-python3 ./.trellis/scripts/get_context.py --mode phase --step <X.Y>  # detailed guide for a workflow step
+python3 ./.phronia/scripts/get_context.py                            # full session runtime
+python3 ./.phronia/scripts/get_context.py --mode packages            # available packages + spec layers
+python3 ./.phronia/scripts/get_context.py --mode phase --step <X.Y>  # detailed guide for a workflow step
 ```
 
 ---
@@ -141,7 +141,7 @@ python3 ./.trellis/scripts/get_context.py --mode phase --step <X.Y>  # detailed 
     - Run `trellis update` after editing to push the new bodies to
       downstream user projects (block-level managed replacement)
     - Full runtime contract:
-      .trellis/spec/cli/backend/workflow-state-contract.md
+      .phronia/spec/cli/backend/workflow-state-contract.md
 -->
 
 ## Phase Index
@@ -310,8 +310,8 @@ When a user request matches one of these intents inside an active task, route fi
 At each step, run this to fetch detailed guidance:
 
 ```bash
-python3 ./.trellis/scripts/get_context.py --mode phase --step <step>
-# e.g. python3 ./.trellis/scripts/get_context.py --mode phase --step 1.1
+python3 ./.phronia/scripts/get_context.py --mode phase --step <step>
+# e.g. python3 ./.phronia/scripts/get_context.py --mode phase --step 1.1
 ```
 
 ---
@@ -325,7 +325,7 @@ Goal: classify the request, get task-creation consent when a task is needed, and
 Create the task directory only after task-creation consent. The command sets status to `planning`, writes `task.json`, creates a default `prd.md`, and auto-targets the new task when session identity is available:
 
 ```bash
-python3 ./.trellis/scripts/task.py create "<task title>" --slug <name>
+python3 ./.phronia/scripts/task.py create "<task title>" --slug <name>
 ```
 
 `--slug` is the human-readable name only. Do **not** include the `MM-DD-` date prefix; `task.py create` adds that prefix automatically.
@@ -336,7 +336,7 @@ After this command succeeds, the per-turn breadcrumb auto-switches to `[workflow
 
 Run only `create` here — do not also run `start`. `start` flips status to `in_progress`, which switches the breadcrumb to the implementation phase before planning artifacts are reviewed. Save `start` for step 1.4.
 
-Skip when `python3 ./.trellis/scripts/task.py current --source` already points to a task.
+Skip when `python3 ./.phronia/scripts/task.py current --source` already points to a task.
 
 #### 1.1 Requirement exploration `[required · repeatable]`
 
@@ -400,7 +400,7 @@ Curate `implement.jsonl` and `check.jsonl` so the Phase 2 sub-agents get the rig
 **Format**: one JSON object per line — `{"file": "<path>", "reason": "<why>"}`. Paths are repo-root relative.
 
 **What to put in**:
-- **Spec files** — `.trellis/spec/<package>/<layer>/index.md` and any specific guideline files (`error-handling.md`, `conventions.md`, etc.) relevant to this task
+- **Spec files** — `.phronia/spec/<package>/<layer>/index.md` and any specific guideline files (`error-handling.md`, `conventions.md`, etc.) relevant to this task
 - **Research files** — `{TASK_DIR}/research/*.md` that the sub-agent will need to consult
 
 **What NOT to put in**:
@@ -416,7 +416,7 @@ These manifests do not replace `implement.md`. `implement.md` is the human-reada
 **How to discover relevant specs**:
 
 ```bash
-python3 ./.trellis/scripts/get_context.py --mode packages
+python3 ./.phronia/scripts/get_context.py --mode packages
 ```
 
 Lists every package + its spec layers with paths. Pick the entries that match this task's domain.
@@ -426,8 +426,8 @@ Lists every package + its spec layers with paths. Pick the entries that match th
 Either edit the jsonl file directly in your editor, or use:
 
 ```bash
-python3 ./.trellis/scripts/task.py add-context "$TASK_DIR" implement "<path>" "<reason>"
-python3 ./.trellis/scripts/task.py add-context "$TASK_DIR" check "<path>" "<reason>"
+python3 ./.phronia/scripts/task.py add-context "$TASK_DIR" implement "<path>" "<reason>"
+python3 ./.phronia/scripts/task.py add-context "$TASK_DIR" check "<path>" "<reason>"
 ```
 
 Delete the seed `_example` line once real entries exist (optional — it's skipped automatically by consumers).
@@ -449,7 +449,7 @@ Skip this step. Context is loaded directly by the `trellis-before-dev` skill in 
 After artifact review, flip the task status to `in_progress`:
 
 ```bash
-python3 ./.trellis/scripts/task.py start <task-dir>
+python3 ./.phronia/scripts/task.py start <task-dir>
 ```
 
 For lightweight tasks, `prd.md` can be enough. For complex tasks, `prd.md`, `design.md`, and `implement.md` must exist and be reviewed before start. On sub-agent-dispatch platforms, `implement.jsonl` and `check.jsonl` must both have real curated entries before start. Runtime consumers tolerate missing or seed-only manifests for compatibility, but that tolerance is not a planning-ready state.
@@ -565,7 +565,7 @@ If issues are found → fix → re-check, until green.
 
 [/codex-inline, Kilo, Antigravity, Devin, DeepSeek Harness]
 
-**Final pass (before Phase 3.4 commit)**: the last 2.2 of a task must run full-scope, not just on the latest implement chunk. List all affected packages with `python3 ./.trellis/scripts/get_context.py --mode packages`, then load each package's spec index Quality Check section. This catches cross-layer / multi-package issues a mid-iteration local 2.2 cannot.
+**Final pass (before Phase 3.4 commit)**: the last 2.2 of a task must run full-scope, not just on the latest implement chunk. List all affected packages with `python3 ./.phronia/scripts/get_context.py --mode packages`, then load each package's spec index Quality Check section. This catches cross-layer / multi-package issues a mid-iteration local 2.2 cannot.
 
 #### 2.3 Rollback `[on demand]`
 
@@ -595,11 +595,11 @@ Load the `trellis-update-spec` skill and review whether this task produced new k
 - Pitfalls you hit
 - New technical decisions
 
-Update the docs under `.trellis/spec/` accordingly. Even if the conclusion is "nothing to update", walk through the judgment.
+Update the docs under `.phronia/spec/` accordingly. Even if the conclusion is "nothing to update", walk through the judgment.
 
 #### 3.4 Commit changes `[required · once]`
 
-**Spec-sync preamble**: before drafting commits, ask: did this task fix a bug or surface non-obvious knowledge that should land in `.trellis/spec/` so future-you (or future-AI) doesn't repeat the mistake? If yes, return to Phase 3.3 first — spec writes belong in the same task's commit batch, not as a forgotten follow-up.
+**Spec-sync preamble**: before drafting commits, ask: did this task fix a bug or surface non-obvious knowledge that should land in `.phronia/spec/` so future-you (or future-AI) doesn't repeat the mistake? If yes, return to Phase 3.3 first — spec writes belong in the same task's commit batch, not as a forgotten follow-up.
 
 The AI drives a batched commit of this task's code changes so `/finish-work` can run cleanly afterwards. Goal: produce work commits FIRST, then bookkeeping (archive + journal) commits land after — never interleaved.
 
@@ -717,5 +717,5 @@ Supported events: `after_create / after_start / after_finish / after_archive`. N
 
 For the workflow state machine's runtime contract, the locations of all status writers, pseudo-statuses (`no_task` / `stale_<source_type>`), the hook reachability matrix, and other deep details, see:
 
-- `.trellis/spec/cli/backend/workflow-state-contract.md` — runtime contract + writer table + test invariants
-- `.trellis/scripts/inject-workflow-state.py` — actual parser (reads workflow.md only, no embedded text)
+- `.phronia/spec/cli/backend/workflow-state-contract.md` — runtime contract + writer table + test invariants
+- `.phronia/scripts/inject-workflow-state.py` — actual parser (reads workflow.md only, no embedded text)

@@ -18,7 +18,7 @@ You are already the `trellis-check` sub-agent that the main session dispatched. 
 ## Context
 
 Before checking, read:
-- `.trellis/spec/` - Development guidelines
+- `.phronia/spec/` - Development guidelines
 - Task `prd.md` - Requirements document
 - Task `design.md` - Technical design (if exists)
 - Task `implement.md` - Execution plan (if exists)
@@ -51,7 +51,7 @@ git diff              # View specific changes
 
 ### Step 2: Check Against Specs and Task Artifacts
 
-Read the task's prd.md, design.md if present, and implement.md if present, then read relevant specs in `.trellis/spec/` to check code:
+Read the task's prd.md, design.md if present, and implement.md if present, then read relevant specs in `.phronia/spec/` to check code:
 
 - Does it satisfy the task requirements
 - Does it follow the technical design and implementation plan when present

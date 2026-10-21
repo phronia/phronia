@@ -59,14 +59,14 @@ function captureOmpHandlers(): Map<string, OmpEventHandler> {
 
 function makeOmpProject(): { root: string; taskDir: string; sessionId: string } {
   const root = fs.mkdtempSync(path.join(process.env.TMPDIR ?? "/tmp", "trellis-omp-") );
-  const taskDir = path.join(root, ".trellis", "tasks", "08-13-context-limits");
+  const taskDir = path.join(root, ".phronia", "tasks", "08-13-context-limits");
   const sessionId = "context_limits";
-  fs.mkdirSync(path.join(root, ".trellis", ".runtime", "sessions"), { recursive: true });
+  fs.mkdirSync(path.join(root, ".phronia", ".runtime", "sessions"), { recursive: true });
   fs.mkdirSync(taskDir, { recursive: true });
   fs.writeFileSync(path.join(taskDir, "task.json"), JSON.stringify({ status: "in_progress", title: "Context limits" }));
   fs.writeFileSync(
-    path.join(root, ".trellis", ".runtime", "sessions", "omp_context_limits.json"),
-    JSON.stringify({ current_task: ".trellis/tasks/08-13-context-limits" }),
+    path.join(root, ".phronia", ".runtime", "sessions", "omp_context_limits.json"),
+    JSON.stringify({ current_task: ".phronia/tasks/08-13-context-limits" }),
   );
   return { root, taskDir, sessionId };
 }
@@ -147,7 +147,7 @@ describe("omp templates", () => {
     const handler = captureOmpHandlers().get("tool_call");
     if (!handler) throw new Error("OMP extension did not register tool_call");
     const params: { command: string; env?: Record<string, string> } = {
-      command: "python3 ./.trellis/scripts/task.py current",
+      command: "python3 ./.phronia/scripts/task.py current",
       env: { EXISTING: "kept" },
     };
 
@@ -164,7 +164,7 @@ describe("omp templates", () => {
     const handler = captureOmpHandlers().get("tool_call");
     if (!handler) throw new Error("OMP extension did not register tool_call");
     const command =
-      "TRELLIS_CONTEXT_ID=inline python3 ./.trellis/scripts/task.py current";
+      "TRELLIS_CONTEXT_ID=inline python3 ./.phronia/scripts/task.py current";
     const params: { command: string; env?: Record<string, string> } = {
       command,
       env: { TRELLIS_CONTEXT_ID: "explicit" },
@@ -218,17 +218,17 @@ describe("omp templates", () => {
     const projectRoot = fs.mkdtempSync(
       path.join(os.tmpdir(), "trellis-omp-dedupe-"),
     );
-    const taskDir = path.join(projectRoot, ".trellis", "tasks", "demo-task");
+    const taskDir = path.join(projectRoot, ".phronia", "tasks", "demo-task");
     const sessionDir = path.join(
       projectRoot,
-      ".trellis",
+      ".phronia",
       ".runtime",
       "sessions",
     );
     const sharedFile = path.join(projectRoot, "docs", "shared.md");
     const checkOnlyFile = path.join(projectRoot, "docs", "check-only.md");
     const contextKey = "omp_session_dedupe";
-    const taskRef = ".trellis/tasks/demo-task";
+    const taskRef = ".phronia/tasks/demo-task";
     const messages: { customType?: string; content?: string }[] = [];
 
     try {
@@ -292,8 +292,8 @@ describe("omp templates", () => {
 
   it("refreshes task context when a referenced file changes mid-session", async () => {
     const projectRoot = fs.mkdtempSync(path.join(os.tmpdir(), "trellis-omp-refresh-"));
-    const taskDir = path.join(projectRoot, ".trellis", "tasks", "demo-task");
-    const sessionsDir = path.join(projectRoot, ".trellis", ".runtime", "sessions");
+    const taskDir = path.join(projectRoot, ".phronia", "tasks", "demo-task");
+    const sessionsDir = path.join(projectRoot, ".phronia", ".runtime", "sessions");
     const referencedFile = path.join(projectRoot, "docs", "changing.md");
     const messages: { customType?: string; content?: string }[] = [];
 
@@ -309,7 +309,7 @@ describe("omp templates", () => {
       );
       fs.writeFileSync(
         path.join(sessionsDir, "omp_session_refresh.json"),
-        JSON.stringify({ current_task: ".trellis/tasks/demo-task" }),
+        JSON.stringify({ current_task: ".phronia/tasks/demo-task" }),
       );
 
       const handlers = new Map<string, OmpEventHandler>();
@@ -364,7 +364,7 @@ describe("omp templates", () => {
 
     try {
       fs.writeFileSync(
-        path.join(project.root, ".trellis", "config.yaml"),
+        path.join(project.root, ".phronia", "config.yaml"),
         "context_injection:\n  max_file_bytes: 0\n  max_artifact_bytes: 64\n  max_total_bytes: 900\n",
       );
       const earlierFile = path.join(project.root, "earlier.md");
@@ -448,7 +448,7 @@ describe("omp templates", () => {
       const context = await runSessionStart(project.root, project.sessionId);
       expect(context).toContain("large.md [truncated]");
       expect(context).toContain("read large.md for the full content");
-      expect(context).toContain("Context is bounded by .trellis/config.yaml");
+      expect(context).toContain("Context is bounded by .phronia/config.yaml");
       expect(Buffer.byteLength(context, "utf-8")).toBeLessThan(140_000);
     } finally {
       fs.rmSync(project.root, { recursive: true, force: true });
@@ -459,7 +459,7 @@ describe("omp templates", () => {
     const project = makeOmpProject();
     try {
       fs.writeFileSync(
-        path.join(project.root, ".trellis", "config.yaml"),
+        path.join(project.root, ".phronia", "config.yaml"),
         "context_injection:\n  max_file_bytes: 0\n  max_total_bytes: 500\n",
       );
       fs.writeFileSync(path.join(project.root, "large.md"), "x".repeat(800));
@@ -490,8 +490,8 @@ describe("omp templates", () => {
         " ".repeat(1024 * 1024 + 1),
       );
       const context = await runSessionStart(project.root, project.sessionId);
-      expect(context).toContain(".trellis/tasks/08-13-context-limits/implement.jsonl [omitted]");
-      expect(context).toContain("required_read: .trellis/tasks/08-13-context-limits/implement.jsonl");
+      expect(context).toContain(".phronia/tasks/08-13-context-limits/implement.jsonl [omitted]");
+      expect(context).toContain("required_read: .phronia/tasks/08-13-context-limits/implement.jsonl");
       expect(context).toContain("manifest exceeds 1048576 byte parse limit");
     } finally {
       fs.rmSync(project.root, { recursive: true, force: true });
@@ -502,7 +502,7 @@ describe("omp templates", () => {
     const project = makeOmpProject();
     try {
       fs.writeFileSync(
-        path.join(project.root, ".trellis", "config.yaml"),
+        path.join(project.root, ".phronia", "config.yaml"),
         "context_injection:\n  max_file_bytes: 3\n  max_artifact_bytes: 64\n  max_total_bytes: 2000\n",
       );
       fs.writeFileSync(path.join(project.root, "invalid.md"), Buffer.from([0x61, 0x62, 0x63, 0x80, 0x64]));
@@ -528,7 +528,7 @@ describe("omp templates", () => {
       const project = makeOmpProject();
       try {
         fs.writeFileSync(
-          path.join(project.root, ".trellis", "config.yaml"),
+          path.join(project.root, ".phronia", "config.yaml"),
           "context_injection:\n  max_file_bytes: 3\n  max_artifact_bytes: 64\n  max_total_bytes: 2000\n",
         );
         fs.writeFileSync(path.join(project.root, name), Buffer.from(bytes));
@@ -550,7 +550,7 @@ describe("omp templates", () => {
     const project = makeOmpProject();
     try {
       fs.writeFileSync(
-        path.join(project.root, ".trellis", "config.yaml"),
+        path.join(project.root, ".phronia", "config.yaml"),
         "context_injection:\n  max_file_bytes: 3\n  max_artifact_bytes: 64\n  max_total_bytes: 2000\n",
       );
       fs.writeFileSync(path.join(project.root, "unicode.md"), "a€tail");
@@ -573,7 +573,7 @@ describe("omp templates", () => {
     const project = makeOmpProject();
     try {
       fs.writeFileSync(
-        path.join(project.root, ".trellis", "config.yaml"),
+        path.join(project.root, ".phronia", "config.yaml"),
         "context_injection:\n  max_file_bytes: 4\n  max_artifact_bytes: 64\n  max_total_bytes: 2000\n",
       );
       fs.writeFileSync(path.join(project.root, "unicode-end.md"), "a€tail");
@@ -596,7 +596,7 @@ describe("omp templates", () => {
     const maxTotalBytes = 700;
     try {
       fs.writeFileSync(
-        path.join(project.root, ".trellis", "config.yaml"),
+        path.join(project.root, ".phronia", "config.yaml"),
         `context_injection:\n  max_file_bytes: 0\n  max_artifact_bytes: 64\n  max_total_bytes: ${maxTotalBytes}\n`,
       );
       const rows: string[] = [];

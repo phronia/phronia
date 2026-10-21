@@ -54,7 +54,7 @@ if sys.platform.startswith("win"):
 # Path Constants (change here to rename directories)
 # =============================================================================
 
-DIR_WORKFLOW = ".trellis"
+DIR_WORKFLOW = ".phronia"
 DIR_SPEC = "spec"
 FILE_TASK_JSON = "task.json"
 
@@ -265,9 +265,9 @@ def _read_file_bytes(base_path: str, file_path: str) -> bytes | None:
     full_path = os.path.join(base_path, file_path)
     try:
         root_real = os.path.realpath(base_path)
-        # `.trellis` may itself be a symlink into a store outside the repo
+        # `.phronia` may itself be a symlink into a store outside the repo
         # (#567); its real location is a second legitimate containment base.
-        workflow_real = os.path.realpath(os.path.join(base_path, ".trellis"))
+        workflow_real = os.path.realpath(os.path.join(base_path, ".phronia"))
         full_real = os.path.realpath(full_path)
         if not _real_path_contained(root_real, full_real) and not (
             _real_path_contained(workflow_real, full_real)
@@ -501,7 +501,7 @@ def get_agent_context(
         return (
             f"[Trellis] {agent_jsonl} has no curated entries, so no spec/research "
             "context was injected. Before working, read the guidelines relevant "
-            "to the code you will touch under .trellis/spec/, and treat the task "
+            "to the code you will touch under .phronia/spec/, and treat the task "
             "artifacts below as the only prepared context."
         )
     return "\n\n".join(blocks)
@@ -1136,9 +1136,9 @@ def main():
         # task's prd.md/design.md reach the model prompt, so it checks again.
         try:
             root_real = os.path.realpath(repo_root)
-            # `.trellis` may itself be a symlink into a store outside the
+            # `.phronia` may itself be a symlink into a store outside the
             # repo (#567); its real location is a second legitimate base.
-            workflow_real = os.path.realpath(os.path.join(repo_root, ".trellis"))
+            workflow_real = os.path.realpath(os.path.join(repo_root, ".phronia"))
             task_dir_full = os.path.realpath(os.path.join(repo_root, task_dir))
             if not _real_path_contained(root_real, task_dir_full) and not (
                 _real_path_contained(workflow_real, task_dir_full)

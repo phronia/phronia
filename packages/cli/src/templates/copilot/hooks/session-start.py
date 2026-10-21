@@ -112,7 +112,7 @@ def should_skip_injection() -> bool:
 
 def configure_project_encoding(project_dir: Path) -> None:
     """Reuse Trellis' shared Windows stdio encoding helper before JSON output."""
-    scripts_dir = project_dir / ".trellis" / "scripts"
+    scripts_dir = project_dir / ".phronia" / "scripts"
     if str(scripts_dir) not in sys.path:
         sys.path.insert(0, str(scripts_dir))
 
@@ -156,7 +156,7 @@ def read_file(path: Path, fallback: str = "") -> str:
 
 
 def _resolve_context_key(project_dir: Path, hook_input: dict) -> str | None:
-    scripts_dir = project_dir / ".trellis" / "scripts"
+    scripts_dir = project_dir / ".phronia" / "scripts"
     if str(scripts_dir) not in sys.path:
         sys.path.insert(0, str(scripts_dir))
     try:
@@ -211,7 +211,7 @@ def _normalize_task_ref(task_ref: str) -> str:
         normalized = normalized[2:]
 
     if normalized.startswith("tasks/"):
-        return f".trellis/{normalized}"
+        return f".phronia/{normalized}"
 
     return normalized
 
@@ -221,7 +221,7 @@ def _resolve_task_dir(trellis_dir: Path, task_ref: str) -> Path:
     path_obj = Path(normalized)
     if path_obj.is_absolute():
         return path_obj
-    if normalized.startswith(".trellis/"):
+    if normalized.startswith(".phronia/"):
         return trellis_dir.parent / path_obj
     return trellis_dir / "tasks" / path_obj
 
@@ -240,7 +240,7 @@ def _get_task_status(trellis_dir: Path, hook_input: dict) -> str:
     if active.stale or not task_dir.is_dir():
         return (
             f"Status: STALE POINTER\nTask: {task_ref}\n"
-            "Next: Task directory not found. Run: python3 ./.trellis/scripts/task.py finish"
+            "Next: Task directory not found. Run: python3 ./.phronia/scripts/task.py finish"
         )
 
     task_json_path = task_dir / "task.json"
@@ -257,7 +257,7 @@ def _get_task_status(trellis_dir: Path, hook_input: dict) -> str:
     if task_status == "completed":
         return (
             f"Status: COMPLETED\nTask: {task_title}\n"
-            f"Next: Archive with `python3 ./.trellis/scripts/task.py archive {task_dir.name}` "
+            f"Next: Archive with `python3 ./.phronia/scripts/task.py archive {task_dir.name}` "
             "or start a new task."
         )
 
@@ -336,7 +336,7 @@ def _collect_spec_index_paths(trellis_dir: Path) -> list[str]:
     paths: list[str] = []
     guides_index = trellis_dir / "spec" / "guides" / "index.md"
     if guides_index.is_file():
-        paths.append(".trellis/spec/guides/index.md")
+        paths.append(".phronia/spec/guides/index.md")
 
     spec_dir = trellis_dir / "spec"
     if not spec_dir.is_dir():
@@ -347,14 +347,14 @@ def _collect_spec_index_paths(trellis_dir: Path) -> list[str]:
             continue
         index_file = sub / "index.md"
         if index_file.is_file():
-            paths.append(f".trellis/spec/{sub.name}/index.md")
+            paths.append(f".phronia/spec/{sub.name}/index.md")
             continue
         for nested in sorted(sub.iterdir()):
             if not nested.is_dir():
                 continue
             nested_index = nested / "index.md"
             if nested_index.is_file():
-                paths.append(f".trellis/spec/{sub.name}/{nested.name}/index.md")
+                paths.append(f".phronia/spec/{sub.name}/{nested.name}/index.md")
 
     return paths
 
@@ -401,7 +401,7 @@ def _build_compact_current_state(
         try:
             task_count = sum(1 for _ in iter_active_tasks(get_tasks_dir(repo_root)))
             lines.append(
-                f"Active tasks: {task_count} total. Use `python3 ./.trellis/scripts/task.py list --mine` only if needed."
+                f"Active tasks: {task_count} total. Use `python3 ./.phronia/scripts/task.py list --mine` only if needed."
             )
         except Exception:
             pass  # Optional task summary; keep compact state available.
@@ -460,7 +460,7 @@ def _build_workflow_toc(workflow_path: Path) -> str:
 
     out_lines = [
         "# Development Workflow - Session Summary",
-        "Full guide: .trellis/workflow.md. Step detail: `python3 ./.trellis/scripts/get_context.py --mode phase --step <X.Y>`.",
+        "Full guide: .phronia/workflow.md. Step detail: `python3 ./.phronia/scripts/get_context.py --mode phase --step <X.Y>`.",
         "",
     ]
 
@@ -487,7 +487,7 @@ def main() -> None:
 
     configure_project_encoding(project_dir)
 
-    trellis_dir = project_dir / ".trellis"
+    trellis_dir = project_dir / ".phronia"
     spec_index_paths = _collect_spec_index_paths(trellis_dir)
 
     output = StringIO()
@@ -521,7 +521,7 @@ Trellis compact SessionStart context. Use it to orient the session; load details
 
     output.write(
         "Discover more via: "
-        "`python3 ./.trellis/scripts/get_context.py --mode packages`\n"
+        "`python3 ./.phronia/scripts/get_context.py --mode packages`\n"
     )
     output.write("</guidelines>\n\n")
 

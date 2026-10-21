@@ -85,7 +85,7 @@ describe("resolveTrustedRoots", () => {
   beforeEach(() => {
     tmpDir = fs.mkdtempSync(path.join(realTmp(), "trellis-trust-test-"));
     cwd = path.join(tmpDir, "project");
-    fs.mkdirSync(path.join(cwd, ".trellis"), { recursive: true });
+    fs.mkdirSync(path.join(cwd, ".phronia"), { recursive: true });
   });
 
   afterEach(() => {
@@ -100,7 +100,7 @@ describe("resolveTrustedRoots", () => {
     const extDir = path.join(tmpDir, "ext");
     fs.mkdirSync(extDir, { recursive: true });
     fs.writeFileSync(
-      path.join(cwd, ".trellis", "config.yaml"),
+      path.join(cwd, ".phronia", "config.yaml"),
       `channel:\n  trusted_context_dirs:\n    - ${extDir}\n`,
     );
     const roots = resolveTrustedRoots(cwd);
@@ -110,7 +110,7 @@ describe("resolveTrustedRoots", () => {
   it("skips a non-existent trusted_context_dirs entry with a warning", () => {
     const missing = path.join(tmpDir, "does-not-exist");
     fs.writeFileSync(
-      path.join(cwd, ".trellis", "config.yaml"),
+      path.join(cwd, ".phronia", "config.yaml"),
       `channel:\n  trusted_context_dirs:\n    - ${missing}\n`,
     );
     const originalWrite = process.stderr.write.bind(process.stderr);
@@ -128,24 +128,24 @@ describe("resolveTrustedRoots", () => {
   });
 
   it.skipIf(isWin)(
-    "auto-trusts .trellis/tasks when it is a top-level symlink",
+    "auto-trusts .phronia/tasks when it is a top-level symlink",
     () => {
       const extTasks = path.join(tmpDir, "ext-tasks");
       fs.mkdirSync(extTasks, { recursive: true });
-      fs.symlinkSync(extTasks, path.join(cwd, ".trellis", "tasks"), "dir");
+      fs.symlinkSync(extTasks, path.join(cwd, ".phronia", "tasks"), "dir");
       const roots = resolveTrustedRoots(cwd);
       expect(roots).toEqual([fs.realpathSync(extTasks)]);
     },
   );
 
   it.skipIf(isWin)(
-    "auto-trusts .trellis/workspace when it is a top-level symlink",
+    "auto-trusts .phronia/workspace when it is a top-level symlink",
     () => {
       const extWorkspace = path.join(tmpDir, "ext-workspace");
       fs.mkdirSync(extWorkspace, { recursive: true });
       fs.symlinkSync(
         extWorkspace,
-        path.join(cwd, ".trellis", "workspace"),
+        path.join(cwd, ".phronia", "workspace"),
         "dir",
       );
       const roots = resolveTrustedRoots(cwd);
@@ -158,9 +158,9 @@ describe("resolveTrustedRoots", () => {
     () => {
       const extTasks = path.join(tmpDir, "ext-tasks");
       fs.mkdirSync(extTasks, { recursive: true });
-      fs.symlinkSync(extTasks, path.join(cwd, ".trellis", "tasks"), "dir");
+      fs.symlinkSync(extTasks, path.join(cwd, ".phronia", "tasks"), "dir");
       fs.writeFileSync(
-        path.join(cwd, ".trellis", "config.yaml"),
+        path.join(cwd, ".phronia", "config.yaml"),
         "channel:\n  auto_trust_trellis_symlinks: false\n",
       );
       expect(resolveTrustedRoots(cwd)).toEqual([]);
@@ -172,12 +172,12 @@ describe("resolveTrustedRoots", () => {
     () => {
       const evilTarget = path.join(tmpDir, "evil");
       fs.mkdirSync(evilTarget, { recursive: true });
-      fs.mkdirSync(path.join(cwd, ".trellis", "tasks", "x"), {
+      fs.mkdirSync(path.join(cwd, ".phronia", "tasks", "x"), {
         recursive: true,
       });
       fs.symlinkSync(
         evilTarget,
-        path.join(cwd, ".trellis", "tasks", "x", "evil"),
+        path.join(cwd, ".phronia", "tasks", "x", "evil"),
         "dir",
       );
       expect(resolveTrustedRoots(cwd)).toEqual([]);
@@ -192,7 +192,7 @@ describe("assembleContext with trusted roots (#414 repro)", () => {
   beforeEach(() => {
     tmpDir = fs.mkdtempSync(path.join(realTmp(), "trellis-trust-ctx-test-"));
     cwd = path.join(tmpDir, "project");
-    fs.mkdirSync(path.join(cwd, ".trellis"), { recursive: true });
+    fs.mkdirSync(path.join(cwd, ".phronia"), { recursive: true });
   });
 
   afterEach(() => {
@@ -200,7 +200,7 @@ describe("assembleContext with trusted roots (#414 repro)", () => {
   });
 
   it.skipIf(isWin)(
-    "loads --jsonl-referenced files through an auto-trusted .trellis/tasks symlink",
+    "loads --jsonl-referenced files through an auto-trusted .phronia/tasks symlink",
     () => {
       const extTasks = path.join(tmpDir, "ext-tasks");
       const taskDir = path.join(extTasks, "x");
@@ -212,7 +212,7 @@ describe("assembleContext with trusted roots (#414 repro)", () => {
         jsonlPath,
         `${JSON.stringify({ file: contextFile, reason: "prd" })}\n`,
       );
-      fs.symlinkSync(extTasks, path.join(cwd, ".trellis", "tasks"), "dir");
+      fs.symlinkSync(extTasks, path.join(cwd, ".phronia", "tasks"), "dir");
 
       const trustedRoots = resolveTrustedRoots(cwd);
       const result = assembleContext(cwd, [], [jsonlPath], trustedRoots);
@@ -233,9 +233,9 @@ describe("assembleContext with trusted roots (#414 repro)", () => {
         jsonlPath,
         `${JSON.stringify({ file: contextFile, reason: "prd" })}\n`,
       );
-      fs.symlinkSync(extTasks, path.join(cwd, ".trellis", "tasks"), "dir");
+      fs.symlinkSync(extTasks, path.join(cwd, ".phronia", "tasks"), "dir");
       fs.writeFileSync(
-        path.join(cwd, ".trellis", "config.yaml"),
+        path.join(cwd, ".phronia", "config.yaml"),
         "channel:\n  auto_trust_trellis_symlinks: false\n",
       );
 
@@ -270,11 +270,11 @@ describe("assembleContext with trusted roots (#414 repro)", () => {
   });
 
   it.skipIf(isWin)(
-    "refuses a nested symlink planted under a non-symlinked .trellis/tasks",
+    "refuses a nested symlink planted under a non-symlinked .phronia/tasks",
     () => {
       const evilTarget = path.join(tmpDir, "evil-secret.txt");
       fs.writeFileSync(evilTarget, "top secret\n");
-      const taskDir = path.join(cwd, ".trellis", "tasks", "x");
+      const taskDir = path.join(cwd, ".phronia", "tasks", "x");
       fs.mkdirSync(taskDir, { recursive: true });
       const evilLink = path.join(taskDir, "evil");
       fs.symlinkSync(evilTarget, evilLink, "file");
@@ -294,7 +294,7 @@ describe("assembleContext with trusted roots (#414 repro)", () => {
       const contextFile = path.join(extDir, "notes.md");
       fs.writeFileSync(contextFile, "notes content\n");
       fs.writeFileSync(
-        path.join(cwd, ".trellis", "config.yaml"),
+        path.join(cwd, ".phronia", "config.yaml"),
         `channel:\n  trusted_context_dirs:\n    - ${extDir}\n`,
       );
 
@@ -312,7 +312,7 @@ describe("assembleContext with trusted roots (#414 repro)", () => {
     const evilFile = path.join(evilSibling, "secret.md");
     fs.writeFileSync(evilFile, "should not load\n");
     fs.writeFileSync(
-      path.join(cwd, ".trellis", "config.yaml"),
+      path.join(cwd, ".phronia", "config.yaml"),
       `channel:\n  trusted_context_dirs:\n    - ${trustedDir}\n`,
     );
 
@@ -328,7 +328,7 @@ describe("assembleContext with trusted roots (#414 repro)", () => {
     const contextFile = path.join(extDir, "notes.md");
     fs.writeFileSync(contextFile, "relative entry content\n");
     fs.writeFileSync(
-      path.join(cwd, ".trellis", "config.yaml"),
+      path.join(cwd, ".phronia", "config.yaml"),
       "channel:\n  trusted_context_dirs:\n    - ../rel-allowlisted\n",
     );
 
@@ -346,7 +346,7 @@ describe("agent-loader honors trusted roots", () => {
   beforeEach(() => {
     tmpDir = fs.mkdtempSync(path.join(realTmp(), "trellis-trust-agent-test-"));
     cwd = path.join(tmpDir, "project");
-    fs.mkdirSync(path.join(cwd, ".trellis"), { recursive: true });
+    fs.mkdirSync(path.join(cwd, ".phronia"), { recursive: true });
   });
 
   afterEach(() => {
@@ -354,10 +354,10 @@ describe("agent-loader honors trusted roots", () => {
   });
 
   it.skipIf(isWin)(
-    "loads an agent reached through a trusted-root .trellis/agents symlink",
+    "loads an agent reached through a trusted-root .phronia/agents symlink",
     () => {
-      // .trellis itself isn't in the auto-trust list (only tasks/workspace),
-      // so exercise the allowlist path instead: symlink .trellis/agents to
+      // .phronia itself isn't in the auto-trust list (only tasks/workspace),
+      // so exercise the allowlist path instead: symlink .phronia/agents to
       // a dir inside a channel.trusted_context_dirs entry.
       const extRoot = path.join(tmpDir, "ext-root");
       const extAgents = path.join(extRoot, "agents");
@@ -368,9 +368,9 @@ describe("agent-loader honors trusted roots", () => {
           "\n",
         ),
       );
-      fs.symlinkSync(extAgents, path.join(cwd, ".trellis", "agents"), "dir");
+      fs.symlinkSync(extAgents, path.join(cwd, ".phronia", "agents"), "dir");
       fs.writeFileSync(
-        path.join(cwd, ".trellis", "config.yaml"),
+        path.join(cwd, ".phronia", "config.yaml"),
         `channel:\n  trusted_context_dirs:\n    - ${extRoot}\n`,
       );
 
@@ -382,9 +382,9 @@ describe("agent-loader honors trusted roots", () => {
   );
 
   it("without trusted roots, agent files still resolve normally under agentsRoot", () => {
-    fs.mkdirSync(path.join(cwd, ".trellis", "agents"), { recursive: true });
+    fs.mkdirSync(path.join(cwd, ".phronia", "agents"), { recursive: true });
     fs.writeFileSync(
-      path.join(cwd, ".trellis", "agents", "architect.md"),
+      path.join(cwd, ".phronia", "agents", "architect.md"),
       ["---", "name: architect", "provider: claude", "---", "", "Body"].join(
         "\n",
       ),

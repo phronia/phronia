@@ -155,7 +155,7 @@ describe("init() integration", () => {
       "utf-8",
     );
     expect(gitattributes).toContain(
-      ".trellis/workspace/*/journal-*.md merge=union",
+      ".phronia/workspace/*/journal-*.md merge=union",
     );
     expect(gitattributes).not.toContain("index.md merge=union");
   });
@@ -1165,8 +1165,8 @@ describe("init() integration", () => {
     expect(taskJson.next_action).toBeUndefined();
 
     // relatedFiles point to spec/<name>/
-    expect(taskJson.relatedFiles).toContain(".trellis/spec/core/");
-    expect(taskJson.relatedFiles).toContain(".trellis/spec/ui/");
+    expect(taskJson.relatedFiles).toContain(".phronia/spec/core/");
+    expect(taskJson.relatedFiles).toContain(".phronia/spec/ui/");
 
     // prd.md mentions packages + renders per-package checklist items
     const prd = fs.readFileSync(path.join(taskDir, "prd.md"), "utf-8");
@@ -1178,10 +1178,10 @@ describe("init() integration", () => {
     expect(prd).toContain("- [ ] Fill guidelines for core");
     expect(prd).toContain("- [ ] Fill guidelines for ui");
     expect(prd).toContain(
-      `${expectedPythonCmd} ./.trellis/scripts/task.py finish`,
+      `${expectedPythonCmd} ./.phronia/scripts/task.py finish`,
     );
     expect(prd).toContain(
-      `${expectedPythonCmd} ./.trellis/scripts/task.py archive 00-bootstrap-guidelines`,
+      `${expectedPythonCmd} ./.phronia/scripts/task.py archive 00-bootstrap-guidelines`,
     );
   });
 
@@ -1226,7 +1226,7 @@ describe("init() integration", () => {
     );
     expect(guideCall).toBeDefined();
 
-    // Should NOT create .trellis/ (early return)
+    // Should NOT create .phronia/ (early return)
     expect(fs.existsSync(path.join(tmpDir, DIR_NAMES.WORKFLOW))).toBe(false);
   });
 
@@ -1278,7 +1278,7 @@ describe("init() integration", () => {
         "utf-8",
       ),
     ) as { hashes?: Record<string, string> };
-    expect(hashFile.hashes?.[".trellis/spec/index.md"]).toBe(
+    expect(hashFile.hashes?.[".phronia/spec/index.md"]).toBe(
       computeHash("# remote spec\n"),
     );
   });
@@ -1326,7 +1326,7 @@ describe("init() integration", () => {
         "utf-8",
       ),
     ) as { hashes?: Record<string, string> };
-    expect(hashFile.hashes?.[".trellis/spec/index.md"]).toBe(
+    expect(hashFile.hashes?.[".phronia/spec/index.md"]).toBe(
       computeHash("# golang spec\n"),
     );
   });
@@ -1378,7 +1378,7 @@ describe("init() integration", () => {
         "utf-8",
       ),
     ) as { hashes?: Record<string, string> };
-    expect(hashFile.hashes?.[".trellis/spec/index.md"]).toBe(
+    expect(hashFile.hashes?.[".phronia/spec/index.md"]).toBe(
       computeHash("# refreshed golang spec\n"),
     );
   });

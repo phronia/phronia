@@ -122,13 +122,13 @@ describe("replacePythonCommandLiterals", () => {
       "#!/usr/bin/env python3",
       "# comment about python3",
       'exec python3 "$0" "$@"',
-      "python3 ./.trellis/scripts/task.py",
+      "python3 ./.phronia/scripts/task.py",
     ].join("\n");
     const expected = [
       "#!/usr/bin/env python3",
       "# comment about python",
       'exec python "$0" "$@"',
-      "python ./.trellis/scripts/task.py",
+      "python ./.phronia/scripts/task.py",
     ].join("\n");
     expect(replacePythonCommandLiterals(input)).toBe(expected);
   });
@@ -242,12 +242,12 @@ describe("resolvePlaceholders", () => {
 
     it("resolves {{PYTHON_CMD}} alongside context placeholders", () => {
       const result = resolvePlaceholders(
-        "{{PYTHON_CMD}} ./.trellis/scripts/task.py and {{CMD_REF:start}}",
+        "{{PYTHON_CMD}} ./.phronia/scripts/task.py and {{CMD_REF:start}}",
         claudeCtx,
       );
       const py = process.platform === "win32" ? "python" : "python3";
       expect(result).toBe(
-        `${py} ./.trellis/scripts/task.py and /trellis:start`,
+        `${py} ./.phronia/scripts/task.py and /trellis:start`,
       );
     });
   });
@@ -406,10 +406,10 @@ describe("resolvePlaceholders", () => {
 
     it("works alongside {{PYTHON_CMD}} in a realistic init-context invocation", () => {
       const input =
-        '{{PYTHON_CMD}} ./.trellis/scripts/task.py init-context "$TASK_DIR" <type> --platform {{CLI_FLAG}}';
+        '{{PYTHON_CMD}} ./.phronia/scripts/task.py init-context "$TASK_DIR" <type> --platform {{CLI_FLAG}}';
       const py = process.platform === "win32" ? "python" : "python3";
       expect(resolvePlaceholders(input, codexCtx)).toBe(
-        `${py} ./.trellis/scripts/task.py init-context "$TASK_DIR" <type> --platform codex`,
+        `${py} ./.phronia/scripts/task.py init-context "$TASK_DIR" <type> --platform codex`,
       );
     });
   });

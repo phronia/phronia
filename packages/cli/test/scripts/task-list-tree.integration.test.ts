@@ -30,7 +30,7 @@ function hasPython(): boolean {
 
 function setupRepo(tmp: string): void {
   fs.mkdirSync(tmp, { recursive: true });
-  const scriptsDest = path.join(tmp, ".trellis", "scripts");
+  const scriptsDest = path.join(tmp, ".phronia", "scripts");
   fs.mkdirSync(scriptsDest, { recursive: true });
   fs.cpSync(TEMPLATE_SCRIPTS, scriptsDest, { recursive: true });
 }
@@ -40,7 +40,7 @@ function makeTask(
   name: string,
   overrides: Record<string, unknown> = {},
 ): void {
-  const dir = path.join(repo, ".trellis", "tasks", name);
+  const dir = path.join(repo, ".phronia", "tasks", name);
   fs.mkdirSync(dir, { recursive: true });
   fs.writeFileSync(path.join(dir, "prd.md"), `${name} prd\n`);
   const taskJson: Record<string, unknown> = {
@@ -66,7 +66,7 @@ function makeTask(
 }
 
 function runTask(repo: string, ...args: string[]) {
-  return spawnSync("python3", [".trellis/scripts/task.py", ...args], {
+  return spawnSync("python3", [".phronia/scripts/task.py", ...args], {
     cwd: repo,
     encoding: "utf-8",
   });

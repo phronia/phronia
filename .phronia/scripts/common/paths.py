@@ -12,6 +12,7 @@ Provides:
 
 from __future__ import annotations
 
+import json
 import os
 import re
 from datetime import datetime
@@ -21,11 +22,21 @@ from .git import main_worktree_root
 
 
 # =============================================================================
-# Path Constants (change here to rename directories)
+# Path Constants
 # =============================================================================
 
+# The root directory name is generated from packages/core/src/layout/index.ts
+# into layout.json (scripts/gen-layout.mjs). The fallback keeps a broken or
+# missing generated file from silently resolving a different tree.
+_LAYOUT_FILE = Path(__file__).with_name("layout.json")
+try:
+    _LAYOUT_RAW = json.loads(_LAYOUT_FILE.read_text(encoding="utf-8"))
+except (OSError, ValueError):
+    _LAYOUT_RAW = {}
+_LAYOUT = _LAYOUT_RAW if isinstance(_LAYOUT_RAW, dict) else {}
+
 # Directory names
-DIR_WORKFLOW = ".trellis"
+DIR_WORKFLOW = str(_LAYOUT.get("rootDirName") or ".phronia")
 DIR_WORKSPACE = "workspace"
 DIR_TASKS = "tasks"
 DIR_ARCHIVE = "archive"
@@ -55,7 +66,7 @@ DEVELOPER_HINT = (
 # =============================================================================
 
 def get_repo_root(start_path: Path | None = None) -> Path:
-    """Find the nearest directory containing .trellis/ folder.
+    """Find the nearest directory containing .phronia/ folder.
 
     This handles nested git repos correctly (e.g., test project inside another repo).
 
@@ -63,7 +74,7 @@ def get_repo_root(start_path: Path | None = None) -> Path:
         start_path: Starting directory to search from. Defaults to current directory.
 
     Returns:
-        Path to repository root, or current directory if no .trellis/ found.
+        Path to repository root, or current directory if no .phronia/ found.
     """
     current = (start_path or Path.cwd()).resolve()
 
@@ -72,7 +83,7 @@ def get_repo_root(start_path: Path | None = None) -> Path:
             return current
         current = current.parent
 
-    # Fallback to current directory if no .trellis/ found
+    # Fallback to current directory if no .phronia/ found
     return Path.cwd().resolve()
 
 
@@ -104,8 +115,8 @@ def get_developer(repo_root: Path | None = None) -> str | None:
     it, before this function is ever called):
 
         1. The ``TRELLIS_DEVELOPER`` environment variable.
-        2. ``.trellis/.developer`` in this checkout.
-        3. ``.trellis/.developer`` in the main checkout, when this checkout is a
+        2. ``.phronia/.developer`` in this checkout.
+        3. ``.phronia/.developer`` in the main checkout, when this checkout is a
            linked git worktree.
 
     Step 3 exists because `.developer` is gitignored on purpose — it carries a
@@ -256,7 +267,7 @@ def normalize_task_ref(task_ref: str) -> str:
     """Normalize a task ref for stable runtime storage.
 
     Stored refs should prefer repo-relative POSIX paths like
-    `.trellis/tasks/03-27-my-task`, even on Windows. Absolute paths are preserved
+    `.phronia/tasks/03-27-my-task`, even on Windows. Absolute paths are preserved
     unless they can later be converted back to repo-relative form by callers.
     """
     normalized = task_ref.strip()
@@ -286,12 +297,12 @@ def resolve_task_ref(task_ref: str, repo_root: Path | None = None) -> Path | Non
     each call site.
 
     It matters because a ref is not always something the user typed. It round
-    trips through the session pointer under `.trellis/.runtime/sessions/`, and
+    trips through the session pointer under `.phronia/.runtime/sessions/`, and
     `..` segments used to survive that trip intact: `_canonical_task_ref`
     compares lexically, and a lexical `relative_to` accepts
-    `<root>/.trellis/tasks/../../../elsewhere` because the string does start
+    `<root>/.phronia/tasks/../../../elsewhere` because the string does start
     with the root. The ref was then stored verbatim and replayed on every later
-    turn, so `task.py start .trellis/tasks/../../../elsewhere` both rewrote that
+    turn, so `task.py start .phronia/tasks/../../../elsewhere` both rewrote that
     directory's `task.json` and fed its files to the model.
 
     Resolving here also normalises the path, so callers get a ref without `..`
@@ -332,7 +343,7 @@ def resolve_task_ref(task_ref: str, repo_root: Path | None = None) -> Path | Non
     except ValueError:
         pass
 
-    # `.trellis` may itself be a symlink into a store outside the repo (#567).
+    # `.phronia` may itself be a symlink into a store outside the repo (#567).
     # The workflow dir's own real location is then a second legitimate
     # containment base: a ref through that link never left the workflow tree.
     # A ref that escapes BOTH bases (traversal, absolute path elsewhere, a
@@ -491,8 +502,8 @@ def generate_task_date_prefix() -> str:
 def get_spec_dir(package: str | None = None, repo_root: Path | None = None) -> Path:
     """Get the spec directory path.
 
-    Single-repo: .trellis/spec
-    Monorepo with package: .trellis/spec/<package>
+    Single-repo: .phronia/spec
+    Monorepo with package: .phronia/spec/<package>
 
     Uses lazy import to avoid circular dependency with config.py.
     """

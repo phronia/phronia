@@ -1,10 +1,10 @@
 /**
- * `trellis workflow` command — list and switch the active `.trellis/workflow.md`.
+ * `trellis workflow` command — list and switch the active `.phronia/workflow.md`.
  *
  * Behavior contracts:
  *
  * - Hash boundary: after writing native content, refresh the
- *   `.trellis/workflow.md` entry in `.template-hashes.json`. After writing
+ *   `.phronia/workflow.md` entry in `.template-hashes.json`. After writing
  *   any non-native content, remove that entry. This prevents `trellis update`
  *   from silently restoring native bytes over a user-selected variant
  *   (see design.md "Durable-state contract").
@@ -14,8 +14,8 @@
  *   interactive runs prompt; non-interactive runs fail unless `--force` or
  *   `--create-new` was passed.
  *
- * - `--create-new`: never touches `.trellis/workflow.md`; writes
- *   `.trellis/workflow.md.new` and leaves the hash file alone.
+ * - `--create-new`: never touches `.phronia/workflow.md`; writes
+ *   `.phronia/workflow.md.new` and leaves the hash file alone.
  */
 
 import fs from "node:fs";
@@ -127,11 +127,11 @@ async function confirmOverwriteInteractively(): Promise<
       type: "list",
       name: "action",
       message:
-        "Your .trellis/workflow.md has local edits. What do you want to do?",
+        "Your .phronia/workflow.md has local edits. What do you want to do?",
       choices: [
         { name: "Overwrite (replace local edits)", value: "overwrite" },
         {
-          name: "Write to .trellis/workflow.md.new and keep current",
+          name: "Write to .phronia/workflow.md.new and keep current",
           value: "create-new",
         },
         { name: "Skip (no changes)", value: "skip" },
@@ -244,7 +244,7 @@ export async function runWorkflowCommand(
   const cwd = process.cwd();
   if (!fs.existsSync(path.join(cwd, DIR_NAMES.WORKFLOW))) {
     throw new WorkflowCommandError(
-      "No .trellis/ directory found. Run `trellis init` first.",
+      "No .phronia/ directory found. Run `trellis init` first.",
     );
   }
 
@@ -297,7 +297,7 @@ export async function runWorkflowCommand(
   await writeWorkflow(cwd, template, options);
 
   // Best-effort warning: if the resolved workflow references
-  // `.trellis/agents/<name>.md` files that don't exist on disk, point the user
+  // `.phronia/agents/<name>.md` files that don't exist on disk, point the user
   // at `trellis update` so `trellis channel spawn --agent <name>` doesn't fail
   // mid-session. Non-blocking; never errors a successful write.
   warnAboutMissingAgents(cwd, template.content);
@@ -308,7 +308,7 @@ function warnAboutMissingAgents(cwd: string, workflowContent: string): void {
   if (missing.length === 0) return;
   process.stderr.write(
     chalk.yellow(
-      `\n⚠ The selected workflow references .trellis/agents/{${missing.join(",")}}.md, but those files are not on disk.\n`,
+      `\n⚠ The selected workflow references .phronia/agents/{${missing.join(",")}}.md, but those files are not on disk.\n`,
     ) +
       chalk.yellow(
         `  Run \`trellis update\` to backfill the bundled agent definitions, or create them under ${PATHS.AGENTS}/.\n`,

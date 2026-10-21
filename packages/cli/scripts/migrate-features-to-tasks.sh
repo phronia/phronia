@@ -4,7 +4,7 @@
 # Usage: ./migrate-features-to-tasks.sh [--dry-run] [project-dir]
 #
 # This script converts the old features structure to the new unified tasks system:
-# - .trellis/workspace/{developer}/features/{name}/ -> .trellis/tasks/{MM}-{DD}-{name}-{developer}/
+# - .phronia/workspace/{developer}/features/{name}/ -> .phronia/tasks/{MM}-{DD}-{name}-{developer}/
 # - feature.json -> task.json (with field conversions)
 #
 # Note: This script expects the project to have already been updated to 0.2.0+
@@ -31,11 +31,11 @@ done
 
 # Resolve absolute path
 PROJECT_DIR=$(cd "$PROJECT_DIR" && pwd)
-TRELLIS_DIR="$PROJECT_DIR/.trellis"
+TRELLIS_DIR="$PROJECT_DIR/.phronia"
 
-# Check if .trellis exists
+# Check if .phronia exists
 if [[ ! -d "$TRELLIS_DIR" ]]; then
-    echo "Error: .trellis directory not found in $PROJECT_DIR"
+    echo "Error: .phronia directory not found in $PROJECT_DIR"
     exit 1
 fi
 

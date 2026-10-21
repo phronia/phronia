@@ -5,14 +5,14 @@ import { envName, readEnv, readEnvFlag } from "../../src/layout/env.js";
 
 describe("workspace layout", () => {
   it("exposes the workflow root and derived paths", () => {
-    expect(LAYOUT.rootDirName).toBe(".trellis");
+    expect(LAYOUT.rootDirName).toBe(".phronia");
     expect(LAYOUT.brand).toBe("phronia");
     expect(LAYOUT.packageScope).toBe("@phronia");
     expect(LAYOUT.envPrefix).toBe("PHRONIA_");
     expect(LAYOUT.legacyRootDirName).toBe(".trellis");
-    expect(LAYOUT.paths.tasks).toBe(".trellis/tasks");
-    expect(LAYOUT.paths.sessions).toBe(".trellis/.runtime/sessions");
-    expect(LAYOUT.paths.manifest).toBe(".trellis/.template-hashes.json");
+    expect(LAYOUT.paths.tasks).toBe(".phronia/tasks");
+    expect(LAYOUT.paths.sessions).toBe(".phronia/.runtime/sessions");
+    expect(LAYOUT.paths.manifest).toBe(".phronia/.template-hashes.json");
   });
 
   it("is frozen", () => {
@@ -22,9 +22,9 @@ describe("workspace layout", () => {
 
   it("resolves paths against an explicit root", () => {
     const root = path.join(path.sep, "repo");
-    expect(projectPath(root, "tasks")).toBe(path.join(root, ".trellis/tasks"));
+    expect(projectPath(root, "tasks")).toBe(path.join(root, ".phronia/tasks"));
     expect(workflowPath(root, "spec", "guides")).toBe(
-      path.join(root, ".trellis/spec/guides"),
+      path.join(root, ".phronia/spec/guides"),
     );
   });
 });

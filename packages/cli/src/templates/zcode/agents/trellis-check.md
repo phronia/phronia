@@ -26,7 +26,7 @@ Look for the `<!-- trellis-hook-injected -->` marker in your input above.
 ## Context
 
 Before checking, read:
-- `.trellis/spec/` - Development guidelines
+- `.phronia/spec/` - Development guidelines
 - Pre-commit checklist for quality standards
 
 ## Core Responsibilities
@@ -55,7 +55,7 @@ git diff              # View specific changes
 
 ### Step 2: Check Against Specs
 
-Read relevant specs in `.trellis/spec/` to check code:
+Read relevant specs in `.phronia/spec/` to check code:
 
 - Does it follow directory structure conventions
 - Does it follow naming conventions

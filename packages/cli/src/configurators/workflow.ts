@@ -63,10 +63,10 @@ export interface WorkflowOptions {
   /** Package names that use remote templates (skip blank spec for these) */
   remoteSpecPackages?: Set<string>;
   /**
-   * Optional override for `.trellis/workflow.md` content. When omitted the
+   * Optional override for `.phronia/workflow.md` content. When omitted the
    * bundled native template is written. Set by `init --workflow` (or
    * `--workflow-source`) after the resolver has fetched marketplace content.
-   * Caller is still responsible for removing the `.trellis/workflow.md` hash
+   * Caller is still responsible for removing the `.phronia/workflow.md` hash
    * entry for non-native workflows so update.ts treats them as user-managed.
    */
   workflowMdOverride?: string;
@@ -112,7 +112,7 @@ export function ensureGitattributes(cwd: string): void {
 /**
  * Create workflow structure based on project type
  *
- * This function creates the .trellis/ directory structure by:
+ * This function creates the .phronia/ directory structure by:
  * 1. Copying scripts/ directory directly (dogfooding)
  * 2. Copying workflow.md and .gitignore (dogfooding)
  * 3. Creating workspace/ with index.md
@@ -132,7 +132,7 @@ export async function createWorkflowStructure(
   const remoteSpecPackages = options?.remoteSpecPackages;
   const workflowMd = options?.workflowMdOverride ?? workflowMdTemplate;
 
-  // Create base .trellis directory
+  // Create base .phronia directory
   ensureDir(path.join(cwd, DIR_NAMES.WORKFLOW));
 
   // Copy scripts/ directory from templates

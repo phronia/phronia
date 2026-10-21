@@ -92,13 +92,13 @@ Trellis/
 │   ├── agents/             # Agent 定义
 │   ├── commands/           # 斜杠命令
 │   └── hooks/              # Python Hook 脚本
-├── .trellis/               # Trellis 工作流（项目自用）←
+├── .phronia/               # Trellis 工作流（项目自用）←
 │   ├── scripts/            # Bash 脚本
 │   └── spec/               # Spec 文件模板
 └── docs/                   # 文档
 ```
 
-> **重要：** 修改 `.claude/`、`.trellis/` 或 `.cursor/` 时，请检查是否需要同步更新 `src/templates/`。项目使用自己的配置文件，但模板才是安装到用户项目的内容。
+> **重要：** 修改 `.claude/`、`.phronia/` 或 `.cursor/` 时，请检查是否需要同步更新 `src/templates/`。项目使用自己的配置文件，但模板才是安装到用户项目的内容。
 
 ## 提交规范
 

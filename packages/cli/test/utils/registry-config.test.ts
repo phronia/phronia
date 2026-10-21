@@ -13,7 +13,7 @@ describe("registry-config", () => {
 
   beforeEach(() => {
     tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), "trellis-reg-config-"));
-    fs.mkdirSync(path.join(tmpDir, ".trellis"), { recursive: true });
+    fs.mkdirSync(path.join(tmpDir, ".phronia"), { recursive: true });
   });
 
   afterEach(() => {
@@ -26,7 +26,7 @@ describe("registry-config", () => {
 
   it("writes and reads registry spec source", () => {
     fs.writeFileSync(
-      path.join(tmpDir, ".trellis", "config.yaml"),
+      path.join(tmpDir, ".phronia", "config.yaml"),
       "# Trellis Configuration\n",
       "utf-8",
     );
@@ -40,7 +40,7 @@ describe("registry-config", () => {
 
   it("writes and reads registry marketplace template source", () => {
     fs.writeFileSync(
-      path.join(tmpDir, ".trellis", "config.yaml"),
+      path.join(tmpDir, ".phronia", "config.yaml"),
       "# Trellis Configuration\n",
       "utf-8",
     );
@@ -58,7 +58,7 @@ describe("registry-config", () => {
 
   it("preserves self-hosted SSH registry source strings", () => {
     fs.writeFileSync(
-      path.join(tmpDir, ".trellis", "config.yaml"),
+      path.join(tmpDir, ".phronia", "config.yaml"),
       "# Trellis Configuration\n",
       "utf-8",
     );
@@ -76,7 +76,7 @@ describe("registry-config", () => {
 
   it("reads quoted registry spec source", () => {
     fs.writeFileSync(
-      path.join(tmpDir, ".trellis", "config.yaml"),
+      path.join(tmpDir, ".phronia", "config.yaml"),
       "registry:\n  spec:\n    source: 'gh:org/repo/spec#main'\n    template: \"backend\"\n",
       "utf-8",
     );
@@ -88,7 +88,7 @@ describe("registry-config", () => {
   });
 
   it("does not duplicate an existing registry section", () => {
-    const configPath = path.join(tmpDir, ".trellis", "config.yaml");
+    const configPath = path.join(tmpDir, ".phronia", "config.yaml");
     fs.writeFileSync(
       configPath,
       "registry:\n  spec:\n    source: gh:org/repo/spec\n",
@@ -105,7 +105,7 @@ describe("registry-config", () => {
   });
 
   it("updates an existing registry section", () => {
-    const configPath = path.join(tmpDir, ".trellis", "config.yaml");
+    const configPath = path.join(tmpDir, ".phronia", "config.yaml");
     fs.writeFileSync(
       configPath,
       "registry:\n  spec:\n    source: gitlab:old/spec\n",
@@ -126,7 +126,7 @@ describe("registry-config", () => {
   });
 
   it("adds spec config under an existing registry section", () => {
-    const configPath = path.join(tmpDir, ".trellis", "config.yaml");
+    const configPath = path.join(tmpDir, ".phronia", "config.yaml");
     fs.writeFileSync(
       configPath,
       "registry:\n  marketplace:\n    source: gh:org/marketplace\n\ncommands:\n  skip: []\n",

@@ -25,7 +25,7 @@ In Snow:
 2. Dispatch implement/check/research (project agents under `.snow/agents/`). Prefer prompt first line:
 
 ```text
-Active task: .trellis/tasks/<id>
+Active task: .phronia/tasks/<id>
 ```
 
 3. Optional: `/trellis-continue` / `/trellis-finish-work`, or `skill-execute` on `trellis-*` skills.

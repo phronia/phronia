@@ -54,18 +54,18 @@ function setupRepo(tmp: string): void {
   stampTrellis(tmp);
 }
 
-/** Create the `.trellis/` tree and developer state at `tmp`, without git. */
+/** Create the `.phronia/` tree and developer state at `tmp`, without git. */
 function stampTrellis(tmp: string): void {
   fs.mkdirSync(tmp, { recursive: true });
 
   // Stamp the real templates into the test repo.
-  const scriptsDest = path.join(tmp, ".trellis", "scripts");
+  const scriptsDest = path.join(tmp, ".phronia", "scripts");
   fs.mkdirSync(scriptsDest, { recursive: true });
   fs.cpSync(TEMPLATE_SCRIPTS, scriptsDest, { recursive: true });
 
   // session_auto_commit must be enabled for the session to commit.
   fs.writeFileSync(
-    path.join(tmp, ".trellis", "config.yaml"),
+    path.join(tmp, ".phronia", "config.yaml"),
     "session_auto_commit: true\n",
   );
 
@@ -73,7 +73,7 @@ function stampTrellis(tmp: string): void {
   // the auto-update markers) via the real init script.
   const r = spawnSync(
     "python3",
-    [".trellis/scripts/init_developer.py", DEVELOPER],
+    [".phronia/scripts/init_developer.py", DEVELOPER],
     { cwd: tmp, encoding: "utf-8" },
   );
   if (r.status !== 0) {
@@ -87,7 +87,7 @@ function makeTask(
   prdBody: string,
   branch?: string,
 ): void {
-  const dir = path.join(repo, ".trellis", "tasks", name);
+  const dir = path.join(repo, ".phronia", "tasks", name);
   fs.mkdirSync(dir, { recursive: true });
   fs.writeFileSync(path.join(dir, "prd.md"), prdBody);
   const taskJson: Record<string, unknown> = {
@@ -119,12 +119,12 @@ function makeTask(
  * `get_current_task` returns this task without needing a platform context.
  */
 function setCurrentTask(repo: string, taskName: string): void {
-  const sessionsDir = path.join(repo, ".trellis", ".runtime", "sessions");
+  const sessionsDir = path.join(repo, ".phronia", ".runtime", "sessions");
   fs.mkdirSync(sessionsDir, { recursive: true });
   fs.writeFileSync(
     path.join(sessionsDir, "session.json"),
     JSON.stringify({
-      current_task: `.trellis/tasks/${taskName}`,
+      current_task: `.phronia/tasks/${taskName}`,
       platform: "session",
     }) + "\n",
   );
@@ -144,7 +144,7 @@ function tryAddSession(
 ): RunResult {
   const r = spawnSync(
     "python3",
-    [".trellis/scripts/add_session.py", "--title", title, ...extraArgs],
+    [".phronia/scripts/add_session.py", "--title", title, ...extraArgs],
     { cwd: repo, encoding: "utf-8" },
   );
   return {
@@ -162,11 +162,11 @@ function runAddSession(repo: string, title: string, extraArgs: string[] = []): v
 }
 
 function journalPath(repo: string, num = 1): string {
-  return path.join(repo, ".trellis", "workspace", DEVELOPER, `journal-${num}.md`);
+  return path.join(repo, ".phronia", "workspace", DEVELOPER, `journal-${num}.md`);
 }
 
 function indexPath(repo: string): string {
-  return path.join(repo, ".trellis", "workspace", DEVELOPER, "index.md");
+  return path.join(repo, ".phronia", "workspace", DEVELOPER, "index.md");
 }
 
 function readJournal(repo: string, num = 1): string {
@@ -234,7 +234,7 @@ describe.skipIf(!hasPython())("add_session.py auto-commit", () => {
 
     // Dirty edit in task-b BEFORE recording a session in task-a's context.
     fs.appendFileSync(
-      path.join(tmp, ".trellis", "tasks", "task-b", "prd.md"),
+      path.join(tmp, ".phronia", "tasks", "task-b", "prd.md"),
       "DIRTY EDIT IN TASK-B SHOULD NOT BE COMMITTED\n",
     );
 
@@ -258,7 +258,7 @@ describe.skipIf(!hasPython())("add_session.py auto-commit", () => {
 
     // task-b dirty change still in working tree.
     const status = git(tmp, "status", "--porcelain");
-    expect(status).toMatch(/\.trellis\/tasks\/task-b\/prd\.md/);
+    expect(status).toMatch(/\.phronia\/tasks\/task-b\/prd\.md/);
   });
 
   it("does not sweep pre-staged unrelated files into the session commit (#579)", () => {
@@ -283,7 +283,7 @@ describe.skipIf(!hasPython())("add_session.py auto-commit", () => {
 
     // The chore commit contains only Trellis-owned paths.
     expect(lastFiles).not.toContain("README.md");
-    expect(lastFiles.every((f) => f.startsWith(".trellis/"))).toBe(true);
+    expect(lastFiles.every((f) => f.startsWith(".phronia/"))).toBe(true);
 
     // The developer's file is still staged, ready for their own commit.
     const status = git(tmp, "status", "--porcelain");
@@ -299,7 +299,7 @@ describe.skipIf(!hasPython())("add_session.py auto-commit", () => {
     runAddSession(tmp, "placeholder-free work");
 
     const journal = fs.readFileSync(
-      path.join(tmp, ".trellis", "workspace", DEVELOPER, "journal-1.md"),
+      path.join(tmp, ".phronia", "workspace", DEVELOPER, "journal-1.md"),
       "utf-8",
     );
 
@@ -332,7 +332,7 @@ describe.skipIf(!hasPython())("add_session.py auto-commit", () => {
     ]);
 
     const journal = fs.readFileSync(
-      path.join(tmp, ".trellis", "workspace", DEVELOPER, "journal-1.md"),
+      path.join(tmp, ".phronia", "workspace", DEVELOPER, "journal-1.md"),
       "utf-8",
     );
 
@@ -354,11 +354,11 @@ describe.skipIf(!hasPython())("add_session.py auto-commit", () => {
     runAddSession(tmp, "stale branch work");
 
     const journal = fs.readFileSync(
-      path.join(tmp, ".trellis", "workspace", DEVELOPER, "journal-1.md"),
+      path.join(tmp, ".phronia", "workspace", DEVELOPER, "journal-1.md"),
       "utf-8",
     );
     const index = fs.readFileSync(
-      path.join(tmp, ".trellis", "workspace", DEVELOPER, "index.md"),
+      path.join(tmp, ".phronia", "workspace", DEVELOPER, "index.md"),
       "utf-8",
     );
 
@@ -375,11 +375,11 @@ describe.skipIf(!hasPython())("add_session.py auto-commit", () => {
     // TWO session files → resolve_active_task refuses to guess and returns
     // None. The guard must stage only journal/index, never the wide scan.
     setCurrentTask(tmp, "task-a");
-    const sessionsDir = path.join(tmp, ".trellis", ".runtime", "sessions");
+    const sessionsDir = path.join(tmp, ".phronia", ".runtime", "sessions");
     fs.writeFileSync(
       path.join(sessionsDir, "session2.json"),
       JSON.stringify({
-        current_task: ".trellis/tasks/task-b",
+        current_task: ".phronia/tasks/task-b",
         platform: "session",
       }) + "\n",
     );
@@ -388,11 +388,11 @@ describe.skipIf(!hasPython())("add_session.py auto-commit", () => {
 
     // Both task dirs dirty.
     fs.appendFileSync(
-      path.join(tmp, ".trellis", "tasks", "task-a", "prd.md"),
+      path.join(tmp, ".phronia", "tasks", "task-a", "prd.md"),
       "DIRTY A\n",
     );
     fs.appendFileSync(
-      path.join(tmp, ".trellis", "tasks", "task-b", "prd.md"),
+      path.join(tmp, ".phronia", "tasks", "task-b", "prd.md"),
       "DIRTY B\n",
     );
 
@@ -415,8 +415,8 @@ describe.skipIf(!hasPython())("add_session.py auto-commit", () => {
 
     // Both task dirty edits remain in the working tree.
     const status = git(tmp, "status", "--porcelain");
-    expect(status).toMatch(/\.trellis\/tasks\/task-a\/prd\.md/);
-    expect(status).toMatch(/\.trellis\/tasks\/task-b\/prd\.md/);
+    expect(status).toMatch(/\.phronia\/tasks\/task-a\/prd\.md/);
+    expect(status).toMatch(/\.phronia\/tasks\/task-b\/prd\.md/);
   });
 
   it("stages only Trellis-owned paths in the session auto-commit", () => {
@@ -432,7 +432,7 @@ describe.skipIf(!hasPython())("add_session.py auto-commit", () => {
 
     expect(lastFiles.length).toBeGreaterThan(0);
     for (const f of lastFiles) {
-      expect(f.startsWith(".trellis/"), `unexpected path in commit: ${f}`).toBe(
+      expect(f.startsWith(".phronia/"), `unexpected path in commit: ${f}`).toBe(
         true,
       );
     }
@@ -580,7 +580,7 @@ function markersFor(
 ): { v2: string; v1: string } {
   const harness = [
     "import sys, json",
-    `sys.path.insert(0, ${JSON.stringify(".trellis/scripts")})`,
+    `sys.path.insert(0, ${JSON.stringify(".phronia/scripts")})`,
     "import add_session as a",
     "payload = a._fingerprint_payload(",
     `    ${JSON.stringify(DEVELOPER)}, ${JSON.stringify(title)},`,
@@ -786,7 +786,7 @@ describe.skipIf(!hasPython())("add_session.py retry convergence (R2-R5)", () => 
     const committed = git(
       tmp,
       "show",
-      `HEAD:.trellis/workspace/${DEVELOPER}/journal-1.md`,
+      `HEAD:.phronia/workspace/${DEVELOPER}/journal-1.md`,
     );
     expect(committed).toContain("## Session 1: commit fault");
   });
@@ -872,7 +872,7 @@ describe.skipIf(!hasPython())("add_session.py retry convergence (R2-R5)", () => 
 
   it("stops after a verified journal + index when auto-commit is disabled", () => {
     fs.writeFileSync(
-      path.join(tmp, ".trellis", "config.yaml"),
+      path.join(tmp, ".phronia", "config.yaml"),
       "session_auto_commit: false\n",
     );
     const logBefore = git(tmp, "log", "--oneline");
@@ -900,7 +900,7 @@ describe.skipIf(!hasPython())("add_session.py retry convergence (R2-R5)", () => 
 
   it("rotates to a new journal file and records the entry there", () => {
     fs.writeFileSync(
-      path.join(tmp, ".trellis", "config.yaml"),
+      path.join(tmp, ".phronia", "config.yaml"),
       "session_auto_commit: true\nmax_journal_lines: 12\n",
     );
 
@@ -916,7 +916,7 @@ describe.skipIf(!hasPython())("add_session.py retry convergence (R2-R5)", () => 
 
   it("resumes a rotated entry without appending a second one", () => {
     fs.writeFileSync(
-      path.join(tmp, ".trellis", "config.yaml"),
+      path.join(tmp, ".phronia", "config.yaml"),
       "session_auto_commit: true\nmax_journal_lines: 12\n",
     );
     breakCommits(tmp);
@@ -986,11 +986,11 @@ describe.skipIf(!hasPython())("add_session.py session numbering", () => {
 });
 
 /**
- * `get_repo_root` returns the nearest directory holding `.trellis/`, which is
+ * `get_repo_root` returns the nearest directory holding `.phronia/`, which is
  * not necessarily the git toplevel. Every git path the recorder builds has to
  * be interpreted relative to the Trellis root, not the git root.
  */
-describe.skipIf(!hasPython())("add_session.py with .trellis below the git root", () => {
+describe.skipIf(!hasPython())("add_session.py with .phronia below the git root", () => {
   let outer: string;
   let project: string;
 
@@ -1048,7 +1048,7 @@ describe.skipIf(!hasPython())("add_session.py outside any git repository", () =>
 
   it("records the session and exits 0 — a configured skip, not a retry loop", () => {
     // No git here means auto-commit can never succeed; that must be
-    // COMMIT_BLOCKED (exit 0, like a gitignored .trellis/), not the
+    // COMMIT_BLOCKED (exit 0, like a gitignored .phronia/), not the
     // COMMIT_FAILED checkpoint whose "fix the git error" advice never applies.
     const result = tryAddSession(project, "no git", ["--summary", "no repo"]);
     expect(result.status).toBe(0);

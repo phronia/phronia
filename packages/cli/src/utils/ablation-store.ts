@@ -2,7 +2,7 @@
  * External, versioned recovery storage for reversible full Trellis ablation.
  *
  * The store intentionally contains only manifest-owned project paths and the
- * exact `.trellis/` tree. User-authored task/spec/workspace files may contain
+ * exact `.phronia/` tree. User-authored task/spec/workspace files may contain
  * sensitive text, so the state root is private and retained only until a
  * verified restore. Unrelated application files and global host state are
  * never copied.
@@ -287,7 +287,7 @@ export function getAblationStateRoot(): string {
   if (override && override.trim().length > 0) {
     return path.resolve(override);
   }
-  return path.join(os.homedir(), ".trellis", "ablations", "v1");
+  return path.join(os.homedir(), ".phronia", "ablations", "v1");
 }
 
 export function getTransactionPaths(

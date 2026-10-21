@@ -56,14 +56,14 @@ describe("uninstall() integration", () => {
     fs.rmSync(tmpDir, { recursive: true, force: true });
   });
 
-  it("#1 friendly exit when .trellis/ is missing", async () => {
+  it("#1 friendly exit when .phronia/ is missing", async () => {
     // No init — tmpDir is empty.
     await uninstall({ yes: true });
     // Nothing was created or deleted; tmpDir should still be empty.
     expect(fs.readdirSync(tmpDir)).toEqual([]);
   });
 
-  it("#2 errors when manifest is missing but .trellis/ exists", async () => {
+  it("#2 errors when manifest is missing but .phronia/ exists", async () => {
     fs.mkdirSync(path.join(tmpDir, DIR_NAMES.WORKFLOW));
     const exitSpy = vi
       .spyOn(process, "exit")
@@ -79,7 +79,7 @@ describe("uninstall() integration", () => {
     await init({ yes: true, claude: true, cursor: true, force: true });
 
     // Sanity: init wrote things.
-    expect(fs.existsSync(path.join(tmpDir, ".trellis"))).toBe(true);
+    expect(fs.existsSync(path.join(tmpDir, ".phronia"))).toBe(true);
     expect(fs.existsSync(path.join(tmpDir, ".claude"))).toBe(true);
     expect(fs.existsSync(path.join(tmpDir, ".cursor"))).toBe(true);
 
@@ -88,8 +88,8 @@ describe("uninstall() integration", () => {
 
     await uninstall({ yes: true });
 
-    // .trellis/ should be gone.
-    expect(fs.existsSync(path.join(tmpDir, ".trellis"))).toBe(false);
+    // .phronia/ should be gone.
+    expect(fs.existsSync(path.join(tmpDir, ".phronia"))).toBe(false);
 
     // Every opaque manifest path (non-structured files) should be gone.
     // Structured config files (settings.json/hooks.json/config.toml/
@@ -159,7 +159,7 @@ describe("uninstall() integration", () => {
 
     await uninstall({});
 
-    expect(fs.existsSync(path.join(tmpDir, ".trellis"))).toBe(true);
+    expect(fs.existsSync(path.join(tmpDir, ".phronia"))).toBe(true);
     expect(fs.existsSync(path.join(tmpDir, ".claude"))).toBe(true);
   });
 
@@ -211,7 +211,7 @@ describe("uninstall() integration", () => {
     // Detect kilo's actual config dir from manifest entries.
     const hashesBefore = loadHashes(tmpDir);
     const kiloEntry = Object.keys(hashesBefore).find(
-      (p) => !p.startsWith(".trellis/") && p !== "AGENTS.md",
+      (p) => !p.startsWith(".phronia/") && p !== "AGENTS.md",
     );
     if (!kiloEntry) throw new Error("test fixture: no kilo entries found");
     const kiloRoot = kiloEntry.split("/")[0];
@@ -323,7 +323,7 @@ describe("uninstall() integration", () => {
 
     await uninstall({ yes: true });
 
-    // .trellis/ is gone, but settings.json should remain (had user fields).
+    // .phronia/ is gone, but settings.json should remain (had user fields).
     if (fs.existsSync(settingsPath)) {
       const after = JSON.parse(fs.readFileSync(settingsPath, "utf-8")) as Record<
         string,

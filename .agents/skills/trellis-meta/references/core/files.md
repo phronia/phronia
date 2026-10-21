@@ -1,13 +1,13 @@
 # Trellis File Reference
 
-Complete reference of all files in the `.trellis/` directory.
+Complete reference of all files in the `.phronia/` directory.
 
 ---
 
 ## Directory Structure
 
 ```
-.trellis/
+.phronia/
 ├── .developer              # Developer identity (gitignored)
 ├── .runtime/               # Session-scoped runtime state (gitignored)
 ├── .current-task           # Legacy ignored pointer; not an active-task source
@@ -54,7 +54,7 @@ taosu
 
 ```json
 {
-  "current_task": ".trellis/tasks/01-31-add-login-taosu",
+  "current_task": ".phronia/tasks/01-31-add-login-taosu",
   "current_run": null,
   "platform": "claude",
   "last_seen_at": "2026-04-27T00:00:00Z"
@@ -86,7 +86,7 @@ uses `.runtime/sessions/<session-key>.json` only.
 
 ```json
 {
-  "task": ".trellis/tasks/01-31-add-login",
+  "task": ".phronia/tasks/01-31-add-login",
   "iteration": 2,
   "started_at": "2026-01-31T10:30:00"
 }
@@ -113,7 +113,7 @@ uses `.runtime/sessions/<session-key>.json` only.
 
 ```json
 {
-  ".trellis/workflow.md": "028891d1fe839a266...",
+  ".phronia/workflow.md": "028891d1fe839a266...",
   ".claude/hooks/session-start.py": "0a9899e80f6bfe15...",
   ".claude/commands/start.md": "d1276dcbff880299..."
 }
@@ -218,7 +218,7 @@ uses `.runtime/sessions/<session-key>.json` only.
 ```yaml
 worktree_dir: ../worktrees
 copy:
-  - .trellis/.developer
+  - .phronia/.developer
   - .env
 post_create:
   - npm install
@@ -237,7 +237,7 @@ verify:
 
 **Purpose**: Agent registry for Multi-Session.
 
-**Location**: `.trellis/workspace/{developer}/.agents/`
+**Location**: `.phronia/workspace/{developer}/.agents/`
 
 **Content**: `registry.json` tracking running agents.
 
@@ -303,9 +303,9 @@ These files are managed by `trellis update`:
 
 | File | Purpose |
 |------|---------|
-| `.trellis/workflow.md` | Workflow documentation |
-| `.trellis/worktree.yaml` | Multi-session config |
-| `.trellis/.gitignore` | Git ignore rules |
+| `.phronia/workflow.md` | Workflow documentation |
+| `.phronia/worktree.yaml` | Multi-session config |
+| `.phronia/.gitignore` | Git ignore rules |
 | `.claude/hooks/*.py` | Hook scripts |
 | `.claude/commands/*.md` | Slash commands |
 | `.claude/agents/*.md` | Agent definitions |
@@ -324,7 +324,7 @@ These files are managed by `trellis update`:
 ### Created by `trellis init`
 
 ```
-.trellis/
+.phronia/
 ├── .template-hashes.json
 ├── .version
 ├── .gitignore
@@ -340,7 +340,7 @@ These files are managed by `trellis update`:
 ### Created at runtime
 
 ```
-.trellis/
+.phronia/
 ├── .developer           # init_developer.py
 ├── .runtime/sessions/   # task.py start
 ├── .current-task        # legacy ignored file, not active-task source
@@ -359,7 +359,7 @@ These files are managed by `trellis update`:
 
 ```
 # After task completion
-.trellis/tasks/{task}/ → .trellis/tasks/archive/YYYY-MM/
+.phronia/tasks/{task}/ → .phronia/tasks/archive/YYYY-MM/
 
 # After worktree removal
 .agents/registry.json entries removed

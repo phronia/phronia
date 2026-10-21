@@ -1364,7 +1364,7 @@ export function collectDirectoryFiles(
 
 /**
  * Download a direct registry spec into a temporary directory and return its
- * files as update-template entries under `.trellis/spec/**`.
+ * files as update-template entries under `.phronia/spec/**`.
  */
 export async function fetchRegistrySpecTemplates(
   registry: RegistrySource,

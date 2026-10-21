@@ -15,6 +15,7 @@ import type {
   MigrationManifest,
 } from "../types/migration.js";
 import { compareVersions } from "../utils/compare-versions.js";
+import { LAYOUT } from "@mindfoldhq/trellis-core/layout";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const MANIFESTS_DIR = path.join(__dirname, "manifests");
@@ -177,10 +178,31 @@ export function getConfigSectionsAddedBetween(
   for (const version of applicableVersions) {
     const manifest = manifests[version];
     if (manifest && Array.isArray(manifest.configSectionsAdded)) {
-      collected.push(...manifest.configSectionsAdded);
+      collected.push(
+        ...manifest.configSectionsAdded.map((entry) => ({
+          ...entry,
+          file: normalizeLegacyWorkflowPath(entry.file),
+        })),
+      );
     }
   }
   return collected;
+}
+
+/**
+ * Manifests were written against the pre-rename workflow root. Callers apply
+ * entries to the project's current tree, so normalize at the boundary.
+ */
+function normalizeLegacyWorkflowPath(relativePath: string): string {
+  if (relativePath === LAYOUT.legacyRootDirName) {
+    return LAYOUT.rootDirName;
+  }
+  if (relativePath.startsWith(`${LAYOUT.legacyRootDirName}/`)) {
+    return `${LAYOUT.rootDirName}/${relativePath.slice(
+      LAYOUT.legacyRootDirName.length + 1,
+    )}`;
+  }
+  return relativePath;
 }
 
 /**

@@ -22,7 +22,7 @@
  *
  * Background:
  *   The beta.10 incident (manifest deleted from repo AFTER being published
- *   to npm) motivated this gate — see .trellis/spec/cli/backend/migrations.md.
+ *   to npm) motivated this gate — see .phronia/spec/cli/backend/migrations.md.
  */
 import { execSync } from "node:child_process";
 import fs from "node:fs";
@@ -110,7 +110,7 @@ function main() {
     console.error(
       `\n` +
       `A version on npm without its local manifest breaks \`trellis update\`\n` +
-      `for users on adjacent versions. See .trellis/spec/cli/backend/migrations.md.\n` +
+      `for users on adjacent versions. See .phronia/spec/cli/backend/migrations.md.\n` +
       `\n` +
       `Fix options:\n` +
       `  1. Restore the manifest from git history\n` +

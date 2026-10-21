@@ -2,7 +2,7 @@
  * Task directory naming.
  *
  * User-created task dirs follow the `MM-DD-slug` pattern produced by
- * `.trellis/scripts/common/task_store.py::cmd_create`:
+ * `.phronia/scripts/common/task_store.py::cmd_create`:
  *
  *     <tasks-dir>/05-13-trellis-core-sdk-package/
  *

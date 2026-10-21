@@ -656,14 +656,14 @@ describe.skipIf(!DEVIN_PY)("devin adapter", () => {
               name: "exec",
               arguments: {
                 command:
-                  'py ./.trellis/scripts/task.py create "my task" --slug my-task',
+                  'py ./.phronia/scripts/task.py create "my task" --slug my-task',
               },
             },
             {
               name: "exec",
               arguments: {
                 command:
-                  "py ./.trellis/scripts/task.py start .trellis/tasks/01-01-my-task",
+                  "py ./.phronia/scripts/task.py start .phronia/tasks/01-01-my-task",
               },
             },
           ]),

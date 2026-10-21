@@ -164,8 +164,8 @@ describe("claudeProjectDirFromCwd", () => {
   });
 
   it("sanitizes underscore and dot in a Windows path", () => {
-    expect(dirName("D:\\code\\my_app\\.trellis")).toBe(
-      "D--code-my-app--trellis",
+    expect(dirName("D:\\code\\my_app\\.phronia")).toBe(
+      "D--code-my-app--phronia",
     );
   });
 
@@ -998,7 +998,7 @@ describe("grokListSessions / grokExtractDialogue", () => {
             name: "run_terminal_command",
             arguments: JSON.stringify({
               command:
-                "python3 ./.trellis/scripts/task.py create --slug grok-task",
+                "python3 ./.phronia/scripts/task.py create --slug grok-task",
               description: "create",
             }),
           },
@@ -1013,7 +1013,7 @@ describe("grokListSessions / grokExtractDialogue", () => {
             name: "run_terminal_command",
             arguments: JSON.stringify({
               command:
-                "python3 ./.trellis/scripts/task.py start .trellis/tasks/07-24-grok-task",
+                "python3 ./.phronia/scripts/task.py start .phronia/tasks/07-24-grok-task",
             }),
           },
         ],
@@ -2235,7 +2235,7 @@ describe.skipIf(!ZCODE_PY)("zcodeListSessions / zcodeExtractDialogue", () => {
             state: {
               input: {
                 command:
-                  'py ./.trellis/scripts/task.py create "my task" --slug my-task',
+                  'py ./.phronia/scripts/task.py create "my task" --slug my-task',
               },
             },
           },
@@ -2249,7 +2249,7 @@ describe.skipIf(!ZCODE_PY)("zcodeListSessions / zcodeExtractDialogue", () => {
             state: {
               input: {
                 command:
-                  "py ./.trellis/scripts/task.py start .trellis/tasks/01-01-my-task",
+                  "py ./.phronia/scripts/task.py start .phronia/tasks/01-01-my-task",
               },
             },
           },
@@ -2385,7 +2385,7 @@ describe.skipIf(!ZCODE_PY)("zcodeListSessions / zcodeExtractDialogue", () => {
             state: {
               input: {
                 command:
-                  'py ./.trellis/scripts/task.py create "old task" --slug old-task',
+                  'py ./.phronia/scripts/task.py create "old task" --slug old-task',
               },
             },
           },
@@ -2431,7 +2431,7 @@ describe.skipIf(!ZCODE_PY)("zcodeListSessions / zcodeExtractDialogue", () => {
             state: {
               input: {
                 command:
-                  "py ./.trellis/scripts/task.py start .trellis/tasks/01-01-new-task",
+                  "py ./.phronia/scripts/task.py start .phronia/tasks/01-01-new-task",
               },
             },
           },

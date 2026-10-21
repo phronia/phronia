@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-Standalone reader for .trellis/config.yaml.
+Standalone reader for .phronia/config.yaml.
 
 Owns the minimal YAML parser used across Trellis. ``common.config`` imports
 ``parse_simple_yaml`` from here rather than keeping its own copy: this module
@@ -23,7 +23,7 @@ from pathlib import Path
 from typing import Optional
 
 
-CONFIG_REL_PATH = ".trellis/config.yaml"
+CONFIG_REL_PATH = ".phronia/config.yaml"
 
 
 def _unquote(value: str) -> str:
@@ -225,7 +225,7 @@ def parse_simple_yaml(content: str, source: str = "config.yaml") -> dict:
 
 
 def read_trellis_config(repo_root: Optional[Path] = None) -> dict:
-    """Read .trellis/config.yaml. Returns {} on missing or malformed file."""
+    """Read .phronia/config.yaml. Returns {} on missing or malformed file."""
     root = repo_root or Path.cwd()
     config_file = root / CONFIG_REL_PATH
     try:

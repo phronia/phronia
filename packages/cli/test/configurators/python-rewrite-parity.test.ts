@@ -18,7 +18,7 @@ import path from "node:path";
  */
 const { PYTHON3_LINE } = vi.hoisted(() => ({
   PYTHON3_LINE:
-    "\n\nRun `python3 ./.trellis/scripts/task.py current` before starting.\n",
+    "\n\nRun `python3 ./.phronia/scripts/task.py current` before starting.\n",
 }));
 
 vi.mock("../../src/templates/snow/index.js", async (importOriginal) => {
@@ -101,7 +101,7 @@ describe("python3 rewrite reaches the previously-raw write sites", () => {
     for (const [id, relPath] of RAW_WRITE_SITES) {
       const written = await configureInto(id, relPath);
       expect(written, `${id}: ${relPath}`).toContain(
-        "python3 ./.trellis/scripts/task.py",
+        "python3 ./.phronia/scripts/task.py",
       );
     }
   });
@@ -111,7 +111,7 @@ describe("python3 rewrite reaches the previously-raw write sites", () => {
     for (const [id, relPath] of RAW_WRITE_SITES) {
       const written = await configureInto(id, relPath);
       expect(written, `${id}: ${relPath}`).toContain(
-        "python ./.trellis/scripts/task.py",
+        "python ./.phronia/scripts/task.py",
       );
       expect(written, `${id}: ${relPath}`).not.toContain("python3");
       expect(written, `${id}: ${relPath} must match the collected bytes`).toBe(

@@ -16,7 +16,7 @@
  * the broken state instead of the plugin silently masking it.
  *
  * Silently skips when:
- *   - No .trellis/ directory
+ *   - No .phronia/ directory
  *   - No active task in the session runtime context
  *   - task.json malformed or missing status
  */
@@ -64,12 +64,12 @@ function unquoteYaml(s) {
 
 /**
  * Line-based parser for ONLY the `prompt_injection:` block of
- * `.trellis/config.yaml`. Not a general YAML parser — mirrors
+ * `.phronia/config.yaml`. Not a general YAML parser — mirrors
  * `common.config.get_prompt_injection_config()` semantics for this section
  * only (missing key keeps the default; non-string value keeps the default).
  */
 function readSkipKeyword(directory) {
-  const path = join(directory, ".trellis", "config.yaml")
+  const path = join(directory, ".phronia", "config.yaml")
   if (!existsSync(path)) return DEFAULT_PROMPT_INJECTION_SKIP_KEYWORD
   let text
   try {
@@ -121,7 +121,7 @@ function promptHasSkipKeyword(text, keyword) {
  * rather than the plugin silently masking it.
  */
 function loadBreadcrumbs(directory) {
-  const workflowPath = join(directory, ".trellis", "workflow.md")
+  const workflowPath = join(directory, ".phronia", "workflow.md")
   if (!existsSync(workflowPath)) return {}
   let content
   try {

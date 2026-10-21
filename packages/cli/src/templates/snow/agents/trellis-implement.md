@@ -68,8 +68,8 @@ Active task: <path from task.py current>
 
 Before implementing, read:
 
-- `.trellis/workflow.md` - Project workflow
-- `.trellis/spec/` - Development guidelines
+- `.phronia/workflow.md` - Project workflow
+- `.phronia/spec/` - Development guidelines
 - Task `prd.md` - Requirements document
 - Task `design.md` / `implement.md` if present
 - `implement.jsonl` when curated (skip rows without a `file` field, e.g. legacy `_example` placeholders)
@@ -77,7 +77,7 @@ Before implementing, read:
 
 ## Core Responsibilities
 
-1. **Understand specs** - Read relevant spec files in `.trellis/spec/`
+1. **Understand specs** - Read relevant spec files in `.phronia/spec/`
 2. **Understand requirements** - Read prd.md and design/implement artifacts
 3. **Implement features** - Write code following specs and design
 4. **Self-check** - Ensure code quality (`terminal-execute` lint/typecheck)
@@ -99,8 +99,8 @@ Before implementing, read:
 
 Read relevant specs based on task type:
 
-- Spec layers: `.trellis/spec/<package>/<layer>/`
-- Shared guides: `.trellis/spec/guides/`
+- Spec layers: `.phronia/spec/<package>/<layer>/`
+- Shared guides: `.phronia/spec/guides/`
 
 ### 2. Understand Requirements
 

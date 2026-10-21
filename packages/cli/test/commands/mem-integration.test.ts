@@ -120,7 +120,7 @@ function seedPiPhaseSession(): string {
         timestamp: "2026-06-18T11:00:04.000Z",
         message: {
           role: "bashExecution",
-          command: "task.py start .trellis/tasks/06-18-pi-cli",
+          command: "task.py start .phronia/tasks/06-18-pi-cli",
           output: "",
         },
       },
@@ -429,7 +429,7 @@ describe("runMem subcommand integration", () => {
               name: "Bash",
               input: {
                 command:
-                  "python3 ./.trellis/scripts/task.py create --slug demo",
+                  "python3 ./.phronia/scripts/task.py create --slug demo",
               },
             },
           ],
@@ -454,7 +454,7 @@ describe("runMem subcommand integration", () => {
               name: "Bash",
               input: {
                 command:
-                  "python3 ./.trellis/scripts/task.py start .trellis/tasks/demo",
+                  "python3 ./.phronia/scripts/task.py start .phronia/tasks/demo",
               },
             },
           ],

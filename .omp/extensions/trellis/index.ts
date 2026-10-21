@@ -11,7 +11,7 @@ import { createHash } from "node:crypto";
 function findProjectRoot(startDir: string): string | null {
    let current = startDir;
    while (true) {
-      if (existsSync(join(current, ".trellis"))) return current;
+      if (existsSync(join(current, ".phronia"))) return current;
       const parent = dirname(current);
       if (parent === current) break;
       current = parent;
@@ -124,7 +124,7 @@ function parseChannelTrustSection(content: string): { trustedDirs: string[]; aut
 }
 
 function resolveTrustedRoots(projectRoot: string): string[] {
-   const configPath = join(projectRoot, ".trellis", "config.yaml");
+   const configPath = join(projectRoot, ".phronia", "config.yaml");
    let config: { trustedDirs: string[]; autoTrustSymlinks?: boolean } = { trustedDirs: [] };
    if (existsSync(configPath)) {
       try {
@@ -145,7 +145,7 @@ function resolveTrustedRoots(projectRoot: string): string[] {
 
    if (config.autoTrustSymlinks !== false) {
       for (const entryName of AUTO_TRUST_ENTRIES) {
-         const entryPath = join(projectRoot, ".trellis", entryName);
+         const entryPath = join(projectRoot, ".phronia", entryName);
          try {
             if (lstatSync(entryPath).isSymbolicLink()) {
                roots.push(realpathSync(entryPath));
@@ -182,7 +182,7 @@ function displayProjectPath(projectRoot: string, filePath: string, taskDir?: str
       const taskRelative = relative(projectRoot, taskDir).split("\\").join("/");
       const taskLabel = taskRelative && !taskRelative.startsWith("../") && !isAbsolute(taskRelative)
          ? taskRelative
-         : `.trellis/tasks/${basename(taskDir)}`;
+         : `.phronia/tasks/${basename(taskDir)}`;
       const withinTask = relative(taskDir, filePath).split("\\").join("/");
       if (withinTask && !withinTask.startsWith("../") && !isAbsolute(withinTask)) {
          return `${taskLabel}/${withinTask}`;
@@ -203,7 +203,7 @@ function resolveActiveTaskStatus(
    projectRoot: string,
    contextKey: string | null,
 ): { status: string; taskDir: string | null; taskTitle: string | null } {
-   const sessionsDir = join(projectRoot, ".trellis", ".runtime", "sessions");
+   const sessionsDir = join(projectRoot, ".phronia", ".runtime", "sessions");
    if (!existsSync(sessionsDir)) return { status: "no_task", taskDir: null, taskTitle: null };
 
    // --- 通过 context key 解析 session 文件 ---
@@ -274,7 +274,7 @@ function resolveActiveTaskStatus(
 const SESSION_CONTEXT_TIMEOUT_MS = 5000;
 
 function buildSessionContext(projectRoot: string, contextKey: string | null): string {
-   const script = join(projectRoot, ".trellis", "scripts", "get_context.py");
+   const script = join(projectRoot, ".phronia", "scripts", "get_context.py");
    if (!existsSync(script)) return "";
 
    try {
@@ -312,7 +312,7 @@ function taskContextJsonlNames(agentType?: AgentType): string[] {
 function taskContextInputPaths(projectRoot: string, taskDir: string, agentType?: AgentType): string[] {
    const trustedRoots = resolveTrustedRoots(projectRoot);
    const paths = new Set<string>([
-      join(projectRoot, ".trellis", "config.yaml"),
+      join(projectRoot, ".phronia", "config.yaml"),
       join(taskDir, "prd.md"),
       join(taskDir, "info.md"),
    ]);
@@ -391,7 +391,7 @@ function unquoteYaml(value: string): string {
 function readContextInjectionLimits(projectRoot: string): ContextInjectionLimits {
    const limits = { ...DEFAULT_CONTEXT_INJECTION_LIMITS };
    let config = "";
-   try { config = readFileSync(join(projectRoot, ".trellis", "config.yaml"), "utf-8"); } catch { return limits; }
+   try { config = readFileSync(join(projectRoot, ".phronia", "config.yaml"), "utf-8"); } catch { return limits; }
 
    let inSection = false;
    let sectionIndent = -1;
@@ -625,7 +625,7 @@ function buildTaskContext(projectRoot: string, taskDir: string, agentType?: Agen
    // config.yaml for every jsonl row.
    const trustedRoots = resolveTrustedRoots(projectRoot);
    const limits = readContextInjectionLimits(projectRoot);
-   const prefix = "<task-context>\nContext is bounded by .trellis/config.yaml. Files marked [truncated] or [omitted] remain authoritative on disk; use their required_read path before relying on missing detail.\n\n";
+   const prefix = "<task-context>\nContext is bounded by .phronia/config.yaml. Files marked [truncated] or [omitted] remain authoritative on disk; use their required_read path before relying on missing detail.\n\n";
    const suffix = "\n</task-context>";
    const wrapperBytes = Buffer.byteLength(prefix + suffix, "utf-8");
    if (limits.max_total_bytes > 0 && limits.max_total_bytes < wrapperBytes) return "";
@@ -740,7 +740,7 @@ function isYamlNonStringScalar(raw: string): boolean {
 
 function readPromptInjectionSkipKeyword(projectRoot: string): string {
    let config = "";
-   try { config = readFileSync(join(projectRoot, ".trellis", "config.yaml"), "utf-8"); } catch { return DEFAULT_PROMPT_INJECTION_SKIP_KEYWORD; }
+   try { config = readFileSync(join(projectRoot, ".phronia", "config.yaml"), "utf-8"); } catch { return DEFAULT_PROMPT_INJECTION_SKIP_KEYWORD; }
 
    let inSection = false;
    let sectionIndent = -1;
@@ -820,7 +820,7 @@ class TurnContextCache {
 
       const { status } = resolveActiveTaskStatus(projectRoot, contextKey);
 
-      const workflowPath = join(projectRoot, ".trellis", "workflow.md");
+      const workflowPath = join(projectRoot, ".phronia", "workflow.md");
       let workflowMd = "";
       try { workflowMd = readFileSync(workflowPath, "utf-8"); } catch { }
 

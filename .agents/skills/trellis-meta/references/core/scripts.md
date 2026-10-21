@@ -9,7 +9,7 @@ Platform-independent Python scripts for Trellis automation.
 These scripts work on all platforms - they only read/write files and don't require Claude Code's hook system.
 
 ```
-.trellis/scripts/
+.phronia/scripts/
 ├── common/                 # Shared utilities
 │   ├── paths.py
 │   ├── developer.py
@@ -33,14 +33,14 @@ These scripts work on all platforms - they only read/write files and don't requi
 Initialize developer identity.
 
 ```bash
-python3 .trellis/scripts/init_developer.py <name>
+python3 .phronia/scripts/init_developer.py <name>
 ```
 
 **Creates:**
-- `.trellis/.developer`
-- `.trellis/workspace/<name>/`
-- `.trellis/workspace/<name>/index.md`
-- `.trellis/workspace/<name>/journal-1.md`
+- `.phronia/.developer`
+- `.phronia/workspace/<name>/`
+- `.phronia/workspace/<name>/index.md`
+- `.phronia/workspace/<name>/journal-1.md`
 
 ---
 
@@ -49,7 +49,7 @@ python3 .trellis/scripts/init_developer.py <name>
 Get current developer name.
 
 ```bash
-python3 .trellis/scripts/get_developer.py
+python3 .phronia/scripts/get_developer.py
 # Output: taosu
 ```
 
@@ -66,7 +66,7 @@ python3 .trellis/scripts/get_developer.py
 Get session runtime for AI consumption.
 
 ```bash
-python3 .trellis/scripts/get_context.py
+python3 .phronia/scripts/get_context.py
 ```
 
 **Output includes:**
@@ -82,7 +82,7 @@ python3 .trellis/scripts/get_context.py
 Record session entry to journal.
 
 ```bash
-python3 .trellis/scripts/add_session.py "Session summary"
+python3 .phronia/scripts/add_session.py "Session summary"
 ```
 
 **Actions:**
@@ -101,7 +101,7 @@ Task management CLI.
 #### Create Task
 
 ```bash
-python3 .trellis/scripts/task.py create "Task name" --description "What this task delivers" --slug task-slug
+python3 .phronia/scripts/task.py create "Task name" --description "What this task delivers" --slug task-slug
 ```
 
 **Options:**
@@ -112,7 +112,7 @@ python3 .trellis/scripts/task.py create "Task name" --description "What this tas
 #### List Tasks
 
 ```bash
-python3 .trellis/scripts/task.py list
+python3 .phronia/scripts/task.py list
 ```
 
 **Output:**
@@ -125,17 +125,17 @@ Active Tasks:
 #### Start Task
 
 ```bash
-python3 .trellis/scripts/task.py start <task-dir>
+python3 .phronia/scripts/task.py start <task-dir>
 ```
 
-Sets the active task in `.trellis/.runtime/sessions/<session-key>.json`.
+Sets the active task in `.phronia/.runtime/sessions/<session-key>.json`.
 Without a session identity or `TRELLIS_CONTEXT_ID`, this command fails and
-does not create `.trellis/.current-task`.
+does not create `.phronia/.current-task`.
 
 #### Finish Task
 
 ```bash
-python3 .trellis/scripts/task.py finish
+python3 .phronia/scripts/task.py finish
 ```
 
 Clears the active task for the current session runtime only.
@@ -143,7 +143,7 @@ Clears the active task for the current session runtime only.
 #### Initialize Context
 
 ```bash
-python3 .trellis/scripts/task.py init-context <task-dir> <dev-type>
+python3 .phronia/scripts/task.py init-context <task-dir> <dev-type>
 ```
 
 **Dev types:** `frontend`, `backend`, `fullstack`
@@ -153,7 +153,7 @@ Creates JSONL files with appropriate spec references.
 #### Set Branch
 
 ```bash
-python3 .trellis/scripts/task.py set-branch <task-dir> <branch-name>
+python3 .phronia/scripts/task.py set-branch <task-dir> <branch-name>
 ```
 
 Updates `branch` field in task.json.
@@ -161,15 +161,15 @@ Updates `branch` field in task.json.
 #### Archive Task
 
 ```bash
-python3 .trellis/scripts/task.py archive <task-dir>
+python3 .phronia/scripts/task.py archive <task-dir>
 ```
 
-Moves task to `.trellis/tasks/archive/YYYY-MM/`.
+Moves task to `.phronia/tasks/archive/YYYY-MM/`.
 
 #### List Archive
 
 ```bash
-python3 .trellis/scripts/task.py list-archive [month]
+python3 .phronia/scripts/task.py list-archive [month]
 ```
 
 ---
@@ -182,10 +182,10 @@ Path constants and utilities.
 
 ```python
 from common.paths import (
-    TRELLIS_DIR,      # .trellis/
-    WORKSPACE_DIR,    # .trellis/workspace/
-    TASKS_DIR,        # .trellis/tasks/
-    SPEC_DIR,         # .trellis/spec/
+    TRELLIS_DIR,      # .phronia/
+    WORKSPACE_DIR,    # .phronia/workspace/
+    TASKS_DIR,        # .phronia/tasks/
+    SPEC_DIR,         # .phronia/spec/
 )
 ```
 
@@ -243,33 +243,33 @@ from common.git_context import (
 
 ```bash
 cd /path/to/project
-python3 .trellis/scripts/init_developer.py john-doe
+python3 .phronia/scripts/init_developer.py john-doe
 ```
 
 ### Create and Start Task
 
 ```bash
 # Create task
-python3 .trellis/scripts/task.py create "Add user login" --description "Email + password sign-in" --slug add-login
+python3 .phronia/scripts/task.py create "Add user login" --description "Email + password sign-in" --slug add-login
 
 # Initialize context for fullstack work
-python3 .trellis/scripts/task.py init-context \
-  .trellis/tasks/01-31-add-login-john-doe fullstack
+python3 .phronia/scripts/task.py init-context \
+  .phronia/tasks/01-31-add-login-john-doe fullstack
 
 # Start task
-python3 .trellis/scripts/task.py start \
-  .trellis/tasks/01-31-add-login-john-doe
+python3 .phronia/scripts/task.py start \
+  .phronia/tasks/01-31-add-login-john-doe
 ```
 
 ### Record Session
 
 ```bash
-python3 .trellis/scripts/add_session.py "Implemented login form, pending API integration"
+python3 .phronia/scripts/add_session.py "Implemented login form, pending API integration"
 ```
 
 ### Archive Completed Task
 
 ```bash
-python3 .trellis/scripts/task.py archive \
-  .trellis/tasks/01-31-add-login-john-doe
+python3 .phronia/scripts/task.py archive \
+  .phronia/tasks/01-31-add-login-john-doe
 ```

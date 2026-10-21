@@ -22,6 +22,9 @@ that removes or rewrites upstream code.
 |---|---|---|---|---|---|
 | 2026-10-21 | B0 | `packages/testing/**`, `bench/**`, `docs/adr/**`, `docs/legal/**`, `docs/migrations/**` | added | — | Fork-specific verification and governance; not derived from upstream code. |
 | 2026-10-21 | B0 | `docs-site/`, `marketplace/` submodules | initialized | `f089cb32` | Required by the existing test suite; content remains upstream, unmodified. |
+| 2026-10-21 | B1/T3 | `.trellis/**` → `.phronia/**` | renamed | `f089cb32` | Fork identity. User data (tasks, workspace, spec) moved verbatim; only generated workflow files changed content. |
+| 2026-10-21 | B1/T3 | `.trellis` path literals across `packages/**`, platform dirs, templates, tests | rewritten | `f089cb32` | Workflow root rename. Historical material (upstream migration manifests, ADRs, NOTICE, archived tasks) is excluded. |
+| 2026-10-21 | B1/T3 | `packages/cli/src/templates/trellis/scripts/common/layout.json` | added | — | Generated from the TypeScript layout so Python and TS resolve the same root. |
 
 ## Not yet modified
 

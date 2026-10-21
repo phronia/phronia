@@ -47,21 +47,21 @@ interface HookResult {
 }
 
 function writeFixtureRepo(root: string): void {
-  const taskDir = path.join(root, ".trellis", "tasks", "demo-task");
-  fs.mkdirSync(path.join(root, ".trellis", "scripts"), { recursive: true });
+  const taskDir = path.join(root, ".phronia", "tasks", "demo-task");
+  fs.mkdirSync(path.join(root, ".phronia", "scripts"), { recursive: true });
   fs.mkdirSync(taskDir, { recursive: true });
-  fs.mkdirSync(path.join(root, ".trellis", ".runtime", "sessions"), {
+  fs.mkdirSync(path.join(root, ".phronia", ".runtime", "sessions"), {
     recursive: true,
   });
 
   // Minimal task.py: always reports the fixture active task.
   fs.writeFileSync(
-    path.join(root, ".trellis", "scripts", "task.py"),
+    path.join(root, ".phronia", "scripts", "task.py"),
     [
       "#!/usr/bin/env python3",
       "import sys",
       "if \"current\" in sys.argv:",
-      "    print(\"Current task: .trellis/tasks/demo-task\")",
+      "    print(\"Current task: .phronia/tasks/demo-task\")",
       "    print(\"Source: session\")",
       "    raise SystemExit(0)",
       "print(\"unknown\")",
@@ -102,12 +102,12 @@ function writeFixtureRepo(root: string): void {
     "utf-8",
   );
   fs.writeFileSync(
-    path.join(root, ".trellis", "identity.md"),
+    path.join(root, ".phronia", "identity.md"),
     "# Identity\n\nName: Fixture Dev\n",
     "utf-8",
   );
   fs.writeFileSync(
-    path.join(root, ".trellis", "workflow.md"),
+    path.join(root, ".phronia", "workflow.md"),
     "# Workflow\n\nPhase 1 Plan / Phase 2 Execute\n",
     "utf-8",
   );
@@ -207,7 +207,7 @@ describe("snow write-trellis-context.py execution", () => {
       );
       expect(res.payload?.additionalContext).toContain("Mode: session");
       expect(res.payload?.additionalContext).toContain(
-        ".trellis/tasks/demo-task",
+        ".phronia/tasks/demo-task",
       );
       expect(res.payload?.additionalContext).toContain("prd.md summary");
       expect(res.payload?.display).toContain("Trellis session context injected");
@@ -263,7 +263,7 @@ describe("snow write-trellis-context.py execution", () => {
           cwd: repo,
           agentId: "trellis-implement",
           agentName: "trellis-implement",
-          prompt: "Active task: .trellis/tasks/demo-task\nImplement feature",
+          prompt: "Active task: .phronia/tasks/demo-task\nImplement feature",
         }),
         env: { SNOW_SESSION_ID: "sess-sub-1" },
       });
@@ -401,5 +401,5 @@ print(json.dumps({"bytes": len(out.encode("utf-8")), "has_marker": "truncated" i
 });
 
 function rootSessions(repo: string): string {
-  return path.join(repo, ".trellis", ".runtime", "sessions");
+  return path.join(repo, ".phronia", ".runtime", "sessions");
 }

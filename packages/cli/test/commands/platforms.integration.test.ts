@@ -31,7 +31,7 @@ function writeTrackedPlatforms(
   cwd: string,
   relativePaths: string[],
 ): void {
-  const trellisDir = path.join(cwd, ".trellis");
+  const trellisDir = path.join(cwd, ".phronia");
   fs.mkdirSync(trellisDir, { recursive: true });
   fs.writeFileSync(
     path.join(trellisDir, ".template-hashes.json"),

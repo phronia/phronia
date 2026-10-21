@@ -36,13 +36,13 @@ function hasPython(): boolean {
 }
 
 function setupRepo(tmp: string): void {
-  fs.mkdirSync(path.join(tmp, ".trellis", "scripts"), { recursive: true });
-  fs.cpSync(TEMPLATE_SCRIPTS, path.join(tmp, ".trellis", "scripts"), {
+  fs.mkdirSync(path.join(tmp, ".phronia", "scripts"), { recursive: true });
+  fs.cpSync(TEMPLATE_SCRIPTS, path.join(tmp, ".phronia", "scripts"), {
     recursive: true,
   });
   // workflow.md with a no_task breadcrumb so the body is deterministic.
   fs.writeFileSync(
-    path.join(tmp, ".trellis", "workflow.md"),
+    path.join(tmp, ".phronia", "workflow.md"),
     [
       "# Workflow",
       "",

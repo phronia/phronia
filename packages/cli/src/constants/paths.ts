@@ -50,7 +50,7 @@ export const FILE_NAMES = {
 
 // Constructed paths (relative to project root).
 export const PATHS = {
-  /** Workflow root, e.g. `.trellis/` */
+  /** Workflow root, e.g. `.phronia/` */
   WORKFLOW: LAYOUT.paths.root,
   /** `<root>/workspace/` */
   WORKSPACE: LAYOUT.paths.workspace,
@@ -72,7 +72,7 @@ export const PATHS = {
 
 /**
  * Get developer's workspace directory path
- * @example getWorkspaceDir("john") => ".trellis/workspace/john"
+ * @example getWorkspaceDir("john") => ".phronia/workspace/john"
  */
 export function getWorkspaceDir(developer: string): string {
   return `${PATHS.WORKSPACE}/${developer}`;
@@ -80,7 +80,7 @@ export function getWorkspaceDir(developer: string): string {
 
 /**
  * Get task directory path
- * @example getTaskDir("01-21-my-task") => ".trellis/tasks/01-21-my-task"
+ * @example getTaskDir("01-21-my-task") => ".phronia/tasks/01-21-my-task"
  */
 export function getTaskDir(taskName: string): string {
   return `${PATHS.TASKS}/${taskName}`;
@@ -88,7 +88,7 @@ export function getTaskDir(taskName: string): string {
 
 /**
  * Get archive directory path
- * @example getArchiveDir() => ".trellis/tasks/archive"
+ * @example getArchiveDir() => ".phronia/tasks/archive"
  */
 export function getArchiveDir(): string {
   return `${PATHS.TASKS}/${DIR_NAMES.ARCHIVE}`;

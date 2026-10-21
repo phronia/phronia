@@ -51,7 +51,7 @@ Drop pure spec edits, mechanical refactors, and internal-only cleanup unless the
 
 ## Step 4: Draft Changelog
 
-Voice: technical reference doc. Short, clear, plain. Not a story, not a sales pitch. Follow `.trellis/spec/docs-site/docs/style-guide.md` -> "Changelog / Release Notes Voice".
+Voice: technical reference doc. Short, clear, plain. Not a story, not a sales pitch. Follow `.phronia/spec/docs-site/docs/style-guide.md` -> "Changelog / Release Notes Voice".
 
 Do:
 
@@ -109,7 +109,7 @@ Breaking releases without `migrationGuide` produce a broken upgrade experience. 
 | `reason` | Version-specific context for modified-file prompts | optional |
 | `allowed_hashes` | Known-pristine SHA256 hashes for safe deletion | required for `safe-file-delete` |
 
-`rename` uses the project-local `.trellis/.template-hashes.json`; it does not use manifest `allowed_hashes`.
+`rename` uses the project-local `.phronia/.template-hashes.json`; it does not use manifest `allowed_hashes`.
 
 Use:
 
@@ -174,7 +174,7 @@ The docs-site root path is stable. Development cycles live under `beta/` or `rc/
 
 Per-patch releases (`-beta.1`, `-rc.1`, `0.5.1`) do not run lifecycle scripts. Write changelog MDX, update `docs.json`, commit/push docs-site, then bump the main repo submodule pointer.
 
-Full reference: `.trellis/spec/docs-site/docs/release-lifecycle.md`.
+Full reference: `.phronia/spec/docs-site/docs/release-lifecycle.md`.
 
 ## Step 9: Preflight Before Release
 

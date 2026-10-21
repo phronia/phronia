@@ -13,7 +13,7 @@ Use this command to improve test coverage after code changes.
 Discover and read unit-test specs:
 
 ```bash
-python3 ./.trellis/scripts/get_context.py --mode packages
+python3 ./.phronia/scripts/get_context.py --mode packages
 ```
 
 Look for packages with `unit-test` spec layer in the output.

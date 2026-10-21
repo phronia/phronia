@@ -40,9 +40,9 @@
 
 | Capability | What it changes |
 | --- | --- |
-| **Auto-injected specs** | Write conventions once in `.trellis/spec/`, then let Trellis inject the relevant context into each session instead of repeating yourself. |
-| **Task-centered workflow** | Keep PRDs, implementation context, review context, and task status in `.trellis/tasks/` so AI work stays structured. |
-| **Project memory** | Journals in `.trellis/workspace/` preserve what happened last time, so each new session starts with real context. |
+| **Auto-injected specs** | Write conventions once in `.phronia/spec/`, then let Trellis inject the relevant context into each session instead of repeating yourself. |
+| **Task-centered workflow** | Keep PRDs, implementation context, review context, and task status in `.phronia/tasks/` so AI work stays structured. |
+| **Project memory** | Journals in `.phronia/workspace/` preserve what happened last time, so each new session starts with real context. |
 | **Team-shared standards** | Specs live in the repo, so one person's hard-won workflow or rule can benefit the whole team. |
 | **Multi-platform setup** | Bring the same Trellis structure to 22 AI coding platforms instead of rebuilding your workflow per tool. |
 
@@ -82,7 +82,7 @@ Trellis runs a 4-phase loop with auto-invoked skills and sub-agents:
 1. **Plan** — `trellis-brainstorm` walks through requirements one question at a time and writes `prd.md`. Research-heavy items go to a `trellis-research` sub-agent. The result is curated specs + research files referenced from `implement.jsonl` / `check.jsonl`.
 2. **Implement** — a `trellis-implement` sub-agent writes code from the PRD with the curated context auto-injected, no git commit.
 3. **Verify** — a `trellis-check` sub-agent reviews the diff against specs and runs lint, type-check, and tests, self-fixing where it can.
-4. **Finish** — a final check runs, then `trellis-update-spec` promotes new learnings back into `.trellis/spec/` so the next session starts smarter.
+4. **Finish** — a final check runs, then `trellis-update-spec` promotes new learnings back into `.phronia/spec/` so the next session starts smarter.
 
 ## Resources
 
@@ -138,7 +138,7 @@ Yes. `trellis ablate` temporarily removes all supported project-owned Trellis
 surfaces after creating a verified recovery transaction outside the project.
 Start a fresh agent session for the comparison, then run `trellis restore` to
 recover the exact prior state. Use `--dry-run` to preview either operation.
-The private recovery transaction includes exact `.trellis` task, spec, and
+The private recovery transaction includes exact `.phronia` task, spec, and
 workspace bytes, which may contain user-authored sensitive text, and is kept
 until restore verifies successfully.
 

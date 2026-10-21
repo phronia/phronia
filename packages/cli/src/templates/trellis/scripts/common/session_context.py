@@ -220,7 +220,7 @@ def _discover_child_git_repos(repo_root: Path) -> list[tuple[str, str]]:
             "warning: found more than "
             f"{_POLYREPO_SCAN_MAX_REPOS} child Git repositories; "
             "skipping automatic Git status collection. Configure explicit "
-            "packages entries with path and git: true in .trellis/config.yaml.",
+            "packages entries with path and git: true in .phronia/config.yaml.",
             file=sys.stderr,
         )
         return []

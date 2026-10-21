@@ -80,8 +80,8 @@ describe("loadHashes / saveHashes", () => {
 
   beforeEach(() => {
     tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), "trellis-test-"));
-    // Create .trellis directory for hashes file
-    fs.mkdirSync(path.join(tmpDir, ".trellis"), { recursive: true });
+    // Create .phronia directory for hashes file
+    fs.mkdirSync(path.join(tmpDir, ".phronia"), { recursive: true });
   });
 
   afterEach(() => {
@@ -102,7 +102,7 @@ describe("loadHashes / saveHashes", () => {
   });
 
   it("loadHashes returns empty object for invalid JSON", () => {
-    const hashesPath = path.join(tmpDir, ".trellis", ".template-hashes.json");
+    const hashesPath = path.join(tmpDir, ".phronia", ".template-hashes.json");
     fs.writeFileSync(hashesPath, "not valid json");
 
     const hashes = loadHashes(tmpDir);
@@ -128,7 +128,7 @@ describe("updateHashes", () => {
 
   beforeEach(() => {
     tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), "trellis-test-"));
-    fs.mkdirSync(path.join(tmpDir, ".trellis"), { recursive: true });
+    fs.mkdirSync(path.join(tmpDir, ".phronia"), { recursive: true });
   });
 
   afterEach(() => {
@@ -170,7 +170,7 @@ describe("updateHashFromFile", () => {
 
   beforeEach(() => {
     tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), "trellis-test-"));
-    fs.mkdirSync(path.join(tmpDir, ".trellis"), { recursive: true });
+    fs.mkdirSync(path.join(tmpDir, ".phronia"), { recursive: true });
   });
 
   afterEach(() => {
@@ -206,7 +206,7 @@ describe("removeHash", () => {
 
   beforeEach(() => {
     tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), "trellis-test-"));
-    fs.mkdirSync(path.join(tmpDir, ".trellis"), { recursive: true });
+    fs.mkdirSync(path.join(tmpDir, ".phronia"), { recursive: true });
   });
 
   afterEach(() => {
@@ -240,7 +240,7 @@ describe("renameHash", () => {
 
   beforeEach(() => {
     tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), "trellis-test-"));
-    fs.mkdirSync(path.join(tmpDir, ".trellis"), { recursive: true });
+    fs.mkdirSync(path.join(tmpDir, ".phronia"), { recursive: true });
   });
 
   afterEach(() => {
@@ -275,7 +275,7 @@ describe("isTemplateModified", () => {
 
   beforeEach(() => {
     tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), "trellis-test-"));
-    fs.mkdirSync(path.join(tmpDir, ".trellis"), { recursive: true });
+    fs.mkdirSync(path.join(tmpDir, ".phronia"), { recursive: true });
   });
 
   afterEach(() => {
@@ -351,7 +351,7 @@ describe("getModificationStatus", () => {
 
   beforeEach(() => {
     tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), "trellis-test-"));
-    fs.mkdirSync(path.join(tmpDir, ".trellis"), { recursive: true });
+    fs.mkdirSync(path.join(tmpDir, ".phronia"), { recursive: true });
   });
 
   afterEach(() => {
@@ -396,19 +396,19 @@ describe("initializeHashes", () => {
   });
 
   it("returns 0 when no template directories exist", () => {
-    // Create .trellis dir for saving hashes but no template files
-    fs.mkdirSync(path.join(tmpDir, ".trellis"), { recursive: true });
+    // Create .phronia dir for saving hashes but no template files
+    fs.mkdirSync(path.join(tmpDir, ".phronia"), { recursive: true });
     const count = initializeHashes(tmpDir);
     expect(count).toBe(0);
   });
 
-  it("hashes files in .trellis/ and tracked platform paths", () => {
-    // .trellis/ is always walked recursively. Platform paths (.claude/, etc.)
+  it("hashes files in .phronia/ and tracked platform paths", () => {
+    // .phronia/ is always walked recursively. Platform paths (.claude/, etc.)
     // are hashed only when explicitly listed in `trackedPaths` — the source-
     // of-truth set captured by `startRecordingWrites` during init.
-    fs.mkdirSync(path.join(tmpDir, ".trellis", "scripts"), { recursive: true });
+    fs.mkdirSync(path.join(tmpDir, ".phronia", "scripts"), { recursive: true });
     fs.writeFileSync(
-      path.join(tmpDir, ".trellis", "scripts", "task.py"),
+      path.join(tmpDir, ".phronia", "scripts", "task.py"),
       "print('hello')",
     );
 
@@ -424,7 +424,7 @@ describe("initializeHashes", () => {
     expect(count).toBeGreaterThanOrEqual(2);
 
     const hashes = loadHashes(tmpDir);
-    expect(hashes).toHaveProperty(".trellis/scripts/task.py");
+    expect(hashes).toHaveProperty(".phronia/scripts/task.py");
     expect(hashes).toHaveProperty(".claude/commands/start.md");
   });
 
@@ -434,7 +434,7 @@ describe("initializeHashes", () => {
     // AGENTS.md) into the manifest, so uninstall later unlinked them.
     // Now: only paths trellis actually wrote (recorded via writeFile) make
     // it into the platform/root section of the manifest.
-    fs.mkdirSync(path.join(tmpDir, ".trellis"), { recursive: true });
+    fs.mkdirSync(path.join(tmpDir, ".phronia"), { recursive: true });
 
     const userSession = path.join(
       tmpDir,
@@ -458,46 +458,46 @@ describe("initializeHashes", () => {
   });
 
   it("excludes workspace and tasks directories", () => {
-    fs.mkdirSync(path.join(tmpDir, ".trellis", "workspace"), { recursive: true });
-    fs.writeFileSync(path.join(tmpDir, ".trellis", "workspace", "data.md"), "user data");
-    fs.mkdirSync(path.join(tmpDir, ".trellis", "tasks"), { recursive: true });
-    fs.writeFileSync(path.join(tmpDir, ".trellis", "tasks", "task.json"), "{}");
+    fs.mkdirSync(path.join(tmpDir, ".phronia", "workspace"), { recursive: true });
+    fs.writeFileSync(path.join(tmpDir, ".phronia", "workspace", "data.md"), "user data");
+    fs.mkdirSync(path.join(tmpDir, ".phronia", "tasks"), { recursive: true });
+    fs.writeFileSync(path.join(tmpDir, ".phronia", "tasks", "task.json"), "{}");
 
     const count = initializeHashes(tmpDir);
     const hashes = loadHashes(tmpDir);
 
     // These should be excluded
-    expect(hashes).not.toHaveProperty(".trellis/workspace/data.md");
-    expect(hashes).not.toHaveProperty(".trellis/tasks/task.json");
+    expect(hashes).not.toHaveProperty(".phronia/workspace/data.md");
+    expect(hashes).not.toHaveProperty(".phronia/tasks/task.json");
     expect(count).toBe(0);
   });
 
   it("excludes spec/ directory files from hashing", () => {
-    fs.mkdirSync(path.join(tmpDir, ".trellis", "spec", "guides"), { recursive: true });
-    fs.mkdirSync(path.join(tmpDir, ".trellis", "spec", "frontend"), { recursive: true });
-    fs.mkdirSync(path.join(tmpDir, ".trellis", "spec", "backend"), { recursive: true });
-    fs.writeFileSync(path.join(tmpDir, ".trellis", "spec", "guides", "index.md"), "# Guides");
-    fs.writeFileSync(path.join(tmpDir, ".trellis", "spec", "frontend", "index.md"), "# Frontend");
-    fs.writeFileSync(path.join(tmpDir, ".trellis", "spec", "backend", "index.md"), "# Backend");
+    fs.mkdirSync(path.join(tmpDir, ".phronia", "spec", "guides"), { recursive: true });
+    fs.mkdirSync(path.join(tmpDir, ".phronia", "spec", "frontend"), { recursive: true });
+    fs.mkdirSync(path.join(tmpDir, ".phronia", "spec", "backend"), { recursive: true });
+    fs.writeFileSync(path.join(tmpDir, ".phronia", "spec", "guides", "index.md"), "# Guides");
+    fs.writeFileSync(path.join(tmpDir, ".phronia", "spec", "frontend", "index.md"), "# Frontend");
+    fs.writeFileSync(path.join(tmpDir, ".phronia", "spec", "backend", "index.md"), "# Backend");
 
     const count = initializeHashes(tmpDir);
     const hashes = loadHashes(tmpDir);
 
     // All spec/ files should be excluded
-    expect(hashes).not.toHaveProperty(".trellis/spec/guides/index.md");
-    expect(hashes).not.toHaveProperty(".trellis/spec/frontend/index.md");
-    expect(hashes).not.toHaveProperty(".trellis/spec/backend/index.md");
+    expect(hashes).not.toHaveProperty(".phronia/spec/guides/index.md");
+    expect(hashes).not.toHaveProperty(".phronia/spec/frontend/index.md");
+    expect(hashes).not.toHaveProperty(".phronia/spec/backend/index.md");
     expect(count).toBe(0);
   });
 
   it("collectFiles returns POSIX-normalized paths (no backslashes)", () => {
     // Even on Windows where path.join uses `\`, our collected paths must
     // be POSIX so they can be used as cross-platform hash keys.
-    fs.mkdirSync(path.join(tmpDir, ".trellis", "scripts", "common"), {
+    fs.mkdirSync(path.join(tmpDir, ".phronia", "scripts", "common"), {
       recursive: true,
     });
     fs.writeFileSync(
-      path.join(tmpDir, ".trellis", "scripts", "common", "task.py"),
+      path.join(tmpDir, ".phronia", "scripts", "common", "task.py"),
       "print('x')",
     );
 
@@ -508,11 +508,11 @@ describe("initializeHashes", () => {
       expect(key).not.toContain("\\");
     }
     // And confirm the expected POSIX key is present
-    expect(hashes).toHaveProperty(".trellis/scripts/common/task.py");
+    expect(hashes).toHaveProperty(".phronia/scripts/common/task.py");
   });
 
   it("does not exclude generated update-spec skills from hashing", () => {
-    fs.mkdirSync(path.join(tmpDir, ".trellis"), { recursive: true });
+    fs.mkdirSync(path.join(tmpDir, ".phronia"), { recursive: true });
     const skillPath = path.join(
       tmpDir,
       ".pi",
@@ -546,11 +546,11 @@ describe("initializeHashes", () => {
 
 describe("cross-platform hash storage (POSIX keys + v2 schema)", () => {
   let tmpDir: string;
-  const HASHES_REL = path.join(".trellis", ".template-hashes.json");
+  const HASHES_REL = path.join(".phronia", ".template-hashes.json");
 
   beforeEach(() => {
     tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), "trellis-test-"));
-    fs.mkdirSync(path.join(tmpDir, ".trellis"), { recursive: true });
+    fs.mkdirSync(path.join(tmpDir, ".phronia"), { recursive: true });
   });
 
   afterEach(() => {
@@ -600,7 +600,7 @@ describe("cross-platform hash storage (POSIX keys + v2 schema)", () => {
     // Simulate an existing user's file from before the v2 schema. Both the
     // backslash key AND the missing schema version should trigger discard.
     const legacy = {
-      ".trellis\\config.yaml": "deadbeef",
+      ".phronia\\config.yaml": "deadbeef",
       ".claude/commands/start.md": "cafebabe",
     };
     fs.writeFileSync(
@@ -642,13 +642,13 @@ describe("cross-platform hash storage (POSIX keys + v2 schema)", () => {
     // Plant a legacy flat-format hashes file.
     fs.writeFileSync(
       path.join(tmpDir, HASHES_REL),
-      JSON.stringify({ ".trellis\\config.yaml": "deadbeef" }),
+      JSON.stringify({ ".phronia\\config.yaml": "deadbeef" }),
     );
 
     // Stage some real files to pick up.
-    fs.mkdirSync(path.join(tmpDir, ".trellis", "scripts"), { recursive: true });
+    fs.mkdirSync(path.join(tmpDir, ".phronia", "scripts"), { recursive: true });
     fs.writeFileSync(
-      path.join(tmpDir, ".trellis", "scripts", "task.py"),
+      path.join(tmpDir, ".phronia", "scripts", "task.py"),
       "print('hello')",
     );
 
@@ -659,10 +659,10 @@ describe("cross-platform hash storage (POSIX keys + v2 schema)", () => {
 
     expect(parsed.__version).toBe(2);
     // Legacy bogus key is gone
-    expect(parsed.hashes).not.toHaveProperty(".trellis\\config.yaml");
-    expect(parsed.hashes).not.toHaveProperty(".trellis/config.yaml");
+    expect(parsed.hashes).not.toHaveProperty(".phronia\\config.yaml");
+    expect(parsed.hashes).not.toHaveProperty(".phronia/config.yaml");
     // Newly hashed file is present with POSIX key
-    expect(parsed.hashes).toHaveProperty(".trellis/scripts/task.py");
+    expect(parsed.hashes).toHaveProperty(".phronia/scripts/task.py");
   });
 
   it("removeHash and renameHash work with backslash inputs", () => {

@@ -34,7 +34,7 @@ Common Trellis customization scenarios and what files need to be modified.
 ```
 .claude/commands/trellis/my-command.md    # Create: Command prompt
 .cursor/commands/my-command.md            # Create: Mirror for Cursor (optional)
-.trellis-local/SKILL.md                   # Update: Document the change
+.phronia-local/SKILL.md                   # Update: Document the change
 ```
 
 **Steps**:
@@ -55,8 +55,8 @@ Common Trellis customization scenarios and what files need to be modified.
 ```
 .claude/agents/my-agent.md                          # Create: Agent definition
 .claude/hooks/inject-subagent-context.py            # Modify: Add agent handling
-.trellis/tasks/{template}/my-agent.jsonl            # Create: Context template
-.trellis-local/SKILL.md                             # Update: Document the change
+.phronia/tasks/{template}/my-agent.jsonl            # Create: Context template
+.phronia-local/SKILL.md                             # Update: Document the change
 ```
 
 **Optional**:
@@ -78,7 +78,7 @@ task.json template                                  # Modify: Add to next_action
 ```
 .claude/hooks/{hook-name}.py              # Modify: Hook logic
 .claude/settings.json                     # Modify: If changing matcher/timeout
-.trellis-local/SKILL.md                   # Update: Document the change
+.phronia-local/SKILL.md                   # Update: Document the change
 ```
 
 → See `modify-hook.md` for details.
@@ -92,10 +92,10 @@ task.json template                                  # Modify: Add to next_action
 **Files to modify**:
 
 ```
-.trellis/spec/mobile/index.md             # Create: Category index
-.trellis/spec/mobile/*.md                 # Create: Spec files
-.trellis/tasks/{template}/*.jsonl         # Update: Reference new specs
-.trellis-local/SKILL.md                   # Update: Document the change
+.phronia/spec/mobile/index.md             # Create: Category index
+.phronia/spec/mobile/*.md                 # Create: Spec files
+.phronia/tasks/{template}/*.jsonl         # Update: Reference new specs
+.phronia-local/SKILL.md                   # Update: Document the change
 ```
 
 → See `add-spec.md` for details.
@@ -109,7 +109,7 @@ task.json template                                  # Modify: Add to next_action
 **Files to modify**:
 
 ```
-.trellis/worktree.yaml                    # Modify: verify section
+.phronia/worktree.yaml                    # Modify: verify section
 ```
 
 **Example**:
@@ -135,7 +135,7 @@ task.json (in task directories)           # Modify: next_action array
 .claude/agents/dispatch.md                # Modify: Handle new phase
 .claude/agents/{new-phase}.md             # Create: If new agent needed
 .claude/hooks/inject-subagent-context.py  # Modify: If new agent
-.trellis-local/SKILL.md                   # Update: Document the change
+.phronia-local/SKILL.md                   # Update: Document the change
 ```
 
 → See `add-phase.md` for details.
@@ -149,7 +149,7 @@ task.json (in task directories)           # Modify: next_action array
 **Files to modify**:
 
 ```
-.trellis/worktree.yaml                    # Modify: post_create section
+.phronia/worktree.yaml                    # Modify: post_create section
 ```
 
 **Example**:
@@ -169,7 +169,7 @@ post_create:
 
 ```
 .claude/hooks/session-start.py            # Modify: Injection logic
-.trellis-local/SKILL.md                   # Update: Document the change
+.phronia-local/SKILL.md                   # Update: Document the change
 ```
 
 → See `modify-session-start.md` for details.
@@ -183,9 +183,9 @@ post_create:
 **Files to modify**:
 
 ```
-.trellis/scripts/my-script.py             # Create: Script
-.trellis/scripts/common/*.py              # Create/Modify: If shared utilities
-.trellis-local/SKILL.md                   # Update: Document the change
+.phronia/scripts/my-script.py             # Create: Script
+.phronia/scripts/common/*.py              # Create/Modify: If shared utilities
+.phronia-local/SKILL.md                   # Update: Document the change
 ```
 
 → See `add-script.md` for details.
@@ -199,9 +199,9 @@ post_create:
 **Files to modify**:
 
 ```
-.trellis/scripts/task.py                  # Modify: init-context logic
-.trellis/tasks/{template}/*.jsonl         # Create: New JSONL templates
-.trellis-local/SKILL.md                   # Update: Document the change
+.phronia/scripts/task.py                  # Modify: init-context logic
+.phronia/tasks/{template}/*.jsonl         # Create: New JSONL templates
+.phronia-local/SKILL.md                   # Update: Document the change
 ```
 
 → See `change-task-types.md` for details.

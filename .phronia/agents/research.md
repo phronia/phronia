@@ -15,7 +15,7 @@ Determine the research type from the prompt:
 
 | Type | Signal | Strategy |
 |------|--------|----------|
-| **Internal** | Existing feature, refactor, bug area | Search project code + `.trellis/spec/` |
+| **Internal** | Existing feature, refactor, bug area | Search project code + `.phronia/spec/` |
 | **External** | New SDK, library, API, protocol | Fetch real source + write context files |
 | **Mixed** | Existing feature + new dependency | Both strategies combined |
 
@@ -23,10 +23,10 @@ Determine the research type from the prompt:
 
 ### 2a. Start from spec indexes
 
-Read `.trellis/spec/` to understand what guidelines exist:
+Read `.phronia/spec/` to understand what guidelines exist:
 
 ```
-.trellis/spec/
+.phronia/spec/
 ├── {package}/
 │   └── {layer}/
 │       ├── index.md     ← start here: lists all spec files for this area
@@ -92,7 +92,7 @@ the report and stop — do not fabricate substitutes from prior knowledge.
 
 ### 3c. Context file structure (mandatory template)
 
-Write one file per topic at `.trellis/tasks/{id}/context/{topic}.md`, using
+Write one file per topic at `.phronia/tasks/{id}/context/{topic}.md`, using
 this exact structure:
 
 ~~~markdown
@@ -212,18 +212,18 @@ When there is an active task, fill the JSONL files so downstream agents get the 
 ### What goes into `implement.jsonl`
 
 ```jsonl
-{"path": ".trellis/spec/{pkg}/{layer}/index.md", "description": "Coding guidelines overview"}
-{"path": ".trellis/spec/{pkg}/{layer}/error-handling.md", "description": "Error handling conventions"}
+{"path": ".phronia/spec/{pkg}/{layer}/index.md", "description": "Coding guidelines overview"}
+{"path": ".phronia/spec/{pkg}/{layer}/error-handling.md", "description": "Error handling conventions"}
 {"path": "src/services/auth.ts", "description": "Existing pattern to follow"}
-{"path": ".trellis/tasks/{id}/prd.md", "description": "Requirements"}
-{"path": ".trellis/tasks/{id}/context/new-sdk-usage.md", "description": "SDK API reference"}
+{"path": ".phronia/tasks/{id}/prd.md", "description": "Requirements"}
+{"path": ".phronia/tasks/{id}/context/new-sdk-usage.md", "description": "SDK API reference"}
 ```
 
 ### What goes into `check.jsonl`
 
 ```jsonl
-{"path": ".trellis/spec/{pkg}/{layer}/quality-guidelines.md", "description": "Quality criteria"}
-{"path": ".trellis/spec/guides/cross-layer-thinking-guide.md", "description": "Cross-layer check"}
+{"path": ".phronia/spec/{pkg}/{layer}/quality-guidelines.md", "description": "Quality criteria"}
+{"path": ".phronia/spec/guides/cross-layer-thinking-guide.md", "description": "Cross-layer check"}
 ```
 
 ### Decision guide
@@ -238,13 +238,13 @@ When there is an active task, fill the JSONL files so downstream agents get the 
 
 ### Allowed
 - Describe what exists, where it is, how it works
-- Read and reference `.trellis/spec/` files
-- Write context files under `.trellis/tasks/{id}/context/`
+- Read and reference `.phronia/spec/` files
+- Write context files under `.phronia/tasks/{id}/context/`
 - Populate JSONL files with discovered paths
 
 ### Forbidden (unless explicitly asked)
 - Suggest improvements or criticize implementation
-- Modify source code (only write to .trellis/ task directories)
+- Modify source code (only write to .phronia/ task directories)
 - Execute git commands
 
 ## Report Format
@@ -256,8 +256,8 @@ When there is an active task, fill the JSONL files so downstream agents get the 
 {original query}
 
 ### Specs Reviewed
-- `.trellis/spec/{pkg}/{layer}/index.md` — {what it covers}
-- `.trellis/spec/{pkg}/{layer}/specific-file.md` — {key points}
+- `.phronia/spec/{pkg}/{layer}/index.md` — {what it covers}
+- `.phronia/spec/{pkg}/{layer}/specific-file.md` — {key points}
 
 ### Files Found
 | File Path | Description |
@@ -265,7 +265,7 @@ When there is an active task, fill the JSONL files so downstream agents get the 
 | `src/services/xxx.ts` | Main implementation |
 
 ### Context Files Written (if external research)
-- `.trellis/tasks/{id}/context/topic-name.md` — {what it contains}
+- `.phronia/tasks/{id}/context/topic-name.md` — {what it contains}
 
 ### JSONL Entries Added
 - implement.jsonl: {N} entries

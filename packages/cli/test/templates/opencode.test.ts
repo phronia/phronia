@@ -267,7 +267,7 @@ describe("opencode bash session context", () => {
     const hooks = await createOpenCodeInjectHooks();
     const output = {
       args: {
-        command: "python3 ./.trellis/scripts/task.py start .trellis/tasks/demo",
+        command: "python3 ./.phronia/scripts/task.py start .phronia/tasks/demo",
       },
     };
 
@@ -277,7 +277,7 @@ describe("opencode bash session context", () => {
     );
 
     expect(output.args.command).toBe(
-      "export TRELLIS_CONTEXT_ID='opencode_oc-a'; python3 ./.trellis/scripts/task.py start .trellis/tasks/demo",
+      "export TRELLIS_CONTEXT_ID='opencode_oc-a'; python3 ./.phronia/scripts/task.py start .phronia/tasks/demo",
     );
   });
 
@@ -285,7 +285,7 @@ describe("opencode bash session context", () => {
     const hooks = await createOpenCodeInjectHooks("win32");
     const output = {
       args: {
-        command: "python ./.trellis/scripts/task.py start .trellis/tasks/demo",
+        command: "python ./.phronia/scripts/task.py start .phronia/tasks/demo",
       },
     };
 
@@ -295,7 +295,7 @@ describe("opencode bash session context", () => {
     );
 
     expect(output.args.command).toBe(
-      "$env:TRELLIS_CONTEXT_ID = 'opencode_oc-a'; python ./.trellis/scripts/task.py start .trellis/tasks/demo",
+      "$env:TRELLIS_CONTEXT_ID = 'opencode_oc-a'; python ./.phronia/scripts/task.py start .phronia/tasks/demo",
     );
   });
 
@@ -404,7 +404,7 @@ describe("opencode bash session context", () => {
     const output = {
       args: {
         command:
-          "TRELLIS_CONTEXT_ID=manual python3 ./.trellis/scripts/task.py current",
+          "TRELLIS_CONTEXT_ID=manual python3 ./.phronia/scripts/task.py current",
       },
     };
 
@@ -414,7 +414,7 @@ describe("opencode bash session context", () => {
     );
 
     expect(output.args.command).toBe(
-      "TRELLIS_CONTEXT_ID=manual python3 ./.trellis/scripts/task.py current",
+      "TRELLIS_CONTEXT_ID=manual python3 ./.phronia/scripts/task.py current",
     );
   });
 
@@ -423,7 +423,7 @@ describe("opencode bash session context", () => {
     const output = {
       args: {
         command:
-          "export TRELLIS_CONTEXT_ID=manual; python3 ./.trellis/scripts/task.py current",
+          "export TRELLIS_CONTEXT_ID=manual; python3 ./.phronia/scripts/task.py current",
       },
     };
 
@@ -433,7 +433,7 @@ describe("opencode bash session context", () => {
     );
 
     expect(output.args.command).toBe(
-      "export TRELLIS_CONTEXT_ID=manual; python3 ./.trellis/scripts/task.py current",
+      "export TRELLIS_CONTEXT_ID=manual; python3 ./.phronia/scripts/task.py current",
     );
   });
 
@@ -442,7 +442,7 @@ describe("opencode bash session context", () => {
     const output = {
       args: {
         command:
-          "env FOO=bar TRELLIS_CONTEXT_ID=manual python3 ./.trellis/scripts/task.py current",
+          "env FOO=bar TRELLIS_CONTEXT_ID=manual python3 ./.phronia/scripts/task.py current",
       },
     };
 
@@ -452,7 +452,7 @@ describe("opencode bash session context", () => {
     );
 
     expect(output.args.command).toBe(
-      "env FOO=bar TRELLIS_CONTEXT_ID=manual python3 ./.trellis/scripts/task.py current",
+      "env FOO=bar TRELLIS_CONTEXT_ID=manual python3 ./.phronia/scripts/task.py current",
     );
   });
 
@@ -461,7 +461,7 @@ describe("opencode bash session context", () => {
     const output = {
       args: {
         command:
-          "$env:TRELLIS_CONTEXT_ID = 'manual'; python ./.trellis/scripts/task.py current",
+          "$env:TRELLIS_CONTEXT_ID = 'manual'; python ./.phronia/scripts/task.py current",
       },
     };
 
@@ -471,7 +471,7 @@ describe("opencode bash session context", () => {
     );
 
     expect(output.args.command).toBe(
-      "$env:TRELLIS_CONTEXT_ID = 'manual'; python ./.trellis/scripts/task.py current",
+      "$env:TRELLIS_CONTEXT_ID = 'manual'; python ./.phronia/scripts/task.py current",
     );
   });
 
@@ -726,14 +726,14 @@ describe("opencode persisted synthetic context parts", () => {
 
 function setupTrellisProject(): string {
   const dir = mkdtempSync(join(tmpdir(), "trellis-opencode-264-"));
-  const taskDir = join(dir, ".trellis", "tasks", "demo-task");
+  const taskDir = join(dir, ".phronia", "tasks", "demo-task");
   mkdirSync(taskDir, { recursive: true });
-  mkdirSync(join(dir, ".trellis", ".runtime", "sessions"), { recursive: true });
+  mkdirSync(join(dir, ".phronia", ".runtime", "sessions"), { recursive: true });
   writeFileSync(join(taskDir, "prd.md"), "# Demo PRD\n\nGoal: verify injection.");
   writeFileSync(join(taskDir, "implement.jsonl"), "");
   writeFileSync(join(taskDir, "check.jsonl"), "");
   writeFileSync(
-    join(dir, ".trellis", "workflow.md"),
+    join(dir, ".phronia", "workflow.md"),
     [
       "# Workflow",
       "",
@@ -747,7 +747,7 @@ function setupTrellisProject(): string {
 }
 
 function writeSessionFile(dir: string, key: string, taskRef: string): void {
-  const file = join(dir, ".trellis", ".runtime", "sessions", `${key}.json`);
+  const file = join(dir, ".phronia", ".runtime", "sessions", `${key}.json`);
   writeFileSync(file, JSON.stringify({ current_task: taskRef }, null, 2));
 }
 
@@ -779,18 +779,18 @@ describe("opencode TrellisContext single-session fallback", () => {
   });
 
   it("returns the only session file when exactly one exists", () => {
-    writeSessionFile(dir, "opencode_sole", ".trellis/tasks/demo-task");
+    writeSessionFile(dir, "opencode_sole", ".phronia/tasks/demo-task");
     const ctx = new TrellisContext(dir);
     const active = ctx.getActiveTask({ sessionID: "missing-key" });
 
-    expect(active.taskPath).toBe(".trellis/tasks/demo-task");
+    expect(active.taskPath).toBe(".phronia/tasks/demo-task");
     expect(active.source).toBe("session-fallback:opencode_sole");
     expect(active.stale).toBe(false);
   });
 
   it("refuses to guess when two or more session files exist", () => {
-    writeSessionFile(dir, "opencode_a", ".trellis/tasks/demo-task");
-    writeSessionFile(dir, "opencode_b", ".trellis/tasks/demo-task");
+    writeSessionFile(dir, "opencode_a", ".phronia/tasks/demo-task");
+    writeSessionFile(dir, "opencode_b", ".phronia/tasks/demo-task");
     const ctx = new TrellisContext(dir);
     const active = ctx.getActiveTask({ sessionID: "missing-key" });
 
@@ -808,8 +808,8 @@ describe("opencode TrellisContext single-session fallback", () => {
   });
 
   it("prefers an exact context-key match over the fallback", () => {
-    writeSessionFile(dir, "opencode_session_exact", ".trellis/tasks/demo-task");
-    writeSessionFile(dir, "opencode_other", ".trellis/tasks/demo-task");
+    writeSessionFile(dir, "opencode_session_exact", ".phronia/tasks/demo-task");
+    writeSessionFile(dir, "opencode_other", ".phronia/tasks/demo-task");
     const ctx = new TrellisContext(dir);
     const active = ctx.getActiveTask({ sessionID: "exact" });
 
@@ -839,7 +839,7 @@ describe("opencode inject-subagent-context (issue #264)", () => {
   });
 
   it("mutates implement prompt using single-session fallback when sessionID misses", async () => {
-    writeSessionFile(dir, "opencode_sole", ".trellis/tasks/demo-task");
+    writeSessionFile(dir, "opencode_sole", ".phronia/tasks/demo-task");
     const output: TaskToolOutput = {
       args: {
         subagent_type: "trellis-implement",
@@ -866,14 +866,14 @@ describe("opencode inject-subagent-context (issue #264)", () => {
   it("inlines JSONL-referenced spec content into the implement prompt", async () => {
     // Cover AC #1: "JSONL-referenced context" — the seed-only jsonl path
     // is exercised above; this one verifies a curated entry is inlined.
-    const specPath = join(dir, ".trellis", "spec", "demo.md");
-    mkdirSync(join(dir, ".trellis", "spec"), { recursive: true });
+    const specPath = join(dir, ".phronia", "spec", "demo.md");
+    mkdirSync(join(dir, ".phronia", "spec"), { recursive: true });
     writeFileSync(specPath, "# Demo Spec\n\nUNIQUE_SPEC_MARKER_42");
     writeFileSync(
-      join(dir, ".trellis", "tasks", "demo-task", "implement.jsonl"),
-      JSON.stringify({ file: ".trellis/spec/demo.md", reason: "test" }) + "\n",
+      join(dir, ".phronia", "tasks", "demo-task", "implement.jsonl"),
+      JSON.stringify({ file: ".phronia/spec/demo.md", reason: "test" }) + "\n",
     );
-    writeSessionFile(dir, "opencode_sole", ".trellis/tasks/demo-task");
+    writeSessionFile(dir, "opencode_sole", ".phronia/tasks/demo-task");
 
     const output: TaskToolOutput = {
       args: {
@@ -888,7 +888,7 @@ describe("opencode inject-subagent-context (issue #264)", () => {
     );
 
     expect(output.args.prompt).toContain("<!-- trellis-hook-injected -->");
-    expect(output.args.prompt).toContain("=== .trellis/spec/demo.md ===");
+    expect(output.args.prompt).toContain("=== .phronia/spec/demo.md ===");
     expect(output.args.prompt).toContain("UNIQUE_SPEC_MARKER_42");
     expect(output.args.prompt).toContain("Demo PRD");
   });
@@ -899,7 +899,7 @@ describe("opencode inject-subagent-context (issue #264)", () => {
     const output: TaskToolOutput = {
       args: {
         subagent_type: "trellis-check",
-        prompt: "Active task: .trellis/tasks/demo-task\n\nplease check",
+        prompt: "Active task: .phronia/tasks/demo-task\n\nplease check",
       },
     };
 
@@ -916,8 +916,8 @@ describe("opencode inject-subagent-context (issue #264)", () => {
   it("Active task hint takes precedence over single-session fallback", async () => {
     // Set up TWO matches: a session file pointing at demo-task AND a hint
     // pointing at a different task path. Hint should win.
-    writeSessionFile(dir, "opencode_sole", ".trellis/tasks/another-task");
-    const hintTask = join(dir, ".trellis", "tasks", "hint-task");
+    writeSessionFile(dir, "opencode_sole", ".phronia/tasks/another-task");
+    const hintTask = join(dir, ".phronia", "tasks", "hint-task");
     mkdirSync(hintTask, { recursive: true });
     writeFileSync(join(hintTask, "prd.md"), "# Hint PRD\n\nfrom hint");
     writeFileSync(join(hintTask, "implement.jsonl"), "");
@@ -925,7 +925,7 @@ describe("opencode inject-subagent-context (issue #264)", () => {
     const output: TaskToolOutput = {
       args: {
         subagent_type: "trellis-implement",
-        prompt: "Active task: .trellis/tasks/hint-task\n\ngo",
+        prompt: "Active task: .phronia/tasks/hint-task\n\ngo",
       },
     };
 
@@ -1203,7 +1203,7 @@ describe("opencode messages.transform injection (issue #553)", () => {
 
   it("inject-workflow-state.js honors a custom prompt_injection.skip_keyword", async () => {
     writeFileSync(
-      join(dir, ".trellis", "config.yaml"),
+      join(dir, ".phronia", "config.yaml"),
       ["prompt_injection:", '  skip_keyword: "off-topic"'].join("\n"),
     );
     const hooks = await loadWorkflowHooks();
@@ -1224,7 +1224,7 @@ describe("opencode messages.transform injection (issue #553)", () => {
 
   it("inject-workflow-state.js disables the escape hatch with skip_keyword: \"\"", async () => {
     writeFileSync(
-      join(dir, ".trellis", "config.yaml"),
+      join(dir, ".phronia", "config.yaml"),
       ["prompt_injection:", '  skip_keyword: ""'].join("\n"),
     );
     const hooks = await loadWorkflowHooks();
@@ -1273,19 +1273,19 @@ describe("opencode context injection limits (issue #441)", () => {
   });
 
   function writeConfig(yaml: string): void {
-    writeFileSync(join(dir, ".trellis", "config.yaml"), yaml, "utf-8");
+    writeFileSync(join(dir, ".phronia", "config.yaml"), yaml, "utf-8");
   }
 
   function writeJsonlEntries(entries: Record<string, string>[]): void {
     writeFileSync(
-      join(dir, ".trellis", "tasks", "demo-task", "implement.jsonl"),
+      join(dir, ".phronia", "tasks", "demo-task", "implement.jsonl"),
       entries.map(e => JSON.stringify(e)).join("\n") + "\n",
       "utf-8",
     );
   }
 
   async function runImplementHook(): Promise<string> {
-    writeSessionFile(dir, "opencode_sole", ".trellis/tasks/demo-task");
+    writeSessionFile(dir, "opencode_sole", ".phronia/tasks/demo-task");
     const hooks = (await injectSubagentContextPlugin({
       directory: dir,
       platform: "linux",
@@ -1400,7 +1400,7 @@ describe("opencode context injection limits (issue #441)", () => {
 
       expect(prompt).toContain("=== small.md ===\nsmall spec content");
       expect(prompt).toContain(
-        "=== .trellis/tasks/demo-task/prd.md (Requirements) ===\n# Demo PRD",
+        "=== .phronia/tasks/demo-task/prd.md (Requirements) ===\n# Demo PRD",
       );
       expect(prompt).not.toContain("[Trellis: truncated");
       expect(prompt).not.toContain("[Trellis: not inlined");
@@ -1501,7 +1501,7 @@ describe("opencode context injection limits (issue #441)", () => {
 
     it("truncates an oversized artifact (prd.md) at max_artifact_bytes", async () => {
       writeFileSync(
-        join(dir, ".trellis", "tasks", "demo-task", "prd.md"),
+        join(dir, ".phronia", "tasks", "demo-task", "prd.md"),
         "P".repeat(100000),
         "utf-8",
       );
@@ -1511,7 +1511,7 @@ describe("opencode context injection limits (issue #441)", () => {
       expect(prompt).toContain("P".repeat(65536));
       expect(prompt).not.toContain("P".repeat(65537));
       expect(prompt).toContain(
-        "[Trellis: truncated at 65536 bytes — read .trellis/tasks/demo-task/prd.md for the full content]",
+        "[Trellis: truncated at 65536 bytes — read .phronia/tasks/demo-task/prd.md for the full content]",
       );
     });
 
@@ -1546,7 +1546,7 @@ describe("opencode context injection limits (issue #441)", () => {
       expect(prompt).not.toContain("=== f3.txt ===");
     });
 
-    it("honors a max_file_bytes override from .trellis/config.yaml", async () => {
+    it("honors a max_file_bytes override from .phronia/config.yaml", async () => {
       writeFileSync(join(dir, "ref.md"), "R".repeat(100), "utf-8");
       writeJsonlEntries([{ file: "ref.md", reason: "ref" }]);
       writeConfig(["context_injection:", "  max_file_bytes: 10"].join("\n"));

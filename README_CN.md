@@ -40,9 +40,9 @@
 
 | 能力 | 带来的改变 |
 | --- | --- |
-| **自动注入规范** | 将规范沉淀到 `.trellis/spec/` 之后，Trellis 会在每次会话中按当前任务自动按需注入相关上下文，无需反复说明。 |
-| **任务驱动工作流** | PRD、实现上下文、审查上下文与任务状态统一存放于 `.trellis/tasks/`，AI 开发过程保持结构化、可追溯。 |
-| **项目记忆** | `.trellis/workspace/` 中的工作日志（journal）会保留上一次会话的脉络，因此每次新会话都能基于真实上下文开始。 |
+| **自动注入规范** | 将规范沉淀到 `.phronia/spec/` 之后，Trellis 会在每次会话中按当前任务自动按需注入相关上下文，无需反复说明。 |
+| **任务驱动工作流** | PRD、实现上下文、审查上下文与任务状态统一存放于 `.phronia/tasks/`，AI 开发过程保持结构化、可追溯。 |
+| **项目记忆** | `.phronia/workspace/` 中的工作日志（journal）会保留上一次会话的脉络，因此每次新会话都能基于真实上下文开始。 |
 | **团队共享标准** | Spec 随仓库一同版本化，个人总结出的规则与流程可以直接成为整个团队的基础设施。 |
 | **多平台复用** | 同一套 Trellis 结构覆盖 22 个 AI coding 平台，无需为每个工具单独搭建工作流。 |
 
@@ -82,7 +82,7 @@ Trellis 内部运行一个 4 阶段循环，skill 与子代理均由系统自动
 1. **Plan（规划）** —— `trellis-brainstorm` 逐题梳理需求并写入 `prd.md`；涉及资料调研的部分派发给 `trellis-research` 子代理处理。阶段产出为一组精选的 Spec 与研究文件，由 `implement.jsonl` / `check.jsonl` 编排。
 2. **Implement（实现）** —— `trellis-implement` 子代理依据 PRD 编写代码，所需上下文已按 `implement.jsonl` 自动注入，不会执行 git commit。
 3. **Verify（验证）** —— `trellis-check` 子代理基于 diff 对照 Spec 逐项核查，并运行 lint、type-check 与测试，在能力范围内自动修复。
-4. **Finish（收尾）** —— 执行最终检查后，`trellis-update-spec` 将本轮新增的认知沉淀回 `.trellis/spec/`，为下一次会话积累上下文。
+4. **Finish（收尾）** —— 执行最终检查后，`trellis-update-spec` 将本轮新增的认知沉淀回 `.phronia/spec/`，为下一次会话积累上下文。
 
 ## 资源
 
@@ -138,7 +138,7 @@ Trellis 内部运行一个 4 阶段循环，skill 与子代理均由系统自动
 Trellis 管理的全部项目级表面。请新开一个 agent 会话进行对比；完成后运行
 `trellis restore`，即可精确恢复到消融前的状态。两个命令都支持
 `--dry-run` 预览。
-私有恢复事务会包含 `.trellis` 中 task、spec 和 workspace 的精确字节，
+私有恢复事务会包含 `.phronia` 中 task、spec 和 workspace 的精确字节，
 其中可能有用户编写的敏感文本；事务会保留到恢复完成验证为止。
 
 它不同于永久删除的 `trellis uninstall`，也不同于只关闭 hooks 的

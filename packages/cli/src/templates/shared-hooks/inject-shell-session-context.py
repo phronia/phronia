@@ -32,7 +32,7 @@ if callable(_stdin_reconfigure):
         pass
 
 
-DIR_WORKFLOW = ".trellis"
+DIR_WORKFLOW = ".phronia"
 DIR_RUNTIME = ".runtime"
 DIR_SHELL_TICKETS = "shell-tickets"
 SESSION_SUBCOMMANDS = {"start", "current", "finish"}
@@ -69,7 +69,7 @@ def _resolve_trellis_root(hook_input: dict[str, Any]) -> Path | None:
     """Locate the project root, trying the payload cwd and then our own.
 
     Hosts disagree about what `cwd` means. CodeBuddy IDE 4.10.4 sends `"/"` for
-    every PreToolUse event, so trusting the payload alone finds no `.trellis`
+    every PreToolUse event, so trusting the payload alone finds no `.phronia`
     and the bridge silently does nothing — the hook is invoked, writes no
     ticket, and `task.py start` degrades. Observed with a wildcard probe:
 

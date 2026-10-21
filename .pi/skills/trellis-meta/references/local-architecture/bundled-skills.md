@@ -24,7 +24,7 @@ The set is discovered at runtime by listing directories under `templates/common/
 | --- | --- |
 | `trellis-meta` | This skill. Explains the local Trellis architecture and customization entry points to an AI working inside a user project. |
 | `trellis-session-insight` | Wraps the `trellis mem` CLI so an AI knows when and how to reach into past Claude Code / Codex / Pi Agent conversation logs. |
-| `trellis-spec-bootstrap` | Platform-neutral workflow for creating or refreshing `.trellis/spec/` from the real codebase (with optional GitNexus / ABCoder integration). |
+| `trellis-spec-bootstrap` | Platform-neutral workflow for creating or refreshing `.phronia/spec/` from the real codebase (with optional GitNexus / ABCoder integration). |
 | `trellis-channel` | Capability skill teaching an AI when to reach for `trellis channel` for multi-agent collaboration, forum/thread persistent boards, and dispatcher-wait patterns. |
 
 The list is discovered at runtime, so adding a new directory under `bundled-skills/` is the only step required to register a new skill (see "Adding a New Bundled Skill" below).
@@ -53,7 +53,7 @@ Each platform configurator calls `writeSkills(<root>, <workflowSkills>, resolveB
 Two paths exercise the same data:
 
 1. `configureX(cwd)` writes files during `trellis init`.
-2. `collectPlatformTemplates(platformId)` (in `configurators/index.ts`) returns a `Map<filePath, content>` that `trellis update` uses to detect drift and to populate `.trellis/.template-hashes.json`. Both must produce byte-identical output, so they both call `resolveBundledSkills(ctx)` and `collectSkillTemplates(root, …, resolveBundledSkills(ctx))`.
+2. `collectPlatformTemplates(platformId)` (in `configurators/index.ts`) returns a `Map<filePath, content>` that `trellis update` uses to detect drift and to populate `.phronia/.template-hashes.json`. Both must produce byte-identical output, so they both call `resolveBundledSkills(ctx)` and `collectSkillTemplates(root, …, resolveBundledSkills(ctx))`.
 
 ## Dispatch Wiring (Code Path)
 
@@ -106,19 +106,19 @@ The shape and dispatch wiring are already generic, so adding a skill requires on
    - `pnpm --filter @mindfoldhq/trellis build` copies the asset into `dist/templates/common/bundled-skills/<skill>/`.
    - `npm pack --dry-run --json` includes the expected `dist/**` paths.
    - In a fresh temp project, `trellis init` writes `.claude/skills/<skill>/SKILL.md`, `.agents/skills/<skill>/SKILL.md`, etc.
-   - `.trellis/.template-hashes.json` lists the generated files.
+   - `.phronia/.template-hashes.json` lists the generated files.
    - `trellis update --dry-run` in that temp project reports "Already up to date!".
 
 6. **Add a migration manifest entry** if the skill is added in a release that other projects will upgrade into. Without an explicit manifest entry the file will land via the standard "missing file" branch of `trellis update`, but a manifest makes the change visible in the changelog.
 
 ## Overriding a Bundled Skill Locally
 
-There is no formal "project-local skill" mechanism (e.g. `.trellis/skills/`). Bundled skills are platform-rooted, so any override is platform-rooted too.
+There is no formal "project-local skill" mechanism (e.g. `.phronia/skills/`). Bundled skills are platform-rooted, so any override is platform-rooted too.
 
 The supported pattern relies on the existing template-hash diff in `trellis update`:
 
 1. Edit the local file directly. Example: `.claude/skills/trellis-meta/SKILL.md`.
-2. The file's hash now diverges from the entry in `.trellis/.template-hashes.json`.
+2. The file's hash now diverges from the entry in `.phronia/.template-hashes.json`.
 3. The next `trellis update` detects the user modification and leaves the file untouched (Trellis never overwrites user-modified files without an explicit `--force`).
 
 Caveats:
@@ -126,7 +126,7 @@ Caveats:
 - The override only applies to the one platform whose directory you edited. To override the same skill across, for example, Claude Code and Codex, you must edit both `.claude/skills/<name>/` and `.agents/skills/<name>/`.
 - A future `trellis update --force` will overwrite local edits. Keep the override under version control so it can be reapplied if needed.
 - Marketplace skills installed under the same platform skill root with a different folder name (e.g. `.claude/skills/my-custom-meta/`) are untouched by Trellis and are the cleaner option when the goal is to add behavior, not to mutate the bundled skill.
-- Team-private conventions belong in `.trellis/spec/` or in a separate marketplace-style local skill, not in modifications to `trellis-meta` itself. See `customize-local/add-project-local-conventions.md`.
+- Team-private conventions belong in `.phronia/spec/` or in a separate marketplace-style local skill, not in modifications to `trellis-meta` itself. See `customize-local/add-project-local-conventions.md`.
 
 ## Removing a Bundled Skill From a Project
 
@@ -143,4 +143,4 @@ A third option — globally disabling all bundled skills — is not supported. T
 - Treat `templates/common/bundled-skills/` as the single source of truth for what bundled skills exist. Do not hand-maintain platform-by-platform skill lists.
 - Do not add platform-specific logic inside a bundled `SKILL.md`. If a behavior is platform-specific, put it in `templates/<platform>/skills/` instead.
 - Do not couple bundled skills to a specific CLI binary (e.g. `trellis mem`) without surfacing the dependency in the skill's description and references — users on older releases may not have the command.
-- Do not store project-private content in a bundled skill. Bundled skills are public, shipped to every user; project rules belong in `.trellis/spec/` or a local skill.
+- Do not store project-private content in a bundled skill. Bundled skills are public, shipped to every user; project rules belong in `.phronia/spec/` or a local skill.

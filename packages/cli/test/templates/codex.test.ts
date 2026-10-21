@@ -210,7 +210,7 @@ describe("codex two-channel sub-agent context (native SubagentStart)", () => {
 
     expect(content).toContain("Do not load `implement.jsonl` or `check.jsonl`");
     expect(content).not.toContain(
-      "Run `python3 ./.trellis/scripts/task.py current --source`",
+      "Run `python3 ./.phronia/scripts/task.py current --source`",
     );
   });
 });

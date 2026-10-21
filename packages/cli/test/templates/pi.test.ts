@@ -177,9 +177,9 @@ export { buildPiArgs, resolveRunCfg, splitModelThinking };
 function createMinimalTrellisRoot(): string {
   const root = mkdtempSync(join(tmpdir(), "trellis-pi-355-"));
   mkdirSync(join(root, ".pi"), { recursive: true });
-  mkdirSync(join(root, ".trellis", "scripts"), { recursive: true });
+  mkdirSync(join(root, ".phronia", "scripts"), { recursive: true });
   writeFileSync(
-    join(root, ".trellis", "workflow.md"),
+    join(root, ".phronia", "workflow.md"),
     [
       "[workflow-state:no_task]",
       "No active task. First classify the current turn and ask for task-creation consent before creating any Trellis task.",
@@ -188,7 +188,7 @@ function createMinimalTrellisRoot(): string {
     ].join("\n"),
   );
   writeFileSync(
-    join(root, ".trellis", "scripts", "get_context.py"),
+    join(root, ".phronia", "scripts", "get_context.py"),
     [
       "#!/usr/bin/env python3",
       "import sys",
@@ -443,18 +443,18 @@ describe("pi templates", () => {
     expect(first.systemPrompt).toContain("No active Trellis task found");
 
     // A task is created and activated mid-session.
-    const taskDir = join(root, ".trellis", "tasks", "07-07-cache-fix");
+    const taskDir = join(root, ".phronia", "tasks", "07-07-cache-fix");
     mkdirSync(taskDir, { recursive: true });
     writeFileSync(join(taskDir, "prd.md"), "# PRD\nStable prefix matters.");
     writeFileSync(
       join(taskDir, "task.json"),
       JSON.stringify({ id: "07-07-cache-fix", status: "in_progress" }),
     );
-    mkdirSync(join(root, ".trellis", ".runtime", "sessions"), {
+    mkdirSync(join(root, ".phronia", ".runtime", "sessions"), {
       recursive: true,
     });
     writeFileSync(
-      join(root, ".trellis", ".runtime", "sessions", "pi_pi-unit-task-update.json"),
+      join(root, ".phronia", ".runtime", "sessions", "pi_pi-unit-task-update.json"),
       JSON.stringify({ current_task: "tasks/07-07-cache-fix" }),
     );
 
@@ -474,8 +474,8 @@ describe("pi templates", () => {
 
   it("keeps a native Pi session isolated from a foreign context key (#512)", () => {
     const root = createMinimalTrellisRoot();
-    const taskDir = join(root, ".trellis", "tasks", "foreign-task");
-    const sessionsDir = join(root, ".trellis", ".runtime", "sessions");
+    const taskDir = join(root, ".phronia", "tasks", "foreign-task");
+    const sessionsDir = join(root, ".phronia", ".runtime", "sessions");
     mkdirSync(taskDir, { recursive: true });
     mkdirSync(sessionsDir, { recursive: true });
     writeFileSync(join(taskDir, "prd.md"), "FOREIGN TASK CONTENT");
@@ -596,10 +596,10 @@ describe("pi templates", () => {
   it("scopes per-session caches by resolved root when ctx.cwd changes", () => {
     const root1 = createMinimalTrellisRoot();
     const root2 = createMinimalTrellisRoot();
-    const sessionsDir1 = join(root1, ".trellis", ".runtime", "sessions");
-    const sessionsDir2 = join(root2, ".trellis", ".runtime", "sessions");
-    const taskDir1 = join(root1, ".trellis", "tasks", "shared-task");
-    const taskDir2 = join(root2, ".trellis", "tasks", "shared-task");
+    const sessionsDir1 = join(root1, ".phronia", ".runtime", "sessions");
+    const sessionsDir2 = join(root2, ".phronia", ".runtime", "sessions");
+    const taskDir1 = join(root1, ".phronia", "tasks", "shared-task");
+    const taskDir2 = join(root2, ".phronia", "tasks", "shared-task");
     mkdirSync(sessionsDir1, { recursive: true });
     mkdirSync(sessionsDir2, { recursive: true });
     mkdirSync(taskDir1, { recursive: true });
@@ -646,10 +646,10 @@ describe("pi templates", () => {
   it("re-asserts the current root's task context when a session switches back", () => {
     const root1 = createMinimalTrellisRoot();
     const root2 = createMinimalTrellisRoot();
-    const sessionsDir1 = join(root1, ".trellis", ".runtime", "sessions");
-    const sessionsDir2 = join(root2, ".trellis", ".runtime", "sessions");
-    const taskDir1 = join(root1, ".trellis", "tasks", "shared-task");
-    const taskDir2 = join(root2, ".trellis", "tasks", "shared-task");
+    const sessionsDir1 = join(root1, ".phronia", ".runtime", "sessions");
+    const sessionsDir2 = join(root2, ".phronia", ".runtime", "sessions");
+    const taskDir1 = join(root1, ".phronia", "tasks", "shared-task");
+    const taskDir2 = join(root2, ".phronia", "tasks", "shared-task");
     mkdirSync(sessionsDir1, { recursive: true });
     mkdirSync(sessionsDir2, { recursive: true });
     mkdirSync(taskDir1, { recursive: true });
@@ -1221,20 +1221,20 @@ describe("pi extension: context injection limits (issue #441)", () => {
   }
 
   function activateTask(root: string, taskDirName: string): string {
-    const taskDir = join(root, ".trellis", "tasks", taskDirName);
+    const taskDir = join(root, ".phronia", "tasks", taskDirName);
     mkdirSync(taskDir, { recursive: true });
-    mkdirSync(join(root, ".trellis", ".runtime", "sessions"), {
+    mkdirSync(join(root, ".phronia", ".runtime", "sessions"), {
       recursive: true,
     });
     writeFileSync(
-      join(root, ".trellis", ".runtime", "sessions", `${SESSION_KEY}.json`),
+      join(root, ".phronia", ".runtime", "sessions", `${SESSION_KEY}.json`),
       JSON.stringify({ current_task: `tasks/${taskDirName}` }),
     );
     return taskDir;
   }
 
   function writeConfig(root: string, yaml: string): void {
-    writeFileSync(join(root, ".trellis", "config.yaml"), yaml, "utf-8");
+    writeFileSync(join(root, ".phronia", "config.yaml"), yaml, "utf-8");
   }
 
   describe("truncateUtf8", () => {
@@ -1285,7 +1285,7 @@ describe("pi extension: context injection limits (issue #441)", () => {
   describe("readContextInjectionLimits", () => {
     it("returns built-in defaults when config.yaml has no context_injection section", () => {
       const root = createRoot();
-      mkdirSync(join(root, ".trellis"), { recursive: true });
+      mkdirSync(join(root, ".phronia"), { recursive: true });
       writeConfig(root, "session_auto_commit: true\n");
       const { readContextInjectionLimits } = loadExtensionInternals();
       expect(readContextInjectionLimits(root)).toEqual({
@@ -1307,7 +1307,7 @@ describe("pi extension: context injection limits (issue #441)", () => {
 
     it("applies explicit overrides for all three keys", () => {
       const root = createRoot();
-      mkdirSync(join(root, ".trellis"), { recursive: true });
+      mkdirSync(join(root, ".phronia"), { recursive: true });
       writeConfig(
         root,
         [
@@ -1327,7 +1327,7 @@ describe("pi extension: context injection limits (issue #441)", () => {
 
     it("0 means unlimited and is preserved as-is (not replaced by default)", () => {
       const root = createRoot();
-      mkdirSync(join(root, ".trellis"), { recursive: true });
+      mkdirSync(join(root, ".phronia"), { recursive: true });
       writeConfig(
         root,
         ["context_injection:", "  max_total_bytes: 0"].join("\n"),
@@ -1338,7 +1338,7 @@ describe("pi extension: context injection limits (issue #441)", () => {
 
     it("falls back to default for a negative value", () => {
       const root = createRoot();
-      mkdirSync(join(root, ".trellis"), { recursive: true });
+      mkdirSync(join(root, ".phronia"), { recursive: true });
       writeConfig(
         root,
         ["context_injection:", "  max_file_bytes: -5"].join("\n"),
@@ -1349,7 +1349,7 @@ describe("pi extension: context injection limits (issue #441)", () => {
 
     it("falls back to default for a non-integer value", () => {
       const root = createRoot();
-      mkdirSync(join(root, ".trellis"), { recursive: true });
+      mkdirSync(join(root, ".phronia"), { recursive: true });
       writeConfig(
         root,
         ["context_injection:", "  max_artifact_bytes: not-a-number"].join(
@@ -1499,7 +1499,7 @@ describe("pi extension: context injection limits (issue #441)", () => {
         ].join("\n") + "\n",
         "utf-8",
       );
-      mkdirSync(join(root, ".trellis"), { recursive: true });
+      mkdirSync(join(root, ".phronia"), { recursive: true });
       writeConfig(
         root,
         [
@@ -1532,7 +1532,7 @@ describe("pi extension: context injection limits (issue #441)", () => {
         JSON.stringify({ file: "big.txt", reason: "big" }) + "\n",
         "utf-8",
       );
-      mkdirSync(join(root, ".trellis"), { recursive: true });
+      mkdirSync(join(root, ".phronia"), { recursive: true });
       writeConfig(
         root,
         [
@@ -1551,7 +1551,7 @@ describe("pi extension: context injection limits (issue #441)", () => {
       const root = createRoot();
       const taskDir = activateTask(root, "task-artifact-cap");
       writeFileSync(join(taskDir, "prd.md"), "P".repeat(1000), "utf-8");
-      mkdirSync(join(root, ".trellis"), { recursive: true });
+      mkdirSync(join(root, ".phronia"), { recursive: true });
       writeConfig(
         root,
         [
@@ -1565,7 +1565,7 @@ describe("pi extension: context injection limits (issue #441)", () => {
       const out = buildContextForTest(root, "trellis-implement", SESSION_KEY);
       const relTaskDir = "tasks/task-artifact-cap".replace(
         "tasks/",
-        ".trellis/tasks/",
+        ".phronia/tasks/",
       );
       expect(out).toContain("P".repeat(20));
       expect(out).not.toContain("P".repeat(21));

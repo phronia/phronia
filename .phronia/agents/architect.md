@@ -54,8 +54,8 @@ cannot resolve after checking code and specs.
 | Local codebase | `rg`, file reads | Locate identifiers, files, tests, templates, generated outputs |
 | AST structure | abcoder MCP | Read package/file/function/class structure and direct references |
 | Impact graph | GitNexus MCP | Blast radius, callers, execution flows, route/tool/API consumers |
-| Trellis specs | `.trellis/spec/**` | Project conventions, release/migration/docs-site rules |
-| Task artifacts | `.trellis/tasks/<active>/{prd,design,implement}.md` | Scope, acceptance criteria, prior decisions |
+| Trellis specs | `.phronia/spec/**` | Project conventions, release/migration/docs-site rules |
+| Task artifacts | `.phronia/tasks/<active>/{prd,design,implement}.md` | Scope, acceptance criteria, prior decisions |
 | External docs | official docs / `mcp__ref__*` / web fetch | Current library, npm, GitHub Actions, Mintlify behavior |
 
 Examples:
@@ -78,8 +78,8 @@ Examples:
 Most Trellis bugs are wrong state boundaries, not missing conditionals. Before
 proposing logic, name the durable data:
 
-- task files under `.trellis/tasks/`
-- specs under `.trellis/spec/`
+- task files under `.phronia/tasks/`
+- specs under `.phronia/spec/`
 - generated platform templates
 - migration manifests
 - template hashes
@@ -152,8 +152,8 @@ Use this map when orienting:
 | Channel runtime | `packages/cli/src/commands/channel/**` | event schema, project buckets, worker lifecycle, adapter protocol |
 | Init/update templates | `packages/cli/src/templates/**`, `dist/templates/**` | generated file parity, platform-specific paths, hashes |
 | Migrations | `packages/cli/src/migrations/**`, `packages/cli/scripts/create-manifest.js` | manifest validation, rename/delete safety, migration guide content |
-| Task scripts | `.trellis/scripts/**`, template copies | Python compatibility, task lifecycle, context injection |
-| Specs | `.trellis/spec/**` | executable conventions, release docs, workflow rules |
+| Task scripts | `.phronia/scripts/**`, template copies | Python compatibility, task lifecycle, context injection |
+| Specs | `.phronia/spec/**` | executable conventions, release docs, workflow rules |
 | Docs site | `docs-site/**` | bilingual changelog parity, Mintlify MDX constraints, navigation |
 | Release | `package.json`, `pnpm` scripts, GitHub Actions | dist-tags, manifests, docs, tests, publish idempotency |
 
@@ -189,7 +189,7 @@ or "what execution flow changes."
 Required for non-trivial changes:
 
 ```bash
-rg -n '<identifier-or-path>' packages docs-site .trellis
+rg -n '<identifier-or-path>' packages docs-site .phronia
 ```
 
 When available, use:
@@ -241,7 +241,7 @@ repo inspection. Do not block the design on tooling freshness.
 
 ## Thinking Guide Triggers
 
-Load the matching `.trellis/spec/guides/**` guide mentally when these appear:
+Load the matching `.phronia/spec/guides/**` guide mentally when these appear:
 
 - **Code reuse:** new helper, changed constant/config, repeated pattern, manual
   file list, or two mechanisms producing the same output.

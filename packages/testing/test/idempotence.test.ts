@@ -22,35 +22,35 @@ describe("idempotence report parsing", () => {
         "  New files (will add):",
         "    + .claude/agents/new.md",
         "  Template updated (will auto-update):",
-        "    ↑ .trellis/scripts/task.py",
+        "    ↑ .phronia/scripts/task.py",
         "  Unchanged files (will skip):",
-        "    ○ .trellis/scripts/__init__.py",
+        "    ○ .phronia/scripts/__init__.py",
         "    ... and 239 more",
         "  Modified by you (need your decision):",
-        "    ? .trellis/config.yaml",
+        "    ? .phronia/config.yaml",
         "  Deleted by you (preserved):",
         "    ✕ .opencode/package.json",
         "  User data (preserved):",
-        "    ○ .trellis/spec/",
+        "    ○ .phronia/spec/",
         "This will UPGRADE: 0.6.14 → 0.6.17",
       ].join("\n"),
     );
 
     expect(report.newFiles).toEqual([".claude/agents/new.md"]);
-    expect(report.templateUpdated).toEqual([".trellis/scripts/task.py"]);
-    expect(report.modified).toEqual([".trellis/config.yaml"]);
+    expect(report.templateUpdated).toEqual([".phronia/scripts/task.py"]);
+    expect(report.modified).toEqual([".phronia/config.yaml"]);
     expect(report.deleted).toEqual([".opencode/package.json"]);
-    expect(report.userData).toEqual([".trellis/spec"]);
+    expect(report.userData).toEqual([".phronia/spec"]);
     expect(report.upgrade).toBe("0.6.14 → 0.6.17");
   });
 
   it("strips ANSI colour codes", () => {
     const report = parseUpdateDryRun(
-      ["  Modified by you (need your decision):", "    \u001b[33m?\u001b[39m .trellis/workflow.md"].join(
+      ["  Modified by you (need your decision):", "    \u001b[33m?\u001b[39m .phronia/workflow.md"].join(
         "\n",
       ),
     );
-    expect(report.modified).toEqual([".trellis/workflow.md"]);
+    expect(report.modified).toEqual([".phronia/workflow.md"]);
   });
 });
 

@@ -22,6 +22,7 @@ import {
   clearManifestCache,
   getAllMigrations,
   getAllMigrationVersions,
+  getConfigSectionsAddedBetween,
   getMigrationsForVersion,
   hasPendingMigrations,
 } from "../src/migrations/index.js";
@@ -230,7 +231,7 @@ describe("regression: add_session.py runtime branch context (issue-106)", () => 
   });
 
   function writeTrellisScripts(): void {
-    const scriptsDir = path.join(tmpDir, ".trellis", "scripts");
+    const scriptsDir = path.join(tmpDir, ".phronia", "scripts");
     for (const [relativePath, content] of getAllScripts()) {
       const absPath = path.join(scriptsDir, relativePath);
       fs.mkdirSync(path.dirname(absPath), { recursive: true });
@@ -276,7 +277,7 @@ ${separator}
 <!-- @@@/auto:session-history -->
 `;
     fs.writeFileSync(
-      path.join(tmpDir, ".trellis", "workspace", "test-dev", "index.md"),
+      path.join(tmpDir, ".phronia", "workspace", "test-dev", "index.md"),
       indexContent,
       "utf-8",
     );
@@ -290,32 +291,32 @@ ${separator}
   }): void {
     writeTrellisScripts();
 
-    fs.mkdirSync(path.join(tmpDir, ".trellis", "workspace", "test-dev"), {
+    fs.mkdirSync(path.join(tmpDir, ".phronia", "workspace", "test-dev"), {
       recursive: true,
     });
     fs.writeFileSync(
-      path.join(tmpDir, ".trellis", ".developer"),
+      path.join(tmpDir, ".phronia", ".developer"),
       "name=test-dev\ninitialized_at=2026-03-22T00:00:00\n",
       "utf-8",
     );
     fs.writeFileSync(
-      path.join(tmpDir, ".trellis", "workspace", "test-dev", "journal-1.md"),
+      path.join(tmpDir, ".phronia", "workspace", "test-dev", "journal-1.md"),
       "# Journal - test-dev (Part 1)\n\n---\n",
       "utf-8",
     );
     createWorkspaceIndex(options?.headerMode ?? "current5");
 
     if (options?.taskBranch || options?.taskBaseBranch) {
-      const taskDir = path.join(tmpDir, ".trellis", "tasks", "issue-106");
+      const taskDir = path.join(tmpDir, ".phronia", "tasks", "issue-106");
       fs.mkdirSync(taskDir, { recursive: true });
-      fs.mkdirSync(path.join(tmpDir, ".trellis", ".runtime", "sessions"), {
+      fs.mkdirSync(path.join(tmpDir, ".phronia", ".runtime", "sessions"), {
         recursive: true,
       });
       fs.writeFileSync(
-        path.join(tmpDir, ".trellis", ".runtime", "sessions", "session-a.json"),
+        path.join(tmpDir, ".phronia", ".runtime", "sessions", "session-a.json"),
         JSON.stringify(
           {
-            current_task: ".trellis/tasks/issue-106",
+            current_task: ".phronia/tasks/issue-106",
             platform: "test",
           },
           null,
@@ -352,7 +353,7 @@ ${separator}
     const command = [
       "python3",
       JSON.stringify(
-        path.join(tmpDir, ".trellis", "scripts", "add_session.py"),
+        path.join(tmpDir, ".phronia", "scripts", "add_session.py"),
       ),
       "--title",
       JSON.stringify(title),
@@ -388,11 +389,11 @@ ${separator}
     runAddSession("CLI branch wins", { branch: "cli/from-arg" });
 
     const journal = fs.readFileSync(
-      path.join(tmpDir, ".trellis", "workspace", "test-dev", "journal-1.md"),
+      path.join(tmpDir, ".phronia", "workspace", "test-dev", "journal-1.md"),
       "utf-8",
     );
     const index = fs.readFileSync(
-      path.join(tmpDir, ".trellis", "workspace", "test-dev", "index.md"),
+      path.join(tmpDir, ".phronia", "workspace", "test-dev", "index.md"),
       "utf-8",
     );
 
@@ -416,11 +417,11 @@ ${separator}
     runAddSession("Task branch wins");
 
     const journal = fs.readFileSync(
-      path.join(tmpDir, ".trellis", "workspace", "test-dev", "journal-1.md"),
+      path.join(tmpDir, ".phronia", "workspace", "test-dev", "journal-1.md"),
       "utf-8",
     );
     const index = fs.readFileSync(
-      path.join(tmpDir, ".trellis", "workspace", "test-dev", "index.md"),
+      path.join(tmpDir, ".phronia", "workspace", "test-dev", "index.md"),
       "utf-8",
     );
 
@@ -440,11 +441,11 @@ ${separator}
     runAddSession("Git branch fallback");
 
     const journal = fs.readFileSync(
-      path.join(tmpDir, ".trellis", "workspace", "test-dev", "journal-1.md"),
+      path.join(tmpDir, ".phronia", "workspace", "test-dev", "journal-1.md"),
       "utf-8",
     );
     const index = fs.readFileSync(
-      path.join(tmpDir, ".trellis", "workspace", "test-dev", "index.md"),
+      path.join(tmpDir, ".phronia", "workspace", "test-dev", "index.md"),
       "utf-8",
     );
 
@@ -466,7 +467,7 @@ ${separator}
     runAddSession("Legacy 4-column migration");
 
     const index = fs.readFileSync(
-      path.join(tmpDir, ".trellis", "workspace", "test-dev", "index.md"),
+      path.join(tmpDir, ".phronia", "workspace", "test-dev", "index.md"),
       "utf-8",
     );
 
@@ -483,11 +484,11 @@ ${separator}
     runAddSession("No branch available");
 
     const journal = fs.readFileSync(
-      path.join(tmpDir, ".trellis", "workspace", "test-dev", "journal-1.md"),
+      path.join(tmpDir, ".phronia", "workspace", "test-dev", "journal-1.md"),
       "utf-8",
     );
     const index = fs.readFileSync(
-      path.join(tmpDir, ".trellis", "workspace", "test-dev", "index.md"),
+      path.join(tmpDir, ".phronia", "workspace", "test-dev", "index.md"),
       "utf-8",
     );
 
@@ -503,7 +504,7 @@ ${separator}
 describe("regression: Windows path separator (beta.12)", () => {
   it("[beta.12] isManagedPath handles Windows backslash paths", () => {
     expect(isManagedPath(".claude\\commands\\foo.md")).toBe(true);
-    expect(isManagedPath(".trellis\\spec\\backend")).toBe(true);
+    expect(isManagedPath(".phronia\\spec\\backend")).toBe(true);
     expect(isManagedPath(".cursor\\commands\\start.md")).toBe(true);
     expect(isManagedPath(".opencode\\config.json")).toBe(true);
     expect(isManagedPath(".github\\copilot\\hooks\\session-start.py")).toBe(
@@ -522,15 +523,15 @@ describe("regression: Windows path separator (beta.12)", () => {
 // =============================================================================
 
 describe("regression: task directory paths (0.2.14, 0.2.15, beta.13)", () => {
-  it("[0.2.15] PATHS.TASKS is .trellis/tasks (not .trellis/workspace/*/tasks)", () => {
-    expect(PATHS.TASKS).toBe(".trellis/tasks");
+  it("[0.2.15] PATHS.TASKS is .phronia/tasks (not .phronia/workspace/*/tasks)", () => {
+    expect(PATHS.TASKS).toBe(".phronia/tasks");
     expect(PATHS.TASKS).not.toContain("workspace");
   });
 
-  it("[0.2.14] Claude agent templates do not contain hardcoded .trellis/workspace/*/tasks/ paths", () => {
+  it("[0.2.14] Claude agent templates do not contain hardcoded .phronia/workspace/*/tasks/ paths", () => {
     const agents = getClaudeAgents();
     for (const agent of agents) {
-      expect(agent.content).not.toMatch(/\.trellis\/workspace\/[^/]+\/tasks\//);
+      expect(agent.content).not.toMatch(/\.phronia\/workspace\/[^/]+\/tasks\//);
     }
   });
 
@@ -553,9 +554,9 @@ describe("regression: task directory paths (0.2.14, 0.2.15, beta.13)", () => {
 });
 
 describe("regression: resolve_task_dir path handling", () => {
-  it("[beta.12] resolve_task_dir handles .trellis prefix", () => {
-    // The function should recognize .trellis-prefixed paths as relative paths
-    expect(commonTaskUtils).toContain('.startswith(".trellis")');
+  it("[beta.12] resolve_task_dir handles .phronia prefix", () => {
+    // The function should recognize .phronia-prefixed paths as relative paths
+    expect(commonTaskUtils).toContain('.startswith(".phronia")');
   });
 
   it("[current-task] resolve_task_dir normalizes backslash separators before path classification", () => {
@@ -574,7 +575,7 @@ describe("regression: resolve_task_dir containment chokepoint", () => {
   } {
     const result = spawnSync(
       pythonCmd,
-      [path.join(".trellis", "scripts", "task.py"), ...args],
+      [path.join(".phronia", "scripts", "task.py"), ...args],
       { cwd: tmpDir, encoding: "utf-8" },
     );
     return {
@@ -585,7 +586,7 @@ describe("regression: resolve_task_dir containment chokepoint", () => {
   }
 
   function taskDir(...segments: string[]): string {
-    return path.join(tmpDir, ".trellis", "tasks", ...segments);
+    return path.join(tmpDir, ".phronia", "tasks", ...segments);
   }
 
   function makeTask(name: string): void {
@@ -598,14 +599,14 @@ describe("regression: resolve_task_dir containment chokepoint", () => {
 
   beforeEach(() => {
     tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), "trellis-task-escape-"));
-    const scriptsDir = path.join(tmpDir, ".trellis", "scripts");
+    const scriptsDir = path.join(tmpDir, ".phronia", "scripts");
     for (const [relativePath, content] of getAllScripts()) {
       const absPath = path.join(scriptsDir, relativePath);
       fs.mkdirSync(path.dirname(absPath), { recursive: true });
       fs.writeFileSync(absPath, content, "utf-8");
     }
     fs.writeFileSync(
-      path.join(tmpDir, ".trellis", ".developer"),
+      path.join(tmpDir, ".phronia", ".developer"),
       "name=tester\n",
     );
     fs.mkdirSync(taskDir("archive"), { recursive: true });
@@ -680,9 +681,9 @@ describe("regression: resolve_task_dir containment chokepoint", () => {
     );
     expect(r.status).not.toBe(0);
     expect(r.stderr).toContain("--slug must be a plain name");
-    expect(fs.existsSync(path.join(tmpDir, ".trellis", "escaped"))).toBe(false);
+    expect(fs.existsSync(path.join(tmpDir, ".phronia", "escaped"))).toBe(false);
     expect(
-      fs.readdirSync(path.join(tmpDir, ".trellis", "tasks")).sort(),
+      fs.readdirSync(path.join(tmpDir, ".phronia", "tasks")).sort(),
     ).toEqual(["08-09-real", "archive"]);
   });
 
@@ -691,7 +692,7 @@ describe("regression: resolve_task_dir containment chokepoint", () => {
       "add-context",
       "08-09-real",
       "../../../evil-ctx",
-      ".trellis/tasks/08-09-real/task.json",
+      ".phronia/tasks/08-09-real/task.json",
     );
     expect(r.status).not.toBe(0);
     expect(r.stdout + r.stderr).toContain("must be a plain name");
@@ -701,17 +702,17 @@ describe("regression: resolve_task_dir containment chokepoint", () => {
     expect(fs.existsSync(path.join(tmpDir, "evil-ctx.jsonl"))).toBe(false);
   });
 
-  it("[audit] add-context on '..' fails instead of writing into .trellis/", () => {
+  it("[audit] add-context on '..' fails instead of writing into .phronia/", () => {
     const r = runTask(
       "add-context",
       "..",
       "implement",
-      ".trellis/tasks/08-09-real/task.json",
+      ".phronia/tasks/08-09-real/task.json",
     );
     expect(r.status).not.toBe(0);
     expect(r.stderr).toContain("invalid task name");
     expect(
-      fs.existsSync(path.join(tmpDir, ".trellis", "implement.jsonl")),
+      fs.existsSync(path.join(tmpDir, ".phronia", "implement.jsonl")),
     ).toBe(false);
   });
 
@@ -744,12 +745,12 @@ describe("regression: resolve_task_dir containment chokepoint", () => {
 
     expect(runTask("set-meta", "08-09-real", "by-name", "1").status).toBe(0);
     expect(
-      runTask("set-meta", ".trellis/tasks/08-09-real", "by-path", "2").status,
+      runTask("set-meta", ".phronia/tasks/08-09-real", "by-path", "2").status,
     ).toBe(0);
     expect(
       runTask(
         "set-meta",
-        ".trellis/tasks/archive/2026-07/08-09-old",
+        ".phronia/tasks/archive/2026-07/08-09-old",
         "archived",
         "3",
       ).status,
@@ -786,7 +787,7 @@ describe("regression: task lifecycle overwrite and collision safety", () => {
   } {
     const result = spawnSync(
       pythonCmd,
-      [path.join(".trellis", "scripts", "task.py"), ...args],
+      [path.join(".phronia", "scripts", "task.py"), ...args],
       { cwd: tmpDir, encoding: "utf-8" },
     );
     return {
@@ -797,7 +798,7 @@ describe("regression: task lifecycle overwrite and collision safety", () => {
   }
 
   function taskDir(...segments: string[]): string {
-    return path.join(tmpDir, ".trellis", "tasks", ...segments);
+    return path.join(tmpDir, ".phronia", "tasks", ...segments);
   }
 
   function readTaskJson(...segments: string[]): Record<string, unknown> {
@@ -815,14 +816,14 @@ describe("regression: task lifecycle overwrite and collision safety", () => {
 
   beforeEach(() => {
     tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), "trellis-task-collision-"));
-    const scriptsDir = path.join(tmpDir, ".trellis", "scripts");
+    const scriptsDir = path.join(tmpDir, ".phronia", "scripts");
     for (const [relativePath, content] of getAllScripts()) {
       const absPath = path.join(scriptsDir, relativePath);
       fs.mkdirSync(path.dirname(absPath), { recursive: true });
       fs.writeFileSync(absPath, content, "utf-8");
     }
     fs.writeFileSync(
-      path.join(tmpDir, ".trellis", ".developer"),
+      path.join(tmpDir, ".phronia", ".developer"),
       "name=tester\n",
     );
     fs.mkdirSync(taskDir("archive"), { recursive: true });
@@ -931,7 +932,7 @@ describe("regression: task lifecycle overwrite and collision safety", () => {
     // Both sides of the collision must be named, or the user cannot tell
     // which archived task to move out of the way.
     expect(r.stderr).toContain(`archive/${yearMonth}/${dirName}`);
-    expect(r.stderr).toContain(`Task remains at: .trellis/tasks/${dirName}`);
+    expect(r.stderr).toContain(`Task remains at: .phronia/tasks/${dirName}`);
 
     // No nesting, no partial state: the live task is untouched (not even
     // flipped to completed) and the archived copy still holds its own file.
@@ -982,7 +983,7 @@ describe("regression: task lifecycle overwrite and collision safety", () => {
     expect(r.status).not.toBe(0);
     expect(r.stderr).toContain("Parent task not resolved");
     expect(r.stderr).toContain("No task was created");
-    expect(fs.readdirSync(path.join(tmpDir, ".trellis", "tasks"))).toEqual([
+    expect(fs.readdirSync(path.join(tmpDir, ".phronia", "tasks"))).toEqual([
       "archive",
     ]);
   });
@@ -1149,7 +1150,7 @@ describe("regression: JSON read/write failure reporting", () => {
   ): { status: number | null; stdout: string; stderr: string } {
     const result = spawnSync(
       pythonCmd,
-      [path.join(".trellis", "scripts", "task.py"), ...args],
+      [path.join(".phronia", "scripts", "task.py"), ...args],
       { cwd: tmpDir, encoding: "utf-8", env: { ...process.env, ...env } },
     );
     return {
@@ -1160,7 +1161,7 @@ describe("regression: JSON read/write failure reporting", () => {
   }
 
   function taskDir(...segments: string[]): string {
-    return path.join(tmpDir, ".trellis", "tasks", ...segments);
+    return path.join(tmpDir, ".phronia", "tasks", ...segments);
   }
 
   function taskJsonPath(name: string): string {
@@ -1176,14 +1177,14 @@ describe("regression: JSON read/write failure reporting", () => {
 
   beforeEach(() => {
     tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), "trellis-task-json-io-"));
-    const scriptsDir = path.join(tmpDir, ".trellis", "scripts");
+    const scriptsDir = path.join(tmpDir, ".phronia", "scripts");
     for (const [relativePath, content] of getAllScripts()) {
       const absPath = path.join(scriptsDir, relativePath);
       fs.mkdirSync(path.dirname(absPath), { recursive: true });
       fs.writeFileSync(absPath, content, "utf-8");
     }
     fs.writeFileSync(
-      path.join(tmpDir, ".trellis", ".developer"),
+      path.join(tmpDir, ".phronia", ".developer"),
       "name=tester\n",
     );
     fs.mkdirSync(taskDir("archive"), { recursive: true });
@@ -1679,7 +1680,7 @@ describe("regression: JSON read/write failure reporting", () => {
       ).toBe(0);
       expect(runTask(["start", `${datePrefix}-one`], env).status).toBe(0);
 
-      const sessionsDir = path.join(tmpDir, ".trellis", ".runtime", "sessions");
+      const sessionsDir = path.join(tmpDir, ".phronia", ".runtime", "sessions");
       const sessionFile = path.join(sessionsDir, "json-io-session.json");
       expect(fs.existsSync(sessionFile)).toBe(true);
 
@@ -1698,7 +1699,7 @@ describe("regression: JSON read/write failure reporting", () => {
       const session = JSON.parse(fs.readFileSync(sessionFile, "utf-8")) as {
         current_task: string;
       };
-      expect(session.current_task).toBe(`.trellis/tasks/${datePrefix}-one`);
+      expect(session.current_task).toBe(`.phronia/tasks/${datePrefix}-one`);
     },
   );
 });
@@ -1711,20 +1712,20 @@ describe("regression: is_within_tasks_dir archive boundary (issue #428)", () => 
     tmpDir = fs.mkdtempSync(
       path.join(os.tmpdir(), "trellis-within-tasks-dir-"),
     );
-    const scriptsDir = path.join(tmpDir, ".trellis", "scripts");
+    const scriptsDir = path.join(tmpDir, ".phronia", "scripts");
     for (const [relativePath, content] of getAllScripts()) {
       const absPath = path.join(scriptsDir, relativePath);
       fs.mkdirSync(path.dirname(absPath), { recursive: true });
       fs.writeFileSync(absPath, content, "utf-8");
     }
-    fs.mkdirSync(path.join(tmpDir, ".trellis", "tasks", "archive"), {
+    fs.mkdirSync(path.join(tmpDir, ".phronia", "tasks", "archive"), {
       recursive: true,
     });
     fs.mkdirSync(
-      path.join(tmpDir, ".trellis", "tasks", "archive", "2026-07", "old-task"),
+      path.join(tmpDir, ".phronia", "tasks", "archive", "2026-07", "old-task"),
       { recursive: true },
     );
-    fs.mkdirSync(path.join(tmpDir, ".trellis", "tasks", "live-task"), {
+    fs.mkdirSync(path.join(tmpDir, ".phronia", "tasks", "live-task"), {
       recursive: true,
     });
     fs.mkdirSync(path.join(tmpDir, "src"), { recursive: true });
@@ -1741,15 +1742,15 @@ import sys
 from pathlib import Path
 
 root = Path.cwd()
-sys.path.insert(0, str(root / ".trellis" / "scripts"))
+sys.path.insert(0, str(root / ".phronia" / "scripts"))
 from common.task_utils import is_within_tasks_dir
 
 print(json.dumps({
-    "archive_root": is_within_tasks_dir(root / ".trellis" / "tasks" / "archive", root),
-    "archived_child": is_within_tasks_dir(root / ".trellis" / "tasks" / "archive" / "2026-07" / "old-task", root),
-    "tasks_root": is_within_tasks_dir(root / ".trellis" / "tasks", root),
+    "archive_root": is_within_tasks_dir(root / ".phronia" / "tasks" / "archive", root),
+    "archived_child": is_within_tasks_dir(root / ".phronia" / "tasks" / "archive" / "2026-07" / "old-task", root),
+    "tasks_root": is_within_tasks_dir(root / ".phronia" / "tasks", root),
     "external_path": is_within_tasks_dir(root / "src", root),
-    "direct_child": is_within_tasks_dir(root / ".trellis" / "tasks" / "live-task", root),
+    "direct_child": is_within_tasks_dir(root / ".phronia" / "tasks" / "live-task", root),
 }))
 `;
     const result = spawnSync(pythonCmd, ["-c", probe], {
@@ -1773,7 +1774,7 @@ describe("regression: write_json fd ownership and cleanup (issue #429)", () => {
 
   beforeEach(() => {
     tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), "trellis-write-json-"));
-    const scriptsDir = path.join(tmpDir, ".trellis", "scripts");
+    const scriptsDir = path.join(tmpDir, ".phronia", "scripts");
     for (const [relativePath, content] of getAllScripts()) {
       const absPath = path.join(scriptsDir, relativePath);
       fs.mkdirSync(path.dirname(absPath), { recursive: true });
@@ -1798,7 +1799,7 @@ from pathlib import Path
 from unittest import mock
 
 root = Path.cwd()
-sys.path.insert(0, str(root / ".trellis" / "scripts"))
+sys.path.insert(0, str(root / ".phronia" / "scripts"))
 from common.io import write_json
 
 ${probeBody}
@@ -1911,29 +1912,29 @@ describe("regression: task auto-activation failure diagnostics (issue #430)", ()
 
   beforeEach(() => {
     tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), "trellis-task-activate-"));
-    const scriptsDir = path.join(tmpDir, ".trellis", "scripts");
+    const scriptsDir = path.join(tmpDir, ".phronia", "scripts");
     for (const [relativePath, content] of getAllScripts()) {
       const absPath = path.join(scriptsDir, relativePath);
       fs.mkdirSync(path.dirname(absPath), { recursive: true });
       fs.writeFileSync(absPath, content, "utf-8");
     }
-    fs.mkdirSync(path.join(tmpDir, ".trellis", "spec", "guides"), {
+    fs.mkdirSync(path.join(tmpDir, ".phronia", "spec", "guides"), {
       recursive: true,
     });
     fs.writeFileSync(
-      path.join(tmpDir, ".trellis", "spec", "guides", "index.md"),
+      path.join(tmpDir, ".phronia", "spec", "guides", "index.md"),
       "# Guides\n",
     );
     fs.writeFileSync(
-      path.join(tmpDir, ".trellis", "workflow.md"),
+      path.join(tmpDir, ".phronia", "workflow.md"),
       "# Workflow\n",
     );
-    fs.mkdirSync(path.join(tmpDir, ".trellis", "tasks"), { recursive: true });
-    fs.mkdirSync(path.join(tmpDir, ".trellis", "workspace", "test-dev"), {
+    fs.mkdirSync(path.join(tmpDir, ".phronia", "tasks"), { recursive: true });
+    fs.mkdirSync(path.join(tmpDir, ".phronia", "workspace", "test-dev"), {
       recursive: true,
     });
     fs.writeFileSync(
-      path.join(tmpDir, ".trellis", ".developer"),
+      path.join(tmpDir, ".phronia", ".developer"),
       "name=test-dev\n",
       "utf-8",
     );
@@ -1970,7 +1971,7 @@ describe("regression: task auto-activation failure diagnostics (issue #430)", ()
   ] as const;
 
   function runCreate(env: NodeJS.ProcessEnv) {
-    const taskScriptPath = path.join(tmpDir, ".trellis", "scripts", "task.py");
+    const taskScriptPath = path.join(tmpDir, ".phronia", "scripts", "task.py");
     const blocked = new Set<string>(AMBIENT_SESSION_ENV_KEYS);
     const scrubbed: NodeJS.ProcessEnv = {};
     for (const [key, value] of Object.entries(process.env)) {
@@ -2011,7 +2012,7 @@ describe("regression: task auto-activation failure diagnostics (issue #430)", ()
     // FileExistsError — a real, portable failure mode (no chmod needed).
     const sessionsPathAsFile = path.join(
       tmpDir,
-      ".trellis",
+      ".phronia",
       ".runtime",
       "sessions",
     );
@@ -2347,15 +2348,15 @@ describe("regression: agent-session Trellis update hint", () => {
 
   beforeEach(() => {
     tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), "trellis-update-hint-"));
-    const scriptsDir = path.join(tmpDir, ".trellis", "scripts");
+    const scriptsDir = path.join(tmpDir, ".phronia", "scripts");
     for (const [relativePath, content] of getAllScripts()) {
       const absPath = path.join(scriptsDir, relativePath);
       fs.mkdirSync(path.dirname(absPath), { recursive: true });
       fs.writeFileSync(absPath, content, "utf-8");
     }
-    fs.mkdirSync(path.join(tmpDir, ".trellis", "tasks"), { recursive: true });
+    fs.mkdirSync(path.join(tmpDir, ".phronia", "tasks"), { recursive: true });
     fs.writeFileSync(
-      path.join(tmpDir, ".trellis", ".developer"),
+      path.join(tmpDir, ".phronia", ".developer"),
       "name=test-dev\ninitialized_at=2026-05-09T00:00:00Z\n",
       "utf-8",
     );
@@ -2370,7 +2371,7 @@ describe("regression: agent-session Trellis update hint", () => {
     trellisVersionOutput: string | null,
   ): string {
     fs.writeFileSync(
-      path.join(tmpDir, ".trellis", ".version"),
+      path.join(tmpDir, ".phronia", ".version"),
       `${currentVersion}\n`,
       "utf-8",
     );
@@ -2381,7 +2382,7 @@ describe("regression: agent-session Trellis update hint", () => {
         "import os",
         "import sys",
         "from pathlib import Path",
-        "sys.path.insert(0, str(Path.cwd() / '.trellis' / 'scripts'))",
+        "sys.path.insert(0, str(Path.cwd() / '.phronia' / 'scripts'))",
         "from common import session_context",
         "output = os.environ.get('TRELLIS_VERSION_OUTPUT')",
         "session_context._fetch_trellis_version_output = lambda: None if output == '__NONE__' else output",
@@ -2425,7 +2426,7 @@ describe("regression: agent-session Trellis update hint", () => {
     expect(runContextWithTrellisOutput("0.5.9", "0.5.9")).not.toContain(
       "Trellis update available",
     );
-    fs.rmSync(path.join(tmpDir, ".trellis", ".runtime"), {
+    fs.rmSync(path.join(tmpDir, ".phronia", ".runtime"), {
       recursive: true,
       force: true,
     });
@@ -2438,7 +2439,7 @@ describe("regression: agent-session Trellis update hint", () => {
     expect(runContextWithTrellisOutput("0.5.0", null)).not.toContain(
       "Trellis update available",
     );
-    fs.rmSync(path.join(tmpDir, ".trellis", ".runtime"), {
+    fs.rmSync(path.join(tmpDir, ".phronia", ".runtime"), {
       recursive: true,
       force: true,
     });
@@ -2473,7 +2474,7 @@ describe("regression: agent-session Trellis update hint", () => {
       fs.existsSync(
         path.join(
           tmpDir,
-          ".trellis",
+          ".phronia",
           ".runtime",
           "update-check-test-update-session.marker",
         ),
@@ -2510,18 +2511,18 @@ describe("regression: issue #252 polyrepo Git context", () => {
 
   beforeEach(() => {
     tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), "trellis-polyrepo-git-"));
-    const scriptsDir = path.join(tmpDir, ".trellis", "scripts");
+    const scriptsDir = path.join(tmpDir, ".phronia", "scripts");
     for (const [relativePath, content] of getAllScripts()) {
       const absPath = path.join(scriptsDir, relativePath);
       fs.mkdirSync(path.dirname(absPath), { recursive: true });
       fs.writeFileSync(absPath, content, "utf-8");
     }
-    fs.mkdirSync(path.join(tmpDir, ".trellis", "tasks"), { recursive: true });
-    fs.mkdirSync(path.join(tmpDir, ".trellis", "workspace", "test-dev"), {
+    fs.mkdirSync(path.join(tmpDir, ".phronia", "tasks"), { recursive: true });
+    fs.mkdirSync(path.join(tmpDir, ".phronia", "workspace", "test-dev"), {
       recursive: true,
     });
     fs.writeFileSync(
-      path.join(tmpDir, ".trellis", ".developer"),
+      path.join(tmpDir, ".phronia", ".developer"),
       "name=test-dev\n",
       "utf-8",
     );
@@ -2533,7 +2534,7 @@ describe("regression: issue #252 polyrepo Git context", () => {
 
   function writeConfigYaml(content: string): void {
     fs.writeFileSync(
-      path.join(tmpDir, ".trellis", "config.yaml"),
+      path.join(tmpDir, ".phronia", "config.yaml"),
       content,
       "utf-8",
     );
@@ -2567,7 +2568,7 @@ describe("regression: issue #252 polyrepo Git context", () => {
         "import json",
         "import sys",
         "from pathlib import Path",
-        "sys.path.insert(0, str(Path.cwd() / '.trellis' / 'scripts'))",
+        "sys.path.insert(0, str(Path.cwd() / '.phronia' / 'scripts'))",
         "from common import session_context",
         expression,
         "",
@@ -2678,7 +2679,7 @@ describe("regression: issue #252 polyrepo Git context", () => {
         "import subprocess",
         "import sys",
         "from pathlib import Path",
-        "sys.path.insert(0, str(Path.cwd() / '.trellis' / 'scripts'))",
+        "sys.path.insert(0, str(Path.cwd() / '.phronia' / 'scripts'))",
         "from common.git import run_git",
         "captured = {}",
         "def fake_run(*args, **kwargs):",
@@ -2788,7 +2789,7 @@ describe("regression: current-task path normalization", () => {
   });
 
   function writeTrellisScripts(): void {
-    const scriptsDir = path.join(tmpDir, ".trellis", "scripts");
+    const scriptsDir = path.join(tmpDir, ".phronia", "scripts");
     for (const [relativePath, content] of getAllScripts()) {
       const absPath = path.join(scriptsDir, relativePath);
       fs.mkdirSync(path.dirname(absPath), { recursive: true });
@@ -2803,12 +2804,12 @@ describe("regression: current-task path normalization", () => {
   }
 
   function writeLegacyCurrentTask(taskRef: string): void {
-    writeProjectFile(path.join(".trellis", ".current-task"), `${taskRef}\n`);
+    writeProjectFile(path.join(".phronia", ".current-task"), `${taskRef}\n`);
   }
 
   function writeSessionContext(contextKey: string, taskRef: string): void {
     writeProjectFile(
-      path.join(".trellis", ".runtime", "sessions", `${contextKey}.json`),
+      path.join(".phronia", ".runtime", "sessions", `${contextKey}.json`),
       JSON.stringify(
         {
           current_task: taskRef,
@@ -2865,16 +2866,16 @@ describe("regression: current-task path normalization", () => {
   function setupTaskRepo(): void {
     writeTrellisScripts();
     writeProjectFile(
-      path.join(".trellis", ".developer"),
+      path.join(".phronia", ".developer"),
       "name=test-dev\ninitialized_at=2026-03-27T00:00:00\n",
     );
-    writeProjectFile(path.join(".trellis", "workflow.md"), "# Workflow\n");
+    writeProjectFile(path.join(".phronia", "workflow.md"), "# Workflow\n");
     writeProjectFile(
-      path.join(".trellis", "spec", "guides", "index.md"),
+      path.join(".phronia", "spec", "guides", "index.md"),
       "# Guides\n",
     );
     writeProjectFile(
-      path.join(".trellis", "tasks", "issue-106", "task.json"),
+      path.join(".phronia", "tasks", "issue-106", "task.json"),
       JSON.stringify(
         {
           title: "Issue 106 task",
@@ -2886,11 +2887,11 @@ describe("regression: current-task path normalization", () => {
       ),
     );
     writeProjectFile(
-      path.join(".trellis", "tasks", "issue-106", "prd.md"),
+      path.join(".phronia", "tasks", "issue-106", "prd.md"),
       "# PRD\n",
     );
     writeProjectFile(
-      path.join(".trellis", "tasks", "issue-106", "implement.jsonl"),
+      path.join(".phronia", "tasks", "issue-106", "implement.jsonl"),
       '{"file":"src/example.ts","reason":"runtime regression"}\n',
     );
   }
@@ -2948,10 +2949,10 @@ describe("regression: current-task path normalization", () => {
     // prints a degraded-mode warning and returns 0 so the AI workflow can
     // proceed.
     setupTaskRepo();
-    const taskScriptPath = path.join(tmpDir, ".trellis", "scripts", "task.py");
+    const taskScriptPath = path.join(tmpDir, ".phronia", "scripts", "task.py");
 
     const output = execSync(
-      `${pythonCmd} ${JSON.stringify(taskScriptPath)} start ${JSON.stringify(".trellis\\\\tasks\\\\issue-106")}`,
+      `${pythonCmd} ${JSON.stringify(taskScriptPath)} start ${JSON.stringify(".phronia\\\\tasks\\\\issue-106")}`,
       {
         cwd: tmpDir,
         encoding: "utf-8",
@@ -2965,10 +2966,10 @@ describe("regression: current-task path normalization", () => {
     expect(output).toContain("TRELLIS_CONTEXT_ID");
 
     // No active-task pointer written
-    expect(fs.existsSync(path.join(tmpDir, ".trellis", ".current-task"))).toBe(
+    expect(fs.existsSync(path.join(tmpDir, ".phronia", ".current-task"))).toBe(
       false,
     );
-    expect(fs.existsSync(path.join(tmpDir, ".trellis", ".runtime"))).toBe(
+    expect(fs.existsSync(path.join(tmpDir, ".phronia", ".runtime"))).toBe(
       false,
     );
 
@@ -2976,7 +2977,7 @@ describe("regression: current-task path normalization", () => {
     // mode preserves the existing status when not planning)
     const taskJsonPath = path.join(
       tmpDir,
-      ".trellis",
+      ".phronia",
       "tasks",
       "issue-106",
       "task.json",
@@ -2992,7 +2993,7 @@ describe("regression: current-task path normalization", () => {
     setupTaskRepo();
     const taskJsonPath = path.join(
       tmpDir,
-      ".trellis",
+      ".phronia",
       "tasks",
       "issue-106",
       "task.json",
@@ -3001,9 +3002,9 @@ describe("regression: current-task path normalization", () => {
     taskJson.status = "planning";
     fs.writeFileSync(taskJsonPath, JSON.stringify(taskJson, null, 2), "utf-8");
 
-    const taskScriptPath = path.join(tmpDir, ".trellis", "scripts", "task.py");
+    const taskScriptPath = path.join(tmpDir, ".phronia", "scripts", "task.py");
     const output = execSync(
-      `${pythonCmd} ${JSON.stringify(taskScriptPath)} start ${JSON.stringify(".trellis\\\\tasks\\\\issue-106")}`,
+      `${pythonCmd} ${JSON.stringify(taskScriptPath)} start ${JSON.stringify(".phronia\\\\tasks\\\\issue-106")}`,
       { cwd: tmpDir, encoding: "utf-8", env: sessionEnv() },
     );
 
@@ -3014,10 +3015,10 @@ describe("regression: current-task path normalization", () => {
 
   it("[session-current-task] task.py start writes session runtime state when TRELLIS_CONTEXT_ID is set", () => {
     setupTaskRepo();
-    const taskScriptPath = path.join(tmpDir, ".trellis", "scripts", "task.py");
+    const taskScriptPath = path.join(tmpDir, ".phronia", "scripts", "task.py");
 
     const output = execSync(
-      `${pythonCmd} ${JSON.stringify(taskScriptPath)} start ${JSON.stringify(".trellis\\\\tasks\\\\issue-106")}`,
+      `${pythonCmd} ${JSON.stringify(taskScriptPath)} start ${JSON.stringify(".phronia\\\\tasks\\\\issue-106")}`,
       {
         cwd: tmpDir,
         encoding: "utf-8",
@@ -3029,7 +3030,7 @@ describe("regression: current-task path normalization", () => {
     expect(output).not.toContain("Fallback:");
     const contextPath = path.join(
       tmpDir,
-      ".trellis",
+      ".phronia",
       ".runtime",
       "sessions",
       "session-a.json",
@@ -3037,25 +3038,25 @@ describe("regression: current-task path normalization", () => {
     const context = JSON.parse(fs.readFileSync(contextPath, "utf-8")) as {
       current_task: string;
     };
-    expect(context.current_task).toBe(".trellis/tasks/issue-106");
-    expect(fs.existsSync(path.join(tmpDir, ".trellis", ".current-task"))).toBe(
+    expect(context.current_task).toBe(".phronia/tasks/issue-106");
+    expect(fs.existsSync(path.join(tmpDir, ".phronia", ".current-task"))).toBe(
       false,
     );
   });
 
   it("[session-current-task] task.py finish deletes the session runtime context", () => {
     setupTaskRepo();
-    const taskScriptPath = path.join(tmpDir, ".trellis", "scripts", "task.py");
+    const taskScriptPath = path.join(tmpDir, ".phronia", "scripts", "task.py");
     const contextPath = path.join(
       tmpDir,
-      ".trellis",
+      ".phronia",
       ".runtime",
       "sessions",
       "session-finish.json",
     );
 
     execSync(
-      `${pythonCmd} ${JSON.stringify(taskScriptPath)} start ${JSON.stringify(".trellis/tasks/issue-106")}`,
+      `${pythonCmd} ${JSON.stringify(taskScriptPath)} start ${JSON.stringify(".phronia/tasks/issue-106")}`,
       {
         cwd: tmpDir,
         encoding: "utf-8",
@@ -3087,12 +3088,12 @@ describe("regression: current-task path normalization", () => {
     // immediately when session identity is available.
     writeTrellisScripts();
     writeProjectFile(
-      path.join(".trellis", ".developer"),
+      path.join(".phronia", ".developer"),
       "name=test-dev\ninitialized_at=2026-03-27T00:00:00\n",
     );
-    writeProjectFile(path.join(".trellis", "workflow.md"), "# Workflow\n");
+    writeProjectFile(path.join(".phronia", "workflow.md"), "# Workflow\n");
 
-    const taskScriptPath = path.join(tmpDir, ".trellis", "scripts", "task.py");
+    const taskScriptPath = path.join(tmpDir, ".phronia", "scripts", "task.py");
     execSync(
       `${pythonCmd} ${JSON.stringify(taskScriptPath)} create "r7-auto-active" --description "regression fixture" --slug r7-auto --assignee test-dev`,
       {
@@ -3104,13 +3105,13 @@ describe("regression: current-task path normalization", () => {
 
     // Resolve the new task directory (MM-DD-r7-auto)
     const taskDir = fs
-      .readdirSync(path.join(tmpDir, ".trellis", "tasks"))
+      .readdirSync(path.join(tmpDir, ".phronia", "tasks"))
       .find((d) => d.includes("r7-auto"));
     expect(taskDir).toBeDefined();
 
     const contextPath = path.join(
       tmpDir,
-      ".trellis",
+      ".phronia",
       ".runtime",
       "sessions",
       "r7-session.json",
@@ -3119,18 +3120,18 @@ describe("regression: current-task path normalization", () => {
     const context = JSON.parse(fs.readFileSync(contextPath, "utf-8")) as {
       current_task: string;
     };
-    expect(context.current_task).toBe(`.trellis/tasks/${taskDir}`);
+    expect(context.current_task).toBe(`.phronia/tasks/${taskDir}`);
   });
 
   it("[issue-397] task.py create stores the trimmed description and reports session activation", () => {
     writeTrellisScripts();
     writeProjectFile(
-      path.join(".trellis", ".developer"),
+      path.join(".phronia", ".developer"),
       "name=test-dev\ninitialized_at=2026-03-27T00:00:00\n",
     );
-    writeProjectFile(path.join(".trellis", "workflow.md"), "# Workflow\n");
+    writeProjectFile(path.join(".phronia", "workflow.md"), "# Workflow\n");
 
-    const taskScriptPath = path.join(tmpDir, ".trellis", "scripts", "task.py");
+    const taskScriptPath = path.join(tmpDir, ".phronia", "scripts", "task.py");
     const result = spawnSync(
       pythonCmd,
       [
@@ -3156,12 +3157,12 @@ describe("regression: current-task path normalization", () => {
     expect(result.stderr).toContain("Source: session:issue-397-session");
 
     const taskDir = fs
-      .readdirSync(path.join(tmpDir, ".trellis", "tasks"))
+      .readdirSync(path.join(tmpDir, ".phronia", "tasks"))
       .find((d) => d.includes("described"));
     expect(taskDir).toBeDefined();
     const taskJson = JSON.parse(
       fs.readFileSync(
-        path.join(tmpDir, ".trellis", "tasks", taskDir as string, "task.json"),
+        path.join(tmpDir, ".phronia", "tasks", taskDir as string, "task.json"),
         "utf-8",
       ),
     ) as { description: string };
@@ -3171,13 +3172,13 @@ describe("regression: current-task path normalization", () => {
   it("[issue-397] task.py create --no-start does not move the session pointer", () => {
     writeTrellisScripts();
     writeProjectFile(
-      path.join(".trellis", ".developer"),
+      path.join(".phronia", ".developer"),
       "name=test-dev\ninitialized_at=2026-03-27T00:00:00\n",
     );
-    writeProjectFile(path.join(".trellis", "workflow.md"), "# Workflow\n");
-    writeSessionContext("batch-session", ".trellis/tasks/existing-task");
+    writeProjectFile(path.join(".phronia", "workflow.md"), "# Workflow\n");
+    writeSessionContext("batch-session", ".phronia/tasks/existing-task");
 
-    const taskScriptPath = path.join(tmpDir, ".trellis", "scripts", "task.py");
+    const taskScriptPath = path.join(tmpDir, ".phronia", "scripts", "task.py");
     const result = spawnSync(
       pythonCmd,
       [
@@ -3205,7 +3206,7 @@ describe("regression: current-task path normalization", () => {
       fs.readFileSync(
         path.join(
           tmpDir,
-          ".trellis",
+          ".phronia",
           ".runtime",
           "sessions",
           "batch-session.json",
@@ -3213,15 +3214,15 @@ describe("regression: current-task path normalization", () => {
         "utf-8",
       ),
     ) as { current_task: string };
-    expect(context.current_task).toBe(".trellis/tasks/existing-task");
+    expect(context.current_task).toBe(".phronia/tasks/existing-task");
 
     const taskDir = fs
-      .readdirSync(path.join(tmpDir, ".trellis", "tasks"))
+      .readdirSync(path.join(tmpDir, ".phronia", "tasks"))
       .find((d) => d.includes("batch-backlog"));
     expect(taskDir).toBeDefined();
     const taskJson = JSON.parse(
       fs.readFileSync(
-        path.join(tmpDir, ".trellis", "tasks", taskDir as string, "task.json"),
+        path.join(tmpDir, ".phronia", "tasks", taskDir as string, "task.json"),
         "utf-8",
       ),
     ) as { description: string };
@@ -3234,12 +3235,12 @@ describe("regression: current-task path normalization", () => {
     // written. Pre-R7 behavior parity for headless CLI usage.
     writeTrellisScripts();
     writeProjectFile(
-      path.join(".trellis", ".developer"),
+      path.join(".phronia", ".developer"),
       "name=test-dev\ninitialized_at=2026-03-27T00:00:00\n",
     );
-    writeProjectFile(path.join(".trellis", "workflow.md"), "# Workflow\n");
+    writeProjectFile(path.join(".phronia", "workflow.md"), "# Workflow\n");
 
-    const taskScriptPath = path.join(tmpDir, ".trellis", "scripts", "task.py");
+    const taskScriptPath = path.join(tmpDir, ".phronia", "scripts", "task.py");
     // sessionEnv() with no overrides drops every session-identity env var.
     execSync(
       `${pythonCmd} ${JSON.stringify(taskScriptPath)} create "r7-cli-only" --description "regression fixture" --slug r7-cli --assignee test-dev`,
@@ -3247,11 +3248,11 @@ describe("regression: current-task path normalization", () => {
     );
 
     const taskDir = fs
-      .readdirSync(path.join(tmpDir, ".trellis", "tasks"))
+      .readdirSync(path.join(tmpDir, ".phronia", "tasks"))
       .find((d) => d.includes("r7-cli"));
     expect(taskDir).toBeDefined();
 
-    const sessionsDir = path.join(tmpDir, ".trellis", ".runtime", "sessions");
+    const sessionsDir = path.join(tmpDir, ".phronia", ".runtime", "sessions");
     if (fs.existsSync(sessionsDir)) {
       const files = fs.readdirSync(sessionsDir);
       expect(files).toEqual([]);
@@ -3264,12 +3265,12 @@ describe("regression: current-task path normalization", () => {
     // still flip planning → in_progress correctly.
     writeTrellisScripts();
     writeProjectFile(
-      path.join(".trellis", ".developer"),
+      path.join(".phronia", ".developer"),
       "name=test-dev\ninitialized_at=2026-03-27T00:00:00\n",
     );
-    writeProjectFile(path.join(".trellis", "workflow.md"), "# Workflow\n");
+    writeProjectFile(path.join(".phronia", "workflow.md"), "# Workflow\n");
 
-    const taskScriptPath = path.join(tmpDir, ".trellis", "scripts", "task.py");
+    const taskScriptPath = path.join(tmpDir, ".phronia", "scripts", "task.py");
     execSync(
       `${pythonCmd} ${JSON.stringify(taskScriptPath)} create "r7-idem" --description "regression fixture" --slug r7-idem --assignee test-dev`,
       {
@@ -3280,15 +3281,15 @@ describe("regression: current-task path normalization", () => {
     );
 
     const taskDir = fs
-      .readdirSync(path.join(tmpDir, ".trellis", "tasks"))
+      .readdirSync(path.join(tmpDir, ".phronia", "tasks"))
       .find((d) => d.includes("r7-idem"));
     expect(taskDir).toBeDefined();
-    const relTaskDir = path.posix.join(".trellis", "tasks", taskDir as string);
+    const relTaskDir = path.posix.join(".phronia", "tasks", taskDir as string);
 
     // Status should be planning after create.
     const taskJsonPath = path.join(
       tmpDir,
-      ".trellis",
+      ".phronia",
       "tasks",
       taskDir as string,
       "task.json",
@@ -3327,7 +3328,7 @@ describe("regression: current-task path normalization", () => {
     // Pointer still points at the same task.
     const contextPath = path.join(
       tmpDir,
-      ".trellis",
+      ".phronia",
       ".runtime",
       "sessions",
       "r7-idem-session.json",
@@ -3341,39 +3342,39 @@ describe("regression: current-task path normalization", () => {
 
   it("[session-current-task] task.py archive deletes runtime sessions pointing at the archived task", () => {
     setupTaskRepo();
-    const taskScriptPath = path.join(tmpDir, ".trellis", "scripts", "task.py");
+    const taskScriptPath = path.join(tmpDir, ".phronia", "scripts", "task.py");
     const contextA = path.join(
       tmpDir,
-      ".trellis",
+      ".phronia",
       ".runtime",
       "sessions",
       "session-a.json",
     );
     const contextB = path.join(
       tmpDir,
-      ".trellis",
+      ".phronia",
       ".runtime",
       "sessions",
       "session-b.json",
     );
     const contextOther = path.join(
       tmpDir,
-      ".trellis",
+      ".phronia",
       ".runtime",
       "sessions",
       "session-other.json",
     );
     writeProjectFile(
-      path.join(".trellis", ".runtime", "sessions", "session-a.json"),
-      JSON.stringify({ current_task: ".trellis/tasks/issue-106" }, null, 2),
+      path.join(".phronia", ".runtime", "sessions", "session-a.json"),
+      JSON.stringify({ current_task: ".phronia/tasks/issue-106" }, null, 2),
     );
     writeProjectFile(
-      path.join(".trellis", ".runtime", "sessions", "session-b.json"),
+      path.join(".phronia", ".runtime", "sessions", "session-b.json"),
       JSON.stringify({ current_task: "issue-106" }, null, 2),
     );
     writeProjectFile(
-      path.join(".trellis", ".runtime", "sessions", "session-other.json"),
-      JSON.stringify({ current_task: ".trellis/tasks/other-task" }, null, 2),
+      path.join(".phronia", ".runtime", "sessions", "session-other.json"),
+      JSON.stringify({ current_task: ".phronia/tasks/other-task" }, null, 2),
     );
 
     execSync(
@@ -3393,13 +3394,13 @@ describe("regression: current-task path normalization", () => {
   it("[task-lifecycle] task.py create refuses an archived task dir-name collision", () => {
     writeTrellisScripts();
     writeProjectFile(
-      path.join(".trellis", ".developer"),
+      path.join(".phronia", ".developer"),
       "name=test-dev\ninitialized_at=2026-03-27T00:00:00\n",
     );
-    writeProjectFile(path.join(".trellis", "workflow.md"), "# Workflow\n");
+    writeProjectFile(path.join(".phronia", "workflow.md"), "# Workflow\n");
     fs.mkdirSync(path.join(tmpDir, ".claude"), { recursive: true });
 
-    const taskScriptPath = path.join(tmpDir, ".trellis", "scripts", "task.py");
+    const taskScriptPath = path.join(tmpDir, ".phronia", "scripts", "task.py");
     const createArgs = [
       taskScriptPath,
       "create",
@@ -3422,7 +3423,7 @@ describe("regression: current-task path normalization", () => {
       },
     );
 
-    const tasksDir = path.join(tmpDir, ".trellis", "tasks");
+    const tasksDir = path.join(tmpDir, ".phronia", "tasks");
     const taskDirName = fs
       .readdirSync(tasksDir)
       .find((entry) => entry.endsWith("-web-auth-retry"));
@@ -3467,7 +3468,7 @@ describe("regression: current-task path normalization", () => {
 
     const contextPath = path.join(
       tmpDir,
-      ".trellis",
+      ".phronia",
       ".runtime",
       "sessions",
       "archive-collision.json",
@@ -3483,7 +3484,7 @@ describe("regression: current-task path normalization", () => {
     expect(result.status).toBe(1);
     expect(result.stderr).toContain("Task already archived");
     expect(result.stderr).toContain(taskDirName as string);
-    expect(result.stderr).toContain(".trellis/tasks/archive/");
+    expect(result.stderr).toContain(".phronia/tasks/archive/");
     expect(fs.existsSync(path.join(tasksDir, taskDirName as string))).toBe(
       false,
     );
@@ -3497,10 +3498,10 @@ describe("regression: current-task path normalization", () => {
   it("[issue-377] task.py create normalizes a --slug carrying today's date prefix", () => {
     writeTrellisScripts();
     writeProjectFile(
-      path.join(".trellis", ".developer"),
+      path.join(".phronia", ".developer"),
       "name=test-dev\ninitialized_at=2026-03-27T00:00:00\n",
     );
-    const taskScriptPath = path.join(tmpDir, ".trellis", "scripts", "task.py");
+    const taskScriptPath = path.join(tmpDir, ".phronia", "scripts", "task.py");
     const now = new Date();
     const todayPrefix = `${String(now.getMonth() + 1).padStart(2, "0")}-${String(now.getDate()).padStart(2, "0")}`;
 
@@ -3522,7 +3523,7 @@ describe("regression: current-task path normalization", () => {
 
     expect(result.status).toBe(0);
     expect(result.stderr).toContain("normalized to");
-    const tasksDir = path.join(tmpDir, ".trellis", "tasks");
+    const tasksDir = path.join(tmpDir, ".phronia", "tasks");
     expect(
       fs.existsSync(path.join(tasksDir, `${todayPrefix}-example-task`)),
     ).toBe(true);
@@ -3536,10 +3537,10 @@ describe("regression: current-task path normalization", () => {
   it("[issue-377] task.py create rejects a --slug carrying a different date prefix", () => {
     writeTrellisScripts();
     writeProjectFile(
-      path.join(".trellis", ".developer"),
+      path.join(".phronia", ".developer"),
       "name=test-dev\ninitialized_at=2026-03-27T00:00:00\n",
     );
-    const taskScriptPath = path.join(tmpDir, ".trellis", "scripts", "task.py");
+    const taskScriptPath = path.join(tmpDir, ".phronia", "scripts", "task.py");
     const now = new Date();
     // Pick a valid date prefix that is guaranteed not to be today.
     const otherPrefix =
@@ -3564,7 +3565,7 @@ describe("regression: current-task path normalization", () => {
     expect(result.status).toBe(1);
     expect(result.stderr).toContain("date prefix");
     expect(result.stderr).toContain("--slug example-task");
-    const tasksDir = path.join(tmpDir, ".trellis", "tasks");
+    const tasksDir = path.join(tmpDir, ".phronia", "tasks");
     const created = fs.existsSync(tasksDir) ? fs.readdirSync(tasksDir) : [];
     expect(created.filter((d) => d.endsWith("example-task"))).toEqual([]);
   });
@@ -3572,10 +3573,10 @@ describe("regression: current-task path normalization", () => {
   it("[issue-377] task.py create leaves non-date numeric slug prefixes untouched", () => {
     writeTrellisScripts();
     writeProjectFile(
-      path.join(".trellis", ".developer"),
+      path.join(".phronia", ".developer"),
       "name=test-dev\ninitialized_at=2026-03-27T00:00:00\n",
     );
-    const taskScriptPath = path.join(tmpDir, ".trellis", "scripts", "task.py");
+    const taskScriptPath = path.join(tmpDir, ".phronia", "scripts", "task.py");
     const now = new Date();
     const todayPrefix = `${String(now.getMonth() + 1).padStart(2, "0")}-${String(now.getDate()).padStart(2, "0")}`;
 
@@ -3602,7 +3603,7 @@ describe("regression: current-task path normalization", () => {
       fs.existsSync(
         path.join(
           tmpDir,
-          ".trellis",
+          ".phronia",
           "tasks",
           `${todayPrefix}-13-45-example-task`,
         ),
@@ -3612,13 +3613,13 @@ describe("regression: current-task path normalization", () => {
 
   it("[task-input-contract] task.py archive accepts task name, relative path, and absolute path", () => {
     setupTaskRepo();
-    const taskScriptPath = path.join(tmpDir, ".trellis", "scripts", "task.py");
+    const taskScriptPath = path.join(tmpDir, ".phronia", "scripts", "task.py");
 
     // Create three additional task directories for the three input forms.
     const taskNames = ["issue-201", "issue-202", "issue-203"];
     for (const name of taskNames) {
       writeProjectFile(
-        path.join(".trellis", "tasks", name, "task.json"),
+        path.join(".phronia", "tasks", name, "task.json"),
         JSON.stringify(
           {
             title: `Task ${name}`,
@@ -3643,7 +3644,7 @@ describe("regression: current-task path normalization", () => {
 
     // Form 2: relative path
     execSync(
-      `${pythonCmd} ${JSON.stringify(taskScriptPath)} archive ${JSON.stringify(`.trellis/tasks/${taskNames[1]}`)} --no-commit`,
+      `${pythonCmd} ${JSON.stringify(taskScriptPath)} archive ${JSON.stringify(`.phronia/tasks/${taskNames[1]}`)} --no-commit`,
       {
         cwd: tmpDir,
         encoding: "utf-8",
@@ -3652,7 +3653,7 @@ describe("regression: current-task path normalization", () => {
     );
 
     // Form 3: absolute path
-    const absPath = path.join(tmpDir, ".trellis", "tasks", taskNames[2]);
+    const absPath = path.join(tmpDir, ".phronia", "tasks", taskNames[2]);
     execSync(
       `${pythonCmd} ${JSON.stringify(taskScriptPath)} archive ${JSON.stringify(absPath)} --no-commit`,
       {
@@ -3665,13 +3666,13 @@ describe("regression: current-task path normalization", () => {
     // All three task dirs should be removed from active tasks/.
     for (const name of taskNames) {
       expect(
-        fs.existsSync(path.join(tmpDir, ".trellis", "tasks", name)),
+        fs.existsSync(path.join(tmpDir, ".phronia", "tasks", name)),
         `task ${name} should no longer exist in active tasks/`,
       ).toBe(false);
     }
 
     // All three should appear under archive/<YYYY-MM>/.
-    const archiveRoot = path.join(tmpDir, ".trellis", "tasks", "archive");
+    const archiveRoot = path.join(tmpDir, ".phronia", "tasks", "archive");
     expect(fs.existsSync(archiveRoot)).toBe(true);
     const archivedNames = new Set<string>();
     for (const monthDir of fs.readdirSync(archiveRoot)) {
@@ -3697,10 +3698,10 @@ describe("regression: current-task path normalization", () => {
     // resolving end-to-end through `task.py start` — instead of covering a
     // fiction. Codex's surviving real name has its own test below.
     setupTaskRepo();
-    const taskScriptPath = path.join(tmpDir, ".trellis", "scripts", "task.py");
+    const taskScriptPath = path.join(tmpDir, ".phronia", "scripts", "task.py");
 
     const output = execSync(
-      `${pythonCmd} ${JSON.stringify(taskScriptPath)} start ${JSON.stringify(".trellis/tasks/issue-106")}`,
+      `${pythonCmd} ${JSON.stringify(taskScriptPath)} start ${JSON.stringify(".phronia/tasks/issue-106")}`,
       {
         cwd: tmpDir,
         encoding: "utf-8",
@@ -3711,7 +3712,7 @@ describe("regression: current-task path normalization", () => {
     expect(output).toContain("Source: session:claude_native-a");
     const contextPath = path.join(
       tmpDir,
-      ".trellis",
+      ".phronia",
       ".runtime",
       "sessions",
       "claude_native-a.json",
@@ -3719,7 +3720,7 @@ describe("regression: current-task path normalization", () => {
     const context = JSON.parse(fs.readFileSync(contextPath, "utf-8")) as {
       current_task: string;
     };
-    expect(context.current_task).toBe(".trellis/tasks/issue-106");
+    expect(context.current_task).toBe(".phronia/tasks/issue-106");
   });
 
   it("[zcode-session-key] hook input and shell env resolve the same runtime key", () => {
@@ -3730,7 +3731,7 @@ describe("regression: current-task path normalization", () => {
       [
         "import json",
         "import sys",
-        `sys.path.insert(0, ${JSON.stringify(path.join(tmpDir, ".trellis", "scripts"))})`,
+        `sys.path.insert(0, ${JSON.stringify(path.join(tmpDir, ".phronia", "scripts"))})`,
         "from common.active_task import resolve_context_key",
         'value = "sess-zcode-review"',
         "print(json.dumps({",
@@ -3763,7 +3764,7 @@ import sys
 from pathlib import Path
 
 root = Path.cwd()
-sys.path.insert(0, str(root / ".trellis" / "scripts"))
+sys.path.insert(0, str(root / ".phronia" / "scripts"))
 from common.cli_adapter import CLIAdapter, detect_platform
 
 adapter = CLIAdapter("grok")
@@ -3802,7 +3803,7 @@ import sys
 from pathlib import Path
 
 root = Path.cwd()
-sys.path.insert(0, str(root / ".trellis" / "scripts"))
+sys.path.insert(0, str(root / ".phronia" / "scripts"))
 from common.cli_adapter import CLIAdapter, detect_platform
 
 adapter = CLIAdapter("kimi")
@@ -3840,10 +3841,10 @@ print(json.dumps({
     // as ZCode/Reasonix, and correctly degrades instead of pretending to
     // resolve a session that was never available to this process.
     setupTaskRepo();
-    const taskScriptPath = path.join(tmpDir, ".trellis", "scripts", "task.py");
+    const taskScriptPath = path.join(tmpDir, ".phronia", "scripts", "task.py");
 
     const output = execSync(
-      `${pythonCmd} ${JSON.stringify(taskScriptPath)} start ${JSON.stringify(".trellis/tasks/issue-106")}`,
+      `${pythonCmd} ${JSON.stringify(taskScriptPath)} start ${JSON.stringify(".phronia/tasks/issue-106")}`,
       {
         cwd: tmpDir,
         encoding: "utf-8",
@@ -3854,7 +3855,7 @@ print(json.dumps({
     expect(output).toContain("Session identity not available");
     expect(output).toContain("degraded");
     expect(output).not.toContain("session:grok_native-a");
-    const sessionsDir = path.join(tmpDir, ".trellis", ".runtime", "sessions");
+    const sessionsDir = path.join(tmpDir, ".phronia", ".runtime", "sessions");
     expect(fs.existsSync(path.join(sessionsDir, "grok_native-a.json"))).toBe(
       false,
     );
@@ -3862,10 +3863,10 @@ print(json.dumps({
 
   it("[session-current-task] task.py start uses Codex Desktop CODEX_THREAD_ID", () => {
     setupTaskRepo();
-    const taskScriptPath = path.join(tmpDir, ".trellis", "scripts", "task.py");
+    const taskScriptPath = path.join(tmpDir, ".phronia", "scripts", "task.py");
 
     const output = execSync(
-      `${pythonCmd} ${JSON.stringify(taskScriptPath)} start ${JSON.stringify(".trellis/tasks/issue-106")}`,
+      `${pythonCmd} ${JSON.stringify(taskScriptPath)} start ${JSON.stringify(".phronia/tasks/issue-106")}`,
       {
         cwd: tmpDir,
         encoding: "utf-8",
@@ -3876,7 +3877,7 @@ print(json.dumps({
     expect(output).toContain("Source: session:codex_thread-a");
     const contextPath = path.join(
       tmpDir,
-      ".trellis",
+      ".phronia",
       ".runtime",
       "sessions",
       "codex_thread-a.json",
@@ -3884,7 +3885,7 @@ print(json.dumps({
     const context = JSON.parse(fs.readFileSync(contextPath, "utf-8")) as {
       current_task: string;
     };
-    expect(context.current_task).toBe(".trellis/tasks/issue-106");
+    expect(context.current_task).toBe(".phronia/tasks/issue-106");
   });
 
   it("[session-current-task] task.py start ignores OPENCODE_RUN_ID and enters degraded mode", () => {
@@ -3897,10 +3898,10 @@ print(json.dumps({
     // the env-table entry only ever pretended to work, and OpenCode now
     // degrades honestly — same shape as the Grok case above.
     setupTaskRepo();
-    const taskScriptPath = path.join(tmpDir, ".trellis", "scripts", "task.py");
+    const taskScriptPath = path.join(tmpDir, ".phronia", "scripts", "task.py");
 
     const output = execSync(
-      `${pythonCmd} ${JSON.stringify(taskScriptPath)} start ${JSON.stringify(".trellis/tasks/issue-106")}`,
+      `${pythonCmd} ${JSON.stringify(taskScriptPath)} start ${JSON.stringify(".phronia/tasks/issue-106")}`,
       {
         cwd: tmpDir,
         encoding: "utf-8",
@@ -3911,7 +3912,7 @@ print(json.dumps({
     expect(output).toContain("Session identity not available");
     expect(output).toContain("degraded");
     expect(output).not.toContain("session:opencode_run-a");
-    const sessionsDir = path.join(tmpDir, ".trellis", ".runtime", "sessions");
+    const sessionsDir = path.join(tmpDir, ".phronia", ".runtime", "sessions");
     expect(fs.existsSync(path.join(sessionsDir, "opencode_run-a.json"))).toBe(
       false,
     );
@@ -3922,10 +3923,10 @@ print(json.dumps({
     // only safe because the plugin injects the key into the bash command. This
     // reproduces exactly what plugins/inject-subagent-context.js prepends.
     setupTaskRepo();
-    const taskScriptPath = path.join(tmpDir, ".trellis", "scripts", "task.py");
+    const taskScriptPath = path.join(tmpDir, ".phronia", "scripts", "task.py");
 
     const output = execSync(
-      `${pythonCmd} ${JSON.stringify(taskScriptPath)} start ${JSON.stringify(".trellis/tasks/issue-106")}`,
+      `${pythonCmd} ${JSON.stringify(taskScriptPath)} start ${JSON.stringify(".phronia/tasks/issue-106")}`,
       {
         cwd: tmpDir,
         encoding: "utf-8",
@@ -3938,7 +3939,7 @@ print(json.dumps({
       fs.readFileSync(
         path.join(
           tmpDir,
-          ".trellis",
+          ".phronia",
           ".runtime",
           "sessions",
           "opencode_run-a.json",
@@ -3946,14 +3947,14 @@ print(json.dumps({
         "utf-8",
       ),
     ) as { current_task: string };
-    expect(context.current_task).toBe(".trellis/tasks/issue-106");
+    expect(context.current_task).toBe(".phronia/tasks/issue-106");
   });
 
   // ==========================================================================
   // [env-name-purge] active_task.py's env tables may only name real variables
   // ==========================================================================
   // A 2026-08-05 audit checked all 21 platforms against vendor docs, shipped
-  // binaries and live shells (see .trellis/tasks/08-05-session-identity-
+  // binaries and live shells (see .phronia/tasks/08-05-session-identity-
   // propagation/research/platform-session-identity.md). 12 of the 21 declared
   // session env var names had never existed on any platform — they were
   // pattern-guessed from a `<PLATFORM>_SESSION_ID` shape no vendor agreed to,
@@ -3974,7 +3975,7 @@ print(json.dumps({
         "import json",
         "import os",
         "import sys",
-        `sys.path.insert(0, ${JSON.stringify(path.join(tmpDir, ".trellis", "scripts"))})`,
+        `sys.path.insert(0, ${JSON.stringify(path.join(tmpDir, ".phronia", "scripts"))})`,
         "from common.active_task import (",
         "    _ENV_CONVERSATION_KEYS,",
         "    _ENV_SESSION_KEYS,",
@@ -4232,8 +4233,8 @@ print(json.dumps({
 
   it("[session-current-task] task.py finish ignores legacy .current-task when no session task is set", () => {
     setupTaskRepo();
-    writeLegacyCurrentTask(".trellis/tasks/issue-106");
-    const taskScriptPath = path.join(tmpDir, ".trellis", "scripts", "task.py");
+    writeLegacyCurrentTask(".phronia/tasks/issue-106");
+    const taskScriptPath = path.join(tmpDir, ".phronia", "scripts", "task.py");
 
     const output = execSync(
       `${pythonCmd} ${JSON.stringify(taskScriptPath)} finish`,
@@ -4245,15 +4246,15 @@ print(json.dumps({
     );
 
     expect(output).toContain("No current task set");
-    expect(fs.existsSync(path.join(tmpDir, ".trellis", ".current-task"))).toBe(
+    expect(fs.existsSync(path.join(tmpDir, ".phronia", ".current-task"))).toBe(
       true,
     );
   });
 
   it("[session-current-task] task.py current ignores legacy .current-task without context key", () => {
     setupTaskRepo();
-    writeLegacyCurrentTask(".trellis/tasks/issue-106");
-    const taskScriptPath = path.join(tmpDir, ".trellis", "scripts", "task.py");
+    writeLegacyCurrentTask(".phronia/tasks/issue-106");
+    const taskScriptPath = path.join(tmpDir, ".phronia", "scripts", "task.py");
 
     let output = "";
     let status = 0;
@@ -4281,16 +4282,16 @@ print(json.dumps({
 
   it("[session-current-task] stale session task does not fall back to legacy .current-task", () => {
     setupTaskRepo();
-    writeLegacyCurrentTask(".trellis/tasks/issue-106");
+    writeLegacyCurrentTask(".phronia/tasks/issue-106");
     writeProjectFile(
-      path.join(".trellis", ".runtime", "sessions", "session-b.json"),
+      path.join(".phronia", ".runtime", "sessions", "session-b.json"),
       JSON.stringify(
-        { current_task: ".trellis/tasks/missing-task", platform: "test" },
+        { current_task: ".phronia/tasks/missing-task", platform: "test" },
         null,
         2,
       ),
     );
-    const taskScriptPath = path.join(tmpDir, ".trellis", "scripts", "task.py");
+    const taskScriptPath = path.join(tmpDir, ".phronia", "scripts", "task.py");
 
     const output = execSync(
       `${pythonCmd} ${JSON.stringify(taskScriptPath)} current --source`,
@@ -4301,7 +4302,7 @@ print(json.dumps({
       },
     );
 
-    expect(output).toContain("Current task: .trellis/tasks/missing-task");
+    expect(output).toContain("Current task: .phronia/tasks/missing-task");
     expect(output).toContain("Source: session:session-b");
     expect(output).toContain("State: stale");
     expect(output).not.toContain("issue-106");
@@ -4309,9 +4310,9 @@ print(json.dumps({
 
   it("[session-current-task] Claude statusline uses session-scoped task when session_id is present", () => {
     setupTaskRepo();
-    writeLegacyCurrentTask(".trellis/tasks/issue-106");
+    writeLegacyCurrentTask(".phronia/tasks/issue-106");
     writeProjectFile(
-      path.join(".trellis", "tasks", "session-task", "task.json"),
+      path.join(".phronia", "tasks", "session-task", "task.json"),
       JSON.stringify(
         {
           title: "Session scoped task",
@@ -4323,10 +4324,10 @@ print(json.dumps({
       ),
     );
     writeProjectFile(
-      path.join(".trellis", ".runtime", "sessions", "claude_status-a.json"),
+      path.join(".phronia", ".runtime", "sessions", "claude_status-a.json"),
       JSON.stringify(
         {
-          current_task: ".trellis/tasks/session-task",
+          current_task: ".phronia/tasks/session-task",
           platform: "claude",
         },
         null,
@@ -4372,7 +4373,7 @@ print(json.dumps({
 
   it("[session-current-task] Claude statusline ignores legacy .current-task without session context", () => {
     setupTaskRepo();
-    writeLegacyCurrentTask(".trellis/tasks/issue-106");
+    writeLegacyCurrentTask(".phronia/tasks/issue-106");
     writeProjectFile(
       path.join(".claude", "hooks", "statusline.py"),
       getStatuslineHook(),
@@ -4488,8 +4489,8 @@ print(json.dumps({
 
   it("[session-current-task] Python session-start hooks resolve session backslash refs without stale pointer", () => {
     setupTaskRepo();
-    writeSessionContext("claude_session-a", ".trellis\\tasks\\issue-106");
-    writeSessionContext("codex_session-a", ".trellis\\tasks\\issue-106");
+    writeSessionContext("claude_session-a", ".phronia\\tasks\\issue-106");
+    writeSessionContext("codex_session-a", ".phronia\\tasks\\issue-106");
 
     writeProjectFile(
       path.join(".claude", "hooks", "session-start.py"),
@@ -4682,8 +4683,8 @@ print(json.dumps({
   // update" for months, but its only caller was `output_text()` — the
   // get_context.py text path. The hook
   // built its own payload and never went through it, so on hook-driven
-  // platforms the reminder was silent: this repo sat on .trellis/.version
-  // 0.6.2 against an installed 0.6.7 CLI while `.trellis/.runtime/` held six
+  // platforms the reminder was silent: this repo sat on .phronia/.version
+  // 0.6.2 against an installed 0.6.7 CLI while `.phronia/.runtime/` held six
   // codex_* update markers and not one claude_* marker. The hint now rides the
   // <first-reply-notice> block, the payload's existing "say it in the first
   // visible reply" channel, so it reaches the user and not just the model.
@@ -4772,19 +4773,19 @@ print(json.dumps({
   function updateMarkerPath(sessionId: string): string {
     return path.join(
       tmpDir,
-      ".trellis",
+      ".phronia",
       ".runtime",
       `update-check-claude_${sessionId}.marker`,
     );
   }
 
   it.skipIf(isWindows)(
-    "[session-update-hint] a stale .trellis/.version reaches the user through the first-reply notice",
+    "[session-update-hint] a stale .phronia/.version reaches the user through the first-reply notice",
     () => {
       setupTaskRepo();
       writeClaudeSessionStartHook();
       const fakeCli = writeFakeTrellisCli(REPORTS_0_5_9);
-      writeProjectFile(path.join(".trellis", ".version"), "0.5.0\n");
+      writeProjectFile(path.join(".phronia", ".version"), "0.5.0\n");
 
       const context = sessionStartContext("update-stale", fakeCli);
 
@@ -4807,11 +4808,11 @@ print(json.dumps({
       writeClaudeSessionStartHook();
       const fakeCli = writeFakeTrellisCli(REPORTS_0_5_9);
 
-      // No .trellis/.version: the hint path cannot produce anything, so this
+      // No .phronia/.version: the hint path cannot produce anything, so this
       // is the payload exactly as it was shipped before the change.
       const baseline = sessionStartContext("update-baseline", fakeCli);
 
-      writeProjectFile(path.join(".trellis", ".version"), "0.6.0\n");
+      writeProjectFile(path.join(".phronia", ".version"), "0.6.0\n");
       const upToDate = sessionStartContext("update-current", fakeCli);
 
       expect(baseline).not.toContain("Trellis update available");
@@ -4826,7 +4827,7 @@ print(json.dumps({
       setupTaskRepo();
       writeClaudeSessionStartHook();
       const fakeCli = writeFakeTrellisCli(REPORTS_0_5_9);
-      writeProjectFile(path.join(".trellis", ".version"), "0.5.0\n");
+      writeProjectFile(path.join(".phronia", ".version"), "0.5.0\n");
 
       const first = sessionStartContext("update-marker", fakeCli);
       // SessionStart also fires on clear/compact within the same session.
@@ -4848,7 +4849,7 @@ print(json.dumps({
     () => {
       setupTaskRepo();
       writeClaudeSessionStartHook();
-      writeProjectFile(path.join(".trellis", ".version"), "0.5.0\n");
+      writeProjectFile(path.join(".phronia", ".version"), "0.5.0\n");
 
       const failing = writeFakeTrellisCli(
         'echo called >> "$TRELLIS_FAKE_CALL_LOG"\necho boom >&2\nexit 1\n',
@@ -4872,13 +4873,13 @@ print(json.dumps({
     },
   );
 
-  it("[session-update-hint] an unreadable .trellis/.version leaves SessionStart working and silent", () => {
+  it("[session-update-hint] an unreadable .phronia/.version leaves SessionStart working and silent", () => {
     setupTaskRepo();
     writeClaudeSessionStartHook();
     // A directory where the version file belongs: read_text raises OSError
     // (IsADirectoryError on POSIX, PermissionError on Windows) before the hint
     // path ever reaches `trellis --version`.
-    fs.mkdirSync(path.join(tmpDir, ".trellis", ".version"));
+    fs.mkdirSync(path.join(tmpDir, ".phronia", ".version"));
 
     const context = sessionStartContext("update-unreadable");
 
@@ -4897,7 +4898,7 @@ print(json.dumps({
       expectTemplateContent(shellBridgeScript, "cursor shell bridge"),
     );
 
-    const taskScriptPath = path.join(tmpDir, ".trellis", "scripts", "task.py");
+    const taskScriptPath = path.join(tmpDir, ".phronia", "scripts", "task.py");
     const unicodeProbe = "测试质量。\n第二行";
     const hookOutput = runPythonWithLegacyStdinLocale(
       path.join(".cursor", "hooks", "inject-shell-session-context.py"),
@@ -4906,7 +4907,7 @@ print(json.dumps({
         conversation_id: "cursor-shell-a",
         generation_id: "gen-a",
         cwd: tmpDir,
-        command: `${pythonCmd} ./.trellis/scripts/task.py start .trellis/tasks/issue-106 && ${pythonCmd} ./.trellis/scripts/task.py current --source && echo '${unicodeProbe}'`,
+        command: `${pythonCmd} ./.phronia/scripts/task.py start .phronia/tasks/issue-106 && ${pythonCmd} ./.phronia/scripts/task.py current --source && echo '${unicodeProbe}'`,
         hook_event_name: "beforeShellExecution",
       }),
     );
@@ -4917,18 +4918,18 @@ print(json.dumps({
     // stopped being Cursor-only. Every Cursor-observable assertion in this
     // test (permission allow, context key, session file) is unchanged.
     const [ticketName] = fs.readdirSync(
-      path.join(tmpDir, ".trellis", ".runtime", "shell-tickets"),
+      path.join(tmpDir, ".phronia", ".runtime", "shell-tickets"),
     );
     const ticket = JSON.parse(
       fs.readFileSync(
-        path.join(tmpDir, ".trellis", ".runtime", "shell-tickets", ticketName),
+        path.join(tmpDir, ".phronia", ".runtime", "shell-tickets", ticketName),
         "utf-8",
       ),
     ) as { command: string };
     expect(ticket.command).toContain(unicodeProbe);
 
     const startOutput = execSync(
-      `${pythonCmd} ${JSON.stringify(taskScriptPath)} start ${JSON.stringify(".trellis/tasks/issue-106")}`,
+      `${pythonCmd} ${JSON.stringify(taskScriptPath)} start ${JSON.stringify(".phronia/tasks/issue-106")}`,
       {
         cwd: tmpDir,
         encoding: "utf-8",
@@ -4945,12 +4946,12 @@ print(json.dumps({
         env: sessionEnv(),
       },
     );
-    expect(currentOutput).toContain("Current task: .trellis/tasks/issue-106");
+    expect(currentOutput).toContain("Current task: .phronia/tasks/issue-106");
     expect(currentOutput).toContain("Source: session:cursor_cursor-shell-a");
 
     const contextPath = path.join(
       tmpDir,
-      ".trellis",
+      ".phronia",
       ".runtime",
       "sessions",
       "cursor_cursor-shell-a.json",
@@ -4959,7 +4960,7 @@ print(json.dumps({
       current_task: string;
       platform: string;
     };
-    expect(context.current_task).toBe(".trellis/tasks/issue-106");
+    expect(context.current_task).toBe(".phronia/tasks/issue-106");
     expect(context.platform).toBe("cursor");
   });
 
@@ -5053,7 +5054,7 @@ print(json.dumps({
         );
 
         const sessionId = `e2e-${platform}`;
-        const command = `${pythonCmd} ./.trellis/scripts/task.py start .trellis/tasks/issue-106`;
+        const command = `${pythonCmd} ./.phronia/scripts/task.py start .phronia/tasks/issue-106`;
         const payload = isShellExecutionEvent
           ? { session_id: sessionId, cwd: tmpDir, command }
           : {
@@ -5084,7 +5085,7 @@ print(json.dumps({
 
         const ticketDir = path.join(
           tmpDir,
-          ".trellis",
+          ".phronia",
           ".runtime",
           "shell-tickets",
         );
@@ -5095,7 +5096,7 @@ print(json.dumps({
         expect(ticket.context_key).toBeTruthy();
 
         const startOutput = execSync(
-          `${pythonCmd} ${JSON.stringify(path.join(tmpDir, ".trellis", "scripts", "task.py"))} start ${JSON.stringify(".trellis/tasks/issue-106")}`,
+          `${pythonCmd} ${JSON.stringify(path.join(tmpDir, ".phronia", "scripts", "task.py"))} start ${JSON.stringify(".phronia/tasks/issue-106")}`,
           { cwd: tmpDir, encoding: "utf-8", env: hookEnv() },
         );
         expect(startOutput).toContain(`Source: session:${ticket.context_key}`);
@@ -5103,7 +5104,7 @@ print(json.dumps({
           fs.existsSync(
             path.join(
               tmpDir,
-              ".trellis",
+              ".phronia",
               ".runtime",
               "sessions",
               `${ticket.context_key}.json`,
@@ -5115,7 +5116,7 @@ print(json.dumps({
         // the platform's own hook can only find the task by computing exactly
         // the same context key the ticket carried. That agreement is the whole
         // point: a ticket keyed differently writes a file no hook ever reads.
-        writeSessionContext("decoy_other_window", ".trellis/tasks/issue-106");
+        writeSessionContext("decoy_other_window", ".phronia/tasks/issue-106");
 
         // Whichever context hook this platform ships. The per-turn breadcrumb
         // names the task directory; session-start names its title.
@@ -5154,7 +5155,7 @@ print(json.dumps({
       const files = templatesFor(platform);
       const hookPath = requireInstallPath(files, SHELL_HOOK, platform);
       writeSharedHook(hookPath, SHELL_HOOK);
-      const command = `${pythonCmd} ./.trellis/scripts/task.py start .trellis/tasks/issue-106`;
+      const command = `${pythonCmd} ./.phronia/scripts/task.py start .phronia/tasks/issue-106`;
 
       // Two windows, same repo, same subcommand, both tickets fresh.
       for (const sessionId of ["window-a", "window-b"]) {
@@ -5175,18 +5176,18 @@ print(json.dumps({
       }
       expect(
         fs.readdirSync(
-          path.join(tmpDir, ".trellis", ".runtime", "shell-tickets"),
+          path.join(tmpDir, ".phronia", ".runtime", "shell-tickets"),
         ),
       ).toHaveLength(2);
 
       const startOutput = execSync(
-        `${pythonCmd} ${JSON.stringify(path.join(tmpDir, ".trellis", "scripts", "task.py"))} start ${JSON.stringify(".trellis/tasks/issue-106")}`,
+        `${pythonCmd} ${JSON.stringify(path.join(tmpDir, ".phronia", "scripts", "task.py"))} start ${JSON.stringify(".phronia/tasks/issue-106")}`,
         { cwd: tmpDir, encoding: "utf-8", env: hookEnv() },
       );
       // Degraded, never a guess: two candidate keys means neither wins.
       expect(startOutput).not.toContain("Source: session:");
       expect(
-        fs.existsSync(path.join(tmpDir, ".trellis", ".runtime", "sessions")),
+        fs.existsSync(path.join(tmpDir, ".phronia", ".runtime", "sessions")),
       ).toBe(false);
     });
 
@@ -5239,7 +5240,7 @@ print(json.dumps({
       }
       expect(
         fs.existsSync(
-          path.join(tmpDir, ".trellis", ".runtime", "shell-tickets"),
+          path.join(tmpDir, ".phronia", ".runtime", "shell-tickets"),
         ),
       ).toBe(false);
     });
@@ -5251,14 +5252,14 @@ print(json.dumps({
       setupTaskRepo();
       const now = Date.now() / 1000;
       writeProjectFile(
-        path.join(".trellis", ".runtime", "cursor-shell", "legacy.json"),
+        path.join(".phronia", ".runtime", "cursor-shell", "legacy.json"),
         JSON.stringify({
           platform: "cursor",
           context_key: "cursor_legacy-window",
           cwd: tmpDir,
-          command: "task.py start .trellis/tasks/issue-106",
+          command: "task.py start .phronia/tasks/issue-106",
           subcommands: [
-            { name: "start", task_ref: ".trellis/tasks/issue-106" },
+            { name: "start", task_ref: ".phronia/tasks/issue-106" },
           ],
           created_at_epoch: now,
           expires_at_epoch: now + 30,
@@ -5266,7 +5267,7 @@ print(json.dumps({
       );
 
       const startOutput = execSync(
-        `${pythonCmd} ${JSON.stringify(path.join(tmpDir, ".trellis", "scripts", "task.py"))} start ${JSON.stringify(".trellis/tasks/issue-106")}`,
+        `${pythonCmd} ${JSON.stringify(path.join(tmpDir, ".phronia", "scripts", "task.py"))} start ${JSON.stringify(".phronia/tasks/issue-106")}`,
         { cwd: tmpDir, encoding: "utf-8", env: hookEnv() },
       );
       expect(startOutput).toContain("Source: session:cursor_legacy-window");
@@ -5287,10 +5288,10 @@ print(json.dumps({
       ),
     );
     writeProjectFile(
-      path.join(".trellis", ".runtime", "sessions", "cursor_parent-a.json"),
+      path.join(".phronia", ".runtime", "sessions", "cursor_parent-a.json"),
       JSON.stringify(
         {
-          current_task: ".trellis/tasks/issue-106",
+          current_task: ".phronia/tasks/issue-106",
           current_run: null,
           platform: "cursor",
         },
@@ -5328,7 +5329,7 @@ print(json.dumps({
 
     expect(parsed.permission).toBe("allow");
     expect(prompt).toContain(
-      "=== .trellis/tasks/issue-106/prd.md (Requirements) ===",
+      "=== .phronia/tasks/issue-106/prd.md (Requirements) ===",
     );
     expect(prompt).toContain(unicodePrompt);
     expect(parsed.hookSpecificOutput?.updatedInput?.prompt).toBe(prompt);
@@ -5350,10 +5351,10 @@ print(json.dumps({
       ),
     );
     writeProjectFile(
-      path.join(".trellis", ".runtime", "sessions", "codebuddy_parent-a.json"),
+      path.join(".phronia", ".runtime", "sessions", "codebuddy_parent-a.json"),
       JSON.stringify(
         {
-          current_task: ".trellis/tasks/issue-106",
+          current_task: ".phronia/tasks/issue-106",
           current_run: null,
           platform: "codebuddy",
         },
@@ -5367,14 +5368,14 @@ print(json.dumps({
     // files use the same session id on purpose — that is what the real host
     // produces, and it is why the collision is invisible without a decoy.
     writeProjectFile(
-      path.join(".trellis", "tasks", "issue-999", "prd.md"),
+      path.join(".phronia", "tasks", "issue-999", "prd.md"),
       "# Wrong task\n\nTOKEN_WRONG_TASK_MUST_NOT_APPEAR\n",
     );
     writeProjectFile(
-      path.join(".trellis", ".runtime", "sessions", "claude_parent-a.json"),
+      path.join(".phronia", ".runtime", "sessions", "claude_parent-a.json"),
       JSON.stringify(
         {
-          current_task: ".trellis/tasks/issue-999",
+          current_task: ".phronia/tasks/issue-999",
           current_run: null,
           platform: "claude",
         },
@@ -5413,7 +5414,7 @@ print(json.dumps({
 
     expect(parsed.permission).toBe("allow");
     expect(prompt).toContain(
-      "=== .trellis/tasks/issue-106/prd.md (Requirements) ===",
+      "=== .phronia/tasks/issue-106/prd.md (Requirements) ===",
     );
     expect(prompt).not.toContain("TOKEN_WRONG_TASK_MUST_NOT_APPEAR");
     expect(prompt).toContain(unicodePrompt);
@@ -5434,10 +5435,10 @@ print(json.dumps({
       ),
     );
     writeProjectFile(
-      path.join(".trellis", ".runtime", "sessions", "cursor_parent-a.json"),
+      path.join(".phronia", ".runtime", "sessions", "cursor_parent-a.json"),
       JSON.stringify(
         {
-          current_task: ".trellis/tasks/issue-106",
+          current_task: ".phronia/tasks/issue-106",
           current_run: null,
           platform: "cursor",
         },
@@ -5468,19 +5469,19 @@ print(json.dumps({
     setupTaskRepo();
     writeProjectFile(path.join(".git", "HEAD"), "ref: refs/heads/main\n");
     writeProjectFile(
-      path.join(".trellis", "tasks", "issue-106", "implement.jsonl"),
+      path.join(".phronia", "tasks", "issue-106", "implement.jsonl"),
       '{"file":"src/implement-context.md","reason":"implement contract"}\n',
     );
     writeProjectFile(
-      path.join(".trellis", "tasks", "issue-106", "design.md"),
+      path.join(".phronia", "tasks", "issue-106", "design.md"),
       "TOKEN_CODEX_DESIGN\n",
     );
     writeProjectFile(
-      path.join(".trellis", "tasks", "issue-106", "implement.md"),
+      path.join(".phronia", "tasks", "issue-106", "implement.md"),
       "TOKEN_CODEX_PLAN\n",
     );
     writeProjectFile("src/implement-context.md", "TOKEN_CODEX_IMPLEMENT\n");
-    writeSessionContext("codex_parent-a", ".trellis/tasks/issue-106");
+    writeSessionContext("codex_parent-a", ".phronia/tasks/issue-106");
     const injectSubagentContextScript = getSharedHookScripts().find(
       (hook) => hook.name === "inject-subagent-context.py",
     )?.content;
@@ -5514,7 +5515,7 @@ print(json.dumps({
     expect(context).toContain("<!-- trellis-hook-injected -->");
     expect(context).toContain("Trellis Native Implement Subagent");
     expect(context).toContain("`trellis-implement` role");
-    expect(context).toContain("Active task: .trellis/tasks/issue-106");
+    expect(context).toContain("Active task: .phronia/tasks/issue-106");
     expect(context).toContain("TOKEN_CODEX_IMPLEMENT");
     expect(context).toContain("TOKEN_CODEX_DESIGN");
     expect(context).toContain("TOKEN_CODEX_PLAN");
@@ -5524,28 +5525,28 @@ print(json.dumps({
     setupTaskRepo();
     writeProjectFile(path.join(".git", "HEAD"), "ref: refs/heads/main\n");
     writeProjectFile(
-      path.join(".trellis", "tasks", "issue-106", "implement.jsonl"),
+      path.join(".phronia", "tasks", "issue-106", "implement.jsonl"),
       '{"file":"src/implement-order.md","reason":"implement ordering"}\n',
     );
     writeProjectFile(
-      path.join(".trellis", "tasks", "issue-106", "check.jsonl"),
+      path.join(".phronia", "tasks", "issue-106", "check.jsonl"),
       '{"file":"src/check-order.md","reason":"check ordering"}\n',
     );
     writeProjectFile("src/implement-order.md", "TOKEN_IMPLEMENT_ORDER\n");
     writeProjectFile("src/check-order.md", "TOKEN_CHECK_ORDER\n");
     writeProjectFile(
-      path.join(".trellis", "tasks", "issue-106", "prd.md"),
+      path.join(".phronia", "tasks", "issue-106", "prd.md"),
       "TOKEN_PRD_ORDER\n",
     );
     writeProjectFile(
-      path.join(".trellis", "tasks", "issue-106", "design.md"),
+      path.join(".phronia", "tasks", "issue-106", "design.md"),
       "TOKEN_DESIGN_ORDER\n",
     );
     writeProjectFile(
-      path.join(".trellis", "tasks", "issue-106", "implement.md"),
+      path.join(".phronia", "tasks", "issue-106", "implement.md"),
       "TOKEN_PLAN_ORDER\n",
     );
-    writeSessionContext("codex_parent-order", ".trellis/tasks/issue-106");
+    writeSessionContext("codex_parent-order", ".phronia/tasks/issue-106");
     const injectSubagentContextScript = getSharedHookScripts().find(
       (hook) => hook.name === "inject-subagent-context.py",
     )?.content;
@@ -5593,16 +5594,16 @@ print(json.dumps({
     setupTaskRepo();
     writeProjectFile(path.join(".git", "HEAD"), "ref: refs/heads/main\n");
     writeProjectFile(
-      path.join(".trellis", "tasks", "issue-106", "implement.jsonl"),
+      path.join(".phronia", "tasks", "issue-106", "implement.jsonl"),
       '{"file":"src/implement-private.md","reason":"must stay isolated"}\n',
     );
     writeProjectFile(
-      path.join(".trellis", "tasks", "issue-106", "check.jsonl"),
+      path.join(".phronia", "tasks", "issue-106", "check.jsonl"),
       '{"file":"src/check-private.md","reason":"must stay isolated"}\n',
     );
     writeProjectFile("src/implement-private.md", "TOKEN_IMPLEMENT_PRIVATE\n");
     writeProjectFile("src/check-private.md", "TOKEN_CHECK_PRIVATE\n");
-    writeSessionContext("codex_research-parent", ".trellis/tasks/issue-106");
+    writeSessionContext("codex_research-parent", ".phronia/tasks/issue-106");
     const injectSubagentContextScript = getSharedHookScripts().find(
       (hook) => hook.name === "inject-subagent-context.py",
     )?.content;
@@ -5629,7 +5630,7 @@ print(json.dumps({
     };
     const context = parsed.hookSpecificOutput.additionalContext;
 
-    expect(context).toContain("Active task: .trellis/tasks/issue-106");
+    expect(context).toContain("Active task: .phronia/tasks/issue-106");
     expect(context).toContain("Project Spec Directory Structure");
     expect(context).not.toContain("TOKEN_IMPLEMENT_PRIVATE");
     expect(context).not.toContain("TOKEN_CHECK_PRIVATE");
@@ -5640,7 +5641,7 @@ print(json.dumps({
   it("[codex-native-subagents] unknown or malformed parents never borrow a sole session task", () => {
     setupTaskRepo();
     writeProjectFile(path.join(".git", "HEAD"), "ref: refs/heads/main\n");
-    writeSessionContext("codex_unrelated", ".trellis/tasks/issue-106");
+    writeSessionContext("codex_unrelated", ".phronia/tasks/issue-106");
     const injectSubagentContextScript = getSharedHookScripts().find(
       (hook) => hook.name === "inject-subagent-context.py",
     )?.content;
@@ -5671,25 +5672,25 @@ print(json.dumps({
     setupTaskRepo();
     writeProjectFile(path.join(".git", "HEAD"), "ref: refs/heads/main\n");
     writeProjectFile(
-      path.join(".trellis", "tasks", "issue-106", "implement.jsonl"),
+      path.join(".phronia", "tasks", "issue-106", "implement.jsonl"),
       '{"file":"src/session-a.md","reason":"session A only"}\n',
     );
     writeProjectFile("src/session-a.md", "TOKEN_CODEX_SESSION_A\n");
     writeProjectFile(
-      path.join(".trellis", "tasks", "issue-107", "task.json"),
+      path.join(".phronia", "tasks", "issue-107", "task.json"),
       JSON.stringify({ title: "Issue 107", status: "in_progress" }, null, 2),
     );
     writeProjectFile(
-      path.join(".trellis", "tasks", "issue-107", "prd.md"),
+      path.join(".phronia", "tasks", "issue-107", "prd.md"),
       "TOKEN_CODEX_PRD_B\n",
     );
     writeProjectFile(
-      path.join(".trellis", "tasks", "issue-107", "implement.jsonl"),
+      path.join(".phronia", "tasks", "issue-107", "implement.jsonl"),
       '{"file":"src/session-b.md","reason":"session B only"}\n',
     );
     writeProjectFile("src/session-b.md", "TOKEN_CODEX_SESSION_B\n");
-    writeSessionContext("codex_parent-a", ".trellis/tasks/issue-106");
-    writeSessionContext("codex_parent-b", ".trellis/tasks/issue-107");
+    writeSessionContext("codex_parent-a", ".phronia/tasks/issue-106");
+    writeSessionContext("codex_parent-b", ".phronia/tasks/issue-107");
     const injectSubagentContextScript = getSharedHookScripts().find(
       (hook) => hook.name === "inject-subagent-context.py",
     )?.content;
@@ -5737,7 +5738,7 @@ print(json.dumps({
   it("[codex-native-subagents] non-Trellis SubagentStart agents stay silent", () => {
     setupTaskRepo();
     writeProjectFile(path.join(".git", "HEAD"), "ref: refs/heads/main\n");
-    writeSessionContext("codex_parent-a", ".trellis/tasks/issue-106");
+    writeSessionContext("codex_parent-a", ".phronia/tasks/issue-106");
     const injectSubagentContextScript = getSharedHookScripts().find(
       (hook) => hook.name === "inject-subagent-context.py",
     )?.content;
@@ -5765,10 +5766,10 @@ print(json.dumps({
 
   it("[session-current-task] Cursor hook uses conversation_id when transcript_path is null", () => {
     setupTaskRepo();
-    writeLegacyCurrentTask(".trellis/tasks/issue-106");
+    writeLegacyCurrentTask(".phronia/tasks/issue-106");
     writeWorkflowStateHook();
     writeProjectFile(
-      path.join(".trellis", "tasks", "cursor-task", "task.json"),
+      path.join(".phronia", "tasks", "cursor-task", "task.json"),
       JSON.stringify(
         {
           id: "cursor-task",
@@ -5780,10 +5781,10 @@ print(json.dumps({
       ),
     );
     writeProjectFile(
-      path.join(".trellis", ".runtime", "sessions", "cursor_cursor-a.json"),
+      path.join(".phronia", ".runtime", "sessions", "cursor_cursor-a.json"),
       JSON.stringify(
         {
-          current_task: ".trellis/tasks/cursor-task",
+          current_task: ".phronia/tasks/cursor-task",
           platform: "cursor",
         },
         null,
@@ -5815,9 +5816,9 @@ print(json.dumps({
 
   it("[session-current-task] OpenCode resolver ignores legacy .current-task and uses plugin sessionID", () => {
     setupTaskRepo();
-    writeLegacyCurrentTask(".trellis/tasks/issue-106");
+    writeLegacyCurrentTask(".phronia/tasks/issue-106");
     writeProjectFile(
-      path.join(".trellis", "tasks", "opencode-task", "task.json"),
+      path.join(".phronia", "tasks", "opencode-task", "task.json"),
       JSON.stringify(
         {
           title: "OpenCode task",
@@ -5828,10 +5829,10 @@ print(json.dumps({
       ),
     );
     writeProjectFile(
-      path.join(".trellis", ".runtime", "sessions", "opencode_oc-a.json"),
+      path.join(".phronia", ".runtime", "sessions", "opencode_oc-a.json"),
       JSON.stringify(
         {
-          current_task: ".trellis/tasks/opencode-task",
+          current_task: ".phronia/tasks/opencode-task",
           platform: "opencode",
         },
         null,
@@ -5845,7 +5846,7 @@ print(json.dumps({
     // `_resolve_single_session_fallback` — with exactly one session file
     // present, the resolver picks it up (NOT the legacy file).
     const none = ctx.getActiveTask();
-    expect(none.taskPath).toBe(".trellis/tasks/opencode-task");
+    expect(none.taskPath).toBe(".phronia/tasks/opencode-task");
     expect(none.source).toBe("session-fallback:opencode_oc-a");
     expect(none.stale).toBe(false);
 
@@ -5853,7 +5854,7 @@ print(json.dumps({
       sessionID: "oc-a",
     });
 
-    expect(active.taskPath).toBe(".trellis/tasks/opencode-task");
+    expect(active.taskPath).toBe(".phronia/tasks/opencode-task");
     expect(active.source).toBe("session:opencode_oc-a");
     expect(active.stale).toBe(false);
   });
@@ -5867,7 +5868,7 @@ print(json.dumps({
     // hijacked the resolver rather than helping it.
     setupTaskRepo();
     writeProjectFile(
-      path.join(".trellis", "tasks", "opencode-run-task", "task.json"),
+      path.join(".phronia", "tasks", "opencode-run-task", "task.json"),
       JSON.stringify(
         {
           title: "OpenCode run task",
@@ -5879,10 +5880,10 @@ print(json.dumps({
       ),
     );
     writeProjectFile(
-      path.join(".trellis", ".runtime", "sessions", "opencode_run-a.json"),
+      path.join(".phronia", ".runtime", "sessions", "opencode_run-a.json"),
       JSON.stringify(
         {
-          current_task: ".trellis/tasks/opencode-run-task",
+          current_task: ".phronia/tasks/opencode-run-task",
           platform: "opencode",
         },
         null,
@@ -5890,10 +5891,10 @@ print(json.dumps({
       ),
     );
     writeProjectFile(
-      path.join(".trellis", ".runtime", "sessions", "opencode_oc-a.json"),
+      path.join(".phronia", ".runtime", "sessions", "opencode_oc-a.json"),
       JSON.stringify(
         {
-          current_task: ".trellis/tasks/issue-106",
+          current_task: ".phronia/tasks/issue-106",
           platform: "opencode",
         },
         null,
@@ -5909,7 +5910,7 @@ print(json.dumps({
       });
 
       expect(active.source).toBe("session:opencode_oc-a");
-      expect(active.taskPath).toBe(".trellis/tasks/issue-106");
+      expect(active.taskPath).toBe(".phronia/tasks/issue-106");
       expect(active.stale).toBe(false);
     } finally {
       if (previous === undefined) {
@@ -6093,7 +6094,7 @@ print(json.dumps({
 
   it("[workflow-v2] shared session-start summarizes in-progress context without auto-dispatch approval", () => {
     setupTaskRepo();
-    writeSessionContext("claude_session-a", ".trellis/tasks/issue-106");
+    writeSessionContext("claude_session-a", ".phronia/tasks/issue-106");
 
     writeProjectFile(
       path.join(".claude", "hooks", "session-start.py"),
@@ -6117,7 +6118,7 @@ print(json.dumps({
 
   it("[trellis-hooks-env] runtime: shared hooks emit no additionalContext when TRELLIS_HOOKS=0", () => {
     setupTaskRepo();
-    writeSessionContext("claude_session-a", ".trellis/tasks/issue-106");
+    writeSessionContext("claude_session-a", ".phronia/tasks/issue-106");
 
     const claudeSession = expectTemplateContent(
       claudeSessionStart,
@@ -6175,7 +6176,7 @@ print(json.dumps({
 
   it("[session-current-task] OpenCode context layer normalizes backslash refs for downstream plugins", () => {
     setupTaskRepo();
-    writeSessionContext("opencode_oc-a", ".trellis\\tasks\\issue-106");
+    writeSessionContext("opencode_oc-a", ".phronia\\tasks\\issue-106");
 
     const ctx = new TrellisContext(tmpDir) as TrellisContext & {
       getCurrentTask: (platformInput?: object | null) => string | null;
@@ -6183,10 +6184,10 @@ print(json.dumps({
     };
 
     expect(ctx.getCurrentTask({ sessionID: "oc-a" })).toBe(
-      ".trellis/tasks/issue-106",
+      ".phronia/tasks/issue-106",
     );
-    expect(ctx.resolveTaskDir(".trellis\\tasks\\issue-106")).toBe(
-      path.join(tmpDir, ".trellis", "tasks", "issue-106"),
+    expect(ctx.resolveTaskDir(".phronia\\tasks\\issue-106")).toBe(
+      path.join(tmpDir, ".phronia", "tasks", "issue-106"),
     );
   });
 
@@ -6198,7 +6199,7 @@ print(json.dumps({
     output: string;
     status: number;
   } {
-    const taskScriptPath = path.join(tmpDir, ".trellis", "scripts", "task.py");
+    const taskScriptPath = path.join(tmpDir, ".phronia", "scripts", "task.py");
     let output = "";
     let status = 0;
     try {
@@ -6222,7 +6223,7 @@ print(json.dumps({
 
   it("[session-fallback] main CLI does not borrow a sole unrelated session", () => {
     setupTaskRepo();
-    writeSessionContext("codex_session_parent", ".trellis/tasks/issue-106");
+    writeSessionContext("codex_session_parent", ".phronia/tasks/issue-106");
 
     const { output, status } = runTaskCurrent();
     expect(status).toBe(1);
@@ -6242,12 +6243,12 @@ print(json.dumps({
 
   it("[session-fallback] multiple session files — refuses to guess, returns none", () => {
     setupTaskRepo();
-    writeSessionContext("codex_session_a", ".trellis/tasks/issue-106");
+    writeSessionContext("codex_session_a", ".phronia/tasks/issue-106");
     writeProjectFile(
-      path.join(".trellis", "tasks", "other-task", "task.json"),
+      path.join(".phronia", "tasks", "other-task", "task.json"),
       JSON.stringify({ title: "other", status: "in_progress" }, null, 2),
     );
-    writeSessionContext("codex_session_b", ".trellis/tasks/other-task");
+    writeSessionContext("codex_session_b", ".phronia/tasks/other-task");
 
     const { output, status } = runTaskCurrent();
     expect(status).toBe(1);
@@ -6257,13 +6258,13 @@ print(json.dumps({
 
   it("[session-fallback] explicit context-key match takes precedence over fallback", () => {
     setupTaskRepo();
-    writeSessionContext("codex_session_explicit", ".trellis/tasks/issue-106");
+    writeSessionContext("codex_session_explicit", ".phronia/tasks/issue-106");
 
     const { output, status } = runTaskCurrent({
       TRELLIS_CONTEXT_ID: "codex_session_explicit",
     });
     expect(status).toBe(0);
-    expect(output).toContain("Current task: .trellis/tasks/issue-106");
+    expect(output).toContain("Current task: .phronia/tasks/issue-106");
     // Source should be "session:" (precise match), not "session-fallback:"
     expect(output).toContain("Source: session:codex_session_explicit");
     expect(output).not.toContain("session-fallback");
@@ -6271,10 +6272,10 @@ print(json.dumps({
 
   it("[issue #469] finish removes only the exact matched session file", () => {
     setupTaskRepo();
-    writeSessionContext("codex_exact", ".trellis/tasks/issue-106");
-    writeSessionContext("codex_thread_sibling", ".trellis/tasks/issue-106");
-    const taskScriptPath = path.join(tmpDir, ".trellis", "scripts", "task.py");
-    const sessionsDir = path.join(tmpDir, ".trellis", ".runtime", "sessions");
+    writeSessionContext("codex_exact", ".phronia/tasks/issue-106");
+    writeSessionContext("codex_thread_sibling", ".phronia/tasks/issue-106");
+    const taskScriptPath = path.join(tmpDir, ".phronia", "scripts", "task.py");
+    const sessionsDir = path.join(tmpDir, ".phronia", ".runtime", "sessions");
 
     const output = execSync(
       `${pythonCmd} ${JSON.stringify(taskScriptPath)} finish`,
@@ -6296,11 +6297,11 @@ print(json.dumps({
 
   it("[issue #469] finish preserves a sole unmatched session file", () => {
     setupTaskRepo();
-    writeSessionContext("codex_previous-thread", ".trellis/tasks/issue-106");
-    const taskScriptPath = path.join(tmpDir, ".trellis", "scripts", "task.py");
+    writeSessionContext("codex_previous-thread", ".phronia/tasks/issue-106");
+    const taskScriptPath = path.join(tmpDir, ".phronia", "scripts", "task.py");
     const fallbackPath = path.join(
       tmpDir,
-      ".trellis",
+      ".phronia",
       ".runtime",
       "sessions",
       "codex_previous-thread.json",
@@ -6327,10 +6328,10 @@ print(json.dumps({
 
   it("[issue #469] finish deletes nothing when fallback resolution is ambiguous", () => {
     setupTaskRepo();
-    writeSessionContext("codex_thread_a", ".trellis/tasks/issue-106");
-    writeSessionContext("codex_thread_b", ".trellis/tasks/issue-106");
-    const taskScriptPath = path.join(tmpDir, ".trellis", "scripts", "task.py");
-    const sessionsDir = path.join(tmpDir, ".trellis", ".runtime", "sessions");
+    writeSessionContext("codex_thread_a", ".phronia/tasks/issue-106");
+    writeSessionContext("codex_thread_b", ".phronia/tasks/issue-106");
+    const taskScriptPath = path.join(tmpDir, ".phronia", "scripts", "task.py");
+    const sessionsDir = path.join(tmpDir, ".phronia", ".runtime", "sessions");
 
     const output = execSync(
       `${pythonCmd} ${JSON.stringify(taskScriptPath)} finish`,
@@ -6353,12 +6354,12 @@ print(json.dumps({
   it("[issue #469] finish preserves a malformed exact session when another session exists", () => {
     setupTaskRepo();
     writeProjectFile(
-      path.join(".trellis", ".runtime", "sessions", "codex_malformed.json"),
+      path.join(".phronia", ".runtime", "sessions", "codex_malformed.json"),
       "{",
     );
-    writeSessionContext("codex_other", ".trellis/tasks/issue-106");
-    const taskScriptPath = path.join(tmpDir, ".trellis", "scripts", "task.py");
-    const sessionsDir = path.join(tmpDir, ".trellis", ".runtime", "sessions");
+    writeSessionContext("codex_other", ".phronia/tasks/issue-106");
+    const taskScriptPath = path.join(tmpDir, ".phronia", "scripts", "task.py");
+    const sessionsDir = path.join(tmpDir, ".phronia", ".runtime", "sessions");
 
     const output = execSync(
       `${pythonCmd} ${JSON.stringify(taskScriptPath)} finish`,
@@ -6384,13 +6385,13 @@ print(json.dumps({
     // not UTF-8 raised straight out of a read whose whole contract is to
     // return None, and the hook path failed instead of degrading.
     setupTaskRepo();
-    const sessionsDir = path.join(tmpDir, ".trellis", ".runtime", "sessions");
+    const sessionsDir = path.join(tmpDir, ".phronia", ".runtime", "sessions");
     fs.mkdirSync(sessionsDir, { recursive: true });
     fs.writeFileSync(
       path.join(sessionsDir, "codex_binary.json"),
       Buffer.from([0x7b, 0x22, 0xff, 0x22, 0x7d]),
     );
-    const taskScriptPath = path.join(tmpDir, ".trellis", "scripts", "task.py");
+    const taskScriptPath = path.join(tmpDir, ".phronia", "scripts", "task.py");
 
     const proc = spawnSync(pythonCmd, [taskScriptPath, "finish"], {
       cwd: tmpDir,
@@ -6413,7 +6414,7 @@ print(json.dumps({
 
   function writeWorkflowStateHook(): void {
     writeProjectFile(
-      path.join(".trellis", "hooks", "inject-workflow-state.py"),
+      path.join(".phronia", "hooks", "inject-workflow-state.py"),
       expectTemplateContent(injectWorkflowStateScript, "inject-workflow-state"),
     );
   }
@@ -6421,7 +6422,7 @@ print(json.dumps({
   function setStatus(status: string): void {
     const taskJsonPath = path.join(
       tmpDir,
-      ".trellis",
+      ".phronia",
       "tasks",
       "issue-106",
       "task.json",
@@ -6434,7 +6435,7 @@ print(json.dumps({
   }
 
   function writeWorkflowMd(body: string): void {
-    writeProjectFile(path.join(".trellis", "workflow.md"), body);
+    writeProjectFile(path.join(".phronia", "workflow.md"), body);
   }
 
   function runInjectWorkflowState(cwdOverride?: string): string {
@@ -6446,14 +6447,14 @@ print(json.dumps({
 
   function runInjectWorkflowStateWithInput(inputData: object): string {
     return runPython(
-      path.join(".trellis", "hooks", "inject-workflow-state.py"),
+      path.join(".phronia", "hooks", "inject-workflow-state.py"),
       JSON.stringify(inputData),
     );
   }
 
   it("[workflow-state] missing/empty workflow.md degrades to generic line (post-R5: no fallback dict)", () => {
     setupTaskRepo();
-    writeSessionContext("session_workflow-a", ".trellis/tasks/issue-106");
+    writeSessionContext("session_workflow-a", ".phronia/tasks/issue-106");
     writeWorkflowStateHook();
     // overwrite workflow.md with empty content (no tag blocks). After
     // v0.5.0-rc.0 the fallback dict was removed — the hook now degrades
@@ -6479,7 +6480,7 @@ print(json.dumps({
 
   it("[workflow-state] in_progress tag in workflow.md mentions Phase 3.4 commit (R1 invariant)", () => {
     setupTaskRepo();
-    writeSessionContext("session_workflow-a", ".trellis/tasks/issue-106");
+    writeSessionContext("session_workflow-a", ".phronia/tasks/issue-106");
     writeWorkflowStateHook();
     // Write a workflow.md containing only the in_progress tag with the
     // canonical Phase 3.4 commit reminder. This guards against future
@@ -6500,7 +6501,7 @@ print(json.dumps({
 
   it("[workflow-state] workflow.md tag overrides hardcoded fallback", () => {
     setupTaskRepo();
-    writeSessionContext("session_workflow-a", ".trellis/tasks/issue-106");
+    writeSessionContext("session_workflow-a", ".phronia/tasks/issue-106");
     writeWorkflowStateHook();
     writeWorkflowMd(
       "[workflow-state:in_progress]\nCUSTOM BODY from workflow.md\n[/workflow-state:in_progress]\n",
@@ -6548,7 +6549,7 @@ print(json.dumps({
 
   it("[workflow-state] custom status with hyphen matches via regex", () => {
     setupTaskRepo();
-    writeSessionContext("session_workflow-a", ".trellis/tasks/issue-106");
+    writeSessionContext("session_workflow-a", ".phronia/tasks/issue-106");
     writeWorkflowStateHook();
     setStatus("in-review");
     writeWorkflowMd(
@@ -6568,7 +6569,7 @@ print(json.dumps({
 
   it("[workflow-state] unknown status with no tag emits generic fallback, not silent", () => {
     setupTaskRepo();
-    writeSessionContext("session_workflow-a", ".trellis/tasks/issue-106");
+    writeSessionContext("session_workflow-a", ".phronia/tasks/issue-106");
     writeWorkflowStateHook();
     setStatus("weirdstate");
     writeWorkflowMd("# no matching tags\n");
@@ -6586,9 +6587,9 @@ print(json.dumps({
     );
   });
 
-  it("[workflow-state] CWD drift: hook finds .trellis/ when invoked from subdirectory", () => {
+  it("[workflow-state] CWD drift: hook finds .phronia/ when invoked from subdirectory", () => {
     setupTaskRepo();
-    writeSessionContext("session_workflow-a", ".trellis/tasks/issue-106");
+    writeSessionContext("session_workflow-a", ".phronia/tasks/issue-106");
     writeWorkflowStateHook();
     // Create a subdirectory and invoke hook with that CWD
     const subDir = path.join(tmpDir, "packages", "cli");
@@ -6604,17 +6605,17 @@ print(json.dumps({
 
   it("[workflow-state] no_task breadcrumb emitted when no session active task exists", () => {
     writeTrellisScripts();
-    writeProjectFile(path.join(".trellis", ".developer"), "name=test\n");
+    writeProjectFile(path.join(".phronia", ".developer"), "name=test\n");
     // Post-R5: breadcrumb body is read exclusively from workflow.md tag
     // blocks. Provide a minimal no_task tag so the test can assert the
     // routing to trellis-brainstorm content surfaces.
     writeProjectFile(
-      path.join(".trellis", "workflow.md"),
+      path.join(".phronia", "workflow.md"),
       "[workflow-state:no_task]\n" +
         "No active task. Load `trellis-brainstorm` skill to start.\n" +
         "[/workflow-state:no_task]\n",
     );
-    writeLegacyCurrentTask(".trellis/tasks/issue-106");
+    writeLegacyCurrentTask(".phronia/tasks/issue-106");
     writeWorkflowStateHook();
     // Legacy repo-global state must not suppress the session no_task breadcrumb.
     const output = runInjectWorkflowState();
@@ -6632,7 +6633,7 @@ print(json.dumps({
 
   it("reports task_error when task.json is malformed", () => {
     setupTaskRepo();
-    writeSessionContext("session_workflow-a", ".trellis/tasks/issue-106");
+    writeSessionContext("session_workflow-a", ".phronia/tasks/issue-106");
     writeWorkflowStateHook();
     writeWorkflowMd(
       "[workflow-state:no_task]\n" +
@@ -6643,7 +6644,7 @@ print(json.dumps({
         "[/workflow-state:task_error]\n",
     );
     writeProjectFile(
-      path.join(".trellis", "tasks", "issue-106", "task.json"),
+      path.join(".phronia", "tasks", "issue-106", "task.json"),
       "{not-json\n",
     );
 
@@ -6659,13 +6660,13 @@ print(json.dumps({
 
   it("reports task_error when task.json has no usable status", () => {
     setupTaskRepo();
-    writeSessionContext("session_workflow-a", ".trellis/tasks/issue-106");
+    writeSessionContext("session_workflow-a", ".phronia/tasks/issue-106");
     writeWorkflowStateHook();
     writeWorkflowMd(
       "[workflow-state:no_task]\nNo active task.\n[/workflow-state:no_task]\n",
     );
     writeProjectFile(
-      path.join(".trellis", "tasks", "issue-106", "task.json"),
+      path.join(".phronia", "tasks", "issue-106", "task.json"),
       JSON.stringify({ title: "Missing status" }),
     );
 
@@ -6681,13 +6682,13 @@ print(json.dumps({
 
   it("reports task_error when task.json is not an object", () => {
     setupTaskRepo();
-    writeSessionContext("session_workflow-a", ".trellis/tasks/issue-106");
+    writeSessionContext("session_workflow-a", ".phronia/tasks/issue-106");
     writeWorkflowStateHook();
     writeWorkflowMd(
       "[workflow-state:task_error]\nRepair the active task record before continuing.\n[/workflow-state:task_error]\n",
     );
     writeProjectFile(
-      path.join(".trellis", "tasks", "issue-106", "task.json"),
+      path.join(".phronia", "tasks", "issue-106", "task.json"),
       "[]",
     );
 
@@ -6726,11 +6727,11 @@ print(json.dumps({
     );
   });
 
-  it("[workflow-state] silent exit 0 when not a Trellis project (no .trellis/ dir)", () => {
-    // No .trellis/ at all — hook should silently exit
+  it("[workflow-state] silent exit 0 when not a Trellis project (no .phronia/ dir)", () => {
+    // No .phronia/ at all — hook should silently exit
     writeWorkflowStateHook();
-    fs.rmSync(path.join(tmpDir, ".trellis"), { recursive: true, force: true });
-    fs.mkdirSync(path.join(tmpDir, ".trellis", "hooks"), { recursive: true });
+    fs.rmSync(path.join(tmpDir, ".phronia"), { recursive: true, force: true });
+    fs.mkdirSync(path.join(tmpDir, ".phronia", "hooks"), { recursive: true });
     fs.copyFileSync(
       path.join(
         __dirname,
@@ -6740,10 +6741,10 @@ print(json.dumps({
         "shared-hooks",
         "inject-workflow-state.py",
       ),
-      path.join(tmpDir, ".trellis", "hooks", "inject-workflow-state.py"),
+      path.join(tmpDir, ".phronia", "hooks", "inject-workflow-state.py"),
     );
-    // Now .trellis/ exists only as a parent for the hook script — need to move
-    // the hook out of .trellis/ so root-finding fails. Use a fully separate dir.
+    // Now .phronia/ exists only as a parent for the hook script — need to move
+    // the hook out of .phronia/ so root-finding fails. Use a fully separate dir.
     const nonTrellisDir = fs.mkdtempSync(
       path.join(os.tmpdir(), "non-trellis-"),
     );
@@ -6777,7 +6778,7 @@ print(json.dumps({
 
     const hookPath = path.join(
       tmpDir,
-      ".trellis",
+      ".phronia",
       "hooks",
       "inject-workflow-state.py",
     );
@@ -6828,13 +6829,13 @@ print(json.dumps({
 
   it("[workflow-v2] task.py create does NOT write legacy current_phase / next_action fields", () => {
     setupTaskRepo();
-    const taskScriptPath = path.join(tmpDir, ".trellis", "scripts", "task.py");
+    const taskScriptPath = path.join(tmpDir, ".phronia", "scripts", "task.py");
     execSync(
       `${pythonCmd} ${JSON.stringify(taskScriptPath)} create "dummy task" --description "regression fixture" --slug dummy-task --assignee test-dev`,
       { cwd: tmpDir, encoding: "utf-8" },
     );
     // Locate the newly created task dir
-    const tasksDir = path.join(tmpDir, ".trellis", "tasks");
+    const tasksDir = path.join(tmpDir, ".phronia", "tasks");
     const newDirs = fs
       .readdirSync(tasksDir)
       .filter((d) => d.includes("dummy-task"));
@@ -6855,12 +6856,12 @@ print(json.dumps({
   it("[init-context-removal] task.py create does NOT seed jsonl when no sub-agent platform configured", () => {
     setupTaskRepo();
     // setupTaskRepo does not create any .{platform}/ dir → agent-less mode
-    const taskScriptPath = path.join(tmpDir, ".trellis", "scripts", "task.py");
+    const taskScriptPath = path.join(tmpDir, ".phronia", "scripts", "task.py");
     execSync(
       `${pythonCmd} ${JSON.stringify(taskScriptPath)} create "plain task" --description "regression fixture" --slug plain-task --assignee test-dev`,
       { cwd: tmpDir, encoding: "utf-8" },
     );
-    const tasksDir = path.join(tmpDir, ".trellis", "tasks");
+    const tasksDir = path.join(tmpDir, ".phronia", "tasks");
     const newDirs = fs
       .readdirSync(tasksDir)
       .filter((d) => d.includes("plain-task"));
@@ -6874,13 +6875,13 @@ print(json.dumps({
     setupTaskRepo();
     // Simulate a Claude Code install
     fs.mkdirSync(path.join(tmpDir, ".claude"), { recursive: true });
-    const taskScriptPath = path.join(tmpDir, ".trellis", "scripts", "task.py");
+    const taskScriptPath = path.join(tmpDir, ".phronia", "scripts", "task.py");
     const output = execSync(
       `${pythonCmd} ${JSON.stringify(taskScriptPath)} create "seeded task" --description "regression fixture" --slug seeded-task --assignee test-dev`,
       { cwd: tmpDir, encoding: "utf-8", stdio: ["pipe", "pipe", "pipe"] },
     );
     expect(output).toBeDefined();
-    const tasksDir = path.join(tmpDir, ".trellis", "tasks");
+    const tasksDir = path.join(tmpDir, ".phronia", "tasks");
     const newDirs = fs
       .readdirSync(tasksDir)
       .filter((d) => d.includes("seeded-task"));
@@ -6899,7 +6900,7 @@ print(json.dumps({
   it("[validation-preflight] task.py create prints jsonl curation instructions instead of writing them into the files", () => {
     setupTaskRepo();
     fs.mkdirSync(path.join(tmpDir, ".claude"), { recursive: true });
-    const taskScriptPath = path.join(tmpDir, ".trellis", "scripts", "task.py");
+    const taskScriptPath = path.join(tmpDir, ".phronia", "scripts", "task.py");
     const result = spawnSync(
       pythonCmd,
       [
@@ -6924,13 +6925,13 @@ print(json.dumps({
   it("[grok] task.py create creates empty jsonl when Grok is the only sub-agent platform", () => {
     setupTaskRepo();
     fs.mkdirSync(path.join(tmpDir, ".grok"), { recursive: true });
-    const taskScriptPath = path.join(tmpDir, ".trellis", "scripts", "task.py");
+    const taskScriptPath = path.join(tmpDir, ".phronia", "scripts", "task.py");
     execSync(
       `${pythonCmd} ${JSON.stringify(taskScriptPath)} create "grok task" --description "regression fixture" --slug grok-task --assignee test-dev`,
       { cwd: tmpDir, encoding: "utf-8", env: sessionEnv() },
     );
 
-    const tasksDir = path.join(tmpDir, ".trellis", "tasks");
+    const tasksDir = path.join(tmpDir, ".phronia", "tasks");
     const taskName = fs
       .readdirSync(tasksDir)
       .find((name) => name.includes("grok-task"));
@@ -6947,13 +6948,13 @@ print(json.dumps({
   it("[kimi] task.py create creates empty jsonl when Kimi is the only sub-agent platform", () => {
     setupTaskRepo();
     fs.mkdirSync(path.join(tmpDir, ".kimi-code"), { recursive: true });
-    const taskScriptPath = path.join(tmpDir, ".trellis", "scripts", "task.py");
+    const taskScriptPath = path.join(tmpDir, ".phronia", "scripts", "task.py");
     execSync(
       `${pythonCmd} ${JSON.stringify(taskScriptPath)} create "kimi task" --description "regression fixture" --slug kimi-task --assignee test-dev`,
       { cwd: tmpDir, encoding: "utf-8", env: sessionEnv() },
     );
 
-    const tasksDir = path.join(tmpDir, ".trellis", "tasks");
+    const tasksDir = path.join(tmpDir, ".phronia", "tasks");
     const taskName = fs
       .readdirSync(tasksDir)
       .find((name) => name.includes("kimi-task"));
@@ -6971,7 +6972,7 @@ print(json.dumps({
     setupTaskRepo();
     fs.mkdirSync(path.join(tmpDir, ".codex"), { recursive: true });
     writeConfigYaml("codex:\n  dispatch_mode: inline\n");
-    const taskScriptPath = path.join(tmpDir, ".trellis", "scripts", "task.py");
+    const taskScriptPath = path.join(tmpDir, ".phronia", "scripts", "task.py");
     execSync(
       `${pythonCmd} ${JSON.stringify(taskScriptPath)} create "codex inline task" --description "regression fixture" --slug codex-inline-task --assignee test-dev`,
       { cwd: tmpDir, encoding: "utf-8" },
@@ -6979,10 +6980,10 @@ print(json.dumps({
 
     const taskDir = path.join(
       tmpDir,
-      ".trellis",
+      ".phronia",
       "tasks",
       fs
-        .readdirSync(path.join(tmpDir, ".trellis", "tasks"))
+        .readdirSync(path.join(tmpDir, ".phronia", "tasks"))
         .find((d) => d.includes("codex-inline-task")) as string,
     );
     expect(fs.existsSync(path.join(taskDir, "implement.jsonl"))).toBe(false);
@@ -6993,10 +6994,10 @@ print(json.dumps({
     setupTaskRepo();
     fs.mkdirSync(path.join(tmpDir, ".codex"), { recursive: true });
     writeProjectFile(
-      path.join(".trellis", "config.yaml"),
+      path.join(".phronia", "config.yaml"),
       "codex:\n  dispatch_mode: sub-agent  # opt into trellis-* sub-agents\n",
     );
-    const taskScriptPath = path.join(tmpDir, ".trellis", "scripts", "task.py");
+    const taskScriptPath = path.join(tmpDir, ".phronia", "scripts", "task.py");
     execSync(
       `${pythonCmd} ${JSON.stringify(taskScriptPath)} create "codex subagent task" --description "regression fixture" --slug codex-subagent-task --assignee test-dev`,
       { cwd: tmpDir, encoding: "utf-8" },
@@ -7004,10 +7005,10 @@ print(json.dumps({
 
     const taskDir = path.join(
       tmpDir,
-      ".trellis",
+      ".phronia",
       "tasks",
       fs
-        .readdirSync(path.join(tmpDir, ".trellis", "tasks"))
+        .readdirSync(path.join(tmpDir, ".phronia", "tasks"))
         .find((d) => d.includes("codex-subagent-task")) as string,
     );
     for (const jsonlName of ["implement.jsonl", "check.jsonl"]) {
@@ -7019,12 +7020,12 @@ print(json.dumps({
 
   it("[init-context-removal] task.py init-context is deprecated with clear pointer to planning artifacts", () => {
     setupTaskRepo();
-    const taskScriptPath = path.join(tmpDir, ".trellis", "scripts", "task.py");
+    const taskScriptPath = path.join(tmpDir, ".phronia", "scripts", "task.py");
     let threw = false;
     let stderr = "";
     try {
       execSync(
-        `${pythonCmd} ${JSON.stringify(taskScriptPath)} init-context .trellis/tasks/issue-106 fullstack`,
+        `${pythonCmd} ${JSON.stringify(taskScriptPath)} init-context .phronia/tasks/issue-106 fullstack`,
         { cwd: tmpDir, encoding: "utf-8" },
       );
     } catch (err) {
@@ -7081,16 +7082,16 @@ print(len(entries))
   it("[#573] task.py validate fails for a freshly created task until manifests are curated", () => {
     setupTaskRepo();
     fs.mkdirSync(path.join(tmpDir, ".claude"), { recursive: true });
-    const taskScriptPath = path.join(tmpDir, ".trellis", "scripts", "task.py");
+    const taskScriptPath = path.join(tmpDir, ".phronia", "scripts", "task.py");
     execSync(
       `${pythonCmd} ${JSON.stringify(taskScriptPath)} create "seed-only" --description "regression fixture" --slug seed-only-task --assignee test-dev`,
       { cwd: tmpDir, encoding: "utf-8" },
     );
     const taskDir = fs
-      .readdirSync(path.join(tmpDir, ".trellis", "tasks"))
+      .readdirSync(path.join(tmpDir, ".phronia", "tasks"))
       .find((d) => d.includes("seed-only-task"));
     expect(taskDir).toBeDefined();
-    const relTaskDir = path.posix.join(".trellis", "tasks", taskDir as string);
+    const relTaskDir = path.posix.join(".phronia", "tasks", taskDir as string);
 
     const result = spawnSync(
       pythonCmd,
@@ -7114,14 +7115,14 @@ print(len(entries))
     // Curated row for the manifest not under test: an empty manifest is
     // itself an error since #573, which would obscure the count under test.
     const curatedRow =
-      '{"file":".trellis/spec/guides/index.md","reason":"guideline"}\n';
+      '{"file":".phronia/spec/guides/index.md","reason":"guideline"}\n';
 
     function validateWith(
       implementContent: string,
       checkContent: string,
     ): ReturnType<typeof spawnSync> {
       setupTaskRepo();
-      const taskDir = path.join(tmpDir, ".trellis", "tasks", "issue-106");
+      const taskDir = path.join(tmpDir, ".phronia", "tasks", "issue-106");
       fs.writeFileSync(
         path.join(taskDir, "implement.jsonl"),
         implementContent,
@@ -7132,10 +7133,10 @@ print(len(entries))
         checkContent,
         "utf-8",
       );
-      const taskScriptPath = path.join(tmpDir, ".trellis", "scripts", "task.py");
+      const taskScriptPath = path.join(tmpDir, ".phronia", "scripts", "task.py");
       return spawnSync(
         pythonCmd,
-        [taskScriptPath, "validate", ".trellis/tasks/issue-106"],
+        [taskScriptPath, "validate", ".phronia/tasks/issue-106"],
         { cwd: tmpDir, encoding: "utf-8", env: sessionEnv() },
       );
     }
@@ -7181,15 +7182,15 @@ print(len(entries))
 
     it("passes for curated entries pointing at real files", () => {
       setupTaskRepo();
-      const taskDir = path.join(tmpDir, ".trellis", "tasks", "issue-106");
+      const taskDir = path.join(tmpDir, ".phronia", "tasks", "issue-106");
       const curated =
-        '{"file":".trellis/spec/guides/index.md","reason":"guideline"}\n';
+        '{"file":".phronia/spec/guides/index.md","reason":"guideline"}\n';
       fs.writeFileSync(path.join(taskDir, "implement.jsonl"), curated, "utf-8");
       fs.writeFileSync(path.join(taskDir, "check.jsonl"), curated, "utf-8");
-      const taskScriptPath = path.join(tmpDir, ".trellis", "scripts", "task.py");
+      const taskScriptPath = path.join(tmpDir, ".phronia", "scripts", "task.py");
       const result = spawnSync(
         pythonCmd,
-        [taskScriptPath, "validate", ".trellis/tasks/issue-106"],
+        [taskScriptPath, "validate", ".phronia/tasks/issue-106"],
         { cwd: tmpDir, encoding: "utf-8", env: sessionEnv() },
       );
       expect(result.status).toBe(0);
@@ -7220,29 +7221,29 @@ print(len(entries))
       // Same wrong-shape rows as the validate case above — list-context is a
       // read-only listing, so it skips them and still lists curated entries.
       setupTaskRepo();
-      const taskDir = path.join(tmpDir, ".trellis", "tasks", "issue-106");
+      const taskDir = path.join(tmpDir, ".phronia", "tasks", "issue-106");
       fs.writeFileSync(
         path.join(taskDir, "implement.jsonl"),
-        '"just a string"\n[1, 2]\nnull\n{"file":".trellis/spec/guides/index.md","reason":"guideline"}\n',
+        '"just a string"\n[1, 2]\nnull\n{"file":".phronia/spec/guides/index.md","reason":"guideline"}\n',
         "utf-8",
       );
       fs.writeFileSync(path.join(taskDir, "check.jsonl"), "", "utf-8");
-      const taskScriptPath = path.join(tmpDir, ".trellis", "scripts", "task.py");
+      const taskScriptPath = path.join(tmpDir, ".phronia", "scripts", "task.py");
       const result = spawnSync(
         pythonCmd,
-        [taskScriptPath, "list-context", ".trellis/tasks/issue-106"],
+        [taskScriptPath, "list-context", ".phronia/tasks/issue-106"],
         { cwd: tmpDir, encoding: "utf-8", env: sessionEnv() },
       );
       expect(result.status).toBe(0);
       expect(result.stderr).not.toContain("Traceback");
-      expect(result.stdout).toContain(".trellis/spec/guides/index.md");
+      expect(result.stdout).toContain(".phronia/spec/guides/index.md");
     });
 
     it("rejects a placeholder row inside an archived task", () => {
       setupTaskRepo();
       const archivedDir = path.join(
         tmpDir,
-        ".trellis",
+        ".phronia",
         "tasks",
         "archive",
         "2026-07",
@@ -7259,13 +7260,13 @@ print(len(entries))
         "utf-8",
       );
       fs.writeFileSync(path.join(archivedDir, "check.jsonl"), "", "utf-8");
-      const taskScriptPath = path.join(tmpDir, ".trellis", "scripts", "task.py");
+      const taskScriptPath = path.join(tmpDir, ".phronia", "scripts", "task.py");
       const result = spawnSync(
         pythonCmd,
         [
           taskScriptPath,
           "validate",
-          ".trellis/tasks/archive/2026-07/07-01-archived-task",
+          ".phronia/tasks/archive/2026-07/07-01-archived-task",
         ],
         { cwd: tmpDir, encoding: "utf-8", env: sessionEnv() },
       );
@@ -7276,10 +7277,10 @@ print(len(entries))
 
   describe("[#573] task.py start seed-only context gate", () => {
     const curatedRow =
-      '{"file":".trellis/spec/guides/index.md","reason":"guideline"}\n';
+      '{"file":".phronia/spec/guides/index.md","reason":"guideline"}\n';
 
     function writeManifests(implement: string | null, check: string | null): void {
-      const taskDir = path.join(tmpDir, ".trellis", "tasks", "issue-106");
+      const taskDir = path.join(tmpDir, ".phronia", "tasks", "issue-106");
       if (implement !== null) {
         fs.writeFileSync(path.join(taskDir, "implement.jsonl"), implement, "utf-8");
       }
@@ -7289,10 +7290,10 @@ print(len(entries))
     }
 
     function runStart(...extra: string[]): ReturnType<typeof spawnSync> {
-      const taskScriptPath = path.join(tmpDir, ".trellis", "scripts", "task.py");
+      const taskScriptPath = path.join(tmpDir, ".phronia", "scripts", "task.py");
       return spawnSync(
         pythonCmd,
-        [taskScriptPath, "start", ".trellis/tasks/issue-106", ...extra],
+        [taskScriptPath, "start", ".phronia/tasks/issue-106", ...extra],
         {
           cwd: tmpDir,
           encoding: "utf-8",
@@ -7352,16 +7353,16 @@ print(len(entries))
   it("[init-context-removal] task.py list-context prints 'no curated entries yet' for uncurated jsonl", () => {
     setupTaskRepo();
     fs.mkdirSync(path.join(tmpDir, ".claude"), { recursive: true });
-    const taskScriptPath = path.join(tmpDir, ".trellis", "scripts", "task.py");
+    const taskScriptPath = path.join(tmpDir, ".phronia", "scripts", "task.py");
     execSync(
       `${pythonCmd} ${JSON.stringify(taskScriptPath)} create "seed-list" --description "regression fixture" --slug seed-list-task --assignee test-dev`,
       { cwd: tmpDir, encoding: "utf-8" },
     );
     const taskDir = fs
-      .readdirSync(path.join(tmpDir, ".trellis", "tasks"))
+      .readdirSync(path.join(tmpDir, ".phronia", "tasks"))
       .find((d) => d.includes("seed-list-task"));
     expect(taskDir).toBeDefined();
-    const relTaskDir = path.posix.join(".trellis", "tasks", taskDir as string);
+    const relTaskDir = path.posix.join(".phronia", "tasks", taskDir as string);
 
     const result = execSync(
       `${pythonCmd} ${JSON.stringify(taskScriptPath)} list-context ${relTaskDir}`,
@@ -7655,15 +7656,15 @@ print(len(entries))
 
   it("[workflow-v2] get_context.py --mode phase returns compact Phase Index only", () => {
     writeTrellisScripts();
-    writeProjectFile(path.join(".trellis", ".developer"), "name=test\n");
+    writeProjectFile(path.join(".phronia", ".developer"), "name=test\n");
     writeProjectFile(
-      path.join(".trellis", "workflow.md"),
+      path.join(".phronia", "workflow.md"),
       templateWorkflowMd(),
     );
 
     const contextScript = path.join(
       tmpDir,
-      ".trellis",
+      ".phronia",
       "scripts",
       "get_context.py",
     );
@@ -7683,9 +7684,9 @@ print(len(entries))
 
   it("[workflow-v2] --mode phase --platform codex (sub-agent mode) filters out generic before-dev routing", () => {
     writeTrellisScripts();
-    writeProjectFile(path.join(".trellis", ".developer"), "name=test\n");
+    writeProjectFile(path.join(".phronia", ".developer"), "name=test\n");
     writeProjectFile(
-      path.join(".trellis", "workflow.md"),
+      path.join(".phronia", "workflow.md"),
       templateWorkflowMd(),
     );
     // Codex defaults to inline since 0.5.9; opt into sub-agent dispatch
@@ -7694,7 +7695,7 @@ print(len(entries))
 
     const contextScript = path.join(
       tmpDir,
-      ".trellis",
+      ".phronia",
       "scripts",
       "get_context.py",
     );
@@ -7712,15 +7713,15 @@ print(len(entries))
 
   it("[pi] --mode phase --platform pi uses sub-agent routing", () => {
     writeTrellisScripts();
-    writeProjectFile(path.join(".trellis", ".developer"), "name=test\n");
+    writeProjectFile(path.join(".phronia", ".developer"), "name=test\n");
     writeProjectFile(
-      path.join(".trellis", "workflow.md"),
+      path.join(".phronia", "workflow.md"),
       templateWorkflowMd(),
     );
 
     const contextScript = path.join(
       tmpDir,
-      ".trellis",
+      ".phronia",
       "scripts",
       "get_context.py",
     );
@@ -7739,14 +7740,14 @@ print(len(entries))
 
   it("[workflow-v2] step 2.1 for Codex describes native hook injection with child-side fallback", () => {
     writeTrellisScripts();
-    writeProjectFile(path.join(".trellis", ".developer"), "name=test\n");
+    writeProjectFile(path.join(".phronia", ".developer"), "name=test\n");
     writeProjectFile(
-      path.join(".trellis", "workflow.md"),
+      path.join(".phronia", "workflow.md"),
       templateWorkflowMd(),
     );
     const contextScript = path.join(
       tmpDir,
-      ".trellis",
+      ".phronia",
       "scripts",
       "get_context.py",
     );
@@ -7767,15 +7768,15 @@ print(len(entries))
 
   it("[pi] step 2.1 describes extension-backed sub-agent context path", () => {
     writeTrellisScripts();
-    writeProjectFile(path.join(".trellis", ".developer"), "name=test\n");
+    writeProjectFile(path.join(".phronia", ".developer"), "name=test\n");
     writeProjectFile(
-      path.join(".trellis", "workflow.md"),
+      path.join(".phronia", "workflow.md"),
       templateWorkflowMd(),
     );
 
     const contextScript = path.join(
       tmpDir,
-      ".trellis",
+      ".phronia",
       "scripts",
       "get_context.py",
     );
@@ -7794,15 +7795,15 @@ print(len(entries))
     // Symmetric to the codex filter test: agent-less platforms MUST still
     // see `trellis-before-dev` because they write code in the main session.
     writeTrellisScripts();
-    writeProjectFile(path.join(".trellis", ".developer"), "name=test\n");
+    writeProjectFile(path.join(".phronia", ".developer"), "name=test\n");
     writeProjectFile(
-      path.join(".trellis", "workflow.md"),
+      path.join(".phronia", "workflow.md"),
       templateWorkflowMd(),
     );
 
     const contextScript = path.join(
       tmpDir,
-      ".trellis",
+      ".phronia",
       "scripts",
       "get_context.py",
     );
@@ -7821,9 +7822,9 @@ print(len(entries))
 
   it("[workflow-v2] session-start.py <trellis-workflow> block contains compact Phase Index", () => {
     writeTrellisScripts();
-    writeProjectFile(path.join(".trellis", ".developer"), "name=test\n");
+    writeProjectFile(path.join(".phronia", ".developer"), "name=test\n");
     writeProjectFile(
-      path.join(".trellis", "workflow.md"),
+      path.join(".phronia", "workflow.md"),
       templateWorkflowMd(),
     );
     writeProjectFile(
@@ -7860,19 +7861,19 @@ print(len(entries))
 
   it("[workflow-v2] session-start.py <guidelines> block lists context order and spec paths", () => {
     writeTrellisScripts();
-    writeProjectFile(path.join(".trellis", ".developer"), "name=test\n");
+    writeProjectFile(path.join(".phronia", ".developer"), "name=test\n");
     writeProjectFile(
-      path.join(".trellis", "workflow.md"),
+      path.join(".phronia", "workflow.md"),
       templateWorkflowMd(),
     );
     // Guides are no longer inlined in compact SessionStart.
     writeProjectFile(
-      path.join(".trellis", "spec", "guides", "index.md"),
+      path.join(".phronia", "spec", "guides", "index.md"),
       "# Thinking Guides\n\nGUIDES_INLINE_MARKER\n",
     );
     // Package index — must be paths-only (content should NOT appear)
     writeProjectFile(
-      path.join(".trellis", "spec", "cli", "backend", "index.md"),
+      path.join(".phronia", "spec", "cli", "backend", "index.md"),
       "# Backend\n\nBACKEND_INDEX_CONTENT_SHOULD_NOT_APPEAR\n",
     );
     writeProjectFile(
@@ -7895,7 +7896,7 @@ print(len(entries))
 
     expect(guidelinesBlock).toContain("Task context order");
     expect(guidelinesBlock).not.toContain("GUIDES_INLINE_MARKER");
-    expect(guidelinesBlock).toContain(".trellis/spec/cli/backend/index.md");
+    expect(guidelinesBlock).toContain(".phronia/spec/cli/backend/index.md");
     expect(guidelinesBlock).not.toContain(
       "BACKEND_INDEX_CONTENT_SHOULD_NOT_APPEAR",
     );
@@ -7914,14 +7915,14 @@ print(len(entries))
     )?.content;
 
     writeTrellisScripts();
-    writeProjectFile(path.join(".trellis", ".developer"), "name=test\n");
-    writeProjectFile(path.join(".trellis", "workflow.md"), "# Minimal\n");
+    writeProjectFile(path.join(".phronia", ".developer"), "name=test\n");
+    writeProjectFile(path.join(".phronia", "workflow.md"), "# Minimal\n");
     // Session active task WITHOUT current_phase field (post-migration state)
     writeProjectFile(
-      path.join(".trellis", ".runtime", "sessions", "claude_phase-a.json"),
+      path.join(".phronia", ".runtime", "sessions", "claude_phase-a.json"),
       JSON.stringify(
         {
-          current_task: ".trellis/tasks/issue-106",
+          current_task: ".phronia/tasks/issue-106",
           platform: "claude",
         },
         null,
@@ -7929,7 +7930,7 @@ print(len(entries))
       ),
     );
     writeProjectFile(
-      path.join(".trellis", "tasks", "issue-106", "task.json"),
+      path.join(".phronia", "tasks", "issue-106", "task.json"),
       JSON.stringify(
         {
           id: "issue-106",
@@ -7942,11 +7943,11 @@ print(len(entries))
       ),
     );
     writeProjectFile(
-      path.join(".trellis", "tasks", "issue-106", "prd.md"),
+      path.join(".phronia", "tasks", "issue-106", "prd.md"),
       "# PRD\n",
     );
     writeProjectFile(
-      path.join(".trellis", "tasks", "issue-106", "implement.jsonl"),
+      path.join(".phronia", "tasks", "issue-106", "implement.jsonl"),
       '{"file":"src/example.ts","reason":"spec"}\n',
     );
     writeProjectFile(
@@ -7972,7 +7973,7 @@ print(len(entries))
     // Assert task.json is NOT modified with current_phase
     const taskJson = JSON.parse(
       fs.readFileSync(
-        path.join(tmpDir, ".trellis", "tasks", "issue-106", "task.json"),
+        path.join(tmpDir, ".phronia", "tasks", "issue-106", "task.json"),
         "utf-8",
       ),
     ) as Record<string, unknown>;
@@ -8007,15 +8008,15 @@ print(len(entries))
   }
 
   function writeConfigYaml(content: string): void {
-    writeProjectFile(path.join(".trellis", "config.yaml"), content);
+    writeProjectFile(path.join(".phronia", "config.yaml"), content);
   }
 
   it("[issue-codex-dispatch-mode] codex breadcrumb defaults to native auto dispatch when config absent", () => {
     setupTaskRepo();
-    writeSessionContext("codex_workflow-a", ".trellis/tasks/issue-106");
+    writeSessionContext("codex_workflow-a", ".phronia/tasks/issue-106");
     const codexHookPath = writeCodexInjectHook();
     writeProjectFile(
-      path.join(".trellis", "workflow.md"),
+      path.join(".phronia", "workflow.md"),
       "[workflow-state:in_progress]\n" +
         "DISPATCH the trellis-implement / trellis-check sub-agents.\n" +
         "[/workflow-state:in_progress]\n" +
@@ -8037,10 +8038,10 @@ print(len(entries))
 
   it("[issue-codex-dispatch-mode] codex breadcrumb routes to plain status when codex.dispatch_mode=sub-agent", () => {
     setupTaskRepo();
-    writeSessionContext("codex_workflow-a", ".trellis/tasks/issue-106");
+    writeSessionContext("codex_workflow-a", ".phronia/tasks/issue-106");
     const codexHookPath = writeCodexInjectHook();
     writeProjectFile(
-      path.join(".trellis", "workflow.md"),
+      path.join(".phronia", "workflow.md"),
       "[workflow-state:in_progress]\n" +
         "DISPATCH the trellis-implement / trellis-check sub-agents.\n" +
         "[/workflow-state:in_progress]\n" +
@@ -8063,10 +8064,10 @@ print(len(entries))
 
   it("[issue-codex-dispatch-mode] codex breadcrumb routes to inline tag when codex.dispatch_mode=inline", () => {
     setupTaskRepo();
-    writeSessionContext("codex_workflow-a", ".trellis/tasks/issue-106");
+    writeSessionContext("codex_workflow-a", ".phronia/tasks/issue-106");
     const codexHookPath = writeCodexInjectHook();
     writeProjectFile(
-      path.join(".trellis", "workflow.md"),
+      path.join(".phronia", "workflow.md"),
       "[workflow-state:in_progress]\n" +
         "DISPATCH the trellis-implement / trellis-check sub-agents.\n" +
         "[/workflow-state:in_progress]\n" +
@@ -8090,7 +8091,7 @@ print(len(entries))
 
   it("[issue-codex-dispatch-mode] non-codex platform ignores codex.dispatch_mode=inline", () => {
     setupTaskRepo();
-    writeSessionContext("claude_workflow-a", ".trellis/tasks/issue-106");
+    writeSessionContext("claude_workflow-a", ".phronia/tasks/issue-106");
     // Hook installed under .claude/ — _detect_platform returns "claude".
     const claudeHookPath = path.join(
       ".claude",
@@ -8102,7 +8103,7 @@ print(len(entries))
       expectTemplateContent(injectWorkflowStateScript, "inject-workflow-state"),
     );
     writeProjectFile(
-      path.join(".trellis", "workflow.md"),
+      path.join(".phronia", "workflow.md"),
       "[workflow-state:in_progress]\n" +
         "DISPATCH the trellis-implement / trellis-check sub-agents.\n" +
         "[/workflow-state:in_progress]\n" +
@@ -8125,16 +8126,16 @@ print(len(entries))
 
   it("[issue-codex-dispatch-mode] get_context.py --platform codex swaps to inline block content", () => {
     writeTrellisScripts();
-    writeProjectFile(path.join(".trellis", ".developer"), "name=test\n");
+    writeProjectFile(path.join(".phronia", ".developer"), "name=test\n");
     writeProjectFile(
-      path.join(".trellis", "workflow.md"),
+      path.join(".phronia", "workflow.md"),
       templateWorkflowMd(),
     );
     writeConfigYaml("codex:\n  dispatch_mode: inline\n");
 
     const contextScript = path.join(
       tmpDir,
-      ".trellis",
+      ".phronia",
       "scripts",
       "get_context.py",
     );
@@ -8157,7 +8158,7 @@ print(len(entries))
     // rather than retesting an inline copy.
     writeTrellisScripts();
     writeProjectFile(
-      path.join(".trellis", "hooks", "inject-workflow-state.py"),
+      path.join(".phronia", "hooks", "inject-workflow-state.py"),
       expectTemplateContent(injectWorkflowStateScript, "inject-workflow-state"),
     );
     const probePath = path.join(tmpDir, "probe_breadcrumb.py");
@@ -8167,7 +8168,7 @@ print(len(entries))
         "import importlib.util, json, sys",
         "from pathlib import Path",
         `hook_path = Path(${JSON.stringify(
-          path.join(tmpDir, ".trellis", "hooks", "inject-workflow-state.py"),
+          path.join(tmpDir, ".phronia", "hooks", "inject-workflow-state.py"),
         )})`,
         "spec = importlib.util.spec_from_file_location('iws', hook_path)",
         "mod = importlib.util.module_from_spec(spec)",
@@ -8212,7 +8213,7 @@ print(len(entries))
     setupTaskRepo();
     writeTrellisScripts();
     writeProjectFile(
-      path.join(".trellis", "hooks", "trellis_config.py"),
+      path.join(".phronia", "hooks", "trellis_config.py"),
       expectTemplateContent(
         getAllScripts().get("common/trellis_config.py") ?? "",
         "trellis_config",
@@ -8225,7 +8226,7 @@ print(len(entries))
         "import importlib.util, json, sys",
         "from pathlib import Path",
         `hook_path = Path(${JSON.stringify(
-          path.join(tmpDir, ".trellis", "hooks", "trellis_config.py"),
+          path.join(tmpDir, ".phronia", "hooks", "trellis_config.py"),
         )})`,
         "spec = importlib.util.spec_from_file_location('tc', hook_path)",
         "mod = importlib.util.module_from_spec(spec)",
@@ -8256,7 +8257,7 @@ print(len(entries))
       probePath,
       [
         "import sys, json",
-        `sys.path.insert(0, ${JSON.stringify(path.join(tmpDir, ".trellis", "scripts"))})`,
+        `sys.path.insert(0, ${JSON.stringify(path.join(tmpDir, ".phronia", "scripts"))})`,
         "from common.workflow_phase import resolve_effective_platform",
         "result = {",
         "  'codex_default': resolve_effective_platform('codex', {}),",
@@ -8299,7 +8300,7 @@ print(len(entries))
 
   it("[issue-codex-dispatch-mode] codex hook injects <codex-mode> banner reflecting dispatch_mode", () => {
     setupTaskRepo();
-    writeSessionContext("session_workflow-a", ".trellis/tasks/issue-106");
+    writeSessionContext("session_workflow-a", ".phronia/tasks/issue-106");
     const codexHookPath = path.join(
       ".codex",
       "hooks",
@@ -8310,7 +8311,7 @@ print(len(entries))
       expectTemplateContent(injectWorkflowStateScript, "inject-workflow-state"),
     );
     writeProjectFile(
-      path.join(".trellis", "workflow.md"),
+      path.join(".phronia", "workflow.md"),
       "[workflow-state:in_progress]\nDISPATCH the trellis-implement.\n[/workflow-state:in_progress]\n[workflow-state:in_progress-inline]\nMAIN SESSION inline edit.\n[/workflow-state:in_progress-inline]\n",
     );
 
@@ -8340,7 +8341,7 @@ print(len(entries))
 
   it("[issue-codex-dispatch-mode] non-codex hook does NOT inject <codex-mode> banner", () => {
     setupTaskRepo();
-    writeSessionContext("session_workflow-a", ".trellis/tasks/issue-106");
+    writeSessionContext("session_workflow-a", ".phronia/tasks/issue-106");
     // Hook installed under .claude/ — _detect_platform returns "claude".
     const claudeHookPath = path.join(
       ".claude",
@@ -8352,7 +8353,7 @@ print(len(entries))
       expectTemplateContent(injectWorkflowStateScript, "inject-workflow-state"),
     );
     writeProjectFile(
-      path.join(".trellis", "workflow.md"),
+      path.join(".phronia", "workflow.md"),
       "[workflow-state:in_progress]\nDISPATCH the trellis-implement.\n[/workflow-state:in_progress]\n",
     );
     writeConfigYaml("codex:\n  dispatch_mode: inline\n");
@@ -8370,7 +8371,7 @@ print(len(entries))
 
   it("[issue-395] task.py list --json emits a stable machine-readable schema", () => {
     setupTaskRepo();
-    const taskScriptPath = path.join(tmpDir, ".trellis", "scripts", "task.py");
+    const taskScriptPath = path.join(tmpDir, ".phronia", "scripts", "task.py");
 
     const output = execSync(
       `${pythonCmd} ${JSON.stringify(taskScriptPath)} list --json`,
@@ -8390,7 +8391,7 @@ print(len(entries))
     };
     expect(parsed.tasks).toHaveLength(1);
     expect(parsed.tasks[0]).toMatchObject({
-      dir: ".trellis/tasks/issue-106",
+      dir: ".phronia/tasks/issue-106",
       title: "Issue 106 task",
       status: "in_progress",
       parent: null,
@@ -8400,7 +8401,7 @@ print(len(entries))
 
   it("[issue-395] task.py current --json reports null when no task is active", () => {
     setupTaskRepo();
-    const taskScriptPath = path.join(tmpDir, ".trellis", "scripts", "task.py");
+    const taskScriptPath = path.join(tmpDir, ".phronia", "scripts", "task.py");
 
     const result = spawnSync(pythonCmd, [taskScriptPath, "current", "--json"], {
       cwd: tmpDir,
@@ -8415,10 +8416,10 @@ print(len(entries))
 
   it("[issue-395] task.py current --json reports the active task object", () => {
     setupTaskRepo();
-    const taskScriptPath = path.join(tmpDir, ".trellis", "scripts", "task.py");
+    const taskScriptPath = path.join(tmpDir, ".phronia", "scripts", "task.py");
 
     execSync(
-      `${pythonCmd} ${JSON.stringify(taskScriptPath)} start ${JSON.stringify(".trellis/tasks/issue-106")}`,
+      `${pythonCmd} ${JSON.stringify(taskScriptPath)} start ${JSON.stringify(".phronia/tasks/issue-106")}`,
       {
         cwd: tmpDir,
         encoding: "utf-8",
@@ -8439,7 +8440,7 @@ print(len(entries))
       current_task: { dir: string; title: string; status: string } | null;
     };
     expect(parsed.current_task).toMatchObject({
-      dir: ".trellis/tasks/issue-106",
+      dir: ".phronia/tasks/issue-106",
       title: "Issue 106 task",
       status: "in_progress",
     });
@@ -8470,19 +8471,19 @@ print(len(entries))
     );
     execSync("git checkout -q -b feature/some-work", { cwd: tmpDir });
 
-    const taskScriptPath = path.join(tmpDir, ".trellis", "scripts", "task.py");
+    const taskScriptPath = path.join(tmpDir, ".phronia", "scripts", "task.py");
     execSync(
       `${pythonCmd} ${JSON.stringify(taskScriptPath)} create "base branch test" --description "regression fixture" --slug base-branch-test --assignee test-dev --no-start`,
       { cwd: tmpDir, encoding: "utf-8", env: sessionEnv() },
     );
 
     const taskDir = fs
-      .readdirSync(path.join(tmpDir, ".trellis", "tasks"))
+      .readdirSync(path.join(tmpDir, ".phronia", "tasks"))
       .find((d) => d.includes("base-branch-test"));
     expect(taskDir).toBeDefined();
     const taskJson = JSON.parse(
       fs.readFileSync(
-        path.join(tmpDir, ".trellis", "tasks", taskDir as string, "task.json"),
+        path.join(tmpDir, ".phronia", "tasks", taskDir as string, "task.json"),
         "utf-8",
       ),
     ) as { base_branch: string };
@@ -8500,7 +8501,7 @@ print(len(entries))
     execSync("git commit -q -m init", { cwd: tmpDir });
     // No origin remote configured at all.
 
-    const taskScriptPath = path.join(tmpDir, ".trellis", "scripts", "task.py");
+    const taskScriptPath = path.join(tmpDir, ".phronia", "scripts", "task.py");
     const result = spawnSync(
       pythonCmd,
       [
@@ -8526,11 +8527,11 @@ print(len(entries))
     expect(result.stderr).toContain("solo-branch");
 
     const taskDir = fs
-      .readdirSync(path.join(tmpDir, ".trellis", "tasks"))
+      .readdirSync(path.join(tmpDir, ".phronia", "tasks"))
       .find((d) => d.includes("no-remote-test"));
     const taskJson = JSON.parse(
       fs.readFileSync(
-        path.join(tmpDir, ".trellis", "tasks", taskDir as string, "task.json"),
+        path.join(tmpDir, ".phronia", "tasks", taskDir as string, "task.json"),
         "utf-8",
       ),
     ) as { base_branch: string };
@@ -8546,7 +8547,7 @@ print(len(entries))
     execSync("git commit -q -m init", { cwd: tmpDir });
     // No origin remote configured at all — would otherwise fall back with a warning.
 
-    const taskScriptPath = path.join(tmpDir, ".trellis", "scripts", "task.py");
+    const taskScriptPath = path.join(tmpDir, ".phronia", "scripts", "task.py");
     const result = spawnSync(
       pythonCmd,
       [
@@ -8571,12 +8572,12 @@ print(len(entries))
     );
 
     const taskDir = fs
-      .readdirSync(path.join(tmpDir, ".trellis", "tasks"))
+      .readdirSync(path.join(tmpDir, ".phronia", "tasks"))
       .find((d) => d.includes("explicit-base-branch-test"));
     expect(taskDir).toBeDefined();
     const taskJson = JSON.parse(
       fs.readFileSync(
-        path.join(tmpDir, ".trellis", "tasks", taskDir as string, "task.json"),
+        path.join(tmpDir, ".phronia", "tasks", taskDir as string, "task.json"),
         "utf-8",
       ),
     ) as { base_branch: string };
@@ -8593,7 +8594,7 @@ print(len(entries))
 
     const taskJsonPath = path.join(
       tmpDir,
-      ".trellis",
+      ".phronia",
       "tasks",
       "issue-106",
       "task.json",
@@ -8602,10 +8603,10 @@ print(len(entries))
     data.branch = "task/deleted-branch-does-not-exist";
     fs.writeFileSync(taskJsonPath, JSON.stringify(data, null, 2));
 
-    const taskScriptPath = path.join(tmpDir, ".trellis", "scripts", "task.py");
+    const taskScriptPath = path.join(tmpDir, ".phronia", "scripts", "task.py");
     const result = spawnSync(
       pythonCmd,
-      [taskScriptPath, "validate", ".trellis/tasks/issue-106"],
+      [taskScriptPath, "validate", ".phronia/tasks/issue-106"],
       { cwd: tmpDir, encoding: "utf-8", env: sessionEnv() },
     );
 
@@ -8624,7 +8625,7 @@ print(len(entries))
 
     const taskJsonPath = path.join(
       tmpDir,
-      ".trellis",
+      ".phronia",
       "tasks",
       "issue-106",
       "task.json",
@@ -8633,10 +8634,10 @@ print(len(entries))
     data.branch = "task/deleted-branch-does-not-exist";
     fs.writeFileSync(taskJsonPath, JSON.stringify(data, null, 2));
 
-    const taskScriptPath = path.join(tmpDir, ".trellis", "scripts", "task.py");
+    const taskScriptPath = path.join(tmpDir, ".phronia", "scripts", "task.py");
     const result = spawnSync(
       pythonCmd,
-      [taskScriptPath, "archive", ".trellis/tasks/issue-106", "--no-commit"],
+      [taskScriptPath, "archive", ".phronia/tasks/issue-106", "--no-commit"],
       { cwd: tmpDir, encoding: "utf-8", env: sessionEnv() },
     );
 
@@ -8664,7 +8665,7 @@ print(len(entries))
   function patchIssue106Task(fields: Record<string, unknown>): string {
     const taskJsonPath = path.join(
       tmpDir,
-      ".trellis",
+      ".phronia",
       "tasks",
       "issue-106",
       "task.json",
@@ -8680,7 +8681,7 @@ print(len(entries))
   function readIssue106Task(): { branch: string | null; status: string } {
     return JSON.parse(
       fs.readFileSync(
-        path.join(tmpDir, ".trellis", "tasks", "issue-106", "task.json"),
+        path.join(tmpDir, ".phronia", "tasks", "issue-106", "task.json"),
         "utf-8",
       ),
     );
@@ -8692,10 +8693,10 @@ print(len(entries))
     execSync("git checkout -q -b feature/record-me", { cwd: tmpDir });
     patchIssue106Task({ status: "planning", branch: null, base_branch: "main" });
 
-    const taskScriptPath = path.join(tmpDir, ".trellis", "scripts", "task.py");
+    const taskScriptPath = path.join(tmpDir, ".phronia", "scripts", "task.py");
     const result = spawnSync(
       pythonCmd,
-      [taskScriptPath, "start", ".trellis/tasks/issue-106"],
+      [taskScriptPath, "start", ".phronia/tasks/issue-106"],
       {
         cwd: tmpDir,
         encoding: "utf-8",
@@ -8720,10 +8721,10 @@ print(len(entries))
       base_branch: "main",
     });
 
-    const taskScriptPath = path.join(tmpDir, ".trellis", "scripts", "task.py");
+    const taskScriptPath = path.join(tmpDir, ".phronia", "scripts", "task.py");
     const result = spawnSync(
       pythonCmd,
-      [taskScriptPath, "start", ".trellis/tasks/issue-106"],
+      [taskScriptPath, "start", ".phronia/tasks/issue-106"],
       {
         cwd: tmpDir,
         encoding: "utf-8",
@@ -8741,10 +8742,10 @@ print(len(entries))
     execSync("git checkout -q --detach", { cwd: tmpDir });
     patchIssue106Task({ status: "planning", branch: null, base_branch: "main" });
 
-    const taskScriptPath = path.join(tmpDir, ".trellis", "scripts", "task.py");
+    const taskScriptPath = path.join(tmpDir, ".phronia", "scripts", "task.py");
     const result = spawnSync(
       pythonCmd,
-      [taskScriptPath, "start", ".trellis/tasks/issue-106"],
+      [taskScriptPath, "start", ".phronia/tasks/issue-106"],
       {
         cwd: tmpDir,
         encoding: "utf-8",
@@ -8765,10 +8766,10 @@ print(len(entries))
     initTaskGitRepo("main", true);
     patchIssue106Task({ branch: null, base_branch: "main" });
 
-    const taskScriptPath = path.join(tmpDir, ".trellis", "scripts", "task.py");
+    const taskScriptPath = path.join(tmpDir, ".phronia", "scripts", "task.py");
     const result = spawnSync(
       pythonCmd,
-      [taskScriptPath, "archive", ".trellis/tasks/issue-106", "--no-commit"],
+      [taskScriptPath, "archive", ".phronia/tasks/issue-106", "--no-commit"],
       { cwd: tmpDir, encoding: "utf-8", env: sessionEnv() },
     );
 
@@ -8778,7 +8779,7 @@ print(len(entries))
     expect(result.stderr).toContain("--skip-branch-validation");
     // Refused before any mutation: the task stays put, still un-completed.
     expect(
-      fs.existsSync(path.join(tmpDir, ".trellis", "tasks", "issue-106")),
+      fs.existsSync(path.join(tmpDir, ".phronia", "tasks", "issue-106")),
     ).toBe(true);
     expect(readIssue106Task().status).toBe("in_progress");
   });
@@ -8788,10 +8789,10 @@ print(len(entries))
     initTaskGitRepo("main", true);
     patchIssue106Task({ branch: "main", base_branch: "main" });
 
-    const taskScriptPath = path.join(tmpDir, ".trellis", "scripts", "task.py");
+    const taskScriptPath = path.join(tmpDir, ".phronia", "scripts", "task.py");
     const result = spawnSync(
       pythonCmd,
-      [taskScriptPath, "archive", ".trellis/tasks/issue-106", "--no-commit"],
+      [taskScriptPath, "archive", ".phronia/tasks/issue-106", "--no-commit"],
       { cwd: tmpDir, encoding: "utf-8", env: sessionEnv() },
     );
 
@@ -8799,7 +8800,7 @@ print(len(entries))
     expect(result.stderr).toContain("branch and base_branch are both 'main'");
     expect(result.stderr).toContain("task.py set-base-branch");
     expect(
-      fs.existsSync(path.join(tmpDir, ".trellis", "tasks", "issue-106")),
+      fs.existsSync(path.join(tmpDir, ".phronia", "tasks", "issue-106")),
     ).toBe(true);
   });
 
@@ -8808,13 +8809,13 @@ print(len(entries))
     initTaskGitRepo("main", true);
     patchIssue106Task({ branch: null, base_branch: "main" });
 
-    const taskScriptPath = path.join(tmpDir, ".trellis", "scripts", "task.py");
+    const taskScriptPath = path.join(tmpDir, ".phronia", "scripts", "task.py");
     const result = spawnSync(
       pythonCmd,
       [
         taskScriptPath,
         "archive",
-        ".trellis/tasks/issue-106",
+        ".phronia/tasks/issue-106",
         "--no-commit",
         "--skip-branch-validation",
       ],
@@ -8823,7 +8824,7 @@ print(len(entries))
 
     expect(result.status).toBe(0);
     expect(
-      fs.existsSync(path.join(tmpDir, ".trellis", "tasks", "issue-106")),
+      fs.existsSync(path.join(tmpDir, ".phronia", "tasks", "issue-106")),
     ).toBe(false);
   });
 
@@ -8835,10 +8836,10 @@ print(len(entries))
       base_branch: "main",
     });
 
-    const taskScriptPath = path.join(tmpDir, ".trellis", "scripts", "task.py");
+    const taskScriptPath = path.join(tmpDir, ".phronia", "scripts", "task.py");
     const result = spawnSync(
       pythonCmd,
-      [taskScriptPath, "archive", ".trellis/tasks/issue-106", "--no-commit"],
+      [taskScriptPath, "archive", ".phronia/tasks/issue-106", "--no-commit"],
       { cwd: tmpDir, encoding: "utf-8", env: sessionEnv() },
     );
 
@@ -8847,7 +8848,7 @@ print(len(entries))
       "recorded branch 'feature/merged-and-deleted' no longer exists locally",
     );
     expect(
-      fs.existsSync(path.join(tmpDir, ".trellis", "tasks", "issue-106")),
+      fs.existsSync(path.join(tmpDir, ".phronia", "tasks", "issue-106")),
     ).toBe(false);
   });
 });
@@ -9493,8 +9494,10 @@ describe("regression: migration manifest consistency", () => {
     expect(shellArchives.length).toBe(19);
     for (const m of shellArchives) {
       expect(m.type).toBe("rename");
-      expect(m.from).toMatch(/\.trellis\/scripts\/.*\.sh$/);
-      expect(m.to).toMatch(/\.trellis\/scripts-shell-archive\/.*\.sh$/);
+      // Upstream manifests were written against `.trellis`; the fork keeps
+      // them as historical contracts until B1/T7 archives them.
+      expect(m.from).toMatch(/\.(?:phronia|trellis)\/scripts\/.*\.sh$/);
+      expect(m.to).toMatch(/\.(?:phronia|trellis)\/scripts-shell-archive\/.*\.sh$/);
       // The filename should be preserved
       const fromFile = m.from.split("/").pop();
       const toFile = (m.to as string).split("/").pop();
@@ -10061,7 +10064,7 @@ describe("regression: class-2 platforms use pull-based sub-agent context", () =>
       });
 
       it("research definition does NOT contain pull-based prelude", () => {
-        // research is orthogonal: it searches .trellis/spec/ and doesn't
+        // research is orthogonal: it searches .phronia/spec/ and doesn't
         // depend on an active task. Prelude would make it fail when Phase 1.2
         // runs before planning-time jsonl curation.
         for (const file of nonPreludeAgents) {
@@ -10371,7 +10374,7 @@ describe("regression: templates/markdown/spec contains only .md.txt files (0.5.0
   // placeholder templates only — markdown/index.ts reads .md.txt via
   // readLocalTemplate, so bare .md files there are orphans (ship to dist as
   // dead weight, never land on user disks). Documented in
-  // .trellis/spec/cli/backend/directory-structure.md "Don't: Leak dogfood
+  // .phronia/spec/cli/backend/directory-structure.md "Don't: Leak dogfood
   // spec into templates/markdown/spec/". Captured while cleaning up ~2-year-old
   // leakage in task 04-21-task-schema-unify.
   it("every file under templates/markdown/spec ends in .md.txt", () => {
@@ -10965,7 +10968,7 @@ describe("regression: configSectionsAdded (issue-codex-dispatch-mode)", () => {
   it("[config-sections] applyConfigSectionsAdded appends section when sentinel missing, idempotent on rerun", async () => {
     const { applyConfigSectionsAdded } =
       await import("../src/commands/update.js");
-    const trellisDir = path.join(tmpDir, ".trellis");
+    const trellisDir = path.join(tmpDir, ".phronia");
     fs.mkdirSync(trellisDir, { recursive: true });
     const userConfigPath = path.join(trellisDir, "config.yaml");
     const userConfig = [
@@ -10989,13 +10992,13 @@ describe("regression: configSectionsAdded (issue-codex-dispatch-mode)", () => {
 
     const entries = [
       {
-        file: ".trellis/config.yaml",
+        file: ".phronia/config.yaml",
         sentinel: "codex:",
         sectionHeading: "Codex (sub-agent dispatch behavior)",
       },
     ];
     const bundled = new Map<string, string>([
-      [".trellis/config.yaml", bundledTemplate],
+      [".phronia/config.yaml", bundledTemplate],
     ]);
 
     const first = applyConfigSectionsAdded(entries, tmpDir, bundled);
@@ -11018,13 +11021,13 @@ describe("regression: configSectionsAdded (issue-codex-dispatch-mode)", () => {
     const result = applyConfigSectionsAdded(
       [
         {
-          file: ".trellis/config.yaml",
+          file: ".phronia/config.yaml",
           sentinel: "codex:",
           sectionHeading: "Codex (sub-agent dispatch behavior)",
         },
       ],
       tmpDir,
-      new Map<string, string>([[".trellis/config.yaml", "# fake template"]]),
+      new Map<string, string>([[".phronia/config.yaml", "# fake template"]]),
     );
     expect(result.appended).toBe(0);
   });
@@ -11049,9 +11052,15 @@ describe("regression: configSectionsAdded (issue-codex-dispatch-mode)", () => {
     expect(manifest.version).toBe("0.5.7");
     expect(manifest.configSectionsAdded).toBeDefined();
     const entry = manifest.configSectionsAdded?.[0];
+    // Raw manifest is historical: it records the pre-rename root.
     expect(entry?.file).toBe(".trellis/config.yaml");
     expect(entry?.sentinel).toBe("codex:");
     expect(entry?.sectionHeading).toBe("Codex (dispatch behavior)");
+
+    // The loader normalizes the path to the current root at the boundary.
+    const normalized = getConfigSectionsAddedBetween("0.5.6", "0.5.7");
+    const codexSection = normalized.find((section) => section.sentinel === "codex:");
+    expect(codexSection?.file).toBe(".phronia/config.yaml");
   });
 
   it("[config-sections] bundled config.yaml template contains the new Codex section", () => {
@@ -11073,42 +11082,42 @@ describe("regression: configSectionsAdded (issue-codex-dispatch-mode)", () => {
 });
 
 // =============================================================================
-// safe-commit: gitignored .trellis/ recovery (0.5.10 → 0.5.11)
+// safe-commit: gitignored .phronia/ recovery (0.5.10 → 0.5.11)
 // =============================================================================
 //
-// Real user incident: project .gitignore listed `.trellis/`. add_session.py's
-// auto-commit ran `git add .trellis/workspace .trellis/tasks`, got `ignored
-// by .gitignore`, fell back to a hint suggesting `git add .trellis &&
+// Real user incident: project .gitignore listed `.phronia/`. add_session.py's
+// auto-commit ran `git add .phronia/workspace .phronia/tasks`, got `ignored
+// by .gitignore`, fell back to a hint suggesting `git add .phronia &&
 // commit`. The AI agent driving the workflow extrapolated that to
-// `git add -f .trellis/`, which forced in `.trellis/.backup-*/`,
-// `.trellis/worktrees/`, `.trellis/.template-hashes.json`, etc. — 548 files
+// `git add -f .phronia/`, which forced in `.phronia/.backup-*/`,
+// `.phronia/worktrees/`, `.phronia/.template-hashes.json`, etc. — 548 files
 // / 83474 lines of caches/backups committed.
 //
 // 0.5.10 fix (since reverted):
 //   - Scripts only stage SPECIFIC product paths.
 //   - On `ignored by` the scripts retried with `git add -f <specific paths>`.
-// That auto-`-f` was an over-fix — when a user gitignores `.trellis/` they
-// mean "keep .trellis/ local-only", and forcing the commit through (even on
+// That auto-`-f` was an over-fix — when a user gitignores `.phronia/` they
+// mean "keep .phronia/ local-only", and forcing the commit through (even on
 // narrow paths) violates user intent. Group-chat report: a finish-work auto
-// committed `.trellis/workspace/` straight into a repo whose .gitignore
-// excluded `.trellis/`.
+// committed `.phronia/workspace/` straight into a repo whose .gitignore
+// excluded `.phronia/`.
 //
 // 0.5.11 fix (current):
 //   - Plain `git add <specific>` is tried once. On `ignored by`, the script
 //     warns and skips the auto-commit — never `-f`.
 //   - New `session_auto_commit: false` config opts the user out of auto-stage
 //     and auto-commit entirely (issue #245).
-//   - The warning explicitly says ``Do NOT use `git add -f .trellis/```` so
+//   - The warning explicitly says ``Do NOT use `git add -f .phronia/```` so
 //     AI re-reading the log doesn't reinvent the bug, and points at the new
 //     `session_auto_commit: false` knob.
 //
-// These tests synthesize a tmp git repo with `.trellis/` gitignored and
+// These tests synthesize a tmp git repo with `.phronia/` gitignored and
 // verify (a) on `ignored by` the script warns + skips (no commit, no -f),
 // (b) `session_auto_commit: false` skips git entirely in any state, and
 // (c) the negative-rule warning + new config hint are reachable.
 // =============================================================================
 
-describe("regression: safe auto-commit when .trellis/ is gitignored (0.5.10 → 0.5.11)", () => {
+describe("regression: safe auto-commit when .phronia/ is gitignored (0.5.10 → 0.5.11)", () => {
   let tmpDir: string;
   const pyCmd = process.platform === "win32" ? "python" : "python3";
 
@@ -11131,7 +11140,7 @@ describe("regression: safe auto-commit when .trellis/ is gitignored (0.5.10 → 
   }
 
   function writeTrellisScripts(): void {
-    const scriptsDir = path.join(tmpDir, ".trellis", "scripts");
+    const scriptsDir = path.join(tmpDir, ".phronia", "scripts");
     for (const [rel, content] of getAllScripts()) {
       const abs = path.join(scriptsDir, rel);
       fs.mkdirSync(path.dirname(abs), { recursive: true });
@@ -11141,7 +11150,7 @@ describe("regression: safe auto-commit when .trellis/ is gitignored (0.5.10 → 
 
   function writeWorkspaceIndex(): void {
     writeFile(
-      ".trellis/workspace/test-dev/index.md",
+      ".phronia/workspace/test-dev/index.md",
       [
         "# Workspace Index - test-dev",
         "",
@@ -11175,35 +11184,35 @@ describe("regression: safe auto-commit when .trellis/ is gitignored (0.5.10 → 
   function setupRepo(options?: { gitignoreTrellis?: boolean }): void {
     writeTrellisScripts();
     writeFile(
-      ".trellis/.developer",
+      ".phronia/.developer",
       "name=test-dev\ninitialized_at=2026-05-09T00:00:00\n",
     );
     writeFile(
-      ".trellis/workspace/test-dev/journal-1.md",
+      ".phronia/workspace/test-dev/journal-1.md",
       "# Journal - test-dev (Part 1)\n\n---\n",
     );
     writeWorkspaceIndex();
     // Ignored caches/backups must exist on disk to prove they don't get
     // staged when -f is forced on specific paths.
     writeFile(
-      ".trellis/.backup-2026-05-09/should-not-be-committed.txt",
+      ".phronia/.backup-2026-05-09/should-not-be-committed.txt",
       "secret-backup\n",
     );
     writeFile(
-      ".trellis/worktrees/wt-a/should-not-be-committed.txt",
+      ".phronia/worktrees/wt-a/should-not-be-committed.txt",
       "secret-worktree\n",
     );
     writeFile(
-      ".trellis/.template-hashes.json",
+      ".phronia/.template-hashes.json",
       '{"_": "should-not-be-committed"}\n',
     );
     writeFile(
-      ".trellis/.runtime/sessions/should-not-be-committed.json",
+      ".phronia/.runtime/sessions/should-not-be-committed.json",
       "{}\n",
     );
 
     if (options?.gitignoreTrellis) {
-      writeFile(".gitignore", ".trellis/\n");
+      writeFile(".gitignore", ".phronia/\n");
     }
     // Seed an initial commit so HEAD exists.
     writeFile("README.md", "test\n");
@@ -11217,7 +11226,7 @@ describe("regression: safe auto-commit when .trellis/ is gitignored (0.5.10 → 
   function runAddSession(): { stdout: string; stderr: string } {
     const scriptPath = path.join(
       tmpDir,
-      ".trellis",
+      ".phronia",
       "scripts",
       "add_session.py",
     );
@@ -11244,7 +11253,7 @@ describe("regression: safe auto-commit when .trellis/ is gitignored (0.5.10 → 
     return out.split("\n").filter((l) => l.length > 0);
   }
 
-  it("[gitignore-trellis] add_session warns and skips when .trellis/ is ignored (default mode)", () => {
+  it("[gitignore-trellis] add_session warns and skips when .phronia/ is ignored (default mode)", () => {
     setupRepo({ gitignoreTrellis: true });
     const { stderr } = runAddSession();
 
@@ -11253,16 +11262,16 @@ describe("regression: safe auto-commit when .trellis/ is gitignored (0.5.10 → 
     // "Auto-committed" line, and the warning fires.
     expect(stderr).not.toContain("Auto-committed");
     expect(stderr).toContain("ignored by your .gitignore");
-    expect(stderr).toContain("Do NOT use `git add -f .trellis/`");
+    expect(stderr).toContain("Do NOT use `git add -f .phronia/`");
     expect(stderr).toContain("session_auto_commit: false");
 
-    // Nothing under .trellis/ should be tracked: the user's .gitignore
+    // Nothing under .phronia/ should be tracked: the user's .gitignore
     // intent is preserved.
     const tracked = listCommittedFiles();
     for (const tracked_path of tracked) {
       expect(
-        tracked_path.startsWith(".trellis/"),
-        `should not commit anything under .trellis/ (got: ${tracked_path})`,
+        tracked_path.startsWith(".phronia/"),
+        `should not commit anything under .phronia/ (got: ${tracked_path})`,
       ).toBe(false);
     }
 
@@ -11270,23 +11279,23 @@ describe("regression: safe auto-commit when .trellis/ is gitignored (0.5.10 → 
     // before attempting auto-commit) — only git was untouched.
     expect(
       fs.existsSync(
-        path.join(tmpDir, ".trellis/workspace/test-dev/journal-1.md"),
+        path.join(tmpDir, ".phronia/workspace/test-dev/journal-1.md"),
       ),
     ).toBe(true);
     expect(
-      fs.existsSync(path.join(tmpDir, ".trellis/workspace/test-dev/index.md")),
+      fs.existsSync(path.join(tmpDir, ".phronia/workspace/test-dev/index.md")),
     ).toBe(true);
   });
 
-  it("[gitignore-trellis] add_session works normally when .trellis/ is NOT ignored", () => {
+  it("[gitignore-trellis] add_session works normally when .phronia/ is NOT ignored", () => {
     // Regression guard: pre-existing behavior must not change for users
-    // whose .gitignore does not exclude .trellis/.
+    // whose .gitignore does not exclude .phronia/.
     setupRepo({ gitignoreTrellis: false });
     const { stderr } = runAddSession();
     expect(stderr).toContain("Auto-committed");
 
     const tracked = listCommittedFiles();
-    expect(tracked).toContain(".trellis/workspace/test-dev/journal-1.md");
+    expect(tracked).toContain(".phronia/workspace/test-dev/journal-1.md");
   });
 
   it("[gitignore-trellis] safe_commit module ships and contains the negative warning + new config hint", () => {
@@ -11296,7 +11305,7 @@ describe("regression: safe auto-commit when .trellis/ is gitignored (0.5.10 → 
     // new session_auto_commit hint.
     const safeCommit = getAllScripts().get("common/safe_commit.py");
     expect(safeCommit).toBeTruthy();
-    expect(safeCommit).toContain("Do NOT use `git add -f .trellis/`");
+    expect(safeCommit).toContain("Do NOT use `git add -f .phronia/`");
     expect(safeCommit).toContain("safe_trellis_paths_to_add");
     expect(safeCommit).toContain("safe_archive_paths_to_add");
     expect(safeCommit).toContain("safe_git_add");
@@ -11307,20 +11316,20 @@ describe("regression: safe auto-commit when .trellis/ is gitignored (0.5.10 → 
     expect(safeCommit).not.toMatch(/\["add", "-f", "--",/);
   });
 
-  it("[gitignore-trellis] task.py archive warns and skips when .trellis/ is ignored (default mode)", () => {
+  it("[gitignore-trellis] task.py archive warns and skips when .phronia/ is ignored (default mode)", () => {
     setupRepo({ gitignoreTrellis: true });
     // Create a task to archive.
     writeFile(
-      ".trellis/tasks/issue-500/task.json",
+      ".phronia/tasks/issue-500/task.json",
       JSON.stringify(
         { title: "Test archive", status: "in_progress", package: null },
         null,
         2,
       ),
     );
-    writeFile(".trellis/tasks/issue-500/prd.md", "# PRD\n");
+    writeFile(".phronia/tasks/issue-500/prd.md", "# PRD\n");
 
-    const taskScriptPath = path.join(tmpDir, ".trellis", "scripts", "task.py");
+    const taskScriptPath = path.join(tmpDir, ".phronia", "scripts", "task.py");
     const result = spawnSync(pyCmd, [taskScriptPath, "archive", "issue-500"], {
       cwd: tmpDir,
       encoding: "utf-8",
@@ -11331,23 +11340,23 @@ describe("regression: safe auto-commit when .trellis/ is gitignored (0.5.10 → 
     // surface so the user knows their .gitignore won.
     expect(stderr).not.toContain("Auto-committed");
     expect(stderr).toContain("ignored by your .gitignore");
-    expect(stderr).toContain("Do NOT use `git add -f .trellis/`");
+    expect(stderr).toContain("Do NOT use `git add -f .phronia/`");
 
     const tracked = listCommittedFiles();
-    // Nothing under .trellis/ should be tracked.
+    // Nothing under .phronia/ should be tracked.
     for (const t of tracked) {
       expect(
-        t.startsWith(".trellis/"),
-        `should not commit anything under .trellis/ (got: ${t})`,
+        t.startsWith(".phronia/"),
+        `should not commit anything under .phronia/ (got: ${t})`,
       ).toBe(false);
     }
 
     // The archive directory move on disk still happened — only git was
     // untouched.
     const archiveExists = fs
-      .readdirSync(path.join(tmpDir, ".trellis/tasks/archive"))
+      .readdirSync(path.join(tmpDir, ".phronia/tasks/archive"))
       .some((monthDir) => {
-        const monthPath = path.join(tmpDir, ".trellis/tasks/archive", monthDir);
+        const monthPath = path.join(tmpDir, ".phronia/tasks/archive", monthDir);
         return (
           fs.statSync(monthPath).isDirectory() &&
           fs.existsSync(path.join(monthPath, "issue-500"))
@@ -11361,7 +11370,7 @@ describe("regression: safe auto-commit when .trellis/ is gitignored (0.5.10 → 
   // ===========================================================================
 
   function writeConfigYaml(content: string): void {
-    writeFile(".trellis/config.yaml", content);
+    writeFile(".phronia/config.yaml", content);
   }
 
   it("[session_auto_commit=false] add_session skips git entirely (no add, no commit)", () => {
@@ -11391,7 +11400,7 @@ describe("regression: safe auto-commit when .trellis/ is gitignored (0.5.10 → 
     // Files were still written to disk.
     expect(
       fs.existsSync(
-        path.join(tmpDir, ".trellis/workspace/test-dev/journal-1.md"),
+        path.join(tmpDir, ".phronia/workspace/test-dev/journal-1.md"),
       ),
     ).toBe(true);
   });
@@ -11401,16 +11410,16 @@ describe("regression: safe auto-commit when .trellis/ is gitignored (0.5.10 → 
     writeConfigYaml("session_auto_commit: false\n");
 
     writeFile(
-      ".trellis/tasks/issue-600/task.json",
+      ".phronia/tasks/issue-600/task.json",
       JSON.stringify(
         { title: "Test archive", status: "in_progress", package: null },
         null,
         2,
       ),
     );
-    writeFile(".trellis/tasks/issue-600/prd.md", "# PRD\n");
+    writeFile(".phronia/tasks/issue-600/prd.md", "# PRD\n");
 
-    const taskScriptPath = path.join(tmpDir, ".trellis", "scripts", "task.py");
+    const taskScriptPath = path.join(tmpDir, ".phronia", "scripts", "task.py");
     const result = spawnSync(pyCmd, [taskScriptPath, "archive", "issue-600"], {
       cwd: tmpDir,
       encoding: "utf-8",
@@ -11428,9 +11437,9 @@ describe("regression: safe auto-commit when .trellis/ is gitignored (0.5.10 → 
 
     // Archive directory move still happened on disk.
     const archiveExists = fs
-      .readdirSync(path.join(tmpDir, ".trellis/tasks/archive"))
+      .readdirSync(path.join(tmpDir, ".phronia/tasks/archive"))
       .some((monthDir) => {
-        const monthPath = path.join(tmpDir, ".trellis/tasks/archive", monthDir);
+        const monthPath = path.join(tmpDir, ".phronia/tasks/archive", monthDir);
         return (
           fs.statSync(monthPath).isDirectory() &&
           fs.existsSync(path.join(monthPath, "issue-600"))
@@ -11539,25 +11548,25 @@ describe("regression: bounded index.lock retry on archive auto-commit", () => {
   }
 
   function setupRepo(): void {
-    const scriptsDir = path.join(tmpDir, ".trellis", "scripts");
+    const scriptsDir = path.join(tmpDir, ".phronia", "scripts");
     for (const [rel, content] of getAllScripts()) {
       const abs = path.join(scriptsDir, rel);
       fs.mkdirSync(path.dirname(abs), { recursive: true });
       fs.writeFileSync(abs, content, "utf-8");
     }
     writeFile(
-      ".trellis/.developer",
+      ".phronia/.developer",
       "name=test-dev\ninitialized_at=2026-08-09T00:00:00\n",
     );
     writeFile(
-      `.trellis/tasks/${taskName}/task.json`,
+      `.phronia/tasks/${taskName}/task.json`,
       JSON.stringify(
         { title: "Locked archive", status: "in_progress", package: null },
         null,
         2,
       ),
     );
-    writeFile(`.trellis/tasks/${taskName}/prd.md`, "# PRD\n");
+    writeFile(`.phronia/tasks/${taskName}/prd.md`, "# PRD\n");
     writeFile("README.md", "test\n");
     // The task must be tracked: an untracked task dir makes a failed
     // auto-commit inconsequential, which is not the case under test.
@@ -11566,7 +11575,7 @@ describe("regression: bounded index.lock retry on archive auto-commit", () => {
   }
 
   function runArchive(): { status: number | null; stderr: string } {
-    const taskScriptPath = path.join(tmpDir, ".trellis", "scripts", "task.py");
+    const taskScriptPath = path.join(tmpDir, ".phronia", "scripts", "task.py");
     const result = spawnSync(pyCmd, [taskScriptPath, "archive", taskName], {
       cwd: tmpDir,
       encoding: "utf-8",
@@ -11576,7 +11585,7 @@ describe("regression: bounded index.lock retry on archive auto-commit", () => {
   }
 
   function archivedTaskExists(): boolean {
-    const archiveRoot = path.join(tmpDir, ".trellis/tasks/archive");
+    const archiveRoot = path.join(tmpDir, ".phronia/tasks/archive");
     if (!fs.existsSync(archiveRoot)) return false;
     return fs.readdirSync(archiveRoot).some((monthDir) => {
       const monthPath = path.join(archiveRoot, monthDir);
@@ -11604,7 +11613,7 @@ import sys
 from pathlib import Path
 
 root = Path.cwd()
-sys.path.insert(0, str(root / ".trellis" / "scripts"))
+sys.path.insert(0, str(root / ".phronia" / "scripts"))
 import common.git as g
 
 # Real backoff would make this probe sleep for its whole runtime.
@@ -11697,7 +11706,7 @@ print(json.dumps({
     expect(status, stderr).toBe(0);
     expect(stderr).toContain("Auto-committed");
     expect(archivedTaskExists()).toBe(true);
-    expect(fs.existsSync(path.join(tmpDir, ".trellis/tasks", taskName))).toBe(
+    expect(fs.existsSync(path.join(tmpDir, ".phronia/tasks", taskName))).toBe(
       false,
     );
 
@@ -11711,7 +11720,7 @@ print(json.dumps({
       cwd: tmpDir,
       encoding: "utf-8",
     });
-    expect(dirty).not.toContain(`.trellis/tasks/${taskName}/`);
+    expect(dirty).not.toContain(`.phronia/tasks/${taskName}/`);
   });
 
   it("[index-lock] a lock that never clears aborts with a diagnostic naming it", () => {
@@ -11733,7 +11742,7 @@ print(json.dumps({
 
     // Consistent state: the move completed, nothing is half-moved.
     expect(archivedTaskExists()).toBe(true);
-    expect(fs.existsSync(path.join(tmpDir, ".trellis/tasks", taskName))).toBe(
+    expect(fs.existsSync(path.join(tmpDir, ".phronia/tasks", taskName))).toBe(
       false,
     );
 
@@ -11744,7 +11753,7 @@ print(json.dumps({
       cwd: tmpDir,
       encoding: "utf-8",
     });
-    expect(dirty).toContain(`.trellis/tasks/${taskName}/`);
+    expect(dirty).toContain(`.phronia/tasks/${taskName}/`);
   });
 });
 
@@ -11752,8 +11761,8 @@ print(json.dumps({
 // regression: dogfood ↔ shipped Python script parity
 // =============================================================================
 
-describe("regression: .trellis/scripts stays byte-identical to templates/trellis/scripts", () => {
-  // `.trellis/scripts/` is Trellis's own dogfood copy;
+describe("regression: .phronia/scripts stays byte-identical to templates/trellis/scripts", () => {
+  // `.phronia/scripts/` is Trellis's own dogfood copy;
   // `packages/cli/src/templates/trellis/scripts/` is what ships to users.
   // They are two physical copies of the same 28 files and nothing enforced
   // parity, so one-sided edits landed silently — PR #390 changed the template's
@@ -11762,7 +11771,7 @@ describe("regression: .trellis/scripts stays byte-identical to templates/trellis
   // build failure.
   const __dirnameParity = path.dirname(fileURLToPath(import.meta.url));
   const parityRepoRoot = path.resolve(__dirnameParity, "../../..");
-  const dogfoodScriptsRoot = path.join(parityRepoRoot, ".trellis", "scripts");
+  const dogfoodScriptsRoot = path.join(parityRepoRoot, ".phronia", "scripts");
   const templateScriptsRoot = path.join(
     parityRepoRoot,
     "packages/cli/src/templates/trellis/scripts",
@@ -11790,7 +11799,7 @@ describe("regression: .trellis/scripts stays byte-identical to templates/trellis
     const dogfoodFiles = listPyFiles(dogfoodScriptsRoot);
     expect(
       dogfoodFiles,
-      "`.trellis/scripts/` and `packages/cli/src/templates/trellis/scripts/` " +
+      "`.phronia/scripts/` and `packages/cli/src/templates/trellis/scripts/` " +
         "must hold the same .py files — a script added to (or deleted from) " +
         "one tree must be mirrored in the other.",
     ).toEqual(templateFiles);
@@ -11801,7 +11810,7 @@ describe("regression: .trellis/scripts stays byte-identical to templates/trellis
       const dogfoodPath = path.join(dogfoodScriptsRoot, relativePath);
       expect(
         fs.existsSync(dogfoodPath),
-        `.trellis/scripts/${relativePath} is missing (template has it)`,
+        `.phronia/scripts/${relativePath} is missing (template has it)`,
       ).toBe(true);
       const dogfoodBytes = fs.readFileSync(dogfoodPath);
       const templateBytes = fs.readFileSync(
@@ -11809,7 +11818,7 @@ describe("regression: .trellis/scripts stays byte-identical to templates/trellis
       );
       expect(
         dogfoodBytes.equals(templateBytes),
-        `.trellis/scripts/${relativePath} has drifted from ` +
+        `.phronia/scripts/${relativePath} has drifted from ` +
           `packages/cli/src/templates/trellis/scripts/${relativePath}. ` +
           `Edit both copies, never one.`,
       ).toBe(true);
@@ -11827,7 +11836,7 @@ describe("regression: compat alias must not win platform detection", () => {
   // no_task while the pointer sits on disk.
   //
   // Observed on CodeBuddy IDE 4.10.4: `codebuddy_ae54840e….json` in
-  // .trellis/.runtime/sessions/ next to `update-check-claude_ae54840e….marker`
+  // .phronia/.runtime/sessions/ next to `update-check-claude_ae54840e….marker`
   // — same session id, two different platform prefixes.
   const HOOKS_WITH_DETECTION = ["inject-workflow-state.py", "session-start.py"];
 
@@ -11872,12 +11881,12 @@ describe("regression: task.py rename rewrites every reference in one pass", () =
   beforeEach(() => {
     tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), "trellis-task-rename-"));
     for (const [rel, content] of getAllScripts()) {
-      const abs = path.join(tmpDir, ".trellis", "scripts", rel);
+      const abs = path.join(tmpDir, ".phronia", "scripts", rel);
       fs.mkdirSync(path.dirname(abs), { recursive: true });
       fs.writeFileSync(abs, content, "utf-8");
     }
     fs.writeFileSync(
-      path.join(tmpDir, ".trellis", ".developer"),
+      path.join(tmpDir, ".phronia", ".developer"),
       "name=test-dev\ninitialized_at=2026-08-09T00:00:00\n",
     );
     fs.mkdirSync(taskDir("archive"), { recursive: true });
@@ -11894,7 +11903,7 @@ describe("regression: task.py rename rewrites every reference in one pass", () =
   } {
     const proc = spawnSync(
       pyCmd,
-      [path.join(".trellis", "scripts", "task.py"), ...args],
+      [path.join(".phronia", "scripts", "task.py"), ...args],
       { cwd: tmpDir, encoding: "utf-8" },
     );
     return {
@@ -11905,7 +11914,7 @@ describe("regression: task.py rename rewrites every reference in one pass", () =
   }
 
   function taskDir(...segments: string[]): string {
-    return path.join(tmpDir, ".trellis", "tasks", ...segments);
+    return path.join(tmpDir, ".phronia", "tasks", ...segments);
   }
 
   function readTaskJson(name: string): Record<string, unknown> {
@@ -11930,7 +11939,7 @@ describe("regression: task.py rename rewrites every reference in one pass", () =
     return `${datePrefix}-${slug}`;
   }
 
-  /** Every `<file>:<line>` under .trellis/tasks/ that still names `taskName`. */
+  /** Every `<file>:<line>` under .phronia/tasks/ that still names `taskName`. */
   function scanForName(taskName: string): string[] {
     const pattern = new RegExp(`(?<![0-9A-Za-z_-])${taskName}(?![0-9A-Za-z_-])`);
     const hits: string[] = [];
@@ -12001,10 +12010,10 @@ describe("regression: task.py rename rewrites every reference in one pass", () =
     create("kid", target);
     fs.writeFileSync(
       path.join(taskDir(target), "implement.jsonl"),
-      `{"file": ".trellis/tasks/${target}/research.md", "reason": "findings"}\n`,
+      `{"file": ".phronia/tasks/${target}/research.md", "reason": "findings"}\n`,
     );
     fs.writeFileSync(
-      path.join(tmpDir, ".trellis", "workflow.md"),
+      path.join(tmpDir, ".phronia", "workflow.md"),
       `The plan is tracked in ${target}.\n`,
     );
 
@@ -12022,21 +12031,21 @@ describe("regression: task.py rename rewrites every reference in one pass", () =
     // The whole point of the dry run: what it printed is what the real run did.
     expect(applied.stdout).toBe(dry.stdout);
     expect(dry.stdout).toContain(
-      `dir: .trellis/tasks/${target} -> .trellis/tasks/${datePrefix}-renamed`,
+      `dir: .phronia/tasks/${target} -> .phronia/tasks/${datePrefix}-renamed`,
     );
     expect(dry.stdout).toContain("task.json: id: target -> renamed");
     expect(dry.stdout).toContain(
-      `backref: .trellis/tasks/${parent}/task.json: children[0]: ${target} -> ${datePrefix}-renamed`,
+      `backref: .phronia/tasks/${parent}/task.json: children[0]: ${target} -> ${datePrefix}-renamed`,
     );
     expect(dry.stdout).toContain(
-      `jsonl: .trellis/tasks/${target}/implement.jsonl:1:`,
+      `jsonl: .phronia/tasks/${target}/implement.jsonl:1:`,
     );
     // References outside the task dir are reported, never rewritten.
     expect(dry.stdout).toContain(
-      "reported (not rewritten): .trellis/workflow.md:1",
+      "reported (not rewritten): .phronia/workflow.md:1",
     );
     expect(
-      fs.readFileSync(path.join(tmpDir, ".trellis", "workflow.md"), "utf-8"),
+      fs.readFileSync(path.join(tmpDir, ".phronia", "workflow.md"), "utf-8"),
     ).toContain(target);
   });
 
@@ -12046,9 +12055,9 @@ describe("regression: task.py rename rewrites every reference in one pass", () =
     fs.writeFileSync(
       path.join(taskDir(target), "check.jsonl"),
       [
-        `{"file": ".trellis/tasks/${target}/research.md", "reason": "findings"}`,
-        `{"file": ".trellis/spec/guides/style.md", "reason": "spec"}`,
-        `{"file": ".trellis/tasks/${sibling}/notes.md", "reason": "sibling"}`,
+        `{"file": ".phronia/tasks/${target}/research.md", "reason": "findings"}`,
+        `{"file": ".phronia/spec/guides/style.md", "reason": "spec"}`,
+        `{"file": ".phronia/tasks/${sibling}/notes.md", "reason": "sibling"}`,
         "",
       ].join("\n"),
     );
@@ -12060,10 +12069,10 @@ describe("regression: task.py rename rewrites every reference in one pass", () =
       path.join(taskDir(renamed), "check.jsonl"),
       "utf-8",
     );
-    expect(after).toContain(`".trellis/tasks/${renamed}/research.md"`);
-    expect(after).toContain('".trellis/spec/guides/style.md"');
+    expect(after).toContain(`".phronia/tasks/${renamed}/research.md"`);
+    expect(after).toContain('".phronia/spec/guides/style.md"');
     // `target` is a prefix of `target-other`; the sibling must survive intact.
-    expect(after).toContain(`".trellis/tasks/${sibling}/notes.md"`);
+    expect(after).toContain(`".phronia/tasks/${sibling}/notes.md"`);
   });
 
   it("[task-rename] refuses an existing destination, an archived name, a bad slug and an unknown task", () => {
@@ -12117,18 +12126,18 @@ describe("regression: task.py rename rewrites every reference in one pass", () =
     // very next turn resolved the active task as stale/missing.
     const target = create("target");
     const other = create("bystander");
-    const sessionsDir = path.join(tmpDir, ".trellis", ".runtime", "sessions");
+    const sessionsDir = path.join(tmpDir, ".phronia", ".runtime", "sessions");
     fs.mkdirSync(sessionsDir, { recursive: true });
     const sessionFile = path.join(sessionsDir, "sess-a.json");
     const bystanderFile = path.join(sessionsDir, "sess-b.json");
     fs.writeFileSync(
       sessionFile,
-      JSON.stringify({ current_task: `.trellis/tasks/${target}` }),
+      JSON.stringify({ current_task: `.phronia/tasks/${target}` }),
       "utf-8",
     );
     fs.writeFileSync(
       bystanderFile,
-      JSON.stringify({ current_task: `.trellis/tasks/${other}` }),
+      JSON.stringify({ current_task: `.phronia/tasks/${other}` }),
       "utf-8",
     );
 
@@ -12138,11 +12147,11 @@ describe("regression: task.py rename rewrites every reference in one pass", () =
     const renamed = `${datePrefix}-renamed`;
     expect(
       JSON.parse(fs.readFileSync(sessionFile, "utf-8")).current_task,
-    ).toBe(`.trellis/tasks/${renamed}`);
+    ).toBe(`.phronia/tasks/${renamed}`);
     // A session on a different task is left exactly as it was.
     expect(
       JSON.parse(fs.readFileSync(bystanderFile, "utf-8")).current_task,
-    ).toBe(`.trellis/tasks/${other}`);
+    ).toBe(`.phronia/tasks/${other}`);
   });
 
   it("[task-rename] refuses to rename an archived task", () => {
@@ -12151,7 +12160,7 @@ describe("regression: task.py rename rewrites every reference in one pass", () =
 
     const r = runTask(
       "rename",
-      path.posix.join(".trellis", "tasks", "archive", yearMonth, target),
+      path.posix.join(".phronia", "tasks", "archive", yearMonth, target),
       "renamed",
     );
     expect(r.status).not.toBe(0);
@@ -12163,7 +12172,7 @@ describe("regression: task.py rename rewrites every reference in one pass", () =
 });
 
 describe("regression: a linked worktree inherits developer identity", () => {
-  // `.trellis/.developer` is gitignored (it carries a personal identity), so a
+  // `.phronia/.developer` is gitignored (it carries a personal identity), so a
   // fresh `git worktree add` used to start with no identity at all and every
   // task.py command failed with "No developer set" until init_developer.py was
   // re-run per worktree — which blocks worktree-per-worker parallel runs.
@@ -12184,7 +12193,7 @@ describe("regression: a linked worktree inherits developer identity", () => {
 
   function writeScripts(root: string): void {
     for (const [rel, content] of getAllScripts()) {
-      const abs = path.join(root, ".trellis", "scripts", rel);
+      const abs = path.join(root, ".phronia", "scripts", rel);
       fs.mkdirSync(path.dirname(abs), { recursive: true });
       fs.writeFileSync(abs, content, "utf-8");
     }
@@ -12195,12 +12204,12 @@ describe("regression: a linked worktree inherits developer identity", () => {
     writeScripts(mainDir);
     fs.writeFileSync(
       path.join(mainDir, ".gitignore"),
-      ".trellis/.developer\n",
+      ".phronia/.developer\n",
       "utf-8",
     );
     if (developerName !== null) {
       fs.writeFileSync(
-        path.join(mainDir, ".trellis", ".developer"),
+        path.join(mainDir, ".phronia", ".developer"),
         `name=${developerName}\ninitialized_at=2026-08-09T00:00:00\n`,
         "utf-8",
       );
@@ -12226,7 +12235,7 @@ describe("regression: a linked worktree inherits developer identity", () => {
     }
     const proc = spawnSync(
       pyCmd,
-      [path.join(cwd, ".trellis", "scripts", "task.py"), ...args],
+      [path.join(cwd, ".phronia", "scripts", "task.py"), ...args],
       { cwd, encoding: "utf-8", env },
     );
     return {
@@ -12261,7 +12270,7 @@ describe("regression: a linked worktree inherits developer identity", () => {
   function assigneeOf(cwd: string, slug: string): unknown {
     const taskJson = path.join(
       cwd,
-      ".trellis",
+      ".phronia",
       "tasks",
       `${datePrefix}-${slug}`,
       "task.json",
@@ -12287,7 +12296,7 @@ describe("regression: a linked worktree inherits developer identity", () => {
 
     // The premise: git did not carry the gitignored identity file across.
     expect(
-      fs.existsSync(path.join(worktreeDir, ".trellis", ".developer")),
+      fs.existsSync(path.join(worktreeDir, ".phronia", ".developer")),
     ).toBe(false);
 
     const created = createTask(worktreeDir, "inherited");
@@ -12309,7 +12318,7 @@ describe("regression: a linked worktree inherits developer identity", () => {
     // Inheritance is read-only: copying the file in would go stale and shadow
     // later changes made in the main checkout.
     expect(
-      fs.existsSync(path.join(worktreeDir, ".trellis", ".developer")),
+      fs.existsSync(path.join(worktreeDir, ".phronia", ".developer")),
     ).toBe(false);
   });
 
@@ -12319,7 +12328,7 @@ describe("regression: a linked worktree inherits developer identity", () => {
     expect(assigneeOf(worktreeDir, "first")).toBe("main-dev");
 
     fs.writeFileSync(
-      path.join(mainDir, ".trellis", ".developer"),
+      path.join(mainDir, ".phronia", ".developer"),
       "name=renamed-dev\ninitialized_at=2026-08-09T00:00:00\n",
       "utf-8",
     );
@@ -12337,7 +12346,7 @@ describe("regression: a linked worktree inherits developer identity", () => {
 
     // 3. a local file in the worktree wins over the main checkout
     fs.writeFileSync(
-      path.join(worktreeDir, ".trellis", ".developer"),
+      path.join(worktreeDir, ".phronia", ".developer"),
       "name=local-dev\ninitialized_at=2026-08-09T00:00:00\n",
       "utf-8",
     );
@@ -12420,9 +12429,9 @@ describe("regression: a linked worktree inherits developer identity", () => {
     // answer looks exactly like a right one. git must name the main worktree.
     buildRepo("main-dev");
     const outerDir = path.join(tmpDir, "outer");
-    fs.mkdirSync(path.join(outerDir, ".trellis"), { recursive: true });
+    fs.mkdirSync(path.join(outerDir, ".phronia"), { recursive: true });
     fs.writeFileSync(
-      path.join(outerDir, ".trellis", ".developer"),
+      path.join(outerDir, ".phronia", ".developer"),
       "name=unrelated-stranger\ninitialized_at=2026-08-09T00:00:00\n",
       "utf-8",
     );

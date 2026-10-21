@@ -52,9 +52,9 @@ describe("registry internal consistency", () => {
     }
   });
 
-  it("no configDir collides with .trellis", () => {
+  it("no configDir collides with .phronia", () => {
     for (const id of PLATFORM_IDS) {
-      expect(AI_TOOLS[id].configDir).not.toBe(".trellis");
+      expect(AI_TOOLS[id].configDir).not.toBe(".phronia");
     }
   });
 

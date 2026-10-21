@@ -29,7 +29,7 @@ Use this skill only after task-creation consent has been given and the user is r
 If no task exists yet, create one:
 
 ```bash
-TASK_DIR=$({{PYTHON_CMD}} ./.trellis/scripts/task.py create "<short task title>" --description "<one-line summary>" --slug <slug>)
+TASK_DIR=$({{PYTHON_CMD}} ./.phronia/scripts/task.py create "<short task title>" --description "<one-line summary>" --slug <slug>)
 ```
 
 Use a concise title from the user's request. Both the title and `--description` must be non-empty — `create` rejects blanks, and a record with either one empty is refused at archive. Use a slug without a date prefix. `task.py create` adds the `MM-DD-` directory prefix automatically.

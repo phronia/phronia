@@ -52,14 +52,14 @@ function hasPython(): boolean {
 }
 
 function setupRepo(tmp: string): void {
-  fs.mkdirSync(path.join(tmp, ".trellis", "scripts"), { recursive: true });
-  fs.cpSync(TEMPLATE_SCRIPTS, path.join(tmp, ".trellis", "scripts"), {
+  fs.mkdirSync(path.join(tmp, ".phronia", "scripts"), { recursive: true });
+  fs.cpSync(TEMPLATE_SCRIPTS, path.join(tmp, ".phronia", "scripts"), {
     recursive: true,
   });
 }
 
 function writeConfig(tmp: string, yaml: string): void {
-  fs.writeFileSync(path.join(tmp, ".trellis", "config.yaml"), yaml, "utf-8");
+  fs.writeFileSync(path.join(tmp, ".phronia", "config.yaml"), yaml, "utf-8");
 }
 
 /** Run a Python snippet with the hook module preloaded as `mod` and the repo
@@ -91,7 +91,7 @@ function runConfigProbe(tmp: string, code: string): string {
   const probePath = path.join(tmp, "config_probe.py");
   const script = `
 import sys
-sys.path.insert(0, ${JSON.stringify(path.join(tmp, ".trellis", "scripts"))})
+sys.path.insert(0, ${JSON.stringify(path.join(tmp, ".phronia", "scripts"))})
 from pathlib import Path
 from common.config import get_context_injection_limits
 REPO_ROOT = Path(${JSON.stringify(tmp)})
@@ -109,7 +109,7 @@ ${code}
 }
 
 function makeTask(tmp: string, dirName: string): string {
-  const taskDir = path.join(tmp, ".trellis", "tasks", dirName);
+  const taskDir = path.join(tmp, ".phronia", "tasks", dirName);
   fs.mkdirSync(taskDir, { recursive: true });
   fs.writeFileSync(
     path.join(taskDir, "task.json"),
@@ -124,7 +124,7 @@ function makeArchivedTask(tmp: string, dirName: string): string {
   const activeTaskDir = makeTask(tmp, dirName);
   const archivedTaskDir = path.join(
     tmp,
-    ".trellis",
+    ".phronia",
     "tasks",
     "archive",
     "2026-08",
@@ -141,7 +141,7 @@ function runTaskValidate(
 ): { status: number | null; stdout: string; stderr: string } {
   const r = spawnSync(
     "python3",
-    [path.join(tmp, ".trellis", "scripts", "task.py"), "validate", taskDir],
+    [path.join(tmp, ".phronia", "scripts", "task.py"), "validate", taskDir],
     { cwd: tmp, encoding: "utf-8" },
   );
   if (r.error) throw r.error;
@@ -227,7 +227,7 @@ describe.skipIf(!hasPython())(
           probePath,
           `
 import sys
-sys.path.insert(0, ${JSON.stringify(path.join(tmp, ".trellis", "scripts"))})
+sys.path.insert(0, ${JSON.stringify(path.join(tmp, ".phronia", "scripts"))})
 from pathlib import Path
 from common.config import get_context_injection_limits
 print(get_context_injection_limits(Path(${JSON.stringify(tmp)}))["max_file_bytes"])
@@ -255,7 +255,7 @@ print(get_context_injection_limits(Path(${JSON.stringify(tmp)}))["max_file_bytes
           probePath,
           `
 import sys
-sys.path.insert(0, ${JSON.stringify(path.join(tmp, ".trellis", "scripts"))})
+sys.path.insert(0, ${JSON.stringify(path.join(tmp, ".phronia", "scripts"))})
 from pathlib import Path
 from common.config import get_context_injection_limits
 print(get_context_injection_limits(Path(${JSON.stringify(tmp)}))["max_artifact_bytes"])
@@ -708,7 +708,7 @@ print("all-valid")
         expect(out).toContain(
           `[Trellis] ${relTask}/implement.jsonl has no curated entries`,
         );
-        expect(out).toContain(".trellis/spec/");
+        expect(out).toContain(".phronia/spec/");
         // Task artifacts still follow the notice.
         expect(out).toContain("prd body");
       });
@@ -755,18 +755,18 @@ print("all-valid")
         expect(stdout).toContain("All validations passed");
       });
 
-      it("does not warn about a code-looking path under .trellis/spec/, docs/, or the task's own directory", () => {
+      it("does not warn about a code-looking path under .phronia/spec/, docs/, or the task's own directory", () => {
         const taskDir = makeTask(tmp, "task-code-exempt");
-        fs.mkdirSync(path.join(tmp, ".trellis", "spec"), { recursive: true });
+        fs.mkdirSync(path.join(tmp, ".phronia", "spec"), { recursive: true });
         fs.writeFileSync(
-          path.join(tmp, ".trellis", "spec", "example.py"),
+          path.join(tmp, ".phronia", "spec", "example.py"),
           "# example only\n",
           "utf-8",
         );
         fs.writeFileSync(
           path.join(taskDir, "implement.jsonl"),
           JSON.stringify({
-            file: ".trellis/spec/example.py",
+            file: ".phronia/spec/example.py",
             reason: "spec code sample",
           }) + "\n",
           "utf-8",
@@ -829,7 +829,7 @@ print("all-valid")
           "import sys",
           "from pathlib import Path",
           `sys.path.insert(0, ${JSON.stringify(
-            path.join(tmp, ".trellis", "scripts"),
+            path.join(tmp, ".phronia", "scripts"),
           )})`,
           "from common import task_context",
           "_real = Path.is_file",
@@ -861,16 +861,16 @@ print("all-valid")
 
       it("stays warning-free for a clean, under-cap, spec-only manifest", () => {
         const taskDir = makeTask(tmp, "task-clean");
-        fs.mkdirSync(path.join(tmp, ".trellis", "spec"), { recursive: true });
+        fs.mkdirSync(path.join(tmp, ".phronia", "spec"), { recursive: true });
         fs.writeFileSync(
-          path.join(tmp, ".trellis", "spec", "guide.md"),
+          path.join(tmp, ".phronia", "spec", "guide.md"),
           "spec guide\n",
           "utf-8",
         );
         fs.writeFileSync(
           path.join(taskDir, "implement.jsonl"),
           JSON.stringify({
-            file: ".trellis/spec/guide.md",
+            file: ".phronia/spec/guide.md",
             reason: "guide",
           }) + "\n",
           "utf-8",
@@ -884,7 +884,7 @@ print("all-valid")
 
     describe("task.py validate: archived task paths (#518)", () => {
       const taskName = "08-04-archive-validator-repro";
-      const historicalEvidence = `.trellis/tasks/${taskName}/research/evidence.md`;
+      const historicalEvidence = `.phronia/tasks/${taskName}/research/evidence.md`;
 
       it("#1 resolves a ..-spelled archived task without rewriting", () => {
         const taskDir = makeArchivedTask(tmp, taskName);
@@ -929,7 +929,7 @@ print("all-valid")
         fs.writeFileSync(
           path.join(taskDir, "implement.jsonl"),
           JSON.stringify({
-            file: `.trellis/tasks/${taskName}/research/`,
+            file: `.phronia/tasks/${taskName}/research/`,
             type: "directory",
             reason: "research directory",
           }) + "\n",
@@ -945,7 +945,7 @@ print("all-valid")
       it("#3 keeps an unrelated missing task reference as an error", () => {
         const taskDir = makeArchivedTask(tmp, taskName);
         const missingPath =
-          ".trellis/tasks/another-task/research/missing.md";
+          ".phronia/tasks/another-task/research/missing.md";
         fs.writeFileSync(
           path.join(taskDir, "implement.jsonl"),
           JSON.stringify({ file: missingPath, reason: "other task" }) + "\n",
@@ -990,7 +990,7 @@ print("all-valid")
           "utf-8",
         );
         const traversalPath =
-          `.trellis/tasks/${taskName}/../${taskName}/research/active-only.md`;
+          `.phronia/tasks/${taskName}/../${taskName}/research/active-only.md`;
         fs.writeFileSync(
           path.join(taskDir, "implement.jsonl"),
           JSON.stringify({ file: traversalPath, reason: "traversal" }) + "\n",
@@ -1073,7 +1073,7 @@ print("all-valid")
         const archivedTaskDir = makeArchivedTask(tmp, taskName);
         const malformedArchiveTaskDir = path.join(
           tmp,
-          ".trellis",
+          ".phronia",
           "tasks",
           "archive",
           "2026-8",

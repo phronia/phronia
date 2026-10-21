@@ -29,7 +29,7 @@ Conversations get compacted; files don't. Every research output MUST end up as a
 
 ### Step 1: Resolve Current Task
 
-Run `python3 ./.trellis/scripts/task.py current --source` to get the active task path. If no active task is set, ask the user where to write output; do NOT guess.
+Run `python3 ./.phronia/scripts/task.py current --source` to get the active task path. If no active task is set, ask the user where to write output; do NOT guess.
 
 Ensure `{TASK_DIR}/research/` exists before writing findings.
 
@@ -67,8 +67,8 @@ Do NOT paste full research content into the reply. The files are the contract.
 ### Write Forbidden
 
 - Code files (`src/`, `lib/`, etc.)
-- Spec files (`.trellis/spec/`) - main agent should use the update-spec skill instead
-- `.trellis/scripts/`, `.trellis/workflow.md`, platform config (`.zcode/`, `.claude/`, `.cursor/`, etc.)
+- Spec files (`.phronia/spec/`) - main agent should use the update-spec skill instead
+- `.phronia/scripts/`, `.phronia/workflow.md`, platform config (`.zcode/`, `.claude/`, `.cursor/`, etc.)
 - Other task directories
 - Any git operation
 
@@ -106,7 +106,7 @@ Each `{TASK_DIR}/research/<topic>.md` should follow:
 
 ### Related Specs
 
-- `.trellis/spec/xxx.md` - <description>
+- `.phronia/spec/xxx.md` - <description>
 
 ## Caveats / Not Found
 

@@ -3,7 +3,7 @@
  *
  * Every TypeScript module that needs a workflow path goes through this object.
  * The Python side reads a generated `layout.json` (see scripts/gen-layout.mjs)
- * so the two runtimes cannot drift. B1 flips `rootDirName` from `.trellis` to
+ * so the two runtimes cannot drift. B1 flips `rootDirName` from `.phronia` to
  * `.phronia`; until then the value stays old on purpose while call sites are
  * converted.
  */
@@ -60,7 +60,7 @@ export interface WorkspaceLayout {
   readonly paths: WorkspacePaths;
 }
 
-const ROOT = ".trellis";
+const ROOT = ".phronia";
 
 export const LAYOUT: WorkspaceLayout = Object.freeze({
   rootDirName: ROOT,

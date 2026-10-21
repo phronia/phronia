@@ -60,7 +60,7 @@ COMPACT_MAX_BYTES = 2800
 def _find_repo_root(start: Path) -> Path:
     cur = start.resolve()
     for candidate in [cur, *cur.parents]:
-        if (candidate / ".trellis").is_dir():
+        if (candidate / ".phronia").is_dir():
             return candidate
     return cur
 
@@ -147,7 +147,7 @@ def _jsonl_summaries(path: Path, max_items: int = 8, line_limit: int = 120) -> l
 
 
 def _parse_active_task_path(current_out: str, repo: Path) -> Path | None:
-    # Prefer "Current task: .trellis/tasks/..." line from task.py --source.
+    # Prefer "Current task: .phronia/tasks/..." line from task.py --source.
     for line in current_out.splitlines():
         m = re.search(r"Current task:\s*(.+)\s*$", line.strip(), re.I)
         if not m:
@@ -160,7 +160,7 @@ def _parse_active_task_path(current_out: str, repo: Path) -> Path | None:
             p = repo / p
         return p
     # Fallback: first path-like token containing tasks/
-    m = re.search(r"(\.trellis[/\\]tasks[/\\][^\s]+)", current_out)
+    m = re.search(r"(\.phronia[/\\]tasks[/\\][^\s]+)", current_out)
     if m:
         return repo / m.group(1).replace("\\", "/")
     return None
@@ -398,7 +398,7 @@ def _resolve_runtime_session_file(
     stdin_ctx: dict[str, Any] | None = None,
 ) -> Path | None:
     # Resolve only the current session runtime file; never pick by mtime.
-    sessions_dir = repo / ".trellis" / ".runtime" / "sessions"
+    sessions_dir = repo / ".phronia" / ".runtime" / "sessions"
     if not sessions_dir.is_dir():
         return None
     for sid in _current_session_ids(stdin_ctx):
@@ -414,18 +414,18 @@ def _workflow_phase_summary(
     stdin_ctx: dict[str, Any] | None = None,
 ) -> list[str]:
     lines: list[str] = []
-    workflow = repo / ".trellis" / "workflow.md"
+    workflow = repo / ".phronia" / "workflow.md"
     if workflow.is_file():
         body = _read_text(workflow, 900)
         if body:
             lines.extend(["## workflow.md excerpt", body, ""])
 
     # Prefer classic path; fall back only to the *current* runtime session file.
-    session_md = repo / ".trellis" / "session" / "current.md"
+    session_md = repo / ".phronia" / "session" / "current.md"
     if session_md.is_file():
         body = _read_text(session_md, 1200)
         if body:
-            lines.extend(["## .trellis/session/current.md", body, ""])
+            lines.extend(["## .phronia/session/current.md", body, ""])
     else:
         current_session = _resolve_runtime_session_file(repo, stdin_ctx)
         if current_session is not None:
@@ -475,7 +475,7 @@ def build_context(
             lines.append(f"Dispatch prompt (truncated): {p}")
         lines.append("")
 
-    task_py = repo / ".trellis" / "scripts" / "task.py"
+    task_py = repo / ".phronia" / "scripts" / "task.py"
     current = ""
     task_dir: Path | None = None
     if task_py.is_file():
@@ -484,7 +484,7 @@ def build_context(
         lines.extend(["## task.py current --source", "```", current, "```", ""])
         task_dir = _parse_active_task_path(current, repo)
     else:
-        lines.append("(no .trellis/scripts/task.py — run trellis init first)")
+        lines.append("(no .phronia/scripts/task.py — run trellis init first)")
         lines.append("")
 
     if task_dir and task_dir.exists():
@@ -502,14 +502,14 @@ def build_context(
     if not compact:
         lines.extend(_workflow_phase_summary(repo, stdin_ctx))
 
-        identity = repo / ".trellis" / "identity.md"
+        identity = repo / ".phronia" / "identity.md"
         if identity.is_file():
             body = _read_text(identity, 900 if mode == "subagent" else 1200)
             if body:
-                lines.extend(["## .trellis/identity.md", body, ""])
+                lines.extend(["## .phronia/identity.md", body, ""])
     else:
         # Compact: short identity one-liner if file exists.
-        identity = repo / ".trellis" / "identity.md"
+        identity = repo / ".phronia" / "identity.md"
         if identity.is_file():
             body = _read_text(identity, 280)
             if body:

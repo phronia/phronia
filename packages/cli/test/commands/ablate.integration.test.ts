@@ -90,7 +90,7 @@ describe("ablate()/restore() integration", () => {
     await initialize();
     const sensitiveTask = path.join(
       projectDir,
-      ".trellis",
+      ".phronia",
       "tasks",
       "private-context.md",
     );
@@ -102,7 +102,7 @@ describe("ablate()/restore() integration", () => {
     const before = projectFingerprint();
 
     await ablate({ yes: true });
-    expect(fs.existsSync(path.join(projectDir, ".trellis"))).toBe(false);
+    expect(fs.existsSync(path.join(projectDir, ".phronia"))).toBe(false);
     expect(
       fs.readFileSync(path.join(projectDir, "application.txt"), "utf-8"),
     ).toBe("unchanged\n");
@@ -112,7 +112,7 @@ describe("ablate()/restore() integration", () => {
       fs.readFileSync(
         path.join(
           getTransactionPaths(projectDir).backupDir,
-          ".trellis",
+          ".phronia",
           "tasks",
           "private-context.md",
         ),
@@ -170,7 +170,7 @@ describe("ablate()/restore() integration", () => {
       /changed while ablated/,
     );
     expect(projectFingerprint()).toEqual(conflicted);
-    expect(fs.existsSync(path.join(projectDir, ".trellis"))).toBe(false);
+    expect(fs.existsSync(path.join(projectDir, ".phronia"))).toBe(false);
 
     fs.rmSync(conflictPath);
     await restore({ yes: true });
@@ -183,7 +183,7 @@ describe("ablate()/restore() integration", () => {
     await expect(ablate({ yes: true })).rejects.toThrow(/already ablated/);
     await restore({ yes: true });
     await restore({ yes: true });
-    expect(fs.existsSync(path.join(projectDir, ".trellis"))).toBe(true);
+    expect(fs.existsSync(path.join(projectDir, ".phronia"))).toBe(true);
   });
 
   it("#6 non-interactive mutation requires --yes", async () => {
@@ -200,7 +200,7 @@ describe("ablate()/restore() integration", () => {
 
     await expect(ablate({})).rejects.toThrow("process.exit(1)");
     expect(exitSpy).toHaveBeenCalledWith(1);
-    expect(fs.existsSync(path.join(projectDir, ".trellis"))).toBe(true);
+    expect(fs.existsSync(path.join(projectDir, ".phronia"))).toBe(true);
   });
 
   it.skipIf(process.platform === "win32")(
@@ -315,7 +315,7 @@ describe("ablate()/restore() integration", () => {
 
     await expect(restore({})).rejects.toThrow("process.exit(1)");
     expect(exitSpy).toHaveBeenCalledWith(1);
-    expect(fs.existsSync(path.join(projectDir, ".trellis"))).toBe(false);
+    expect(fs.existsSync(path.join(projectDir, ".phronia"))).toBe(false);
     expect(fs.existsSync(getTransactionPaths(projectDir).stateFile)).toBe(true);
   });
 

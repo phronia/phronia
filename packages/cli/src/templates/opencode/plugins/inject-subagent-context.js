@@ -33,7 +33,7 @@ function extractActiveTaskHint(prompt) {
 
 /**
  * Get context for implement agent. `taskDir` may be relative
- * (`.trellis/tasks/foo`) or absolute; both are resolved via
+ * (`.phronia/tasks/foo`) or absolute; both are resolved via
  * `ctx.resolveTaskDir`.
  *
  * Read order (mirrors Python `get_implement_context`):
@@ -161,7 +161,7 @@ function getResearchContext(ctx) {
   const parts = []
 
   // Dynamic project structure (scan actual spec directory)
-  const specPath = ".trellis/spec"
+  const specPath = ".phronia/spec"
   const specFull = join(ctx.directory, specPath)
 
   const structureLines = [`## Project Spec Directory Structure\n\n\`\`\`\n${specPath}/`]
@@ -201,8 +201,8 @@ function getResearchContext(ctx) {
 
 ## Search Tips
 
-- Spec files: \`.trellis/spec/**/*.md\`
-- Known issues: \`.trellis/big-question/\`
+- Spec files: \`.phronia/spec/**/*.md\`
+- Known issues: \`.phronia/big-question/\`
 - Code search: Use Glob and Grep tools
 - Tech solutions: Use mcp__exa__web_search_exa or mcp__exa__get_code_context_exa`)
 

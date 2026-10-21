@@ -14,8 +14,8 @@
  * self-correct on the next routine command.
  *
  * Rules:
- *   - `.trellis/*` entries are ALWAYS kept. `trellis uninstall` removes
- *     `.trellis/` wholesale via `fs.rmSync(..., { recursive: true })`, so
+ *   - `.phronia/*` entries are ALWAYS kept. `trellis uninstall` removes
+ *     `.phronia/` wholesale via `fs.rmSync(..., { recursive: true })`, so
  *     manifest accuracy there doesn't affect uninstall data-loss. `update`
  *     also relies on these entries to detect user-modified workflow files.
  *   - Root-level `AGENTS.md` is kept only when it still looks Trellis-managed

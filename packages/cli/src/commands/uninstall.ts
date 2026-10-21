@@ -1,9 +1,9 @@
 /**
  * `trellis uninstall` — remove every file written by `trellis init` / `update`
- * from the current project, plus the `.trellis/` directory itself.
+ * from the current project, plus the `.phronia/` directory itself.
  *
  * The single source of truth for "what trellis wrote" is
- * `.trellis/.template-hashes.json`. Files outside that manifest are never
+ * `.phronia/.template-hashes.json`. Files outside that manifest are never
  * touched (e.g. user-added hooks under `.cursor/hooks/`).
  *
  * Manifest-listed files split into two groups:
@@ -14,7 +14,7 @@
  *      file is fully empty afterwards, we delete it.
  *
  * Whether the user has modified a manifest-listed file or not, it is removed
- * (per the PRD: "全删"). The `.trellis/` tree is removed unconditionally.
+ * (per the PRD: "全删"). The `.phronia/` tree is removed unconditionally.
  */
 
 import { execFileSync } from "node:child_process";
@@ -119,9 +119,9 @@ async function promptContinue(): Promise<boolean> {
 
 /**
  * List uncommitted (modified, staged, or untracked) files under the
- * user-data subdirectories of `.trellis/` — spec/, tasks/, workspace/ — which
+ * user-data subdirectories of `.phronia/` — spec/, tasks/, workspace/ — which
  * hold user-authored specs, task PRDs, and journals that `update.ts` marks as
- * PROTECTED. Uninstall deletes the whole `.trellis/` tree with no backup, so
+ * PROTECTED. Uninstall deletes the whole `.phronia/` tree with no backup, so
  * these are surfaced before the destructive step. Returns `[]` when this is
  * not a git repo or git is unavailable (nothing we can check).
  */
@@ -171,11 +171,11 @@ export async function uninstall(options: UninstallOptions = {}): Promise<void> {
   const cwd = process.cwd();
   const trellisDir = path.join(cwd, DIR_NAMES.WORKFLOW);
 
-  // Pre-check 1: must have a `.trellis/` directory.
+  // Pre-check 1: must have a `.phronia/` directory.
   if (!fs.existsSync(trellisDir)) {
     console.log(
       chalk.gray(
-        "Trellis is not installed in this project (no .trellis/ directory found).",
+        "Trellis is not installed in this project (no .phronia/ directory found).",
       ),
     );
     return;
@@ -188,7 +188,7 @@ export async function uninstall(options: UninstallOptions = {}): Promise<void> {
     console.error(
       chalk.red(
         "Trellis directory found but manifest is missing — cannot determine which platform files to remove. " +
-          "You can manually delete .trellis/ if needed.",
+          "You can manually delete .phronia/ if needed.",
       ),
     );
     process.exit(1);
@@ -202,7 +202,7 @@ export async function uninstall(options: UninstallOptions = {}): Promise<void> {
   // Dry-run: still compute the pruned hashes (so the plan reflects post-prune
   // reality) but pass `persist: false` so no disk write happens. The actual
   // disk write defers to executePlan time, where we'd be rewriting the
-  // manifest only to delete the whole .trellis/ dir anyway — but the
+  // manifest only to delete the whole .phronia/ dir anyway — but the
   // computation must remain to keep the rendered plan honest.
   const configuredPlatforms = getConfiguredPlatforms(cwd);
   const { pruned, hashes: prunedHashes } = pruneOrphanManifestKeys(
@@ -224,7 +224,7 @@ export async function uninstall(options: UninstallOptions = {}): Promise<void> {
   const plan = buildManagedRemovalPlan(cwd, prunedHashes);
   renderPlan(cwd, plan);
 
-  // .trellis/ holds user-authored specs, task PRDs, and journals that have no
+  // .phronia/ holds user-authored specs, task PRDs, and journals that have no
   // backup here. Surface any uncommitted such files before deleting the tree,
   // and — for scripted `--yes` runs where nobody reads the warning — fail
   // closed unless explicitly overridden.
@@ -232,7 +232,7 @@ export async function uninstall(options: UninstallOptions = {}): Promise<void> {
   if (uncommitted.length > 0) {
     console.warn(
       chalk.red.bold(
-        `\n⚠ ${uncommitted.length} uncommitted file(s) under .trellis/ (spec/tasks/workspace) ` +
+        `\n⚠ ${uncommitted.length} uncommitted file(s) under .phronia/ (spec/tasks/workspace) ` +
           `will be permanently deleted with no backup:`,
       ),
     );
@@ -255,7 +255,7 @@ export async function uninstall(options: UninstallOptions = {}): Promise<void> {
   if (uncommitted.length > 0 && options.yes && !dirtyUninstallBypassEnabled()) {
     console.error(
       chalk.red(
-        "Refusing to uninstall with --yes while .trellis/ has uncommitted user data " +
+        "Refusing to uninstall with --yes while .phronia/ has uncommitted user data " +
           "(spec/tasks/workspace). Commit or stash it, re-run without --yes to confirm " +
           "interactively, or set TRELLIS_ALLOW_DIRTY_UNINSTALL=1 to override.",
       ),

@@ -90,7 +90,7 @@ for the batch list and gates.
 - Commit prefix: `refactor(B<n>/T<x>): ...`.
 - Every batch must pass `pnpm verify`; batches touching generated files must
   also pass `pnpm test:idempotence`.
-- Do not hand-edit generated `.trellis/` (later `.phronia/`) or platform
+- Do not hand-edit generated `.phronia/` (later `.phronia/`) or platform
   directories. Change the template under `packages/cli/src/templates/` and
   regenerate.
 - Decisions live in `docs/adr/`. A deviation from an accepted ADR needs a new
@@ -112,13 +112,13 @@ Trellis/
 │   ├── agents/             # Agent definitions
 │   ├── commands/           # Slash commands
 │   └── hooks/              # Python hook scripts
-├── .trellis/               # Trellis workflow (project's own) ←
+├── .phronia/               # Trellis workflow (project's own) ←
 │   ├── scripts/            # Bash scripts
 │   └── spec/               # Spec file templates
 └── docs/                   # Documentation
 ```
 
-> **Important:** When modifying `.claude/`, `.trellis/`, or `.cursor/`, check if the same changes need to be applied to `src/templates/`. The project uses its own config files, but templates are what gets installed to user projects.
+> **Important:** When modifying `.claude/`, `.phronia/`, or `.cursor/`, check if the same changes need to be applied to `src/templates/`. The project uses its own config files, but templates are what gets installed to user projects.
 
 ## Commit Guidelines
 

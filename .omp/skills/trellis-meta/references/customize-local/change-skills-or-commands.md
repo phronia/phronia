@@ -4,10 +4,10 @@ When the user wants to change AI entry points, auto-trigger rules, or explicit c
 
 ## Read These Files First
 
-1. `.trellis/workflow.md`
+1. `.phronia/workflow.md`
 2. Target platform skill/command/prompt/workflow directory
 3. Related agent or hook files
-4. Whether project rules already exist in `.trellis/spec/`
+4. Whether project rules already exist in `.phronia/spec/`
 
 ## Which Entry Type To Choose
 
@@ -15,8 +15,8 @@ When the user wants to change AI entry points, auto-trigger rules, or explicit c
 | --- | --- |
 | AI should automatically know a capability | Add or modify a skill. |
 | User wants to trigger manually with a command | Add or modify a command/prompt/workflow. |
-| Team project conventions | Prefer `.trellis/spec/` or a project-local skill. |
-| Change Trellis flow semantics | Synchronize `.trellis/workflow.md`. |
+| Team project conventions | Prefer `.phronia/spec/` or a project-local skill. |
+| Change Trellis flow semantics | Synchronize `.phronia/workflow.md`. |
 
 ## Modify A Skill
 
@@ -43,11 +43,11 @@ Do not write vague descriptions such as "helpful project skill"; they can trigge
 Explicit entry points should state:
 
 - How the user triggers it.
-- Which `.trellis/` files to read.
+- Which `.phronia/` files to read.
 - Which scripts to run.
 - How to report after completion.
 
-If a command only repeats workflow rules, prefer making it reference/read `.trellis/workflow.md` instead of maintaining a second copy of the flow.
+If a command only repeats workflow rules, prefer making it reference/read `.phronia/workflow.md` instead of maintaining a second copy of the flow.
 
 ## Common Paths
 
@@ -75,4 +75,4 @@ For multi-platform projects, add equivalent versions in each platform skill dire
 
 - Do not mix every platform's syntax into one file.
 - Do not change only one platform entry point while claiming all platforms are supported.
-- Do not hide long-term engineering conventions inside a command; write them to `.trellis/spec/`.
+- Do not hide long-term engineering conventions inside a command; write them to `.phronia/spec/`.
