@@ -69,8 +69,9 @@ Batches that must update this file:
     and rejects shared-assembly markers. `@phronia/testing` gained contract
     fixture replay: a recorded payload plus minimal project is replayed
     through `phronia context`, and payload/envelope key drift fails the test.
-    The interactive "keep my modified shim + write .new" update flow is not
-    part of this change yet; shims are still handled as managed templates.
+    A locally modified shim is never overwritten: `update` writes
+    `<path>.new`, keeps the installed file, and prints the adopt/reset
+    commands. `--force` remains the explicit overwrite path.
   - **B5 now**: `phronia doctor` reports the selected adapter, harness version
     and source, status, and last handshake per platform; `--json`,
     `--no-probe`, `--refresh-manifest`, and `--check` are available.
@@ -117,8 +118,10 @@ Batches that must update this file:
   - Edit/Write tool calls receive only the verified rules whose scope
     matches the target path (`<rules-for-path>`), capped at 8. Draft and
     deprecated rules are reported but never injected or enforced.
-  - check output is still prose; the machine-readable verdict file is not
-    part of this change yet.
+  - check output is still prose, but `phronia rules verdict --task <ref>
+    --input <file|->` validates per-rule verdicts and writes
+    `.phronia/tasks/<ref>/check-results.json` with `pass|fail|partial` and
+    a `missing` list for verified rules that were not evaluated.
 - **B10**: hooks stop invoking Python; a platform package is used when
   available.
 - **B11**: task worktrees and session GC.

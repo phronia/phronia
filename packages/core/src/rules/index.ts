@@ -294,3 +294,4 @@ function findRuleFiles(dir: string): string[] {
   }
   return out;
 }
+export * from "./verdict.js";

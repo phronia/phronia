@@ -11,7 +11,11 @@ import { uninstall } from "../commands/uninstall.js";
 import { adopt, printAdoptReport } from "../commands/adopt.js";
 import { runContextCommand } from "../commands/context.js";
 import { runDoctorCommand, runZcodeDetectCommand } from "../commands/doctor.js";
-import { runRulesCompile, runRulesList } from "../commands/rules.js";
+import {
+  runRulesCompile,
+  runRulesList,
+  runRulesVerdict,
+} from "../commands/rules.js";
 import {
   addWorktree,
   listWorktrees,
@@ -646,6 +650,23 @@ rulesCommand
   .option("--check", "Exit non-zero when the ledger has errors")
   .action((options: Record<string, unknown>) => {
     const exitCode = runRulesCompile({ cwd, ...options });
+    if (exitCode !== 0) process.exit(exitCode);
+  });
+
+rulesCommand
+  .command("verdict")
+  .requiredOption("--task <ref>", "Task directory reference")
+  .requiredOption("--input <file>", "Verdict JSON file, or - for stdin")
+  .option("--check", "Exit non-zero on unknown rules or a failed verdict")
+  .option("--json", "Output machine-readable JSON")
+  .action((options: Record<string, unknown>) => {
+    const exitCode = runRulesVerdict({
+      cwd,
+      task: options.task as string,
+      input: options.input as string,
+      check: Boolean(options.check),
+      json: Boolean(options.json),
+    });
     if (exitCode !== 0) process.exit(exitCode);
   });
 

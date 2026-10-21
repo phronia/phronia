@@ -2708,6 +2708,27 @@ export async function update(options: UpdateOptions): Promise<void> {
     const applyToAll: { action: ConflictAction | null } = { action: null };
 
     for (const file of changes.changedFiles) {
+      // A modified shim is never overwritten silently or behind an
+      // interactive prompt: write the new artifact beside it and say how to
+      // adopt or discard. `--force` remains the explicit overwrite path.
+      if (!options.force && isShimArtifact(file.path)) {
+        fs.writeFileSync(`${file.path}.new`, file.newContent);
+        console.log(
+          chalk.blue(`  ✓ ${file.relativePath}.new (locally modified shim preserved)`),
+        );
+        console.log(
+          chalk.gray(
+            `    adopt: mv ${file.relativePath}.new ${file.relativePath}`,
+          ),
+        );
+        console.log(
+          chalk.gray(
+            `    reset: phronia update --force  (discards local shim changes)`,
+          ),
+        );
+        createdNew++;
+        continue;
+      }
       const action = await promptConflictResolution(file, options, applyToAll);
 
       if (action === "overwrite") {
@@ -2974,5 +2995,21 @@ export async function update(options: UpdateOptions): Promise<void> {
     writeCompiledRules(cwd)
   } catch {
     // manifest is diagnostic state, not required for the update to succeed
+  }
+}
+
+/** Shims carry a `phronia-shim:` stamp; they use the artifact conflict path. */
+export function isShimArtifact(filePath: string): boolean {
+  try {
+    const fd = fs.openSync(filePath, "r");
+    try {
+      const buffer = Buffer.alloc(512);
+      const read = fs.readSync(fd, buffer, 0, buffer.length, 0);
+      return buffer.subarray(0, read).toString("utf8").includes("phronia-shim:");
+    } finally {
+      fs.closeSync(fd);
+    }
+  } catch {
+    return false;
   }
 }
