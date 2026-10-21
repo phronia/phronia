@@ -39,6 +39,8 @@ export interface ContextRequest {
     toolName?: string;
     agentType?: string;
     prompt?: string;
+    /** Return materialized context without the agent-role prompt wrapper. */
+    contextOnly?: boolean;
     cwd?: string;
     filePath?: string;
     hasAssistantMessages?: boolean;

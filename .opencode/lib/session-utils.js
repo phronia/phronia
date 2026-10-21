@@ -1,4 +1,3 @@
-/* global process */
 /**
  * Persisted-context markers for OpenCode message parts.
  *

@@ -70,6 +70,75 @@ describe("materialization limits", () => {
   });
 });
 
+describe("context-only materialization", () => {
+  let root: string;
+
+  beforeEach(() => {
+    root = fs.mkdtempSync(path.join(os.tmpdir(), "phronia-subagent-ctx-"));
+    seed(root);
+  });
+
+  afterEach(() => {
+    fs.rmSync(root, { recursive: true, force: true });
+  });
+
+  it("returns the session scope without a prompt mutation", () => {
+    const response = buildSubagentSpawn(
+      request(root, {
+        session_id: "abc",
+        subagent_type: "session",
+        context_only: true,
+      }),
+    );
+    const text = response.blocks[0]?.text ?? "";
+    expect(response.mutations).toHaveLength(0);
+    expect(response.blocks[0]?.id).toBe("subagent-context");
+    expect(text).toContain("# PRD body");
+    expect(text).toContain("cli/backend/index.md");
+    expect(text).toContain("guides/index.md");
+  });
+
+  it("returns role-specific material without the prompt wrapper", () => {
+    const response = buildSubagentSpawn(
+      request(root, {
+        session_id: "abc",
+        subagent_type: "phronia-implement",
+        context_only: true,
+      }),
+    );
+    const text = response.blocks[0]?.text ?? "";
+    expect(response.mutations).toHaveLength(0);
+    expect(text).toContain("cli/backend/index.md");
+    expect(text).not.toContain("guides/index.md");
+    expect(text).not.toContain("Implement Agent Task");
+  });
+
+  it("deduplicates files shared by both session manifests", () => {
+    fs.writeFileSync(
+      path.join(root, ".phronia/tasks/01-01-one/check.jsonl"),
+      `${JSON.stringify({ file: ".phronia/spec/cli/backend/index.md", reason: "shared" })}\n`,
+    );
+    const text = buildSubagentSpawn(
+      request(root, {
+        session_id: "abc",
+        subagent_type: "session",
+        context_only: true,
+      }),
+    ).blocks[0]?.text ?? "";
+    expect(text.match(/cli\/backend\/index\.md/g)).toHaveLength(1);
+  });
+
+  it("refuses the session scope without contextOnly", () => {
+    const response = buildSubagentSpawn(
+      request(root, { session_id: "abc", subagent_type: "session" }),
+    );
+    expect(response.mutations).toHaveLength(0);
+    expect(response.diagnostics.map((item) => item.code)).toContain(
+      "context.subagent.session_requires_context_only",
+    );
+  });
+});
+
 describe.skipIf(!pythonAvailable)("subagent prompt parity", () => {
   let root: string;
 

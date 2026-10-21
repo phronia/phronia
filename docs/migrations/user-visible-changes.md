@@ -41,6 +41,21 @@ Batches that must update this file:
 - **B3**: Kiro sub-agent output (JSON → plain text); Codex/Copilot gain
   first-reply notice and update hint; stale-pointer wording unified; JS hosts
   regain `task_error` / `Present:` / JSONL warnings.
+  - **OMP**: session start now injects the core session plan; the per-turn
+    message carries the core `<workflow-state>` breadcrumb instead of OMP's
+    nested `[workflow-state:*]` block plus `<session-overview>`. Task context
+    uses the core materializer, so files appear as `=== path ===` blocks.
+  - **Snow**: the hook is a thin adapter over `phronia context`. Session/user
+    inject and `.snow/log/phronia-context.txt` now contain the core session
+    plan and breadcrumb; Snow's own role-specific sub-agent checklists are
+    gone, and sub-agent material comes from the core JSONL/artifact pipeline.
+  - **Pi**: the sub-agent prompt is the core role prompt prefixed with the
+    `.pi/agents/<name>.md` definition (Pi has no `--agent` flag); per-turn
+    runtime context carries only the core breadcrumb, while the startup
+    snapshot stays in `systemPrompt`.
+  - Why: one assembly implementation; OMP/Pi/Snow had three drifting copies.
+  - Migration: no action for users; custom text that matched Snow's
+    `Sub-agent checklist (...)` headings must read the task artifacts instead.
 - **B5/B6**: unknown harness versions may switch to `degraded` fallback;
   shim files become managed artifacts and are no longer overwritten silently.
 - **B7**: ZCode may select `bridge` or `prelude` instead of project hooks; the

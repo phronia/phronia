@@ -2,7 +2,6 @@ import {
   existsSync,
   readFileSync,
   readdirSync,
-  realpathSync,
   statSync,
 } from "node:fs";
 import { createHash, randomBytes } from "node:crypto";
@@ -16,7 +15,6 @@ import {
 } from "node:path";
 import { homedir } from "node:os";
 import { spawn, spawnSync } from "node:child_process";
-import { isUtf8 } from "node:buffer";
 
 // ── Types ──────────────────────────────────────────────────────────────
 type JsonObject = Record<string, unknown>;
@@ -87,12 +85,6 @@ function trunc(s: string, w: number) {
 }
 
 // ── Constants ─────────────────────────────────────────────────────────
-const PHRONIA_AGENT_JSONL: Record<string, string> = {
-  "phronia-implement": "implement.jsonl",
-  implement: "implement.jsonl",
-  "phronia-check": "check.jsonl",
-  check: "check.jsonl",
-};
 const MAX_STDOUT = 8 * 1024 * 1024;
 const MAX_STDERR = 1024 * 1024;
 const MAX_TAIL = 256 * 1024;
@@ -101,18 +93,7 @@ const MAX_TOOL_ARG_CHARS = 2048;
 const MAX_TOOLS = 256;
 const MAX_PARALLEL_PROMPTS = 6;
 const ABORT_KILL_GRACE_MS = 1500;
-const SESSION_OVERVIEW_TIMEOUT_MS = 1500;
 const THROTTLE_MS = 500;
-const FIRST_REPLY_NOTICE = `<first-reply-notice>
-On the first visible assistant reply in this session, briefly acknowledge that Phronia SessionStart context loaded.
-Choose the acknowledgment language in this order:
-1. Use the language of the user's current request (the user message that triggered this reply).
-2. If that request has no clear natural language, use an explicitly established project communication language.
-3. If neither provides a language, output the language-neutral fallback exactly: \`Phronia SessionStart ✓\`.
-Continue directly with the user's request after the acknowledgment.
-The acknowledgment must not alter the language used for the remainder of the response.
-This notice is one-shot: do not repeat it after the first visible assistant reply in this session.
-</first-reply-notice>`;
 
 // ── State types ───────────────────────────────────────────────────────
 type RunStatus = "pending" | "running" | "succeeded" | "failed" | "cancelled";
@@ -752,222 +733,6 @@ class BBC {
   }
 }
 
-// ── Context Injection Limits (issue #441) ───────────────────────────────
-//
-// Notice text and behavior mirrored byte-for-byte from the shared-hooks
-// Python sub-agent context injection hook. Changing wording there requires
-// changing it here too.
-interface ContextInjectionLimits {
-  max_file_bytes: number;
-  max_artifact_bytes: number;
-  max_total_bytes: number;
-}
-const DEFAULT_CONTEXT_INJECTION_LIMITS: ContextInjectionLimits = {
-  max_file_bytes: 32768,
-  max_artifact_bytes: 65536,
-  max_total_bytes: 131072,
-};
-
-function truncateUtf8(buf: Buffer, cap: number): Buffer {
-  if (cap <= 0 || buf.length <= cap) return buf;
-  let i = cap;
-  // Back off over continuation bytes (10xxxxxx) to find the lead byte.
-  while (i > 0 && (buf[i - 1]! & 0xc0) === 0x80) i--;
-  if (i === 0) return Buffer.alloc(0);
-  const lead = buf[i - 1]!;
-  if (lead & 0x80) {
-    let seqLen = 1;
-    if ((lead & 0xe0) === 0xc0) seqLen = 2;
-    else if ((lead & 0xf0) === 0xe0) seqLen = 3;
-    else if ((lead & 0xf8) === 0xf0) seqLen = 4;
-    // Drop the lead byte too if its full sequence didn't fit.
-    if (i - 1 + seqLen > cap) i--;
-  }
-  return buf.subarray(0, i);
-}
-
-function stripInlineComment(value: string): string {
-  let inQuote: string | null = null;
-  for (let idx = 0; idx < value.length; idx++) {
-    const ch = value[idx]!;
-    if (inQuote) {
-      if (ch === inQuote) inQuote = null;
-      continue;
-    }
-    if (ch === '"' || ch === "'") {
-      inQuote = ch;
-      continue;
-    }
-    if (ch === "#" && (idx === 0 || /\s/.test(value[idx - 1]!)))
-      return value.slice(0, idx);
-  }
-  return value;
-}
-function unquoteYaml(s: string): string {
-  if (s.length >= 2 && s[0] === s[s.length - 1] && (s[0] === '"' || s[0] === "'"))
-    return s.slice(1, -1);
-  return s;
-}
-
-/** Line-based parser for ONLY the `context_injection:` block of
- * `.phronia/config.yaml`. Not a general YAML parser — mirrors
- * `common.config.get_context_injection_limits()` semantics for this
- * section only (missing keys keep the default; invalid/negative values
- * fall back to the default for that key). */
-function readContextInjectionLimits(repoRoot: string): ContextInjectionLimits {
-  const limits: ContextInjectionLimits = { ...DEFAULT_CONTEXT_INJECTION_LIMITS };
-  const text = readText(join(repoRoot, ".phronia", "config.yaml"));
-  if (!text) return limits;
-
-  let inSection = false;
-  let sectionIndent = -1;
-  for (const rawLine of text.split(/\r?\n/)) {
-    const trimmed = rawLine.trim();
-    if (!inSection) {
-      if (/^context_injection\s*:\s*(#.*)?$/.test(trimmed)) {
-        inSection = true;
-        sectionIndent = rawLine.length - rawLine.trimStart().length;
-      }
-      continue;
-    }
-    if (!trimmed || trimmed.startsWith("#")) continue;
-    const indent = rawLine.length - rawLine.trimStart().length;
-    if (indent <= sectionIndent) break;
-    const m = trimmed.match(/^([A-Za-z_][A-Za-z0-9_]*)\s*:\s*(.*)$/);
-    if (!m) continue;
-    const key = m[1]!;
-    if (!(key in limits)) continue;
-    const raw = unquoteYaml(stripInlineComment(m[2]!).trim()).trim();
-    if (!/^-?\d+$/.test(raw)) continue; // invalid -> keep default
-    const value = parseInt(raw, 10);
-    if (value < 0) continue; // negative -> keep default
-    (limits as unknown as Record<string, number>)[key] = value;
-  }
-  return limits;
-}
-
-class ContextBudget {
-  used = 0;
-  constructor(private maxTotalBytes: number) {}
-  hasRoom(size: number): boolean {
-    if (this.maxTotalBytes <= 0) return true;
-    return this.used + size <= this.maxTotalBytes;
-  }
-  add(size: number): void {
-    this.used += size;
-  }
-}
-
-function truncateNotice(path: string, cap: number): string {
-  return `\n[Phronia: truncated at ${cap} bytes — read ${path} for the full content]`;
-}
-function isBinaryContent(data: Buffer): boolean {
-  return data.includes(0) || !isUtf8(data);
-}
-function binaryNotice(path: string, size: number, reason: string): string {
-  return `[Phronia: not inlined (binary file) — ${path} (${size} bytes): ${reason}]`;
-}
-function indexNotice(path: string, size: number, reason: string): string {
-  return `[Phronia: not inlined (total context limit reached) — ${path} (${size} bytes): ${reason}]`;
-}
-function budgetedBlock(
-  budget: ContextBudget,
-  header: string,
-  plainPath: string,
-  content: string,
-  reason: string,
-  sizeForIndex: number,
-): string {
-  const block = `=== ${header} ===\n${content}`;
-  const blockBytes = Buffer.byteLength(block, "utf-8");
-  if (!budget.hasRoom(blockBytes)) {
-    const notice = indexNotice(plainPath, sizeForIndex, reason);
-    budget.add(Buffer.byteLength(notice, "utf-8"));
-    return notice;
-  }
-  budget.add(blockBytes);
-  return block;
-}
-function readFileBytes(basePath: string, filePath: string): Buffer | null {
-  const full = join(basePath, filePath);
-  try {
-    if (!statSync(full).isFile()) return null;
-  } catch {
-    return null;
-  }
-  try {
-    return readFileSync(full);
-  } catch {
-    return null;
-  }
-}
-function materializeFile(
-  basePath: string,
-  filePath: string,
-  reason: string,
-  limits: ContextInjectionLimits,
-  budget: ContextBudget,
-): string | null {
-  const data = readFileBytes(basePath, filePath);
-  if (data === null) return null;
-  const size = data.length;
-  if (isBinaryContent(data)) {
-    const notice = binaryNotice(filePath, size, reason);
-    budget.add(Buffer.byteLength(notice, "utf-8"));
-    return notice;
-  }
-  const cap = limits.max_file_bytes;
-  const truncated = truncateUtf8(data, cap);
-  let content = truncated.toString("utf-8");
-  if (truncated.length < size) content += truncateNotice(filePath, cap);
-  return budgetedBlock(budget, filePath, filePath, content, reason, size);
-}
-function materializeArtifact(
-  basePath: string,
-  filePath: string,
-  headerLabel: string,
-  reason: string,
-  limits: ContextInjectionLimits,
-  budget: ContextBudget,
-): string | null {
-  const data = readFileBytes(basePath, filePath);
-  if (data === null) return null;
-  const size = data.length;
-  const cap = limits.max_artifact_bytes;
-  const truncated = truncateUtf8(data, cap);
-  let content = truncated.toString("utf-8");
-  if (truncated.length < size) content += truncateNotice(filePath, cap);
-  return budgetedBlock(budget, headerLabel, filePath, content, reason, size);
-}
-interface JsonlEntry {
-  file: string;
-  type: string;
-  reason: string;
-}
-function readJsonlEntries(basePath: string, jsonlPath: string): JsonlEntry[] {
-  const text = readText(join(basePath, jsonlPath));
-  if (!text) return [];
-  const entries: JsonlEntry[] = [];
-  for (const line of text.split(/\r?\n/)) {
-    const t = line.trim();
-    if (!t) continue;
-    try {
-      const item = JSON.parse(t) as JsonObject;
-      const filePath =
-        (typeof item.file === "string" && item.file) ||
-        (typeof item.path === "string" && item.path) ||
-        "";
-      if (!filePath) continue;
-      entries.push({
-        file: filePath,
-        type: typeof item.type === "string" ? item.type : "file",
-        reason: (typeof item.reason === "string" && item.reason) || "-",
-      });
-    } catch {}
-  }
-  return entries;
-}
-
 // ── Phronia Context ────────────────────────────────────────────────────
 function findRoot(start: string): string {
   let c = resolve(start);
@@ -1077,192 +842,60 @@ function contextKey(input?: unknown, ctx?: PiExtensionContext): string | null {
   return null;
 }
 
-/**
- * Return `candidate` when it lands inside `root`, else null.
- *
- * A session pointer is not always something the user typed. `task.py` now
- * refuses to store a ref that leaves the project, but a session file written
- * before that fix can still hold one, and `trellis update` does not rewrite
- * session files — so a poisoned pointer outlives the upgrade that closed the
- * writer. Both sides are resolved so a task directory symlinked outside is
- * refused too, but the original `candidate` is returned on success: callers do
- * `relative(root, dir)`, and handing them a realpath would break that whenever
- * `root` itself sits behind a symlink (`/tmp` does on macOS).
- */
-function containInRoot(root: string, candidate: string): string | null {
-  try {
-    const rel = relative(realpathSync(root), realpathSync(candidate));
-    if (rel !== "" && (rel.startsWith("..") || isAbsolute(rel))) return null;
-    return candidate;
-  } catch {
-    return null;
-  }
-}
-
-function readTaskDir(root: string, key: string | null): string | null {
-  if (!key) return null;
-  try {
-    const ctx = JSON.parse(
-      readText(join(root, ".phronia", ".runtime", "sessions", `${key}.json`)),
-    ) as JsonObject;
-    let ref = str(ctx.current_task);
-    if (!ref) return null;
-    ref = ref;
-    ref = ref.replace(/\\/g, "/").replace(/^\.\//, "");
-    if (ref.startsWith("tasks/")) ref = `.phronia/${ref}`;
-    const candidate = ref.startsWith(".phronia/")
-      ? join(root, ref)
-      : isAbsolute(ref)
-        ? ref
-        : join(root, ".phronia", "tasks", ref);
-    return containInRoot(root, candidate);
-  } catch {
-    return null;
-  }
-}
-
 // ── Workflow State Breadcrumb ─────────────────────────────────────────
-const WF_RE =
-  /\[workflow-state:([A-Za-z0-9_-]+)\]\s*\n([\s\S]*?)\n\s*\[\/workflow-state:\1\]/g;
+// Assembly lives in `@phronia/core`; this shim only adapts the event shape.
 function workflowBreadcrumb(root: string, key: string | null): string {
-  const wf = readText(join(root, ".phronia", "workflow.md"));
-  if (!wf) return "";
-  const templates: Record<string, string> = {};
-  for (const m of wf.matchAll(WF_RE)) {
-    const s = m[1] ?? "",
-      b = (m[2] ?? "").trim();
-    if (s && b) templates[s] = b;
-  }
-  const dir = readTaskDir(root, key);
-  let header = "Status: no_task",
-    lookup = "no_task";
-  if (dir) {
-    try {
-      const d = JSON.parse(readText(join(dir, "task.json"))) as JsonObject;
-      const status = str(d.status) ?? "";
-      const id = str(d.id) ?? dir.split(/[\\/]/).pop() ?? "";
-      if (status) {
-        header = `Task: ${id} (${status})`;
-        lookup = status;
-      }
-    } catch {}
-  }
-  const body = templates[lookup] ?? "Refer to workflow.md for current step.";
-  return `<workflow-state>\n${header}\n${body}\n</workflow-state>`;
+  const response = runCoreContext(root, key, "user-prompt", { prompt: "" });
+  return response ? blocksText(response) : "";
 }
 
-// ── Session Overview ───────────────────────────────────────────────────
-function runContextScript(root: string, key: string | null, args: string[]): string {
-  const script = join(root, ".phronia", "scripts", "get_context.py");
-  if (!exists(script)) return "";
-  try {
-    const py = process.platform === "win32" ? "python" : "python3";
-    const result = spawnSync(py, [script, ...args], {
-      cwd: root,
-      env: key ? { ...process.env, PHRONIA_CONTEXT_ID: key } : process.env,
-      encoding: "utf-8",
-      timeout: SESSION_OVERVIEW_TIMEOUT_MS,
-      windowsHide: true,
-    });
-    if (result.status !== 0) return "";
-    const stdout = (result.stdout ?? "").trim();
-    return stdout;
-  } catch {
-    return "";
-  }
-}
-
-function sessionOverview(root: string, key: string | null): string {
-  const stdout = runContextScript(root, key, []);
-  return stdout ? `<session-overview>\n${stdout}\n</session-overview>` : "";
-}
-
-function workflowOverview(root: string, key: string | null): string {
-  const stdout = runContextScript(root, key, [
-    "--mode",
-    "phase",
-    "--platform",
-    "pi",
-  ]);
-  return stdout ? `<phronia-workflow>\n${stdout}\n</phronia-workflow>` : "";
-}
-
-function buildStartupContext(
+// ── Core bridge ────────────────────────────────────────────────────────
+function runCoreContext(
   root: string,
   key: string | null,
-  overview: string,
-): string {
-  const workflow = workflowOverview(root, key);
-  return [
-    "<session-context>\nPhronia compact SessionStart context. Use it to orient the session; load details on demand.\n</session-context>",
-    FIRST_REPLY_NOTICE,
-    overview,
-    workflow,
-    "<ready>\nUse the current workflow state to decide whether to create, continue, or skip a Phronia task.\n</ready>",
-  ]
+  event: string,
+  input: unknown,
+): JsonObject | null {
+  const cliPath = process.env.PHRONIA_CLI_PATH;
+  const command = cliPath ? process.execPath : "phronia";
+  const args = cliPath ? [cliPath, "context"] : ["context"];
+  args.push(
+    "--event",
+    event,
+    "--platform",
+    "pi",
+    "--project-root",
+    root,
+    "--input",
+    "-",
+    "--json",
+  );
+  const result = spawnSync(command, args, {
+    input: JSON.stringify(input ?? {}),
+    encoding: "utf8",
+    timeout: 15000,
+    env: { ...process.env, PHRONIA_CONTEXT_ID: key ?? "" },
+  });
+  if (result.status !== 0 || !result.stdout) return null;
+  try {
+    const parsed = JSON.parse(result.stdout);
+    return isObj(parsed) ? parsed : null;
+  } catch {
+    return null;
+  }
+}
+
+function blocksText(response: JsonObject | null): string {
+  if (!response || !Array.isArray(response.blocks)) return "";
+  return response.blocks
+    .map(block => (isObj(block) && typeof block.text === "string" ? block.text : ""))
     .filter(Boolean)
     .join("\n\n");
 }
 
-function buildContext(root: string, agent: string, key: string | null): string {
-  const dir = readTaskDir(root, key);
-  if (!dir)
-    return "No active Phronia task found. Read .phronia/ before proceeding.";
-  const relTaskDir = relative(root, dir).replace(/\\/g, "/");
-  const limits = readContextInjectionLimits(root);
-  const budget = new ContextBudget(limits.max_total_bytes);
-
-  // 1. Curated spec/research files from {agent}.jsonl (same order, budget
-  //    processed first, matching Python's get_agent_context()).
-  const jsonlName = PHRONIA_AGENT_JSONL[agent] ?? "";
-  const specBlocks: string[] = [];
-  if (jsonlName) {
-    for (const entry of readJsonlEntries(dir, jsonlName)) {
-      if (entry.type === "directory") continue;
-      const block = materializeFile(root, entry.file, entry.reason, limits, budget);
-      if (block) specBlocks.push(block);
-    }
-  }
-  const spec = specBlocks.join("\n\n");
-
-  // 2-4. Task artifacts, in order: prd.md -> design.md -> implement.md.
-  const prd = materializeArtifact(
-    root,
-    `${relTaskDir}/prd.md`,
-    `${relTaskDir}/prd.md (Requirements)`,
-    "Requirements document",
-    limits,
-    budget,
-  );
-  const design = materializeArtifact(
-    root,
-    `${relTaskDir}/design.md`,
-    `${relTaskDir}/design.md (Technical Design)`,
-    "Technical design document",
-    limits,
-    budget,
-  );
-  const impl = materializeArtifact(
-    root,
-    `${relTaskDir}/implement.md`,
-    `${relTaskDir}/implement.md (Execution Plan)`,
-    "Execution plan document",
-    limits,
-    budget,
-  );
-
-  // prd/design/impl already carry their own "=== path (label) ===" header
-  // (from materializeArtifact) — no extra "### x.md" wrapper needed, that
-  // would just double the header.
-  return [
-    `## Phronia Task Context`,
-    `Task directory: ${dir}`,
-    "",
-    prd ?? `(missing) ${relTaskDir}/prd.md`,
-    design ? "\n" + design : "",
-    impl ? "\n" + impl : "",
-    spec ? "\n### Curated Spec / Research Context\n" + spec : "",
-  ].join("\n");
+function buildStartupContext(root: string, key: string | null): string {
+  const response = runCoreContext(root, key, "session-start", {});
+  return response ? blocksText(response) : "";
 }
 
 function normalizeAgent(agent: string | undefined): string {
@@ -1274,23 +907,45 @@ function isTrellisAgent(root: string, agent: string): boolean {
   return existsSync(join(root, ".pi", "agents", `${agent}.md`));
 }
 
+function coreTaskContext(root: string, key: string | null): string {
+  const response = runCoreContext(root, key, "subagent-spawn", {
+    subagent_type: "phronia-implement",
+    prompt: "",
+  });
+  if (!response || !Array.isArray(response.mutations) || response.mutations.length === 0) {
+    return "No active Phronia task found. Read .phronia/ before proceeding.";
+  }
+  const mutation = response.mutations[0];
+  const value = isObj(mutation) && typeof mutation.value === "string" ? mutation.value : "";
+  return value || "No active Phronia task found. Read .phronia/ before proceeding.";
+}
+
 function buildPrompt(
   root: string,
   input: SubagentInput,
   key: string | null,
 ): string {
   const agent = normalizeAgent(input.agent);
-  const raw = readText(join(root, ".pi", "agents", `${agent}.md`));
-  const def = stripFM(raw);
-  const ctx = buildContext(root, agent, key);
+  const response = runCoreContext(root, key, "subagent-spawn", {
+    subagent_type: agent,
+    prompt: input.prompt ?? "",
+  });
+  if (!response || !Array.isArray(response.mutations) || response.mutations.length === 0) {
+    return "";
+  }
+  const mutation = response.mutations[0];
+  const prompt =
+    isObj(mutation) && typeof mutation.value === "string" ? mutation.value : "";
+  if (!prompt) return "";
+  // Pi children receive the agent definition in the prompt; Pi has no
+  // `--agent` flag that would load .pi/agents/<name>.md for us.
+  const definition = stripFM(readText(join(root, ".pi", "agents", `${agent}.md`)));
+  if (!definition) return prompt;
   return [
     "## Phronia Agent Definition",
-    def || "(missing)",
+    definition,
     "",
-    ctx,
-    "",
-    "## Delegated Task",
-    input.prompt ?? "",
+    prompt,
   ].join("\n");
 }
 
@@ -1796,12 +1451,11 @@ export default function trellisExtension(pi: {
     return k;
   };
 
-  // Per-turn cache to avoid double-spawning python
+  // Per-turn cache to avoid double-spawning the CLI
   let turnCache: {
     key: string;
     ts: number;
     wf: string;
-    ov: string;
   } | null = null;
   const getTurnCtx = (k: string | null, ctx?: PiExtensionContext) => {
     const now = Date.now();
@@ -1813,7 +1467,6 @@ export default function trellisExtension(pi: {
       key: ck,
       ts: now,
       wf: workflowBreadcrumb(r, k),
-      ov: sessionOverview(r, k),
     };
     return turnCache;
   };
@@ -1824,13 +1477,12 @@ export default function trellisExtension(pi: {
   const startupCtxCache = new Map<string, string>();
   const getStartupCtx = (
     k: string | null,
-    turn: { ov: string },
     ctx?: PiExtensionContext,
   ): string => {
     const key = cacheKey(k, ctx);
     let startup = startupCtxCache.get(key);
     if (startup === undefined) {
-      startup = buildStartupContext(resolveRoot(ctx), k, turn.ov);
+      startup = buildStartupContext(resolveRoot(ctx), k);
       startupCtxCache.set(key, startup);
     }
     return startup;
@@ -2069,10 +1721,10 @@ export default function trellisExtension(pi: {
     const cur = (event as { systemPrompt?: string }).systemPrompt ?? "";
     const root = resolveRoot(ctx);
     const turn = getTurnCtx(k, ctx);
-    const startup = getStartupCtx(k, turn, ctx);
+    const startup = getStartupCtx(k, ctx);
     // Task context is snapshotted into systemPrompt once; later on-disk
     // changes are delivered as persisted messages so the prefix stays stable.
-    const freshTaskCtx = buildContext(root, "phronia-implement", k);
+    const freshTaskCtx = coreTaskContext(root, k);
     let taskCtx = taskCtxSnapshot.get(key);
     if (taskCtx === undefined) {
       taskCtx = freshTaskCtx;
@@ -2080,7 +1732,7 @@ export default function trellisExtension(pi: {
       lastSentTaskCtx.set(key, freshTaskCtx);
     }
     const updates: string[] = [];
-    const runtimeContext = [turn.wf, turn.ov].filter(Boolean).join("\n\n");
+    const runtimeContext = turn.wf;
     // Re-assert the current root's context on project switches: when the
     // session returns to an unchanged root, the root-scoped lastSent* maps
     // alone would leave the previous project's persisted update as the most

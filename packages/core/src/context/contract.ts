@@ -65,6 +65,7 @@ export function contextJsonSchema(): Record<string, unknown> {
           toolName: { type: "string" },
           agentType: { type: "string" },
           prompt: { type: "string" },
+          contextOnly: { type: "boolean" },
           cwd: { type: "string" },
           filePath: { type: "string" },
           hasAssistantMessages: { type: "boolean" },

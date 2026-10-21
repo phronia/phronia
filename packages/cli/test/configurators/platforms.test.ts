@@ -960,19 +960,22 @@ describe("configurePlatform", () => {
       "utf-8",
     );
     expect(hookPy).toContain("PHRONIA_SNOW_HOOK_MODE");
-    expect(hookPy).toContain("agentKind");
-    expect(hookPy).toContain("implement.jsonl");
+    expect(hookPy).toContain("_agent_type");
+    expect(hookPy).toContain("subagent-spawn");
+    expect(hookPy).toContain("context_only");
     expect(hookPy).toContain("COMPACT_MAX_BYTES");
     expect(hookPy).toContain("SNOW_CWD");
     expect(hookPy).toContain("sessionId");
+    // Assembly lives in the core CLI; the hook only maps the Snow event.
+    expect(hookPy).toContain("_call_core");
+    expect(hookPy).not.toContain("build_context");
+    expect(hookPy).not.toContain("get_context.py");
     // CodeRabbit hardening: short child timeout, session isolation, UTF-8 bytes, full log preserve
-    expect(hookPy).toContain("timeout=5");
+    expect(hookPy).toContain("timeout=10");
     expect(hookPy).not.toContain("timeout=15");
-    expect(hookPy).toContain("_current_session_ids");
-    expect(hookPy).toContain("never pick by mtime");
     expect(hookPy).not.toContain("st_mtime");
     expect(hookPy).toContain('encoded = text.encode("utf-8")');
-    expect(hookPy).toContain("full_context = build_context");
+    expect(hookPy).toContain('_call_core(repo, "session-start"');
 
     const snowGuide = fs.readFileSync(
       path.join(tmpDir, ".snow", "SNOW.md"),

@@ -216,8 +216,36 @@ export function materializeJsonlEntries(
   budget: Budget,
   diagnostics: Diagnostic[],
 ): string[] {
+  return materializeJsonlEntriesUnique(
+    basePath,
+    jsonlPath,
+    limits,
+    budget,
+    diagnostics,
+    null,
+  );
+}
+
+/**
+ * Materialize one manifest while skipping paths already emitted by another
+ * one. Main-session context reads both implement.jsonl and check.jsonl, and a
+ * shared spec file must not consume the budget twice.
+ */
+export function materializeJsonlEntriesUnique(
+  basePath: string,
+  jsonlPath: string,
+  limits: ContextInjectionLimits,
+  budget: Budget,
+  diagnostics: Diagnostic[],
+  seen: Set<string> | null,
+): string[] {
   const blocks: string[] = [];
   for (const entry of readJsonlEntries(basePath, jsonlPath, diagnostics)) {
+    const key = path.resolve(basePath, entry.file);
+    if (seen?.has(key)) {
+      continue;
+    }
+    seen?.add(key);
     if (entry.type === "directory") {
       blocks.push(
         ...materializeDirectory(basePath, entry.file, entry.reason, limits, budget),
@@ -315,6 +343,42 @@ export function getFinishContext(
   diagnostics: Diagnostic[],
 ): string {
   return getCheckContext(repoRoot, taskRef, limits, diagnostics);
+}
+
+export function getSessionContext(
+  repoRoot: string,
+  taskRef: string,
+  limits: ContextInjectionLimits,
+  diagnostics: Diagnostic[],
+): string {
+  const budget = new Budget(limits.maxTotalBytes);
+  const parts: string[] = [];
+
+  // The main session sees every task artifact and both curated manifests.
+  appendArtifact(parts, repoRoot, taskRef, "prd.md", "(Requirements)", "Requirements document", limits, budget);
+  appendArtifact(parts, repoRoot, taskRef, "info.md", "(Task Information)", "Task information", limits, budget);
+  appendArtifact(parts, repoRoot, taskRef, "design.md", "(Technical Design)", "Technical design document", limits, budget);
+  appendArtifact(parts, repoRoot, taskRef, "implement.md", "(Execution Plan)", "Execution plan document", limits, budget);
+
+  const seen = new Set<string>();
+  for (const manifest of ["implement.jsonl", "check.jsonl"]) {
+    if (!fs.existsSync(path.join(repoRoot, taskRef, manifest))) {
+      continue;
+    }
+    const blocks = materializeJsonlEntriesUnique(
+      repoRoot,
+      `${taskRef}/${manifest}`,
+      limits,
+      budget,
+      diagnostics,
+      seen,
+    );
+    if (blocks.length > 0) {
+      parts.push(blocks.join("\n\n"));
+    }
+  }
+
+  return parts.join("\n\n");
 }
 
 export function getResearchContext(
