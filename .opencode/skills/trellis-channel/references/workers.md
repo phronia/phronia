@@ -34,7 +34,7 @@ Key `spawn` flags:
 - `--warn-before <duration>` — supervisor_warning lead time (default `5m`; `0ms` disables).
 - `--file <path>` (repeatable, glob-supported) — inject file content into the system prompt.
 - `--jsonl <path>` (repeatable) — Trellis jsonl manifest (`{file, reason}` per line).
-- `--by <agent>` — author of the `spawned` event (defaults to `$TRELLIS_CHANNEL_AS` or `main`).
+- `--by <agent>` — author of the `spawned` event (defaults to `$PHRONIA_CHANNEL_AS` or `main`).
 - `--inbox-policy <explicitOnly|broadcastAndExplicit>` — default `explicitOnly`.
 - `--idle-timeout <duration>` — OOM guard idle TTL (default `5m`; `0` disables).
 - `--max-live-workers <n>` — spawn-time live-worker budget (default `6`; `0` disables).
@@ -203,8 +203,8 @@ project bucket:
 Precedence (highest first):
 
 1. CLI flags: `--idle-timeout`, `--max-live-workers` on `spawn`.
-2. Environment variables: `TRELLIS_CHANNEL_WORKER_IDLE_TIMEOUT`,
-   `TRELLIS_CHANNEL_MAX_LIVE_WORKERS`.
+2. Environment variables: `PHRONIA_CHANNEL_WORKER_IDLE_TIMEOUT`,
+   `PHRONIA_CHANNEL_MAX_LIVE_WORKERS`.
 3. `.phronia/config.yaml` under `channel.worker_guard`.
 4. Built-in defaults (`5m`, `6`).
 

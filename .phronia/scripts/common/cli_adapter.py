@@ -773,7 +773,7 @@ def detect_platform(project_root: Path) -> Platform:
     """Auto-detect platform based on existing config directories.
 
     Detection order:
-    1. TRELLIS_PLATFORM environment variable (if set)
+    1. PHRONIA_PLATFORM environment variable (if set)
     2. .opencode directory exists → opencode
     3. .iflow directory exists → iflow
     4. .cursor directory exists (without .claude) → cursor
@@ -800,7 +800,7 @@ def detect_platform(project_root: Path) -> Platform:
     import os
 
     # Check environment variable first
-    env_platform = os.environ.get("TRELLIS_PLATFORM", "").lower()
+    env_platform = os.environ.get("PHRONIA_PLATFORM", "").lower()
     # Deprecated alias: Windsurf was renamed to Devin.
     if env_platform == "windsurf":
         env_platform = "devin"

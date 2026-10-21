@@ -187,7 +187,7 @@ describe("parseTaskPyCommandsAll (dogfood-driven edge cases)", () => {
 
   it("rejects prose-embedded matches (heredoc / commit-message text)", () => {
     const cmd =
-      'git commit -m "Previous text said `.current-task` is a CLI fallback. Current code never writes that file — task.py start exits with hint to set TRELLIS_CONTEXT_ID."';
+      'git commit -m "Previous text said `.current-task` is a CLI fallback. Current code never writes that file — task.py start exits with hint to set PHRONIA_CONTEXT_ID."';
     expect(parseTaskPyCommandsAll(cmd)).toEqual([]);
   });
 

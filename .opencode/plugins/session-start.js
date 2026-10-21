@@ -41,8 +41,8 @@ export default async ({ directory }) => {
           return
         }
 
-        if (process.env.TRELLIS_HOOKS === "0" || process.env.TRELLIS_DISABLE_HOOKS === "1") {
-          debugLog("session", "Skipping - TRELLIS_HOOKS disabled")
+        if (process.env.PHRONIA_HOOKS === "0" || process.env.PHRONIA_DISABLE_HOOKS === "1") {
+          debugLog("session", "Skipping - PHRONIA_HOOKS disabled")
           return
         }
 

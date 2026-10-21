@@ -42,10 +42,10 @@ export const DEFAULT_IDLE_TTL_MS = 5 * 60 * 1000;
 export const DEFAULT_MAX_LIVE_WORKERS = 6;
 
 /** Env var override for the idle-cleanup TTL. */
-export const ENV_IDLE_TIMEOUT = "TRELLIS_CHANNEL_WORKER_IDLE_TIMEOUT";
+export const ENV_IDLE_TIMEOUT = "PHRONIA_CHANNEL_WORKER_IDLE_TIMEOUT";
 
 /** Env var override for the live-worker budget. */
-export const ENV_MAX_LIVE_WORKERS = "TRELLIS_CHANNEL_MAX_LIVE_WORKERS";
+export const ENV_MAX_LIVE_WORKERS = "PHRONIA_CHANNEL_MAX_LIVE_WORKERS";
 
 export interface WorkerGuardConfig {
   /** Idle-cleanup TTL in ms. `0` disables idle cleanup for new spawns. */

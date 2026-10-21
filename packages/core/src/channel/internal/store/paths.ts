@@ -10,7 +10,7 @@ import {
 
 /** Top-level Trellis channels directory. */
 export function channelRoot(): string {
-  const env = process.env.TRELLIS_CHANNEL_ROOT;
+  const env = process.env.PHRONIA_CHANNEL_ROOT;
   if (env && env.length > 0) return path.resolve(env);
   return path.join(os.homedir(), ".phronia", "channels");
 }
@@ -27,11 +27,11 @@ export function projectKey(cwd: string): string {
 
 /**
  * Project key for the current CLI invocation. Reads
- * `TRELLIS_CHANNEL_PROJECT` env first, then falls back to deriving from
+ * `PHRONIA_CHANNEL_PROJECT` env first, then falls back to deriving from
  * `process.cwd()`.
  */
 export function currentProjectKey(): string {
-  const env = process.env.TRELLIS_CHANNEL_PROJECT;
+  const env = process.env.PHRONIA_CHANNEL_PROJECT;
   if (env && env.length > 0) return env;
   return projectKey(process.cwd());
 }
@@ -269,7 +269,7 @@ export function resolveExistingChannelRef(
         `Channel '${name}' not found in ${opts.scope} scope (${project})`,
       );
     }
-    process.env.TRELLIS_CHANNEL_PROJECT = project;
+    process.env.PHRONIA_CHANNEL_PROJECT = project;
     return { name, scope: opts.scope, project, dir: channelDir(name, project) };
   }
 
@@ -286,7 +286,7 @@ export function resolveExistingChannelRef(
   }
 
   if (globalExists) {
-    process.env.TRELLIS_CHANNEL_PROJECT = GLOBAL_PROJECT_KEY;
+    process.env.PHRONIA_CHANNEL_PROJECT = GLOBAL_PROJECT_KEY;
     return {
       name,
       scope: "global",
@@ -296,7 +296,7 @@ export function resolveExistingChannelRef(
   }
 
   if (fs.existsSync(eventsPath(name, current))) {
-    process.env.TRELLIS_CHANNEL_PROJECT = current;
+    process.env.PHRONIA_CHANNEL_PROJECT = current;
     return {
       name,
       scope: "project",
@@ -306,7 +306,7 @@ export function resolveExistingChannelRef(
   }
 
   if (projectMatches.length === 1) {
-    process.env.TRELLIS_CHANNEL_PROJECT = projectMatches[0];
+    process.env.PHRONIA_CHANNEL_PROJECT = projectMatches[0];
     return {
       name,
       scope: "project",

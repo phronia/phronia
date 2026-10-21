@@ -5,7 +5,23 @@ This module provides shared functionality used by other Trellis scripts.
 """
 
 import io
+import os
 import sys
+
+
+def _install_legacy_env_aliases() -> None:
+    """Map TRELLIS_* to PHRONIA_* for the one-major-version compatibility window.
+
+    Runs before any submodule reads the environment. Existing PHRONIA_* values
+    win; the legacy name is never deleted, so a child process still sees what
+    the user set.
+    """
+    for key in list(os.environ):
+        if key.startswith("TRELLIS_"):
+            os.environ.setdefault("PHRONIA_" + key[len("TRELLIS_") :], os.environ[key])
+
+
+_install_legacy_env_aliases()
 
 # =============================================================================
 # Windows Encoding Fix (MUST be at top, before any other output)

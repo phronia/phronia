@@ -808,7 +808,7 @@ describe("init() integration", () => {
 
   it("[issue-zcode-plugin-hint] zcode init prints a concise bilingual plugin hint", async () => {
     const originalVitest = process.env.VITEST;
-    const originalQuiet = process.env.TRELLIS_QUIET;
+    const originalQuiet = process.env.PHRONIA_QUIET;
     const originalWrite = process.stderr.write.bind(process.stderr);
     const stderr: string[] = [];
     process.stderr.write = ((chunk: string) => {
@@ -816,7 +816,7 @@ describe("init() integration", () => {
       return true;
     }) as typeof process.stderr.write;
     delete process.env.VITEST;
-    delete process.env.TRELLIS_QUIET;
+    delete process.env.PHRONIA_QUIET;
 
     try {
       await init({ yes: true, zcode: true });
@@ -824,8 +824,8 @@ describe("init() integration", () => {
       process.stderr.write = originalWrite;
       if (originalVitest === undefined) delete process.env.VITEST;
       else process.env.VITEST = originalVitest;
-      if (originalQuiet === undefined) delete process.env.TRELLIS_QUIET;
-      else process.env.TRELLIS_QUIET = originalQuiet;
+      if (originalQuiet === undefined) delete process.env.PHRONIA_QUIET;
+      else process.env.PHRONIA_QUIET = originalQuiet;
     }
 
     expect(stderr.join("")).toBe(

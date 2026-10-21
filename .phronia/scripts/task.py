@@ -234,7 +234,7 @@ def cmd_start(args: argparse.Namespace) -> int:
 
     if not resolve_context_key():
         # Degraded mode: no session identity available.
-        # Hook didn't inject TRELLIS_CONTEXT_ID (common on Windows + Claude Code,
+        # Hook didn't inject PHRONIA_CONTEXT_ID (common on Windows + Claude Code,
         # --continue resume path, fork distribution, hooks disabled, etc.). Skip
         # per-session pointer write; AI continues based on conversation context.
         print(colored(
@@ -244,7 +244,7 @@ def cmd_start(args: argparse.Namespace) -> int:
         ))
         print(colored(
             "Hint: run inside an AI IDE/session that exposes session identity, "
-            "or set TRELLIS_CONTEXT_ID before running task.py start.",
+            "or set PHRONIA_CONTEXT_ID before running task.py start.",
             Colors.YELLOW,
         ))
 

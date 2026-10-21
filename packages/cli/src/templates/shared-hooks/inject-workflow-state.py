@@ -38,6 +38,11 @@ from __future__ import annotations
 
 import json
 import os
+
+# TRELLIS_* -> PHRONIA_* compatibility (removed in the next major).
+for _legacy_key in list(os.environ):
+    if _legacy_key.startswith("TRELLIS_"):
+        os.environ.setdefault("PHRONIA_" + _legacy_key[8:], os.environ[_legacy_key])
 import re
 import sys
 import queue
@@ -418,7 +423,7 @@ def _load_hook_input() -> dict:
 
 
 def main() -> int:
-    if os.environ.get("TRELLIS_HOOKS") == "0" or os.environ.get("TRELLIS_DISABLE_HOOKS") == "1":
+    if os.environ.get("PHRONIA_HOOKS") == "0" or os.environ.get("PHRONIA_DISABLE_HOOKS") == "1":
         return 0
 
     data = _load_hook_input()

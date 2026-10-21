@@ -143,7 +143,7 @@ workspace bytes, which may contain user-authored sensitive text, and is kept
 until restore verifies successfully.
 
 This is different from `trellis uninstall` (permanent removal) and
-`TRELLIS_HOOKS=0` (hooks only). Ablation does not launch agents, manage
+`PHRONIA_HOOKS=0` (hooks only). Ablation does not launch agents, manage
 worktrees, hide Git changes, or remove the global CLI, channel logs, or host
 transcripts. If a managed path changes while ablated, restore refuses all
 writes until the conflict is resolved.

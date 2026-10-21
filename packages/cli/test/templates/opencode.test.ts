@@ -263,7 +263,7 @@ describe("opencode session-start history detection", () => {
 });
 
 describe("opencode bash session context", () => {
-  it("injects TRELLIS_CONTEXT_ID into Bash commands from plugin sessionID", async () => {
+  it("injects PHRONIA_CONTEXT_ID into Bash commands from plugin sessionID", async () => {
     const hooks = await createOpenCodeInjectHooks();
     const output = {
       args: {
@@ -277,7 +277,7 @@ describe("opencode bash session context", () => {
     );
 
     expect(output.args.command).toBe(
-      "export TRELLIS_CONTEXT_ID='opencode_oc-a'; python3 ./.phronia/scripts/task.py start .phronia/tasks/demo",
+      "export PHRONIA_CONTEXT_ID='opencode_oc-a'; python3 ./.phronia/scripts/task.py start .phronia/tasks/demo",
     );
   });
 
@@ -295,7 +295,7 @@ describe("opencode bash session context", () => {
     );
 
     expect(output.args.command).toBe(
-      "$env:TRELLIS_CONTEXT_ID = 'opencode_oc-a'; python ./.phronia/scripts/task.py start .phronia/tasks/demo",
+      "$env:PHRONIA_CONTEXT_ID = 'opencode_oc-a'; python ./.phronia/scripts/task.py start .phronia/tasks/demo",
     );
   });
 
@@ -315,7 +315,7 @@ describe("opencode bash session context", () => {
     );
 
     expect(output.args.command).toBe(
-      "export TRELLIS_CONTEXT_ID='opencode_oc-a'; git diff --name-only",
+      "export PHRONIA_CONTEXT_ID='opencode_oc-a'; git diff --name-only",
     );
   });
 
@@ -335,7 +335,7 @@ describe("opencode bash session context", () => {
     );
 
     expect(output.args.command).toBe(
-      "export TRELLIS_CONTEXT_ID='opencode_oc-a'; git status --short",
+      "export PHRONIA_CONTEXT_ID='opencode_oc-a'; git status --short",
     );
   });
 
@@ -355,7 +355,7 @@ describe("opencode bash session context", () => {
     );
 
     expect(output.args.command).toBe(
-      "export TRELLIS_CONTEXT_ID='opencode_oc-a'; git log --oneline -1",
+      "export PHRONIA_CONTEXT_ID='opencode_oc-a'; git log --oneline -1",
     );
   });
 
@@ -375,7 +375,7 @@ describe("opencode bash session context", () => {
     );
 
     expect(output.args.command).toBe(
-      "export TRELLIS_CONTEXT_ID='opencode_oc-a'; git branch --show-current",
+      "export PHRONIA_CONTEXT_ID='opencode_oc-a'; git branch --show-current",
     );
   });
 
@@ -395,16 +395,16 @@ describe("opencode bash session context", () => {
     );
 
     expect(output.args.command).toBe(
-      "export TRELLIS_CONTEXT_ID='opencode_oc-a'; git rev-parse --show-toplevel",
+      "export PHRONIA_CONTEXT_ID='opencode_oc-a'; git rev-parse --show-toplevel",
     );
   });
 
-  it("does not duplicate an explicit TRELLIS_CONTEXT_ID assignment", async () => {
+  it("does not duplicate an explicit PHRONIA_CONTEXT_ID assignment", async () => {
     const hooks = await createOpenCodeInjectHooks();
     const output = {
       args: {
         command:
-          "TRELLIS_CONTEXT_ID=manual python3 ./.phronia/scripts/task.py current",
+          "PHRONIA_CONTEXT_ID=manual python3 ./.phronia/scripts/task.py current",
       },
     };
 
@@ -414,16 +414,16 @@ describe("opencode bash session context", () => {
     );
 
     expect(output.args.command).toBe(
-      "TRELLIS_CONTEXT_ID=manual python3 ./.phronia/scripts/task.py current",
+      "PHRONIA_CONTEXT_ID=manual python3 ./.phronia/scripts/task.py current",
     );
   });
 
-  it("does not duplicate an explicit exported TRELLIS_CONTEXT_ID", async () => {
+  it("does not duplicate an explicit exported PHRONIA_CONTEXT_ID", async () => {
     const hooks = await createOpenCodeInjectHooks();
     const output = {
       args: {
         command:
-          "export TRELLIS_CONTEXT_ID=manual; python3 ./.phronia/scripts/task.py current",
+          "export PHRONIA_CONTEXT_ID=manual; python3 ./.phronia/scripts/task.py current",
       },
     };
 
@@ -433,16 +433,16 @@ describe("opencode bash session context", () => {
     );
 
     expect(output.args.command).toBe(
-      "export TRELLIS_CONTEXT_ID=manual; python3 ./.phronia/scripts/task.py current",
+      "export PHRONIA_CONTEXT_ID=manual; python3 ./.phronia/scripts/task.py current",
     );
   });
 
-  it("does not duplicate an explicit env TRELLIS_CONTEXT_ID assignment", async () => {
+  it("does not duplicate an explicit env PHRONIA_CONTEXT_ID assignment", async () => {
     const hooks = await createOpenCodeInjectHooks();
     const output = {
       args: {
         command:
-          "env FOO=bar TRELLIS_CONTEXT_ID=manual python3 ./.phronia/scripts/task.py current",
+          "env FOO=bar PHRONIA_CONTEXT_ID=manual python3 ./.phronia/scripts/task.py current",
       },
     };
 
@@ -452,16 +452,16 @@ describe("opencode bash session context", () => {
     );
 
     expect(output.args.command).toBe(
-      "env FOO=bar TRELLIS_CONTEXT_ID=manual python3 ./.phronia/scripts/task.py current",
+      "env FOO=bar PHRONIA_CONTEXT_ID=manual python3 ./.phronia/scripts/task.py current",
     );
   });
 
-  it("does not duplicate an explicit PowerShell TRELLIS_CONTEXT_ID assignment", async () => {
+  it("does not duplicate an explicit PowerShell PHRONIA_CONTEXT_ID assignment", async () => {
     const hooks = await createOpenCodeInjectHooks("win32");
     const output = {
       args: {
         command:
-          "$env:TRELLIS_CONTEXT_ID = 'manual'; python ./.phronia/scripts/task.py current",
+          "$env:PHRONIA_CONTEXT_ID = 'manual'; python ./.phronia/scripts/task.py current",
       },
     };
 
@@ -471,15 +471,15 @@ describe("opencode bash session context", () => {
     );
 
     expect(output.args.command).toBe(
-      "$env:TRELLIS_CONTEXT_ID = 'manual'; python ./.phronia/scripts/task.py current",
+      "$env:PHRONIA_CONTEXT_ID = 'manual'; python ./.phronia/scripts/task.py current",
     );
   });
 
-  it("does not treat a grep pattern as an explicit TRELLIS_CONTEXT_ID assignment", async () => {
+  it("does not treat a grep pattern as an explicit PHRONIA_CONTEXT_ID assignment", async () => {
     const hooks = await createOpenCodeInjectHooks();
     const output = {
       args: {
-        command: "env | sort | grep '^TRELLIS_CONTEXT_ID='",
+        command: "env | sort | grep '^PHRONIA_CONTEXT_ID='",
       },
     };
 
@@ -489,7 +489,7 @@ describe("opencode bash session context", () => {
     );
 
     expect(output.args.command).toBe(
-      "export TRELLIS_CONTEXT_ID='opencode_oc-a'; env | sort | grep '^TRELLIS_CONTEXT_ID='",
+      "export PHRONIA_CONTEXT_ID='opencode_oc-a'; env | sort | grep '^PHRONIA_CONTEXT_ID='",
     );
   });
 });
@@ -1118,8 +1118,8 @@ describe("opencode messages.transform injection (issue #553)", () => {
     const sessionHooks = await loadSessionHooks();
     const workflowHooks = await loadWorkflowHooks();
     const cases = [
-      ["TRELLIS_HOOKS", "0"],
-      ["TRELLIS_DISABLE_HOOKS", "1"],
+      ["PHRONIA_HOOKS", "0"],
+      ["PHRONIA_DISABLE_HOOKS", "1"],
       ["OPENCODE_NON_INTERACTIVE", "1"],
     ] as const;
 

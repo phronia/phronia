@@ -319,7 +319,7 @@ export function registerChannelCommand(program: Command): void {
     )
     .option(
       "--by <agent>",
-      "identity recorded as the spawn author (defaults to TRELLIS_CHANNEL_AS env or 'main')",
+      "identity recorded as the spawn author (defaults to PHRONIA_CHANNEL_AS env or 'main')",
     )
     .option(
       "--inbox-policy <policy>",

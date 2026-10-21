@@ -126,8 +126,8 @@ function detectPythonVersion(command: string): PythonProbe {
 export function requireSupportedPython(command: string): string {
   // Final escape hatch — set when the user knows python3 is on PATH but
   // the probe keeps failing for environment-specific reasons.
-  if (process.env.TRELLIS_SKIP_PYTHON_CHECK === "1") {
-    return `version check skipped (TRELLIS_SKIP_PYTHON_CHECK=1)`;
+  if (process.env.PHRONIA_SKIP_PYTHON_CHECK === "1") {
+    return `version check skipped (PHRONIA_SKIP_PYTHON_CHECK=1)`;
   }
 
   const versionOutput = detectPythonVersion(command);
@@ -138,7 +138,7 @@ export function requireSupportedPython(command: string): string {
         `⚠ Python version check skipped — sandboxed environment blocked ` +
           `child_process spawn (EPERM/EACCES). Assuming "${command}" is on ` +
           `PATH. If init fails later, re-run on the host or set ` +
-          `TRELLIS_SKIP_PYTHON_CHECK=1.`,
+          `PHRONIA_SKIP_PYTHON_CHECK=1.`,
       ),
     );
     return `version unknown (sandbox-restricted)`;
@@ -179,8 +179,8 @@ const PYTHON_CANDIDATES: Record<"win32" | "other", readonly string[]> = {
 /**
  * Detect a working Python ≥ 3.9 command on the host platform.
  *
- * Honors `TRELLIS_PYTHON_CMD` (explicit override, no probe) and
- * `TRELLIS_SKIP_PYTHON_CHECK=1` (skip probe, trust platform default).
+ * Honors `PHRONIA_PYTHON_CMD` (explicit override, no probe) and
+ * `PHRONIA_SKIP_PYTHON_CHECK=1` (skip probe, trust platform default).
  *
  * Otherwise tries each candidate in `PYTHON_CANDIDATES` in order and returns
  * the first whose `--version` matches `Python ≥ 3.9`. Caches the result via
@@ -194,19 +194,19 @@ export function resolveSupportedPython(): {
   version: string;
 } {
   // Explicit override — user knows their environment.
-  const override = process.env.TRELLIS_PYTHON_CMD?.trim();
+  const override = process.env.PHRONIA_PYTHON_CMD?.trim();
   if (override) {
     setResolvedPythonCommand(override);
-    return { command: override, version: "set via TRELLIS_PYTHON_CMD" };
+    return { command: override, version: "set via PHRONIA_PYTHON_CMD" };
   }
 
   // Skip probe entirely.
-  if (process.env.TRELLIS_SKIP_PYTHON_CHECK === "1") {
+  if (process.env.PHRONIA_SKIP_PYTHON_CHECK === "1") {
     const fallback = getPythonCommandForPlatform();
     setResolvedPythonCommand(fallback);
     return {
       command: fallback,
-      version: "version check skipped (TRELLIS_SKIP_PYTHON_CHECK=1)",
+      version: "version check skipped (PHRONIA_SKIP_PYTHON_CHECK=1)",
     };
   }
 
@@ -224,7 +224,7 @@ export function resolveSupportedPython(): {
           `⚠ Python version check skipped — sandboxed environment blocked ` +
             `child_process spawn (EPERM/EACCES). Assuming "${candidate}" is ` +
             `on PATH. If init fails later, re-run on the host or set ` +
-            `TRELLIS_SKIP_PYTHON_CHECK=1.`,
+            `PHRONIA_SKIP_PYTHON_CHECK=1.`,
         ),
       );
       setResolvedPythonCommand(candidate);
@@ -249,16 +249,16 @@ export function resolveSupportedPython(): {
   const installHint = isWindows
     ? `Install Python ≥ 3.9 from https://www.python.org/downloads/windows/ — make sure ` +
       `"Add Python to PATH" is checked in the installer. Or, if Python is ` +
-      `installed under a different name, set TRELLIS_PYTHON_CMD=<your-cmd> ` +
-      `before re-running init (e.g. \`set TRELLIS_PYTHON_CMD=py -3\`).`
+      `installed under a different name, set PHRONIA_PYTHON_CMD=<your-cmd> ` +
+      `before re-running init (e.g. \`set PHRONIA_PYTHON_CMD=py -3\`).`
     : `Install Python ≥ 3.9 from https://www.python.org/downloads/ or via your ` +
-      `package manager. Or set TRELLIS_PYTHON_CMD=<your-cmd> before re-running.`;
+      `package manager. Or set PHRONIA_PYTHON_CMD=<your-cmd> before re-running.`;
 
   throw new Error(
     `No supported Python command found. Tried: ${candidates.join(", ")}.\n` +
       `Probe results:\n  ${probeFailures.join("\n  ")}\n\n` +
       `Trellis init requires Python ≥ 3.9. ${installHint}\n` +
-      `Last-resort escape hatch: set TRELLIS_SKIP_PYTHON_CHECK=1 to skip the probe entirely.`,
+      `Last-resort escape hatch: set PHRONIA_SKIP_PYTHON_CHECK=1 to skip the probe entirely.`,
   );
 }
 

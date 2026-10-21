@@ -66,7 +66,7 @@ function buildContextKey(platformName, kind, value) {
 
 // Matches `trellis-implement`, `trellis-check`, `trellis-research` exactly.
 // Used by chat.message plugins to skip injection inside Trellis sub-agent turns.
-const TRELLIS_SUBAGENT_RE = /^trellis-(implement|check|research)$/
+const PHRONIA_SUBAGENT_RE = /^trellis-(implement|check|research)$/
 
 /**
  * Return true when the OpenCode `chat.message` input represents a Trellis
@@ -76,7 +76,7 @@ const TRELLIS_SUBAGENT_RE = /^trellis-(implement|check|research)$/
 export function isTrellisSubagent(input) {
   if (!input || typeof input !== "object") return false
   const agent = typeof input.agent === "string" ? input.agent.trim() : ""
-  return TRELLIS_SUBAGENT_RE.test(agent)
+  return PHRONIA_SUBAGENT_RE.test(agent)
 }
 
 // ============================================================
@@ -332,13 +332,13 @@ export class TrellisContext {
 
   // OpenCode exports no session identity into the environment: no OPENCODE_*
   // name in the 1.17.18 binary or the 1.18.13 source carries one. The plugin
-  // hook input is the only source, and the `export TRELLIS_CONTEXT_ID=` prefix
+  // hook input is the only source, and the `export PHRONIA_CONTEXT_ID=` prefix
   // this plugin adds to Bash commands is the only way that identity reaches a
-  // child process. TRELLIS_CONTEXT_ID is honored here so a nested Trellis run
+  // child process. PHRONIA_CONTEXT_ID is honored here so a nested Trellis run
   // inherits its parent's key; do not add platform-native env names next to it
   // without evidence a vendor sets them.
   getContextKey(platformInput = null) {
-    const override = stringValue(process.env.TRELLIS_CONTEXT_ID)
+    const override = stringValue(process.env.PHRONIA_CONTEXT_ID)
     if (override) {
       return sanitizeKey(override) || hashValue(override)
     }
@@ -530,7 +530,7 @@ export class TrellisContext {
         stdio: ["pipe", "pipe", "pipe"],
         env: {
           ...process.env,
-          ...(contextKey ? { TRELLIS_CONTEXT_ID: contextKey } : {}),
+          ...(contextKey ? { PHRONIA_CONTEXT_ID: contextKey } : {}),
         },
       })
       return result || ""

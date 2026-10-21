@@ -201,30 +201,30 @@ describe("isCwdHomedir / homedir guard helpers", () => {
     }
   });
 
-  it("homedirBypassEnabled reflects TRELLIS_ALLOW_HOMEDIR env var", () => {
-    const orig = process.env.TRELLIS_ALLOW_HOMEDIR;
+  it("homedirBypassEnabled reflects PHRONIA_ALLOW_HOMEDIR env var", () => {
+    const orig = process.env.PHRONIA_ALLOW_HOMEDIR;
     try {
-      delete process.env.TRELLIS_ALLOW_HOMEDIR;
+      delete process.env.PHRONIA_ALLOW_HOMEDIR;
       expect(homedirBypassEnabled()).toBe(false);
-      process.env.TRELLIS_ALLOW_HOMEDIR = "1";
+      process.env.PHRONIA_ALLOW_HOMEDIR = "1";
       expect(homedirBypassEnabled()).toBe(true);
       for (const value of ["0", "false", "true", ""]) {
-        process.env.TRELLIS_ALLOW_HOMEDIR = value;
+        process.env.PHRONIA_ALLOW_HOMEDIR = value;
         expect(homedirBypassEnabled()).toBe(false);
       }
     } finally {
-      if (orig === undefined) delete process.env.TRELLIS_ALLOW_HOMEDIR;
-      else process.env.TRELLIS_ALLOW_HOMEDIR = orig;
+      if (orig === undefined) delete process.env.PHRONIA_ALLOW_HOMEDIR;
+      else process.env.PHRONIA_ALLOW_HOMEDIR = orig;
     }
   });
 
   it("homedirGuardMessage mentions the command and the bypass env var", () => {
     const msgInit = homedirGuardMessage("init");
     expect(msgInit).toContain("init");
-    expect(msgInit).toContain("TRELLIS_ALLOW_HOMEDIR=1");
+    expect(msgInit).toContain("PHRONIA_ALLOW_HOMEDIR=1");
 
     const msgUninstall = homedirGuardMessage("uninstall");
     expect(msgUninstall).toContain("uninstall");
-    expect(msgUninstall).toContain("TRELLIS_ALLOW_HOMEDIR=1");
+    expect(msgUninstall).toContain("PHRONIA_ALLOW_HOMEDIR=1");
   });
 });

@@ -24,18 +24,18 @@ function setup(): TmpEnv {
   );
   const projectDir = path.join(tmpDir, "project");
   fs.mkdirSync(projectDir);
-  const oldRoot = process.env.TRELLIS_CHANNEL_ROOT;
-  const oldProject = process.env.TRELLIS_CHANNEL_PROJECT;
-  process.env.TRELLIS_CHANNEL_ROOT = path.join(tmpDir, "channels");
-  delete process.env.TRELLIS_CHANNEL_PROJECT;
+  const oldRoot = process.env.PHRONIA_CHANNEL_ROOT;
+  const oldProject = process.env.PHRONIA_CHANNEL_PROJECT;
+  process.env.PHRONIA_CHANNEL_ROOT = path.join(tmpDir, "channels");
+  delete process.env.PHRONIA_CHANNEL_PROJECT;
   return { tmpDir, projectDir, oldRoot, oldProject };
 }
 
 function teardown(env: TmpEnv): void {
-  if (env.oldRoot === undefined) delete process.env.TRELLIS_CHANNEL_ROOT;
-  else process.env.TRELLIS_CHANNEL_ROOT = env.oldRoot;
-  if (env.oldProject === undefined) delete process.env.TRELLIS_CHANNEL_PROJECT;
-  else process.env.TRELLIS_CHANNEL_PROJECT = env.oldProject;
+  if (env.oldRoot === undefined) delete process.env.PHRONIA_CHANNEL_ROOT;
+  else process.env.PHRONIA_CHANNEL_ROOT = env.oldRoot;
+  if (env.oldProject === undefined) delete process.env.PHRONIA_CHANNEL_PROJECT;
+  else process.env.PHRONIA_CHANNEL_PROJECT = env.oldProject;
   fs.rmSync(env.tmpDir, { recursive: true, force: true });
 }
 

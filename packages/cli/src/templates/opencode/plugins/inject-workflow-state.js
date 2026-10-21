@@ -195,7 +195,7 @@ export default async ({ directory }) => {
             debugLog("workflow-state", "Skipping trellis subagent turn:", platformInput?.agent)
             return
           }
-          if (process.env.TRELLIS_HOOKS === "0" || process.env.TRELLIS_DISABLE_HOOKS === "1") {
+          if (process.env.PHRONIA_HOOKS === "0" || process.env.PHRONIA_DISABLE_HOOKS === "1") {
             return
           }
           if (process.env.OPENCODE_NON_INTERACTIVE === "1") {

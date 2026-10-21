@@ -66,14 +66,14 @@ describe.skipIf(!canRun)("uninstall uncommitted-data guard", () => {
       configurable: true,
       value: true,
     });
-    delete process.env.TRELLIS_ALLOW_DIRTY_UNINSTALL;
+    delete process.env.PHRONIA_ALLOW_DIRTY_UNINSTALL;
     await init({ yes: true, claude: true, force: true });
   });
 
   afterEach(() => {
     vi.restoreAllMocks();
     fs.rmSync(tmpDir, { recursive: true, force: true });
-    delete process.env.TRELLIS_ALLOW_DIRTY_UNINSTALL;
+    delete process.env.PHRONIA_ALLOW_DIRTY_UNINSTALL;
   });
 
   it("detects a newly added spec file once the tree is committed", () => {
@@ -114,11 +114,11 @@ describe.skipIf(!canRun)("uninstall uncommitted-data guard", () => {
     expect(fs.existsSync(path.join(tmpDir, ".phronia"))).toBe(true);
   });
 
-  it("TRELLIS_ALLOW_DIRTY_UNINSTALL=1 overrides the guard", async () => {
+  it("PHRONIA_ALLOW_DIRTY_UNINSTALL=1 overrides the guard", async () => {
     const specFile = path.join(tmpDir, ".phronia", "spec", "my-rules.md");
     fs.mkdirSync(path.dirname(specFile), { recursive: true });
     fs.writeFileSync(specFile, "unsaved work");
-    process.env.TRELLIS_ALLOW_DIRTY_UNINSTALL = "1";
+    process.env.PHRONIA_ALLOW_DIRTY_UNINSTALL = "1";
 
     await uninstall({ yes: true });
 

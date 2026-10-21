@@ -24,7 +24,7 @@ import {
 
 export const ABLATION_SCHEMA_VERSION = 1;
 export const FULL_ABLATION_CAPABILITY = "trellis.full" as const;
-export const ABLATION_STATE_ROOT_ENV = "TRELLIS_ABLATION_STATE_ROOT";
+export const ABLATION_STATE_ROOT_ENV = "PHRONIA_ABLATION_STATE_ROOT";
 
 export type AblationStatus = "preparing" | "applied" | "restoring" | "conflict";
 

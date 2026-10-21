@@ -51,7 +51,7 @@ function runTask(
     {
       cwd: repo,
       encoding: "utf-8",
-      env: { ...process.env, TRELLIS_CONTEXT_ID: "test-ctx" },
+      env: { ...process.env, PHRONIA_CONTEXT_ID: "test-ctx" },
     },
   );
   return { status: r.status, stdout: r.stdout, stderr: r.stderr };

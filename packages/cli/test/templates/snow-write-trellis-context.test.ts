@@ -129,7 +129,7 @@ function runHook(
     ...process.env,
     SNOW_CWD: repo,
     // Avoid leaking host Trellis session identity into fixture runs.
-    TRELLIS_CONTEXT_ID: "",
+    PHRONIA_CONTEXT_ID: "",
     SNOW_SESSION_ID: opts.env?.SNOW_SESSION_ID ?? "",
     ...opts.env,
   };
@@ -348,7 +348,7 @@ describe("snow write-trellis-context.py execution", () => {
         }),
         env: {
           SNOW_SESSION_ID: "mine-session",
-          TRELLIS_CONTEXT_ID: "snow-mine-session",
+          PHRONIA_CONTEXT_ID: "snow-mine-session",
         },
       });
 

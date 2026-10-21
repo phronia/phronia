@@ -92,8 +92,8 @@ default_package: cli
 # budget) and inside each supervisor (self-terminates a worker that stays
 # continuously idle past `idle_timeout`).
 #
-# Precedence: CLI flag > env var (TRELLIS_CHANNEL_WORKER_IDLE_TIMEOUT /
-# TRELLIS_CHANNEL_MAX_LIVE_WORKERS) > this config > built-in default.
+# Precedence: CLI flag > env var (PHRONIA_CHANNEL_WORKER_IDLE_TIMEOUT /
+# PHRONIA_CHANNEL_MAX_LIVE_WORKERS) > this config > built-in default.
 #
 # `idle_timeout: 0` disables idle cleanup (workers can sit idle forever
 # unless explicitly killed or given `--timeout`).

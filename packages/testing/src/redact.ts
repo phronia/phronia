@@ -18,7 +18,7 @@ const ID_KEYS = new Set([
   "conversation_id",
   "conversationId",
   "conversationID",
-  "TRELLIS_CONTEXT_ID",
+  "PHRONIA_CONTEXT_ID",
   "PHRONIA_CONTEXT_ID",
 ]);
 

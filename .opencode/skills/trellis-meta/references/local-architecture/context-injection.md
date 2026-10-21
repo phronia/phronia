@@ -51,7 +51,7 @@ Readers should skip rows without a `file` field (e.g. legacy `_example` placehol
 
 ## Active Task And Context Key
 
-Active task state lives in `.phronia/.runtime/sessions/` and is isolated per session. Hooks try to resolve the context key from platform events, environment variables, transcript paths, or `TRELLIS_CONTEXT_ID`.
+Active task state lives in `.phronia/.runtime/sessions/` and is isolated per session. Hooks try to resolve the context key from platform events, environment variables, transcript paths, or `PHRONIA_CONTEXT_ID`.
 
 If shell commands cannot see the same context key, `task.py current --source` may report no active task. In that case, check whether the platform passes session identity into the shell instead of hand-writing a global current-task file.
 

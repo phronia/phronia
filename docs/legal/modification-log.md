@@ -26,6 +26,7 @@ that removes or rewrites upstream code.
 | 2026-10-21 | B1/T3 | `.trellis` path literals across `packages/**`, platform dirs, templates, tests | rewritten | `f089cb32` | Workflow root rename. Historical material (upstream migration manifests, ADRs, NOTICE, archived tasks) is excluded. |
 | 2026-10-21 | B1/T3 | `packages/cli/src/templates/trellis/scripts/common/layout.json` | added | — | Generated from the TypeScript layout so Python and TS resolve the same root. |
 | 2026-10-21 | B1/T4 | `packages/*/package.json`, imports, release scripts, workflows | rewritten | `f089cb32` | npm identity renamed to `@phronia/core`, `@phronia/cli`, `@phronia/testing`; historical notices and migration manifests keep upstream names. |
+| 2026-10-21 | B1/T4 | `TRELLIS_*` environment reads across product, templates, and tests | rewritten | `f089cb32` | New prefix is `PHRONIA_*`; CLI and Python package startup map legacy names for one major version. |
 
 ## Not yet modified
 

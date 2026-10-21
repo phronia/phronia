@@ -49,7 +49,7 @@ from .paths import (
 # Paths under .phronia/ that must NEVER be auto-staged. Listed here so the
 # warning to the user can show concrete subpaths to ignore individually
 # instead of ignoring the whole `.phronia/` tree.
-TRELLIS_IGNORED_SUBPATHS = (
+PHRONIA_IGNORED_SUBPATHS = (
     ".phronia/.backup-*",
     ".phronia/worktrees/",
     ".phronia/.template-hashes.json",
@@ -288,7 +288,7 @@ def print_gitignore_warning(paths: list[str]) -> None:
         "[WARN] subpaths that should remain ignored, e.g.:",
         file=sys.stderr,
     )
-    for sub in TRELLIS_IGNORED_SUBPATHS:
+    for sub in PHRONIA_IGNORED_SUBPATHS:
         print(f"[WARN]   {sub}", file=sys.stderr)
     print("[WARN]", file=sys.stderr)
     print(

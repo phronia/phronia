@@ -49,7 +49,7 @@ function deriveContextKey(ctx?: { sessionManager?: { getSessionId?: () => string
    if (sessionFile) {
       return buildContextKey("omp", "transcript", sessionFile);
    }
-   const override = process.env.TRELLIS_CONTEXT_ID?.trim();
+   const override = process.env.PHRONIA_CONTEXT_ID?.trim();
    return override ? sanitizeKey(override) || hashValue(override) : null;
 }
 
@@ -282,7 +282,7 @@ function buildSessionContext(projectRoot: string, contextKey: string | null): st
          cwd: projectRoot,
          encoding: "utf-8",
          env: contextKey
-            ? { ...process.env, TRELLIS_CONTEXT_ID: contextKey }
+            ? { ...process.env, PHRONIA_CONTEXT_ID: contextKey }
             : process.env,
          timeout: SESSION_CONTEXT_TIMEOUT_MS,
          windowsHide: true,
@@ -874,11 +874,11 @@ function parseWorkflowStateBlocks(markdown: string): WorkflowStateBlock[] {
 // Sub-agent detection
 // ---------------------------------------------------------------------------
 
-const TRELLIS_AGENTS = new Set(["trellis-implement", "trellis-check", "trellis-research"]);
+const PHRONIA_AGENTS = new Set(["trellis-implement", "trellis-check", "trellis-research"]);
 
 function detectAgentType(): AgentType {
    const blocked = process.env.PI_BLOCKED_AGENT;
-   if (blocked && TRELLIS_AGENTS.has(blocked)) {
+   if (blocked && PHRONIA_AGENTS.has(blocked)) {
       return blocked as AgentType;
    }
    return null;
@@ -1080,7 +1080,7 @@ export default function(pi: ExtensionAPI): void {
       if (!contextKey) return;
       const input = event.input as { env?: Record<string, string> };
       input.env = {
-         TRELLIS_CONTEXT_ID: contextKey,
+         PHRONIA_CONTEXT_ID: contextKey,
          ...input.env,
       };
    });

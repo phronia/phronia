@@ -64,7 +64,7 @@ _KNOWN_PLATFORMS = {
 # declared names had never existed anywhere — they were pattern-guessed from a
 # `<PLATFORM>_SESSION_ID` shape no vendor agreed to, and the uniformity was the
 # only "evidence" behind them. A platform with no verified name belongs in no
-# table; it resolves through TRELLIS_CONTEXT_ID or its hook/plugin bridge.
+# table; it resolves through PHRONIA_CONTEXT_ID or its hook/plugin bridge.
 _ENV_SESSION_KEYS: tuple[tuple[str, tuple[str, ...]], ...] = (
     # REAL (reported 2026-08-13 against DSH 0.1.0-rc.6 by @SajoLuo, from a live
     # run: DSH exports DSH_SESSION_ID plus DSH_SHELL=1 into its managed shell).
@@ -115,7 +115,7 @@ _ENV_SESSION_KEYS: tuple[tuple[str, tuple[str, ...]], ...] = (
     ("zcode", ("CLAUDE_CODE_SESSION_ID", "CLAUDE_SESSION_ID")),
     # REAL by vendor design (verified 2026-08-05): Snow's sessionIdentityEnv.ts
     # exports SNOW_SESSION_ID into hook/terminal/sub-agent children and names
-    # Trellis in its source header. TRELLIS_CONTEXT_ID stays the preferred
+    # Trellis in its source header. PHRONIA_CONTEXT_ID stays the preferred
     # override — Snow sets that too.
     ("snow", ("SNOW_SESSION_ID",)),
 )
@@ -340,7 +340,7 @@ def _env_platform_name(platform_name: str | None) -> str | None:
 def _lookup_env_context_key(platform_name: str | None) -> str | None:
     """Resolve a context key from platform-provided environment variables.
 
-    Hooks pass `TRELLIS_CONTEXT_ID` to subprocesses they launch, but an AI-run
+    Hooks pass `PHRONIA_CONTEXT_ID` to subprocesses they launch, but an AI-run
     shell command can only see session identity if the host platform exports it
     in the command environment. These names are best-effort adapters; if none
     are present, there is no session-scoped active task.
@@ -519,11 +519,11 @@ def resolve_context_key(
 ) -> str | None:
     """Resolve a stable session/window context key, if one is available.
 
-    `TRELLIS_CONTEXT_ID` is an explicit context-key override used by CLI
+    `PHRONIA_CONTEXT_ID` is an explicit context-key override used by CLI
     scripts and subprocesses. It does not store the task itself.
     """
     if allow_environment_context:
-        override = _string_value(os.environ.get("TRELLIS_CONTEXT_ID"))
+        override = _string_value(os.environ.get("PHRONIA_CONTEXT_ID"))
         if override:
             return _sanitize_key(override) or _hash_value(override)
 

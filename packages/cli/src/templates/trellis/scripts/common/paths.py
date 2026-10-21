@@ -50,7 +50,7 @@ FILE_TASK_JSON = "task.json"
 FILE_JOURNAL_PREFIX = "journal-"
 
 # Environment override for the developer identity, ahead of the .developer file.
-ENV_DEVELOPER = "TRELLIS_DEVELOPER"
+ENV_DEVELOPER = "PHRONIA_DEVELOPER"
 
 # Appended to every "no developer set" error so the two non-obvious sources are
 # discoverable from the failure itself.
@@ -114,7 +114,7 @@ def get_developer(repo_root: Path | None = None) -> str | None:
     Resolution order, first hit wins (a CLI `--assignee` flag overrides all of
     it, before this function is ever called):
 
-        1. The ``TRELLIS_DEVELOPER`` environment variable.
+        1. The ``PHRONIA_DEVELOPER`` environment variable.
         2. ``.phronia/.developer`` in this checkout.
         3. ``.phronia/.developer`` in the main checkout, when this checkout is a
            linked git worktree.

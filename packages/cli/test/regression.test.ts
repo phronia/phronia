@@ -368,7 +368,7 @@ ${separator}
     execSync(command.join(" "), {
       cwd: tmpDir,
       encoding: "utf-8",
-      env: { ...process.env, TRELLIS_CONTEXT_ID: "session-a" },
+      env: { ...process.env, PHRONIA_CONTEXT_ID: "session-a" },
     });
   }
 
@@ -1574,7 +1574,7 @@ describe("regression: JSON read/write failure reporting", () => {
   });
 
   it("[audit] start still activates a task with a corrupt task.json but says why status and branch stayed", () => {
-    const env = { TRELLIS_CONTEXT_ID: "json-io-start" };
+    const env = { PHRONIA_CONTEXT_ID: "json-io-start" };
     expect(
       runTask(
         [
@@ -1602,7 +1602,7 @@ describe("regression: JSON read/write failure reporting", () => {
   });
 
   it("[audit] current --json carries a read-failure signal and stays silent when healthy", () => {
-    const env = { TRELLIS_CONTEXT_ID: "json-io-test" };
+    const env = { PHRONIA_CONTEXT_ID: "json-io-test" };
     expect(
       runTask(
         [
@@ -1649,7 +1649,7 @@ describe("regression: JSON read/write failure reporting", () => {
   it.skipIf(!canProvokePermissionFailure)(
     "[audit] a session pointer that cannot be written atomically is left intact",
     () => {
-      const env = { TRELLIS_CONTEXT_ID: "json-io-session" };
+      const env = { PHRONIA_CONTEXT_ID: "json-io-session" };
       expect(
         runTask(
           [
@@ -1948,7 +1948,7 @@ describe("regression: task auto-activation failure diagnostics (issue #430)", ()
   // running inside Claude Code itself) must not leak into the "no session"
   // scenario — scrub every platform session/transcript key before overlay.
   const AMBIENT_SESSION_ENV_KEYS = [
-    "TRELLIS_CONTEXT_ID",
+    "PHRONIA_CONTEXT_ID",
     "CLAUDE_SESSION_ID",
     "CLAUDE_CODE_SESSION_ID",
     "CODEX_SESSION_ID",
@@ -2000,7 +2000,7 @@ describe("regression: task auto-activation failure diagnostics (issue #430)", ()
   });
 
   it("[issue-430] a real session identity activates normally with no warning", () => {
-    const result = runCreate({ TRELLIS_CONTEXT_ID: "probe-session" });
+    const result = runCreate({ PHRONIA_CONTEXT_ID: "probe-session" });
     expect(result.status, result.stderr).toBe(0);
     expect(result.stderr).toContain("Activated task for this session");
     expect(result.stderr).not.toContain("Warning: session activation");
@@ -2019,7 +2019,7 @@ describe("regression: task auto-activation failure diagnostics (issue #430)", ()
     fs.mkdirSync(path.dirname(sessionsPathAsFile), { recursive: true });
     fs.writeFileSync(sessionsPathAsFile, "not a directory");
 
-    const result = runCreate({ TRELLIS_CONTEXT_ID: "probe-session" });
+    const result = runCreate({ PHRONIA_CONTEXT_ID: "probe-session" });
 
     // Task creation itself must still succeed — activation is best-effort.
     expect(result.status, result.stderr).toBe(0);
@@ -2384,7 +2384,7 @@ describe("regression: agent-session Trellis update hint", () => {
         "from pathlib import Path",
         "sys.path.insert(0, str(Path.cwd() / '.phronia' / 'scripts'))",
         "from common import session_context",
-        "output = os.environ.get('TRELLIS_VERSION_OUTPUT')",
+        "output = os.environ.get('PHRONIA_VERSION_OUTPUT')",
         "session_context._fetch_trellis_version_output = lambda: None if output == '__NONE__' else output",
         "session_context.output_text(Path.cwd())",
         "",
@@ -2396,8 +2396,8 @@ describe("regression: agent-session Trellis update hint", () => {
       encoding: "utf-8",
       env: {
         ...process.env,
-        TRELLIS_VERSION_OUTPUT: trellisVersionOutput ?? "__NONE__",
-        TRELLIS_CONTEXT_ID: "test-update-session",
+        PHRONIA_VERSION_OUTPUT: trellisVersionOutput ?? "__NONE__",
+        PHRONIA_CONTEXT_ID: "test-update-session",
       },
     });
   }
@@ -2822,7 +2822,7 @@ describe("regression: current-task path normalization", () => {
   }
 
   const SESSION_ENV_KEYS = [
-    "TRELLIS_CONTEXT_ID",
+    "PHRONIA_CONTEXT_ID",
     "CLAUDE_SESSION_ID",
     "CLAUDE_CODE_SESSION_ID",
     "CODEX_SESSION_ID",
@@ -2963,7 +2963,7 @@ describe("regression: current-task path normalization", () => {
     expect(output).toContain("Session identity not available");
     expect(output).toContain("degraded");
     expect(output).toContain("conversation context");
-    expect(output).toContain("TRELLIS_CONTEXT_ID");
+    expect(output).toContain("PHRONIA_CONTEXT_ID");
 
     // No active-task pointer written
     expect(fs.existsSync(path.join(tmpDir, ".phronia", ".current-task"))).toBe(
@@ -3013,7 +3013,7 @@ describe("regression: current-task path normalization", () => {
     expect(after.status).toBe("in_progress");
   });
 
-  it("[session-current-task] task.py start writes session runtime state when TRELLIS_CONTEXT_ID is set", () => {
+  it("[session-current-task] task.py start writes session runtime state when PHRONIA_CONTEXT_ID is set", () => {
     setupTaskRepo();
     const taskScriptPath = path.join(tmpDir, ".phronia", "scripts", "task.py");
 
@@ -3022,7 +3022,7 @@ describe("regression: current-task path normalization", () => {
       {
         cwd: tmpDir,
         encoding: "utf-8",
-        env: sessionEnv({ TRELLIS_CONTEXT_ID: "session-a" }),
+        env: sessionEnv({ PHRONIA_CONTEXT_ID: "session-a" }),
       },
     );
 
@@ -3060,7 +3060,7 @@ describe("regression: current-task path normalization", () => {
       {
         cwd: tmpDir,
         encoding: "utf-8",
-        env: sessionEnv({ TRELLIS_CONTEXT_ID: "session-finish" }),
+        env: sessionEnv({ PHRONIA_CONTEXT_ID: "session-finish" }),
       },
     );
     expect(fs.existsSync(contextPath)).toBe(true);
@@ -3070,7 +3070,7 @@ describe("regression: current-task path normalization", () => {
       {
         cwd: tmpDir,
         encoding: "utf-8",
-        env: sessionEnv({ TRELLIS_CONTEXT_ID: "session-finish" }),
+        env: sessionEnv({ PHRONIA_CONTEXT_ID: "session-finish" }),
       },
     );
 
@@ -3079,7 +3079,7 @@ describe("regression: current-task path normalization", () => {
     expect(fs.existsSync(contextPath)).toBe(false);
   });
 
-  it("[workflow-state-r7] task.py create auto-sets session pointer when TRELLIS_CONTEXT_ID is set (planning breadcrumb reachable)", () => {
+  it("[workflow-state-r7] task.py create auto-sets session pointer when PHRONIA_CONTEXT_ID is set (planning breadcrumb reachable)", () => {
     // Pre-R7 (v0.5.0-beta.19 and earlier), `task.py create` only created the
     // task directory; the session pointer was set by `task.py start`. That
     // made the [workflow-state:planning] block dead text — the breadcrumb
@@ -3099,7 +3099,7 @@ describe("regression: current-task path normalization", () => {
       {
         cwd: tmpDir,
         encoding: "utf-8",
-        env: sessionEnv({ TRELLIS_CONTEXT_ID: "r7-session" }),
+        env: sessionEnv({ PHRONIA_CONTEXT_ID: "r7-session" }),
       },
     );
 
@@ -3148,7 +3148,7 @@ describe("regression: current-task path normalization", () => {
       {
         cwd: tmpDir,
         encoding: "utf-8",
-        env: sessionEnv({ TRELLIS_CONTEXT_ID: "issue-397-session" }),
+        env: sessionEnv({ PHRONIA_CONTEXT_ID: "issue-397-session" }),
       },
     );
 
@@ -3196,7 +3196,7 @@ describe("regression: current-task path normalization", () => {
       {
         cwd: tmpDir,
         encoding: "utf-8",
-        env: sessionEnv({ TRELLIS_CONTEXT_ID: "batch-session" }),
+        env: sessionEnv({ PHRONIA_CONTEXT_ID: "batch-session" }),
       },
     );
 
@@ -3276,7 +3276,7 @@ describe("regression: current-task path normalization", () => {
       {
         cwd: tmpDir,
         encoding: "utf-8",
-        env: sessionEnv({ TRELLIS_CONTEXT_ID: "r7-idem-session" }),
+        env: sessionEnv({ PHRONIA_CONTEXT_ID: "r7-idem-session" }),
       },
     );
 
@@ -3308,7 +3308,7 @@ describe("regression: current-task path normalization", () => {
         {
           cwd: tmpDir,
           encoding: "utf-8",
-          env: sessionEnv({ TRELLIS_CONTEXT_ID: "r7-idem-session" }),
+          env: sessionEnv({ PHRONIA_CONTEXT_ID: "r7-idem-session" }),
         },
       );
     } catch (err) {
@@ -3412,7 +3412,7 @@ describe("regression: current-task path normalization", () => {
       "--assignee",
       "test-dev",
     ];
-    const env = sessionEnv({ TRELLIS_CONTEXT_ID: "archive-collision" });
+    const env = sessionEnv({ PHRONIA_CONTEXT_ID: "archive-collision" });
 
     execSync(
       `${pythonCmd} ${createArgs.map((arg) => JSON.stringify(arg)).join(" ")}`,
@@ -3894,7 +3894,7 @@ print(json.dumps({
     // OPENCODE_RUN_ID) are absent from OpenCode 1.18.13's source and from the
     // 59 OPENCODE_* literals in the shipped 1.17.18 binary; the OpenCode plugin
     // is what actually carries identity, by prefixing the bash command with
-    // `export TRELLIS_CONTEXT_ID=…` (plugins/inject-subagent-context.js). So
+    // `export PHRONIA_CONTEXT_ID=…` (plugins/inject-subagent-context.js). So
     // the env-table entry only ever pretended to work, and OpenCode now
     // degrades honestly — same shape as the Grok case above.
     setupTaskRepo();
@@ -3918,7 +3918,7 @@ print(json.dumps({
     );
   });
 
-  it("[session-current-task] the OpenCode plugin's TRELLIS_CONTEXT_ID prefix still activates the task", () => {
+  it("[session-current-task] the OpenCode plugin's PHRONIA_CONTEXT_ID prefix still activates the task", () => {
     // The other half of the test above: removing OpenCode from the env table is
     // only safe because the plugin injects the key into the bash command. This
     // reproduces exactly what plugins/inject-subagent-context.js prepends.
@@ -3930,7 +3930,7 @@ print(json.dumps({
       {
         cwd: tmpDir,
         encoding: "utf-8",
-        env: sessionEnv({ TRELLIS_CONTEXT_ID: "opencode_run-a" }),
+        env: sessionEnv({ PHRONIA_CONTEXT_ID: "opencode_run-a" }),
       },
     );
 
@@ -3993,7 +3993,7 @@ print(json.dumps({
         "    for _entry_name, _entry_keys in _table:",
         "        for _key in _entry_keys:",
         "            os.environ.pop(_key, None)",
-        'os.environ.pop("TRELLIS_CONTEXT_ID", None)',
+        'os.environ.pop("PHRONIA_CONTEXT_ID", None)',
         ...bodyLines,
       ].join("\n"),
     );
@@ -4034,7 +4034,7 @@ print(json.dumps({
     // CLAUDE_PROJECT_DIR and TRAE_ENV_FILE.
     ["trae", "TRAE_SESSION_ID"],
     // Pi builds its bash env as `{...process.env, PATH}` only; no PI_* session
-    // var exists. The Pi extension's `export TRELLIS_CONTEXT_ID=…` command
+    // var exists. The Pi extension's `export PHRONIA_CONTEXT_ID=…` command
     // prefix is the real channel.
     ["pi", "PI_SESSION_ID"],
     ["pi", "PI_SESSIONID"],
@@ -4241,7 +4241,7 @@ print(json.dumps({
       {
         cwd: tmpDir,
         encoding: "utf-8",
-        env: sessionEnv({ TRELLIS_CONTEXT_ID: "session-fallback" }),
+        env: sessionEnv({ PHRONIA_CONTEXT_ID: "session-fallback" }),
       },
     );
 
@@ -4298,7 +4298,7 @@ print(json.dumps({
       {
         cwd: tmpDir,
         encoding: "utf-8",
-        env: sessionEnv({ TRELLIS_CONTEXT_ID: "session-b" }),
+        env: sessionEnv({ PHRONIA_CONTEXT_ID: "session-b" }),
       },
     );
 
@@ -4524,7 +4524,7 @@ print(json.dumps({
     );
   });
 
-  it("[session-current-task] Claude SessionStart persists TRELLIS_CONTEXT_ID for Bash commands", () => {
+  it("[session-current-task] Claude SessionStart persists PHRONIA_CONTEXT_ID for Bash commands", () => {
     setupTaskRepo();
     const sessionStartScript = getSharedHookScripts().find(
       (hook) => hook.name === "session-start.py",
@@ -4547,7 +4547,7 @@ print(json.dumps({
     );
 
     expect(fs.readFileSync(envFile, "utf-8")).toContain(
-      "export TRELLIS_CONTEXT_ID=claude_bash-start-a",
+      "export PHRONIA_CONTEXT_ID=claude_bash-start-a",
     );
   });
 
@@ -4587,7 +4587,7 @@ print(json.dumps({
     return fs
       .readFileSync(envFile, "utf-8")
       .split("\n")
-      .filter((line) => line.startsWith("export TRELLIS_CONTEXT_ID="));
+      .filter((line) => line.startsWith("export PHRONIA_CONTEXT_ID="));
   }
 
   it("[env-file-dedup] repeated SessionStarts with the same key append exactly once", () => {
@@ -4602,7 +4602,7 @@ print(json.dumps({
     runSessionStart("dedup-a", envFile);
 
     expect(contextIdExports(envFile)).toEqual([
-      "export TRELLIS_CONTEXT_ID=claude_dedup-a",
+      "export PHRONIA_CONTEXT_ID=claude_dedup-a",
     ]);
     expect(fs.readFileSync(envFile, "utf-8")).toContain(
       'export http_proxy="http://127.0.0.1:7890"',
@@ -4620,8 +4620,8 @@ print(json.dumps({
     runSessionStart("dedup-b", envFile);
 
     expect(contextIdExports(envFile)).toEqual([
-      "export TRELLIS_CONTEXT_ID=claude_dedup-a",
-      "export TRELLIS_CONTEXT_ID=claude_dedup-b",
+      "export PHRONIA_CONTEXT_ID=claude_dedup-a",
+      "export PHRONIA_CONTEXT_ID=claude_dedup-b",
     ]);
   });
 
@@ -4639,9 +4639,9 @@ print(json.dumps({
     runSessionStart("dedup-a", envFile);
 
     expect(contextIdExports(envFile)).toEqual([
-      "export TRELLIS_CONTEXT_ID=claude_dedup-a",
-      "export TRELLIS_CONTEXT_ID=claude_dedup-b",
-      "export TRELLIS_CONTEXT_ID=claude_dedup-a",
+      "export PHRONIA_CONTEXT_ID=claude_dedup-a",
+      "export PHRONIA_CONTEXT_ID=claude_dedup-b",
+      "export PHRONIA_CONTEXT_ID=claude_dedup-a",
     ]);
   });
 
@@ -4673,7 +4673,7 @@ print(json.dumps({
 
     expect(() => runSessionStart("dedup-latin", envFile)).not.toThrow();
     expect(contextIdExports(envFile)).toEqual([
-      "export TRELLIS_CONTEXT_ID=claude_dedup-latin",
+      "export PHRONIA_CONTEXT_ID=claude_dedup-latin",
     ]);
   });
 
@@ -4705,7 +4705,7 @@ print(json.dumps({
     fs.chmodSync(shimPath, 0o755);
     return {
       PATH: `${binDir}${path.delimiter}${process.env.PATH ?? ""}`,
-      TRELLIS_FAKE_CALL_LOG: path.join(tmpDir, "trellis-calls.log"),
+      PHRONIA_FAKE_CALL_LOG: path.join(tmpDir, "trellis-calls.log"),
     };
   }
 
@@ -4717,7 +4717,7 @@ print(json.dumps({
     return fs.readFileSync(callLog, "utf-8").split("\n").filter(Boolean).length;
   }
 
-  const REPORTS_0_5_9 = 'echo called >> "$TRELLIS_FAKE_CALL_LOG"\necho 0.5.9\n';
+  const REPORTS_0_5_9 = 'echo called >> "$PHRONIA_FAKE_CALL_LOG"\necho 0.5.9\n';
 
   function sessionStartContext(
     sessionId: string,
@@ -4852,13 +4852,13 @@ print(json.dumps({
       writeProjectFile(path.join(".phronia", ".version"), "0.5.0\n");
 
       const failing = writeFakeTrellisCli(
-        'echo called >> "$TRELLIS_FAKE_CALL_LOG"\necho boom >&2\nexit 1\n',
+        'echo called >> "$PHRONIA_FAKE_CALL_LOG"\necho boom >&2\nexit 1\n',
       );
       const afterFailure = sessionStartContext("update-fail", failing);
 
       // Hangs well past the hint path's 1s subprocess timeout.
       const hanging = writeFakeTrellisCli(
-        'echo called >> "$TRELLIS_FAKE_CALL_LOG"\nsleep 5\n',
+        'echo called >> "$PHRONIA_FAKE_CALL_LOG"\nsleep 5\n',
       );
       const afterTimeout = sessionStartContext("update-hang", hanging);
 
@@ -5724,7 +5724,7 @@ print(json.dumps({
     const sessionA = outputFor("parent-a");
     const sessionB = outputFor("parent-b");
     const parentWins = outputFor("parent-a", {
-      TRELLIS_CONTEXT_ID: "codex_parent-b",
+      PHRONIA_CONTEXT_ID: "codex_parent-b",
     });
 
     expect(sessionA).toContain("TOKEN_CODEX_SESSION_A");
@@ -6116,7 +6116,7 @@ print(json.dumps({
     expect(rawOutput).toContain("load details on demand");
   });
 
-  it("[trellis-hooks-env] runtime: shared hooks emit no additionalContext when TRELLIS_HOOKS=0", () => {
+  it("[trellis-hooks-env] runtime: shared hooks emit no additionalContext when PHRONIA_HOOKS=0", () => {
     setupTaskRepo();
     writeSessionContext("claude_session-a", ".phronia/tasks/issue-106");
 
@@ -6150,26 +6150,26 @@ print(json.dumps({
     );
     expect(baselineSession).toContain("hookSpecificOutput");
 
-    // With TRELLIS_HOOKS=0: shared hooks short-circuit with empty stdout
+    // With PHRONIA_HOOKS=0: shared hooks short-circuit with empty stdout
     const gatedSession = runPython(
       path.join(".claude", "hooks", "session-start.py"),
       stdinPayload,
-      { TRELLIS_HOOKS: "0" },
+      { PHRONIA_HOOKS: "0" },
     );
     expect(gatedSession.trim()).toBe("");
 
     const gatedWorkflow = runPython(
       path.join(".claude", "hooks", "inject-workflow-state.py"),
       stdinPayload,
-      { TRELLIS_HOOKS: "0" },
+      { PHRONIA_HOOKS: "0" },
     );
     expect(gatedWorkflow.trim()).toBe("");
 
-    // TRELLIS_DISABLE_HOOKS=1 has the same effect
+    // PHRONIA_DISABLE_HOOKS=1 has the same effect
     const gatedAlt = runPython(
       path.join(".claude", "hooks", "session-start.py"),
       stdinPayload,
-      { TRELLIS_DISABLE_HOOKS: "1" },
+      { PHRONIA_DISABLE_HOOKS: "1" },
     );
     expect(gatedAlt.trim()).toBe("");
   });
@@ -6261,7 +6261,7 @@ print(json.dumps({
     writeSessionContext("codex_session_explicit", ".phronia/tasks/issue-106");
 
     const { output, status } = runTaskCurrent({
-      TRELLIS_CONTEXT_ID: "codex_session_explicit",
+      PHRONIA_CONTEXT_ID: "codex_session_explicit",
     });
     expect(status).toBe(0);
     expect(output).toContain("Current task: .phronia/tasks/issue-106");
@@ -7299,7 +7299,7 @@ print(len(entries))
           encoding: "utf-8",
           // Session identity so a successful start prints "Current task set
           // to" instead of the degraded-mode notice.
-          env: sessionEnv({ TRELLIS_CONTEXT_ID: "test-ctx-573" }),
+          env: sessionEnv({ PHRONIA_CONTEXT_ID: "test-ctx-573" }),
         },
       );
     }
@@ -8423,7 +8423,7 @@ print(len(entries))
       {
         cwd: tmpDir,
         encoding: "utf-8",
-        env: sessionEnv({ TRELLIS_CONTEXT_ID: "json-current-session" }),
+        env: sessionEnv({ PHRONIA_CONTEXT_ID: "json-current-session" }),
       },
     );
 
@@ -8432,7 +8432,7 @@ print(len(entries))
       {
         cwd: tmpDir,
         encoding: "utf-8",
-        env: sessionEnv({ TRELLIS_CONTEXT_ID: "json-current-session" }),
+        env: sessionEnv({ PHRONIA_CONTEXT_ID: "json-current-session" }),
       },
     );
 
@@ -8700,7 +8700,7 @@ print(len(entries))
       {
         cwd: tmpDir,
         encoding: "utf-8",
-        env: sessionEnv({ TRELLIS_CONTEXT_ID: "start-branch-session" }),
+        env: sessionEnv({ PHRONIA_CONTEXT_ID: "start-branch-session" }),
       },
     );
 
@@ -8728,7 +8728,7 @@ print(len(entries))
       {
         cwd: tmpDir,
         encoding: "utf-8",
-        env: sessionEnv({ TRELLIS_CONTEXT_ID: "start-noclobber-session" }),
+        env: sessionEnv({ PHRONIA_CONTEXT_ID: "start-noclobber-session" }),
       },
     );
 
@@ -8749,7 +8749,7 @@ print(len(entries))
       {
         cwd: tmpDir,
         encoding: "utf-8",
-        env: sessionEnv({ TRELLIS_CONTEXT_ID: "start-detached-session" }),
+        env: sessionEnv({ PHRONIA_CONTEXT_ID: "start-detached-session" }),
       },
     );
 
@@ -10530,9 +10530,9 @@ describe("regression: Gemini CLI 0.40.x template compatibility (#224)", () => {
     expect(overlapCount).toBeGreaterThan(0);
   });
 
-  it("[trellis-hooks-env] all hook templates honor TRELLIS_HOOKS=0 / TRELLIS_DISABLE_HOOKS=1", () => {
+  it("[trellis-hooks-env] all hook templates honor PHRONIA_HOOKS=0 / PHRONIA_DISABLE_HOOKS=1", () => {
     // All shipped hook scripts must early-return when the operator sets
-    // TRELLIS_HOOKS=0 (or TRELLIS_DISABLE_HOOKS=1), so subprocess wrappers
+    // PHRONIA_HOOKS=0 (or PHRONIA_DISABLE_HOOKS=1), so subprocess wrappers
     // and casual-chat scenarios can disable Trellis injection without
     // editing config or restarting under different settings.
     const sharedHookTargets = [
@@ -10546,9 +10546,9 @@ describe("regression: Gemini CLI 0.40.x template compatibility (#224)", () => {
         (h) => h.name === name,
       )?.content;
       expect(script, `shared-hooks/${name} should exist`).toBeTruthy();
-      expect(script).toContain('os.environ.get("TRELLIS_HOOKS") == "0"');
+      expect(script).toContain('os.environ.get("PHRONIA_HOOKS") == "0"');
       expect(script).toContain(
-        'os.environ.get("TRELLIS_DISABLE_HOOKS") == "1"',
+        'os.environ.get("PHRONIA_DISABLE_HOOKS") == "1"',
       );
     }
 
@@ -10561,9 +10561,9 @@ describe("regression: Gemini CLI 0.40.x template compatibility (#224)", () => {
         (h) => h.name === "session-start.py",
       )?.content;
       expect(sessionStart, `${label} session-start should exist`).toBeTruthy();
-      expect(sessionStart).toContain('os.environ.get("TRELLIS_HOOKS") == "0"');
+      expect(sessionStart).toContain('os.environ.get("PHRONIA_HOOKS") == "0"');
       expect(sessionStart).toContain(
-        'os.environ.get("TRELLIS_DISABLE_HOOKS") == "1"',
+        'os.environ.get("PHRONIA_DISABLE_HOOKS") == "1"',
       );
     }
 
@@ -10582,8 +10582,8 @@ describe("regression: Gemini CLI 0.40.x template compatibility (#224)", () => {
         path.join(openCodePluginDir, name),
         "utf-8",
       );
-      expect(content).toContain('process.env.TRELLIS_HOOKS === "0"');
-      expect(content).toContain('process.env.TRELLIS_DISABLE_HOOKS === "1"');
+      expect(content).toContain('process.env.PHRONIA_HOOKS === "0"');
+      expect(content).toContain('process.env.PHRONIA_DISABLE_HOOKS === "1"');
     }
   });
 
@@ -11236,7 +11236,7 @@ describe("regression: safe auto-commit when .phronia/ is gitignored (0.5.10 → 
       {
         cwd: tmpDir,
         encoding: "utf-8",
-        env: { ...process.env, TRELLIS_CONTEXT_ID: "session-a" },
+        env: { ...process.env, PHRONIA_CONTEXT_ID: "session-a" },
       },
     );
     return {
@@ -11333,7 +11333,7 @@ describe("regression: safe auto-commit when .phronia/ is gitignored (0.5.10 → 
     const result = spawnSync(pyCmd, [taskScriptPath, "archive", "issue-500"], {
       cwd: tmpDir,
       encoding: "utf-8",
-      env: { ...process.env, TRELLIS_CONTEXT_ID: "session-arch" },
+      env: { ...process.env, PHRONIA_CONTEXT_ID: "session-arch" },
     });
     const stderr = result.stderr ?? "";
     // 0.5.11: must NOT retry with -f, must NOT auto-commit. Warning must
@@ -11423,7 +11423,7 @@ describe("regression: safe auto-commit when .phronia/ is gitignored (0.5.10 → 
     const result = spawnSync(pyCmd, [taskScriptPath, "archive", "issue-600"], {
       cwd: tmpDir,
       encoding: "utf-8",
-      env: { ...process.env, TRELLIS_CONTEXT_ID: "session-arch-2" },
+      env: { ...process.env, PHRONIA_CONTEXT_ID: "session-arch-2" },
     });
     const stderr = result.stderr ?? "";
     expect(stderr).not.toContain("Auto-committed");
@@ -11579,7 +11579,7 @@ describe("regression: bounded index.lock retry on archive auto-commit", () => {
     const result = spawnSync(pyCmd, [taskScriptPath, "archive", taskName], {
       cwd: tmpDir,
       encoding: "utf-8",
-      env: { ...process.env, TRELLIS_CONTEXT_ID: "session-lock" },
+      env: { ...process.env, PHRONIA_CONTEXT_ID: "session-lock" },
     });
     return { status: result.status, stderr: result.stderr ?? "" };
   }
@@ -12230,8 +12230,8 @@ describe("regression: a linked worktree inherits developer identity", () => {
     const env = { ...process.env, ...envOverrides };
     // Inherited identity must come from the repo, never from the environment
     // of the machine running the suite.
-    if (envOverrides.TRELLIS_DEVELOPER === undefined) {
-      delete env.TRELLIS_DEVELOPER;
+    if (envOverrides.PHRONIA_DEVELOPER === undefined) {
+      delete env.PHRONIA_DEVELOPER;
     }
     const proc = spawnSync(
       pyCmd,
@@ -12337,7 +12337,7 @@ describe("regression: a linked worktree inherits developer identity", () => {
     expect(assigneeOf(worktreeDir, "second")).toBe("renamed-dev");
   });
 
-  it("[worktree-identity] precedence: --assignee > TRELLIS_DEVELOPER > local file > main checkout", () => {
+  it("[worktree-identity] precedence: --assignee > PHRONIA_DEVELOPER > local file > main checkout", () => {
     buildRepo("main-dev");
 
     // 4. main checkout, in the worktree that has no file of its own
@@ -12355,7 +12355,7 @@ describe("regression: a linked worktree inherits developer identity", () => {
 
     // 2. the env var wins over both files
     expect(
-      createTask(worktreeDir, "env", [], { TRELLIS_DEVELOPER: "env-dev" })
+      createTask(worktreeDir, "env", [], { PHRONIA_DEVELOPER: "env-dev" })
         .status,
     ).toBe(0);
     expect(assigneeOf(worktreeDir, "env")).toBe("env-dev");
@@ -12363,7 +12363,7 @@ describe("regression: a linked worktree inherits developer identity", () => {
     // 1. --assignee wins over everything
     expect(
       createTask(worktreeDir, "flag", ["--assignee", "flag-dev"], {
-        TRELLIS_DEVELOPER: "env-dev",
+        PHRONIA_DEVELOPER: "env-dev",
       }).status,
     ).toBe(0);
     expect(assigneeOf(worktreeDir, "flag")).toBe("flag-dev");
@@ -12372,7 +12372,7 @@ describe("regression: a linked worktree inherits developer identity", () => {
   it("[worktree-identity] the env var alone is enough in the main checkout too", () => {
     buildRepo(null);
     expect(
-      createTask(mainDir, "envonly", [], { TRELLIS_DEVELOPER: "env-dev" })
+      createTask(mainDir, "envonly", [], { PHRONIA_DEVELOPER: "env-dev" })
         .status,
     ).toBe(0);
     expect(assigneeOf(mainDir, "envonly")).toBe("env-dev");
@@ -12381,7 +12381,7 @@ describe("regression: a linked worktree inherits developer identity", () => {
   it("[worktree-identity] a whitespace-only env var does not count as an identity", () => {
     buildRepo("main-dev");
     expect(
-      createTask(worktreeDir, "blank", [], { TRELLIS_DEVELOPER: "   " }).status,
+      createTask(worktreeDir, "blank", [], { PHRONIA_DEVELOPER: "   " }).status,
     ).toBe(0);
     expect(assigneeOf(worktreeDir, "blank")).toBe("main-dev");
   });
@@ -12394,7 +12394,7 @@ describe("regression: a linked worktree inherits developer identity", () => {
       expect(created.status).not.toBe(0);
       expect(created.stderr).toContain("No developer set");
       expect(created.stderr).toContain("init_developer.py");
-      expect(created.stderr).toContain("TRELLIS_DEVELOPER");
+      expect(created.stderr).toContain("PHRONIA_DEVELOPER");
       expect(created.stderr).toContain("linked git worktree");
 
       const listed = runTask(cwd, ["list", "--json", "--mine"]);
@@ -12404,7 +12404,7 @@ describe("regression: a linked worktree inherits developer identity", () => {
         hint: string;
       };
       expect(payload.error).toBe("No developer set");
-      expect(payload.hint).toContain("TRELLIS_DEVELOPER");
+      expect(payload.hint).toContain("PHRONIA_DEVELOPER");
       expect(payload.hint).toContain("linked git worktree");
     }
   });

@@ -1,18 +1,10 @@
 {
   "version": 1,
   "recordedAt": "2026-10-21",
-  "note": "Known dogfood drift after the B1/T3 root-directory flip. B1/T8 regenerates generated platform files; config.yaml and workflow.md are intentional project customizations and stay in this list.",
+  "note": "Intentional dogfood customizations. config.yaml and workflow.md are project-specific and must not be regenerated. .opencode/package.json was deleted by the project, not by templates.",
   "modified": [
-    ".agents/skills/trellis-meta/references/platform-files/platform-map.md",
-    ".claude/hooks/inject-subagent-context.py",
-    ".claude/skills/trellis-meta/references/platform-files/platform-map.md",
-    ".codex/hooks/inject-subagent-context.py",
-    ".cursor/hooks/inject-subagent-context.py",
-    ".cursor/skills/trellis-meta/references/platform-files/platform-map.md",
-    ".opencode/skills/trellis-meta/references/platform-files/platform-map.md",
     ".phronia/config.yaml",
-    ".phronia/workflow.md",
-    ".pi/extensions/trellis/index.ts"
+    ".phronia/workflow.md"
   ],
   "deleted": [
     ".opencode/package.json"

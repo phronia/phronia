@@ -71,7 +71,7 @@ export function collectZcodeTemplates(): Map<string, string> {
 
 /** Print the manual global-plugin fallback required by affected ZCode builds. */
 export function printZcodeSetupHint(): void {
-  if (process.env.VITEST || process.env.TRELLIS_QUIET) return;
+  if (process.env.VITEST || process.env.PHRONIA_QUIET) return;
 
   const plugin = AI_TOOLS.zcode.globalHookPlugin;
   if (!plugin) return;

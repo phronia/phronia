@@ -130,7 +130,7 @@ function loadTrellisConfig(directory, contextKey = null) {
       stdio: ["pipe", "pipe", "pipe"],
       env: {
         ...process.env,
-        ...(contextKey ? { TRELLIS_CONTEXT_ID: contextKey } : {}),
+        ...(contextKey ? { PHRONIA_CONTEXT_ID: contextKey } : {}),
       },
     })
     const data = JSON.parse(output)

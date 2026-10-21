@@ -959,7 +959,7 @@ describe("configurePlatform", () => {
       path.join(tmpDir, ".snow", "hooks", "write-trellis-context.py"),
       "utf-8",
     );
-    expect(hookPy).toContain("TRELLIS_SNOW_HOOK_MODE");
+    expect(hookPy).toContain("PHRONIA_SNOW_HOOK_MODE");
     expect(hookPy).toContain("agentKind");
     expect(hookPy).toContain("implement.jsonl");
     expect(hookPy).toContain("COMPACT_MAX_BYTES");
@@ -985,7 +985,7 @@ describe("configurePlatform", () => {
     expect(snowGuide).not.toContain("sub-agents.phronia.json");
     expect(snowGuide).toContain("Session identity");
     expect(snowGuide).toContain("SNOW_SESSION_ID");
-    expect(snowGuide).toContain("TRELLIS_CONTEXT_ID");
+    expect(snowGuide).toContain("PHRONIA_CONTEXT_ID");
 
     const implementAgent = fs.readFileSync(
       path.join(tmpDir, ".snow", "agents", "trellis-implement.md"),
@@ -1534,7 +1534,7 @@ describe("configurePlatform", () => {
     expect(extension).toContain('pi.on?.("session_start"');
     expect(extension).toContain('pi.on?.("tool_call"');
     expect(extension).toContain("ctx?.sessionManager?.getSessionId");
-    expect(extension).toContain("TRELLIS_PI_CLI_JS");
+    expect(extension).toContain("PHRONIA_PI_CLI_JS");
     expect(extension).toContain("function formatPiOutput");
     expect(extension).toContain('"## Trellis Agent Definition"');
     expect(extension).toContain("ctx?.ui?.notify?.(");

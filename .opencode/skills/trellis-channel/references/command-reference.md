@@ -225,7 +225,7 @@ trellis channel spawn <name>
   [--file <path>] ...                     # glob, repeatable; inject content
   [--jsonl <path>] ...                    # Trellis manifest, repeatable
   [--by <agent>]                          # spawn-event author
-                                          # default: TRELLIS_CHANNEL_AS env or 'main'
+                                          # default: PHRONIA_CHANNEL_AS env or 'main'
   [--inbox-policy explicitOnly|broadcastAndExplicit]
                                           # default explicitOnly
   [--idle-timeout <Ns|Nm|Nh>]             # OOM-guard idle TTL
@@ -242,8 +242,8 @@ Behavior:
 - Records a `spawned` event with `pid`, `provider`, `agent`, `files`,
   `manifests`.
 - OOM-guard precedence: CLI flag → env var
-  (`TRELLIS_CHANNEL_WORKER_IDLE_TIMEOUT`,
-  `TRELLIS_CHANNEL_MAX_LIVE_WORKERS`) →
+  (`PHRONIA_CHANNEL_WORKER_IDLE_TIMEOUT`,
+  `PHRONIA_CHANNEL_MAX_LIVE_WORKERS`) →
   `.phronia/config.yaml#channel.worker_guard` → built-in defaults.
 
 ### `run [name]`

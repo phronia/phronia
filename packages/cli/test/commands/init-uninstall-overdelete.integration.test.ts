@@ -53,13 +53,13 @@ describe("init + uninstall: manifest accuracy + homedir guard", () => {
       configurable: true,
       value: true,
     });
-    delete process.env.TRELLIS_ALLOW_HOMEDIR;
+    delete process.env.PHRONIA_ALLOW_HOMEDIR;
   });
 
   afterEach(() => {
     vi.restoreAllMocks();
     fs.rmSync(tmpDir, { recursive: true, force: true });
-    delete process.env.TRELLIS_ALLOW_HOMEDIR;
+    delete process.env.PHRONIA_ALLOW_HOMEDIR;
   });
 
   // ----- R1: manifest accuracy after init -----
@@ -367,11 +367,11 @@ describe("init + uninstall: manifest accuracy + homedir guard", () => {
     expect(fs.existsSync(path.join(tmpDir, ".phronia"))).toBe(true);
   });
 
-  it("#R2.3 TRELLIS_ALLOW_HOMEDIR=1 bypasses the guard for init", async () => {
+  it("#R2.3 PHRONIA_ALLOW_HOMEDIR=1 bypasses the guard for init", async () => {
     const fakeHome = fs.mkdtempSync(path.join(os.tmpdir(), "fake-home-"));
     try {
       vi.spyOn(process, "cwd").mockReturnValue(fakeHome);
-      process.env.TRELLIS_ALLOW_HOMEDIR = "1";
+      process.env.PHRONIA_ALLOW_HOMEDIR = "1";
 
       await withFakeHome(fakeHome, async () => {
         await init({ yes: true, claude: true, force: true });

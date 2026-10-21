@@ -313,7 +313,7 @@ describe("update() integration", () => {
     await init({ yes: true, force: true, zcode: true });
 
     const originalVitest = process.env.VITEST;
-    const originalQuiet = process.env.TRELLIS_QUIET;
+    const originalQuiet = process.env.PHRONIA_QUIET;
     const originalWrite = process.stderr.write.bind(process.stderr);
     const stderr: string[] = [];
     process.stderr.write = ((chunk: string) => {
@@ -321,7 +321,7 @@ describe("update() integration", () => {
       return true;
     }) as typeof process.stderr.write;
     delete process.env.VITEST;
-    delete process.env.TRELLIS_QUIET;
+    delete process.env.PHRONIA_QUIET;
 
     try {
       await update({});
@@ -329,8 +329,8 @@ describe("update() integration", () => {
       process.stderr.write = originalWrite;
       if (originalVitest === undefined) delete process.env.VITEST;
       else process.env.VITEST = originalVitest;
-      if (originalQuiet === undefined) delete process.env.TRELLIS_QUIET;
-      else process.env.TRELLIS_QUIET = originalQuiet;
+      if (originalQuiet === undefined) delete process.env.PHRONIA_QUIET;
+      else process.env.PHRONIA_QUIET = originalQuiet;
     }
 
     expect(stderr.join("")).toBe(
@@ -345,7 +345,7 @@ describe("update() integration", () => {
     writeProjectFile(MANAGED_FILE, "user modified content");
 
     const originalVitest = process.env.VITEST;
-    const originalQuiet = process.env.TRELLIS_QUIET;
+    const originalQuiet = process.env.PHRONIA_QUIET;
     const originalWrite = process.stderr.write.bind(process.stderr);
     const stderr: string[] = [];
     process.stderr.write = ((chunk: string) => {
@@ -353,7 +353,7 @@ describe("update() integration", () => {
       return true;
     }) as typeof process.stderr.write;
     delete process.env.VITEST;
-    delete process.env.TRELLIS_QUIET;
+    delete process.env.PHRONIA_QUIET;
 
     try {
       await update({ force: true });
@@ -361,8 +361,8 @@ describe("update() integration", () => {
       process.stderr.write = originalWrite;
       if (originalVitest === undefined) delete process.env.VITEST;
       else process.env.VITEST = originalVitest;
-      if (originalQuiet === undefined) delete process.env.TRELLIS_QUIET;
-      else process.env.TRELLIS_QUIET = originalQuiet;
+      if (originalQuiet === undefined) delete process.env.PHRONIA_QUIET;
+      else process.env.PHRONIA_QUIET = originalQuiet;
     }
 
     expect(stderr.join("")).toBe(

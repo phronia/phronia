@@ -153,7 +153,7 @@ export function collectUncommittedTrellisData(cwd: string): string[] {
 
 /** Whether the uncommitted-data guard has been explicitly overridden. */
 function dirtyUninstallBypassEnabled(): boolean {
-  return process.env.TRELLIS_ALLOW_DIRTY_UNINSTALL === "1";
+  return process.env.PHRONIA_ALLOW_DIRTY_UNINSTALL === "1";
 }
 
 /**
@@ -257,7 +257,7 @@ export async function uninstall(options: UninstallOptions = {}): Promise<void> {
       chalk.red(
         "Refusing to uninstall with --yes while .phronia/ has uncommitted user data " +
           "(spec/tasks/workspace). Commit or stash it, re-run without --yes to confirm " +
-          "interactively, or set TRELLIS_ALLOW_DIRTY_UNINSTALL=1 to override.",
+          "interactively, or set PHRONIA_ALLOW_DIRTY_UNINSTALL=1 to override.",
       ),
     );
     process.exit(1);

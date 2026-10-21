@@ -129,7 +129,7 @@ python3 .phronia/scripts/task.py start <task-dir>
 ```
 
 Sets the active task in `.phronia/.runtime/sessions/<session-key>.json`.
-Without a session identity or `TRELLIS_CONTEXT_ID`, this command fails and
+Without a session identity or `PHRONIA_CONTEXT_ID`, this command fails and
 does not create `.phronia/.current-task`.
 
 #### Finish Task
@@ -182,7 +182,7 @@ Path constants and utilities.
 
 ```python
 from common.paths import (
-    TRELLIS_DIR,      # .phronia/
+    PHRONIA_DIR,      # .phronia/
     WORKSPACE_DIR,    # .phronia/workspace/
     TASKS_DIR,        # .phronia/tasks/
     SPEC_DIR,         # .phronia/spec/

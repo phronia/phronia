@@ -11,6 +11,11 @@ warnings.filterwarnings("ignore")
 
 import json
 import os
+
+# TRELLIS_* -> PHRONIA_* compatibility (removed in the next major).
+for _legacy_key in list(os.environ):
+    if _legacy_key.startswith("TRELLIS_"):
+        os.environ.setdefault("PHRONIA_" + _legacy_key[8:], os.environ[_legacy_key])
 import re
 import shlex
 import subprocess
@@ -152,11 +157,11 @@ def _has_curated_jsonl_entry(jsonl_path: Path) -> bool:
 
 def should_skip_injection() -> bool:
     """Check if any platform's non-interactive flag is set, or if Trellis
-    hooks are explicitly disabled via TRELLIS_HOOKS=0 / TRELLIS_DISABLE_HOOKS=1.
+    hooks are explicitly disabled via PHRONIA_HOOKS=0 / PHRONIA_DISABLE_HOOKS=1.
     """
-    if os.environ.get("TRELLIS_HOOKS") == "0":
+    if os.environ.get("PHRONIA_HOOKS") == "0":
         return True
-    if os.environ.get("TRELLIS_DISABLE_HOOKS") == "1":
+    if os.environ.get("PHRONIA_DISABLE_HOOKS") == "1":
         return True
     non_interactive_vars = [
         "CLAUDE_NON_INTERACTIVE",
@@ -286,7 +291,7 @@ def _persist_context_key_for_bash(context_key: str | None) -> None:
     CLAUDE_ENV_FILE is user-owned (conda init, proxy settings, ...) and the host
     shell sources it for every command, so an unconditional append grows it
     without bound — one line per SessionStart forever. Skip the write when the
-    *last* existing TRELLIS_CONTEXT_ID export already assigns this value. Last
+    *last* existing PHRONIA_CONTEXT_ID export already assigns this value. Last
     wins in shell, so only the final assignment describes the effective state:
     "the value appears somewhere in the file" would wrongly skip after a switch
     A -> B -> A, leaving the shell on B.
@@ -296,7 +301,7 @@ def _persist_context_key_for_bash(context_key: str | None) -> None:
     env_file = os.environ.get("CLAUDE_ENV_FILE")
     if not env_file:
         return
-    export_line = f"export TRELLIS_CONTEXT_ID={shlex.quote(context_key)}"
+    export_line = f"export PHRONIA_CONTEXT_ID={shlex.quote(context_key)}"
     try:
         if _last_context_key_export(env_file) == export_line:
             return
@@ -307,7 +312,7 @@ def _persist_context_key_for_bash(context_key: str | None) -> None:
 
 
 def _last_context_key_export(env_file: str) -> str | None:
-    """Return the last `export TRELLIS_CONTEXT_ID=` line in env_file, if any.
+    """Return the last `export PHRONIA_CONTEXT_ID=` line in env_file, if any.
 
     A missing file means "no previous export" (the caller then creates it).
     `errors="replace"` matters: a user env file with non-UTF-8 bytes would
@@ -319,7 +324,7 @@ def _last_context_key_export(env_file: str) -> str | None:
         with open(env_file, "r", encoding="utf-8", errors="replace") as handle:
             for raw_line in handle:
                 stripped = raw_line.strip()
-                if stripped.startswith("export TRELLIS_CONTEXT_ID="):
+                if stripped.startswith("export PHRONIA_CONTEXT_ID="):
                     last_export = stripped
     except FileNotFoundError:
         return None
@@ -369,12 +374,12 @@ def run_script(script_path: Path, context_key: str | None = None) -> str:
             env = os.environ.copy()
             env["PYTHONIOENCODING"] = "utf-8"
             if context_key:
-                env["TRELLIS_CONTEXT_ID"] = context_key
+                env["PHRONIA_CONTEXT_ID"] = context_key
             cmd = [sys.executable, "-W", "ignore", str(script_path)]
         else:
             env = os.environ.copy()
             if context_key:
-                env["TRELLIS_CONTEXT_ID"] = context_key
+                env["PHRONIA_CONTEXT_ID"] = context_key
             cmd = [str(script_path)]
 
         result = subprocess.run(

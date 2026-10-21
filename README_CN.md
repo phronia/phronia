@@ -142,7 +142,7 @@ Trellis 管理的全部项目级表面。请新开一个 agent 会话进行对�
 其中可能有用户编写的敏感文本；事务会保留到恢复完成验证为止。
 
 它不同于永久删除的 `trellis uninstall`，也不同于只关闭 hooks 的
-`TRELLIS_HOOKS=0`。消融不会启动 agent、管理 worktree、隐藏 Git 变更，
+`PHRONIA_HOOKS=0`。消融不会启动 agent、管理 worktree、隐藏 Git 变更，
 也不会删除全局 CLI、channel 日志或宿主会话记录。如果消融期间某个受管理
 路径被修改，恢复会拒绝全部写入，直到冲突被处理。
 

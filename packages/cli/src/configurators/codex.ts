@@ -214,7 +214,7 @@ export async function configureCodex(cwd: string): Promise<void> {
   // it the workflow breadcrumb won't auto-inject (the trellis-bootstrap
   // fallback in inject-workflow-state.py covers this case). Documented in
   // spec/cli/backend/platform-integration.md.
-  if (!process.env.VITEST && !process.env.TRELLIS_QUIET) {
+  if (!process.env.VITEST && !process.env.PHRONIA_QUIET) {
     process.stderr.write(
       "⚠️  Codex hooks require `features.hooks = true` in your " +
         "~/.codex/config.toml (Codex 0.129+; older versions: `codex_hooks = true`). " +

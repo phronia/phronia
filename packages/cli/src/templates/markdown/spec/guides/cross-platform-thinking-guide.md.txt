@@ -221,12 +221,12 @@ PowerShell, Git Bash, MSYS2, or another POSIX-like shell.
 
 ```javascript
 // BAD - breaks when the host shell is PowerShell
-command = `export TRELLIS_CONTEXT_ID=${shellQuote(contextKey)}; ${command}`;
+command = `export PHRONIA_CONTEXT_ID=${shellQuote(contextKey)}; ${command}`;
 
 // GOOD - shell-dialect-aware command prefix
 const prefix = process.platform === "win32" && !isWindowsPosixShell(process.env)
-  ? `$env:TRELLIS_CONTEXT_ID = ${powershellQuote(contextKey)}; `
-  : `export TRELLIS_CONTEXT_ID=${shellQuote(contextKey)}; `;
+  ? `$env:PHRONIA_CONTEXT_ID = ${powershellQuote(contextKey)}; `
+  : `export PHRONIA_CONTEXT_ID=${shellQuote(contextKey)}; `;
 command = `${prefix}${command}`;
 ```
 

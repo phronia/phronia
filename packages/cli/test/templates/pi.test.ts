@@ -116,7 +116,7 @@ function evaluateExtension<T>(
   const moduleObject: { exports: Record<string, unknown> } = { exports: {} };
   const sandboxProcess = Object.create(process) as NodeJS.Process;
   const sandboxEnv = { ...process.env, ...env };
-  delete sandboxEnv.TRELLIS_SUBAGENT_CHILD;
+  delete sandboxEnv.PHRONIA_SUBAGENT_CHILD;
   Object.defineProperty(sandboxProcess, "cwd", { value: () => cwd });
   Object.defineProperty(sandboxProcess, "env", { value: sandboxEnv });
   const sandbox = vm.createContext({
@@ -289,7 +289,7 @@ describe("pi templates", () => {
     expect(extension).toContain('pi.on?.("before_agent_start"');
     // context: preserves the existing context-key establishment behavior only
     expect(extension).toContain('pi.on?.("context"');
-    // tool_call: inject TRELLIS_CONTEXT_ID into bash commands
+    // tool_call: inject PHRONIA_CONTEXT_ID into bash commands
     expect(extension).toContain('pi.on?.("tool_call"');
     // tool_result: mark failed/cancelled subagent runs as errors
     expect(extension).toContain('pi.on?.("tool_result"');
@@ -490,7 +490,7 @@ describe("pi templates", () => {
 
     try {
       const { trellisExtension } = loadExtensionInternals(root, {
-        TRELLIS_CONTEXT_ID: "pi_process_foreign",
+        PHRONIA_CONTEXT_ID: "pi_process_foreign",
       });
       const handlers = new Map<
         string,
@@ -520,7 +520,7 @@ describe("pi templates", () => {
       };
       handlers.get("tool_call")?.(bashEvent, ctx);
       expect(bashEvent.input.command).toBe(
-        "export TRELLIS_CONTEXT_ID='pi_native-window-b'; printf safe",
+        "export PHRONIA_CONTEXT_ID='pi_native-window-b'; printf safe",
       );
 
       const collisionKeys = ["native/window", "native:window"].map(
@@ -542,7 +542,7 @@ describe("pi templates", () => {
             sessionManager: { getSessionId: () => sessionId },
           });
           return event.input.command.match(
-            /^export TRELLIS_CONTEXT_ID='([^']+)'/,
+            /^export PHRONIA_CONTEXT_ID='([^']+)'/,
           )?.[1];
         },
       );
@@ -564,7 +564,7 @@ describe("pi templates", () => {
         (event: unknown, ctx?: unknown) => unknown
       >();
       loadExtensionInternals(root, {
-        TRELLIS_CONTEXT_ID: "pi_process_foreign",
+        PHRONIA_CONTEXT_ID: "pi_process_foreign",
       }).trellisExtension({
         on(event, handler) {
           fallbackHandlers.set(event, handler);
@@ -581,12 +581,12 @@ describe("pi templates", () => {
       fallbackHandlers.get("tool_call")?.(firstFallback);
       fallbackHandlers.get("tool_call")?.(secondFallback);
       const fallbackKey = firstFallback.input.command.match(
-        /^export TRELLIS_CONTEXT_ID='([^']+)'/,
+        /^export PHRONIA_CONTEXT_ID='([^']+)'/,
       )?.[1];
       expect(fallbackKey).toMatch(/^pi_process_[a-f0-9]{24}$/);
       expect(fallbackKey).not.toBe("pi_process_foreign");
       expect(secondFallback.input.command).toContain(
-        `TRELLIS_CONTEXT_ID='${fallbackKey}'`,
+        `PHRONIA_CONTEXT_ID='${fallbackKey}'`,
       );
     } finally {
       rmSync(root, { recursive: true, force: true });
@@ -947,7 +947,7 @@ fallbackModels:
 
     try {
       const { trellisExtension } = loadExtensionInternals(hostRoot, {
-        TRELLIS_PI_CLI_JS: fakeCli,
+        PHRONIA_PI_CLI_JS: fakeCli,
       });
       let registeredTool: RegisteredPiTool | undefined;
       trellisExtension({
@@ -992,9 +992,9 @@ fallbackModels:
   it("cmdHasTrellisCtx detects already-prefixed bash commands", () => {
     const { cmdHasTrellisCtx } = loadExtensionInternals();
 
-    expect(cmdHasTrellisCtx("export TRELLIS_CONTEXT_ID=foo; ls")).toBe(true);
-    expect(cmdHasTrellisCtx("TRELLIS_CONTEXT_ID=foo ls")).toBe(true);
-    expect(cmdHasTrellisCtx("env TRELLIS_CONTEXT_ID=foo ls")).toBe(true);
+    expect(cmdHasTrellisCtx("export PHRONIA_CONTEXT_ID=foo; ls")).toBe(true);
+    expect(cmdHasTrellisCtx("PHRONIA_CONTEXT_ID=foo ls")).toBe(true);
+    expect(cmdHasTrellisCtx("env PHRONIA_CONTEXT_ID=foo ls")).toBe(true);
     expect(cmdHasTrellisCtx("ls -la")).toBe(false);
     expect(cmdHasTrellisCtx("")).toBe(false);
   });
@@ -1076,9 +1076,9 @@ fallbackModels:
     });
 
     const withParent = buildChildEnv("pi_ctx", "serving-session");
-    expect(withParent.TRELLIS_SUBAGENT_CHILD).toBe("1");
+    expect(withParent.PHRONIA_SUBAGENT_CHILD).toBe("1");
     expect(withParent.PI_SUBAGENT_CHILD).toBe("1");
-    expect(withParent.TRELLIS_CONTEXT_ID).toBe("pi_ctx");
+    expect(withParent.PHRONIA_CONTEXT_ID).toBe("pi_ctx");
     expect(withParent.PI_SUBAGENT_PARENT_SESSION).toBe("serving-session");
     expect(withParent.PI_SESSION_ID).toBeUndefined();
     expect(withParent.PI_SESSIONID).toBeUndefined();
@@ -1086,7 +1086,7 @@ fallbackModels:
     const noParent = buildChildEnv(null, null);
     expect(noParent.PI_SUBAGENT_CHILD).toBe("1");
     expect(noParent.PI_SUBAGENT_PARENT_SESSION).toBeUndefined();
-    expect(noParent.TRELLIS_CONTEXT_ID).toBeUndefined();
+    expect(noParent.PHRONIA_CONTEXT_ID).toBeUndefined();
   });
 
   it("injects serving parent env into the spawned headless pi process", async () => {
@@ -1109,7 +1109,7 @@ fallbackModels:
         `writeFileSync(${JSON.stringify(capturedEnv)}, JSON.stringify({`,
         "  PI_SUBAGENT_CHILD: process.env.PI_SUBAGENT_CHILD,",
         "  PI_SUBAGENT_PARENT_SESSION: process.env.PI_SUBAGENT_PARENT_SESSION,",
-        "  TRELLIS_SUBAGENT_CHILD: process.env.TRELLIS_SUBAGENT_CHILD,",
+        "  PHRONIA_SUBAGENT_CHILD: process.env.PHRONIA_SUBAGENT_CHILD,",
         "  PI_SESSION_ID: process.env.PI_SESSION_ID ?? null,",
         "  PI_SESSIONID: process.env.PI_SESSIONID ?? null,",
         "}));",
@@ -1120,7 +1120,7 @@ fallbackModels:
 
     try {
       const { trellisExtension } = loadExtensionInternals(hostRoot, {
-        TRELLIS_PI_CLI_JS: fakeCli,
+        PHRONIA_PI_CLI_JS: fakeCli,
         PI_CODING_AGENT_SESSION_DIR: sessionDir,
         PI_SESSION_ID: "stale-parent-id",
       });
@@ -1150,7 +1150,7 @@ fallbackModels:
       expect(JSON.parse(readFileSync(capturedEnv, "utf-8"))).toEqual({
         PI_SUBAGENT_CHILD: "1",
         PI_SUBAGENT_PARENT_SESSION: "serving-heartbeat-id",
-        TRELLIS_SUBAGENT_CHILD: "1",
+        PHRONIA_SUBAGENT_CHILD: "1",
         PI_SESSION_ID: null,
         PI_SESSIONID: null,
       });
@@ -1170,12 +1170,12 @@ fallbackModels:
     expect(shellQuote("with 'quote'")).toBe("'with '\\''quote'\\'''");
   });
 
-  it("extension forwards TRELLIS_CONTEXT_ID into spawned Pi child env", () => {
+  it("extension forwards PHRONIA_CONTEXT_ID into spawned Pi child env", () => {
     const extension = getExtensionTemplate();
 
-    // The child pi process must inherit TRELLIS_CONTEXT_ID so sub-agent
+    // The child pi process must inherit PHRONIA_CONTEXT_ID so sub-agent
     // task.py current resolves to the same task.
-    expect(extension).toContain("TRELLIS_CONTEXT_ID:");
+    expect(extension).toContain("PHRONIA_CONTEXT_ID:");
     expect(extension).toContain("...process.env");
   });
 

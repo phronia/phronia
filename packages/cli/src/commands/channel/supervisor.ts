@@ -48,7 +48,7 @@ export interface SupervisorConfig {
    *  No "initial user prompt" — the worker stays idle until the first
    *  inbox `send --to <worker>` arrives. */
   systemPrompt: string;
-  /** Extra env vars (TRELLIS_HOOKS=0 etc. are added automatically). */
+  /** Extra env vars (PHRONIA_HOOKS=0 etc. are added automatically). */
   env?: Record<string, string>;
   /** Optional model override. */
   model?: string;
@@ -183,7 +183,7 @@ export async function runSupervisor(
   const config = readConfig(configPath);
 
   // Self-pid file lets `trellis channel kill` find us.
-  const project = process.env.TRELLIS_CHANNEL_PROJECT;
+  const project = process.env.PHRONIA_CHANNEL_PROJECT;
   fs.writeFileSync(
     workerFile(channelName, workerName, "pid", project),
     String(process.pid),
@@ -223,9 +223,9 @@ export async function runSupervisor(
   const env: NodeJS.ProcessEnv = {
     ...process.env,
     ...config.env,
-    TRELLIS_HOOKS: "0",
-    TRELLIS_CHANNEL: channelName,
-    TRELLIS_CHANNEL_AS: workerName,
+    PHRONIA_HOOKS: "0",
+    PHRONIA_CHANNEL: channelName,
+    PHRONIA_CHANNEL_AS: workerName,
   };
 
   const logPath = workerFile(channelName, workerName, "log", project);
@@ -570,7 +570,7 @@ async function cleanup(channelName: string, workerName: string): Promise<void> {
           channelName,
           workerName,
           suffix,
-          process.env.TRELLIS_CHANNEL_PROJECT,
+          process.env.PHRONIA_CHANNEL_PROJECT,
         ),
       );
     } catch {

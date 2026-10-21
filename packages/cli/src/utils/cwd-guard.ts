@@ -11,7 +11,7 @@
  * Subdirectories of home (`~/Documents/projects/foo/`) are NOT blocked — only
  * exact-home match.
  *
- * Bypass: `TRELLIS_ALLOW_HOMEDIR=1`.
+ * Bypass: `PHRONIA_ALLOW_HOMEDIR=1`.
  */
 
 import { realpathSync } from "node:fs";
@@ -56,7 +56,7 @@ export function homedirGuardMessage(
     `in your home directory also contain runtime data from those CLIs (chat history,\n` +
     `session JSONLs, caches). Running here can wipe that data.\n\n` +
     `Run trellis from your project directory instead. If you really want to run in\n` +
-    `$HOME, set TRELLIS_ALLOW_HOMEDIR=1.`
+    `$HOME, set PHRONIA_ALLOW_HOMEDIR=1.`
   );
 }
 
@@ -64,5 +64,5 @@ export function homedirGuardMessage(
  * Returns true when the bypass env var is set.
  */
 export function homedirBypassEnabled(): boolean {
-  return process.env.TRELLIS_ALLOW_HOMEDIR === "1";
+  return process.env.PHRONIA_ALLOW_HOMEDIR === "1";
 }

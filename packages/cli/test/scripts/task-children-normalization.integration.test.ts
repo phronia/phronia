@@ -81,7 +81,7 @@ function runTask(repo: string, ...args: string[]) {
   return spawnSync("python3", [".phronia/scripts/task.py", ...args], {
     cwd: repo,
     encoding: "utf-8",
-    env: { ...process.env, TRELLIS_DEVELOPER: "tester" },
+    env: { ...process.env, PHRONIA_DEVELOPER: "tester" },
   });
 }
 

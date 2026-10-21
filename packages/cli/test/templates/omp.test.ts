@@ -33,7 +33,7 @@ function loadOmpExtension(): OmpExtension {
   const moduleObject: { exports: { default?: OmpExtension } } = { exports: {} };
   const sandboxProcess = Object.create(process) as NodeJS.Process;
   const sandboxEnv = { ...process.env };
-  delete sandboxEnv.TRELLIS_CONTEXT_ID;
+  delete sandboxEnv.PHRONIA_CONTEXT_ID;
   Object.defineProperty(sandboxProcess, "env", { value: sandboxEnv });
   const sandbox = vm.createContext({
     Buffer,
@@ -124,7 +124,7 @@ describe("omp templates", () => {
     const extension = getExtensionTemplate();
 
     expect(extension).not.toContain("pi.setLabel(");
-    expect(extension).not.toContain("process.env.TRELLIS_CONTEXT_ID =");
+    expect(extension).not.toContain("process.env.PHRONIA_CONTEXT_ID =");
     expect(extension).toContain('buildContextKey("omp", "session", sessionId)');
     expect(extension).toContain("realpathSync");
     expect(extension).toContain("resolveProjectFile(projectRoot, file, trustedRoots)");
@@ -156,7 +156,7 @@ describe("omp templates", () => {
       { sessionManager: { getSessionId: () => "session/a" } },
     );
 
-    expect(params.env?.TRELLIS_CONTEXT_ID).toBe("omp_session_a");
+    expect(params.env?.PHRONIA_CONTEXT_ID).toBe("omp_session_a");
     expect(params.env?.EXISTING).toBe("kept");
   });
 
@@ -164,10 +164,10 @@ describe("omp templates", () => {
     const handler = captureOmpHandlers().get("tool_call");
     if (!handler) throw new Error("OMP extension did not register tool_call");
     const command =
-      "TRELLIS_CONTEXT_ID=inline python3 ./.phronia/scripts/task.py current";
+      "PHRONIA_CONTEXT_ID=inline python3 ./.phronia/scripts/task.py current";
     const params: { command: string; env?: Record<string, string> } = {
       command,
-      env: { TRELLIS_CONTEXT_ID: "explicit" },
+      env: { PHRONIA_CONTEXT_ID: "explicit" },
     };
 
     handler(
@@ -176,7 +176,7 @@ describe("omp templates", () => {
     );
 
     expect(params.command).toBe(command);
-    expect(params.env?.TRELLIS_CONTEXT_ID).toBe("explicit");
+    expect(params.env?.PHRONIA_CONTEXT_ID).toBe("explicit");
   });
 
   it("does not mutate non-Bash tool params", () => {

@@ -11,6 +11,11 @@ from __future__ import annotations
 
 import json
 import os
+
+# TRELLIS_* -> PHRONIA_* compatibility (removed in the next major).
+for _legacy_key in list(os.environ):
+    if _legacy_key.startswith("TRELLIS_"):
+        os.environ.setdefault("PHRONIA_" + _legacy_key[8:], os.environ[_legacy_key])
 import re
 import subprocess
 import sys
@@ -104,9 +109,9 @@ This notice is one-shot: do not repeat it after the first visible assistant repl
 
 
 def should_skip_injection() -> bool:
-    if os.environ.get("TRELLIS_HOOKS") == "0":
+    if os.environ.get("PHRONIA_HOOKS") == "0":
         return True
-    if os.environ.get("TRELLIS_DISABLE_HOOKS") == "1":
+    if os.environ.get("PHRONIA_DISABLE_HOOKS") == "1":
         return True
     return os.environ.get("CODEX_NON_INTERACTIVE") == "1"
 
@@ -181,7 +186,7 @@ def run_script(script_path: Path, context_key: str | None = None) -> str:
         env = os.environ.copy()
         env["PYTHONIOENCODING"] = "utf-8"
         if context_key:
-            env["TRELLIS_CONTEXT_ID"] = context_key
+            env["PHRONIA_CONTEXT_ID"] = context_key
         cmd = [sys.executable, "-W", "ignore", str(script_path)]
         result = subprocess.run(
             cmd,

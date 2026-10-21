@@ -87,7 +87,7 @@ function trunc(s: string, w: number) {
 }
 
 // ── Constants ─────────────────────────────────────────────────────────
-const TRELLIS_AGENT_JSONL: Record<string, string> = {
+const PHRONIA_AGENT_JSONL: Record<string, string> = {
   "trellis-implement": "implement.jsonl",
   implement: "implement.jsonl",
   "trellis-check": "check.jsonl",
@@ -473,9 +473,9 @@ function lookupStr(data: unknown, keys: string[]): string | null {
 function cmdHasTrellisCtx(cmd: string) {
   const t = cmd.trimStart();
   return (
-    /^export\s+TRELLIS_CONTEXT_ID=/.test(t) ||
-    /^TRELLIS_CONTEXT_ID=/.test(t) ||
-    /^env\s+.*TRELLIS_CONTEXT_ID=/.test(t)
+    /^export\s+PHRONIA_CONTEXT_ID=/.test(t) ||
+    /^PHRONIA_CONTEXT_ID=/.test(t) ||
+    /^env\s+.*PHRONIA_CONTEXT_ID=/.test(t)
   );
 }
 function fmtDur(ms: number) {
@@ -631,10 +631,10 @@ const PI_CLI_SEGMENTS = [
 ];
 
 function resolvePiCli(): { command: string; args: string[] } {
-  const envCli = str(process.env.TRELLIS_PI_CLI_JS);
+  const envCli = str(process.env.PHRONIA_PI_CLI_JS);
   if (envCli) {
     const p = resolve(envCli);
-    if (!exists(p)) throw new Error(`TRELLIS_PI_CLI_JS missing: ${p}`);
+    if (!exists(p)) throw new Error(`PHRONIA_PI_CLI_JS missing: ${p}`);
     return { command: process.execPath, args: [p] };
   }
   const candidates: string[] = [];
@@ -1159,7 +1159,7 @@ function runContextScript(root: string, key: string | null, args: string[]): str
     const py = process.platform === "win32" ? "python" : "python3";
     const result = spawnSync(py, [script, ...args], {
       cwd: root,
-      env: key ? { ...process.env, TRELLIS_CONTEXT_ID: key } : process.env,
+      env: key ? { ...process.env, PHRONIA_CONTEXT_ID: key } : process.env,
       encoding: "utf-8",
       timeout: SESSION_OVERVIEW_TIMEOUT_MS,
       windowsHide: true,
@@ -1214,7 +1214,7 @@ function buildContext(root: string, agent: string, key: string | null): string {
 
   // 1. Curated spec/research files from {agent}.jsonl (same order, budget
   //    processed first, matching Python's get_agent_context()).
-  const jsonlName = TRELLIS_AGENT_JSONL[agent] ?? "";
+  const jsonlName = PHRONIA_AGENT_JSONL[agent] ?? "";
   const specBlocks: string[] = [];
   if (jsonlName) {
     for (const entry of readJsonlEntries(dir, jsonlName)) {
@@ -1494,12 +1494,12 @@ function buildChildEnv(
 ): NodeJS.ProcessEnv {
   const childEnv: NodeJS.ProcessEnv = {
     ...process.env,
-    TRELLIS_SUBAGENT_CHILD: "1",
+    PHRONIA_SUBAGENT_CHILD: "1",
     // Stops pi-subagents from overwriting PI_SUBAGENT_PARENT_SESSION with the
     // child's own session id, and lets the permission system treat this process
     // as a subagent (ParentAuthorizer forwarding) even when no parent id is known.
     PI_SUBAGENT_CHILD: "1",
-    ...(key ? { TRELLIS_CONTEXT_ID: key } : {}),
+    ...(key ? { PHRONIA_CONTEXT_ID: key } : {}),
     ...(parentSessionId ? { PI_SUBAGENT_PARENT_SESSION: parentSessionId } : {}),
   };
   delete childEnv.PI_SESSION_ID;
@@ -1783,7 +1783,7 @@ export default function trellisExtension(pi: {
   ) => void;
   getThinkingLevel?: () => string;
 }): void {
-  if (process.env.TRELLIS_SUBAGENT_CHILD === "1") return;
+  if (process.env.PHRONIA_SUBAGENT_CHILD === "1") return;
   // Process-level fallback; call sites with a session context re-resolve via
   // resolveRoot(ctx) so the active project (session cwd) is used instead.
   const root = resolveRoot();
@@ -2045,7 +2045,7 @@ export default function trellisExtension(pi: {
       typeof ev.input.command === "string" &&
       !cmdHasTrellisCtx(ev.input.command)
     )
-      ev.input.command = `export TRELLIS_CONTEXT_ID=${shellQuote(k)}; ${ev.input.command}`;
+      ev.input.command = `export PHRONIA_CONTEXT_ID=${shellQuote(k)}; ${ev.input.command}`;
   });
   // Preserve progress details from execute(); mark failed subagent results through
   // the official tool_result patch hook instead of throwing away renderer details.
