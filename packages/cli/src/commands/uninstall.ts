@@ -175,7 +175,7 @@ export async function uninstall(options: UninstallOptions = {}): Promise<void> {
   if (!fs.existsSync(trellisDir)) {
     console.log(
       chalk.gray(
-        "Trellis is not installed in this project (no .phronia/ directory found).",
+        "Phronia is not installed in this project (no .phronia/ directory found).",
       ),
     );
     return;
@@ -187,7 +187,7 @@ export async function uninstall(options: UninstallOptions = {}): Promise<void> {
   if (Object.keys(hashes).length === 0) {
     console.error(
       chalk.red(
-        "Trellis directory found but manifest is missing — cannot determine which platform files to remove. " +
+        "Phronia directory found but manifest is missing — cannot determine which platform files to remove. " +
           "You can manually delete .phronia/ if needed.",
       ),
     );

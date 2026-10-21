@@ -83,7 +83,7 @@ export type SharedHookPlatform =
  *   stdout directly to the conversation context (no JSON envelope).
  * - Claude Code `statusLine` is intentionally not installed by default.
  *   Users can add their own statusLine command in `.claude/settings.json`,
- *   or opt in to the Trellis one via `trellis init --with-statusline`
+ *   or opt in to the Phronia one via `trellis init --with-statusline`
  *   (installed from `templates/claude/hooks/`, not from this table — no
  *   other platform has a statusLine event).
  * - ZCode (3.x) ships a workspace hook config at `.zcode/config.json` covering

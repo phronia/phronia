@@ -109,7 +109,7 @@ const CONFIGURE_ONLY_PATHS = new Set([".claude/hooks/statusline.py"]);
  */
 const CONFIGURE_ONLY_EMPTY_DIRS: Partial<Record<(typeof PLATFORM_IDS)[number], string[]>> =
   {
-    // Trellis ships no Codex-specific skills (they all land in
+    // Phronia ships no Codex-specific skills (they all land in
     // `.agents/skills/`, which Codex reads too). The directory is still
     // created so users have the conventional place for their own.
     codex: [".codex/skills"],
@@ -156,7 +156,7 @@ function snapshotDir(root: string): Map<string, string> {
 }
 
 // =============================================================================
-// getConfiguredPlatforms — detects Trellis-owned platform files
+// getConfiguredPlatforms — detects Phronia-owned platform files
 // =============================================================================
 
 describe("getConfiguredPlatforms", () => {
@@ -178,7 +178,7 @@ describe("getConfiguredPlatforms", () => {
     expect(result.size).toBe(0);
   });
 
-  it("does not treat native platform directories as Trellis installations", () => {
+  it("does not treat native platform directories as Phronia installations", () => {
     for (const id of PLATFORM_IDS) {
       fs.mkdirSync(path.join(tmpDir, AI_TOOLS[id].configDir), {
         recursive: true,
@@ -188,19 +188,19 @@ describe("getConfiguredPlatforms", () => {
     expect([...getConfiguredPlatforms(tmpDir)]).toEqual([]);
   });
 
-  it("detects Trellis-namespaced legacy Windsurf workflows as devin", () => {
+  it("detects Phronia-namespaced legacy Windsurf workflows as devin", () => {
     const workflowsDir = path.join(tmpDir, ".windsurf", "workflows");
     fs.mkdirSync(workflowsDir, {
       recursive: true,
     });
     expect(getConfiguredPlatforms(tmpDir).has("devin")).toBe(false);
 
-    fs.writeFileSync(path.join(workflowsDir, "phronia-continue.md"), "# Trellis");
+    fs.writeFileSync(path.join(workflowsDir, "phronia-continue.md"), "# Phronia");
     const result = getConfiguredPlatforms(tmpDir);
     expect(result.has("devin")).toBe(true);
   });
 
-  it("detects every platform from the files Trellis tracked for it", async () => {
+  it("detects every platform from the files Phronia tracked for it", async () => {
     for (const id of PLATFORM_IDS) {
       const platformRoot = path.join(tmpDir, id);
       fs.mkdirSync(platformRoot, { recursive: true });
@@ -458,7 +458,7 @@ describe("configurePlatform", () => {
       expect(written).toBe(replacePythonCommandLiterals(agent.content));
       expect(written).toContain("<!-- phronia-hook-injected -->");
       expect(written).toContain("Active task: <path>");
-      expect(written).not.toContain("Required: Load Trellis Context First");
+      expect(written).not.toContain("Required: Load Phronia Context First");
     }
 
     const config = getCodexConfigTemplate();
@@ -808,14 +808,14 @@ describe("configurePlatform", () => {
     );
     expect(fs.existsSync(researchAgentPath)).toBe(true);
     expect(fs.readFileSync(researchAgentPath, "utf-8")).not.toContain(
-      "Load Trellis Context First",
+      "Load Phronia Context First",
     );
     expect(
       fs.readFileSync(
         path.join(tmpDir, ".grok", "agents", "phronia-implement.md"),
         "utf-8",
       ),
-    ).toContain("Load Trellis Context First");
+    ).toContain("Load Phronia Context First");
 
     const templates = collectPlatformTemplates("grok");
     expect(templates?.has(".grok/commands/phronia-start.md")).toBe(true);
@@ -886,14 +886,14 @@ describe("configurePlatform", () => {
     expect(fs.existsSync(researchAgentPath)).toBe(true);
     // class-1: neither research nor implement ships class-2 pull prelude
     expect(fs.readFileSync(researchAgentPath, "utf-8")).not.toContain(
-      "Load Trellis Context First",
+      "Load Phronia Context First",
     );
     expect(
       fs.readFileSync(
         path.join(tmpDir, ".snow", "agents", "phronia-implement.md"),
         "utf-8",
       ),
-    ).not.toContain("Load Trellis Context First");
+    ).not.toContain("Load Phronia Context First");
     expect(
       fs.readFileSync(
         path.join(tmpDir, ".snow", "agents", "phronia-implement.md"),
@@ -908,7 +908,7 @@ describe("configurePlatform", () => {
     ).toContain("beforeSubAgentStart");
 
     // Native Snow projects can legitimately contain any of these directories;
-    // only Trellis-owned files recorded in the manifest count as configured.
+    // only Phronia-owned files recorded in the manifest count as configured.
     const emptyDir = fs.mkdtempSync(
       path.join(os.tmpdir(), "phronia-snow-det-"),
     );
@@ -1165,9 +1165,9 @@ describe("configurePlatform", () => {
     );
     expect(implementAgent).toContain("Phronia Context Loading Protocol");
     expect(implementAgent).toContain("<!-- phronia-hook-injected -->");
-    expect(implementAgent).not.toContain("Load Trellis Context First");
+    expect(implementAgent).not.toContain("Load Phronia Context First");
     expect(fs.readFileSync(researchAgentPath, "utf-8")).not.toContain(
-      "Load Trellis Context First",
+      "Load Phronia Context First",
     );
 
     const generatedConfig = readConfiguredFile(tmpDir, ".zcode/config.json");
@@ -1210,10 +1210,10 @@ describe("configurePlatform", () => {
       "Phronia Context Loading Protocol",
     );
     expect(templates?.get(".zcode/agents/phronia-implement.md")).not.toContain(
-      "Load Trellis Context First",
+      "Load Phronia Context First",
     );
     expect(templates?.get(".zcode/agents/phronia-research.md")).not.toContain(
-      "Load Trellis Context First",
+      "Load Phronia Context First",
     );
   });
 
@@ -1536,12 +1536,12 @@ describe("configurePlatform", () => {
     expect(extension).toContain("ctx?.sessionManager?.getSessionId");
     expect(extension).toContain("PHRONIA_PI_CLI_JS");
     expect(extension).toContain("function formatPiOutput");
-    expect(extension).toContain('"## Trellis Agent Definition"');
+    expect(extension).toContain('"## Phronia Agent Definition"');
     expect(extension).toContain("ctx?.ui?.notify?.(");
     expect(extension).toContain("systemPrompt:");
     expect(extension).toContain("isTrellisAgent(root, agentName)");
     expect(extension).not.toContain("message: buildTrellisContext");
-    expect(extension).not.toContain('message:\n      "Trellis project context');
+    expect(extension).not.toContain('message:\n      "Phronia project context');
     expect(extension).not.toContain("persistent: true");
     expect(extension).not.toContain(
       '["--mode", "json", "-p", "--no-session", toPiPromptArgument(prompt)]',
@@ -1595,7 +1595,7 @@ describe("configurePlatform", () => {
         "utf-8",
       );
       if (["phronia-implement", "phronia-check"].includes(agent.name)) {
-        expect(content).toContain("Required: Load Trellis Context First");
+        expect(content).toContain("Required: Load Phronia Context First");
       } else {
         expect(content).toBe(replacePythonCommandLiterals(agent.content));
       }
@@ -1622,7 +1622,7 @@ describe("configurePlatform", () => {
       ),
     ).toBeDefined();
     expect(templates?.get(".pi/agents/phronia-implement.md")).toContain(
-      "Required: Load Trellis Context First",
+      "Required: Load Phronia Context First",
     );
     expect(templates?.get(".pi/extensions/phronia/index.ts")).toBe(
       replacePythonCommandLiterals(getPiExtensionTemplate()),

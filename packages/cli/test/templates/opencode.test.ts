@@ -150,7 +150,7 @@ describe("opencode session-start history detection", () => {
     });
 
     expect(context.startsWith("<session-context>")).toBe(true);
-    expect(context).toContain("Trellis compact SessionStart context");
+    expect(context).toContain("Phronia compact SessionStart context");
     expect(context).toContain("<first-reply-notice>");
     expect(context).toContain("the user's current request");
     expect(context).toContain("the user message that triggered this reply");
@@ -158,7 +158,7 @@ describe("opencode session-start history detection", () => {
     expect(context).toContain(
       "explicitly established project communication language",
     );
-    expect(context).toContain("Trellis SessionStart ✓");
+    expect(context).toContain("Phronia SessionStart ✓");
     expect(context).toContain("Continue directly with the user's request");
     expect(context).toContain(
       "must not alter the language used for the remainder of the response",
@@ -169,7 +169,7 @@ describe("opencode session-start history detection", () => {
     );
     expect(
       context.indexOf("explicitly established project communication language"),
-    ).toBeLessThan(context.indexOf("Trellis SessionStart ✓"));
+    ).toBeLessThan(context.indexOf("Phronia SessionStart ✓"));
     expect(context.indexOf("<first-reply-notice>")).toBeLessThan(
       context.indexOf("<current-state>"),
     );
@@ -178,7 +178,7 @@ describe("opencode session-start history detection", () => {
     expect(context).not.toContain("say once in Chinese");
     expect(context).not.toContain("exactly one short Chinese sentence");
     expect(context).not.toContain(
-      "Trellis SessionStart 已注入：workflow、当前任务状态、开发者身份、git 状态、active tasks、spec 索引已加载。",
+      "Phronia SessionStart 已注入：workflow、当前任务状态、开发者身份、git 状态、active tasks、spec 索引已加载。",
     );
   });
 
@@ -201,7 +201,7 @@ describe("opencode session-start history detection", () => {
     });
     expect(firstMessages[0].parts[0].text).toMatch(/^<session-context>/);
     expect(firstMessages[0].parts[0].text).toContain("<first-reply-notice>");
-    expect(firstMessages[0].parts[0].text).toContain("Trellis SessionStart ✓");
+    expect(firstMessages[0].parts[0].text).toContain("Phronia SessionStart ✓");
     expect(firstMessages[0].parts[1]).toEqual(originalFirstParts[0]);
 
     const laterUser = userTurn("Second request", {
@@ -224,7 +224,7 @@ describe("opencode session-start history detection", () => {
     expect(laterMessages[2].parts[1]).toEqual(originalLaterParts[0]);
   });
 
-  it("detects persisted Trellis context from metadata", () => {
+  it("detects persisted Phronia context from metadata", () => {
     const messages = [
       {
         info: { role: "user" },
@@ -1402,8 +1402,8 @@ describe("opencode context injection limits (issue #441)", () => {
       expect(prompt).toContain(
         "=== .phronia/tasks/demo-task/prd.md (Requirements) ===\n# Demo PRD",
       );
-      expect(prompt).not.toContain("[Trellis: truncated");
-      expect(prompt).not.toContain("[Trellis: not inlined");
+      expect(prompt).not.toContain("[Phronia: truncated");
+      expect(prompt).not.toContain("[Phronia: not inlined");
     });
 
     it("keeps binary jsonl references as notices even when limits are unlimited", async () => {
@@ -1427,10 +1427,10 @@ describe("opencode context injection limits (issue #441)", () => {
       const prompt = await runImplementHook();
 
       expect(prompt).toContain(
-        "[Trellis: not inlined (binary file) — design.png (10 bytes): visual baseline]",
+        "[Phronia: not inlined (binary file) — design.png (10 bytes): visual baseline]",
       );
       expect(prompt).toContain(
-        "[Trellis: not inlined (binary file) — invalid.bin (3 bytes): legacy export]",
+        "[Phronia: not inlined (binary file) — invalid.bin (3 bytes): legacy export]",
       );
       expect(prompt).not.toContain("=== design.png ===");
       expect(prompt).not.toContain("=== invalid.bin ===");
@@ -1447,7 +1447,7 @@ describe("opencode context injection limits (issue #441)", () => {
       const prompt = await runImplementHook();
 
       expect(prompt).toContain(`=== multibyte.md ===\n${multiByteContent}`);
-      expect(prompt).not.toContain("[Trellis: not inlined (binary file)");
+      expect(prompt).not.toContain("[Phronia: not inlined (binary file)");
     });
 
     it("classifies a file as binary when binary bytes appear only at the end", async () => {
@@ -1461,7 +1461,7 @@ describe("opencode context injection limits (issue #441)", () => {
       const prompt = await runImplementHook();
 
       expect(prompt).toContain(
-        `[Trellis: not inlined (binary file) — mixed.dat (${mixed.length} bytes): mixed content]`,
+        `[Phronia: not inlined (binary file) — mixed.dat (${mixed.length} bytes): mixed content]`,
       );
       expect(prompt).not.toContain("=== mixed.dat ===");
     });
@@ -1476,7 +1476,7 @@ describe("opencode context injection limits (issue #441)", () => {
         128 * 1024 + 4096, // total cap + slack for the prompt template/notices
       );
       expect(prompt).toContain(
-        "[Trellis: truncated at 32768 bytes — read big.txt for the full content]",
+        "[Phronia: truncated at 32768 bytes — read big.txt for the full content]",
       );
     });
 
@@ -1495,7 +1495,7 @@ describe("opencode context injection limits (issue #441)", () => {
       expect(prompt).not.toContain("�");
       expect(prompt).toContain(
         "a".repeat(32767) +
-          "\n[Trellis: truncated at 32768 bytes — read zh.md for the full content]",
+          "\n[Phronia: truncated at 32768 bytes — read zh.md for the full content]",
       );
     });
 
@@ -1511,7 +1511,7 @@ describe("opencode context injection limits (issue #441)", () => {
       expect(prompt).toContain("P".repeat(65536));
       expect(prompt).not.toContain("P".repeat(65537));
       expect(prompt).toContain(
-        "[Trellis: truncated at 65536 bytes — read .phronia/tasks/demo-task/prd.md for the full content]",
+        "[Phronia: truncated at 65536 bytes — read .phronia/tasks/demo-task/prd.md for the full content]",
       );
     });
 
@@ -1537,10 +1537,10 @@ describe("opencode context injection limits (issue #441)", () => {
 
       expect(prompt).toContain("=== f1.txt ===\n" + "1".repeat(50));
       expect(prompt).toContain(
-        "[Trellis: not inlined (total context limit reached) — f2.txt (50 bytes): second]",
+        "[Phronia: not inlined (total context limit reached) — f2.txt (50 bytes): second]",
       );
       expect(prompt).toContain(
-        "[Trellis: not inlined (total context limit reached) — f3.txt (50 bytes): third]",
+        "[Phronia: not inlined (total context limit reached) — f3.txt (50 bytes): third]",
       );
       expect(prompt).not.toContain("=== f2.txt ===");
       expect(prompt).not.toContain("=== f3.txt ===");
@@ -1554,7 +1554,7 @@ describe("opencode context injection limits (issue #441)", () => {
       const prompt = await runImplementHook();
 
       expect(prompt).toContain(
-        "[Trellis: truncated at 10 bytes — read ref.md for the full content]",
+        "[Phronia: truncated at 10 bytes — read ref.md for the full content]",
       );
       expect(prompt).not.toContain("R".repeat(11));
     });
@@ -1574,8 +1574,8 @@ describe("opencode context injection limits (issue #441)", () => {
       const prompt = await runImplementHook();
 
       expect(prompt).toContain("=== big.txt ===\n" + bigContent);
-      expect(prompt).not.toContain("[Trellis: truncated");
-      expect(prompt).not.toContain("[Trellis: not inlined");
+      expect(prompt).not.toContain("[Phronia: truncated");
+      expect(prompt).not.toContain("[Phronia: not inlined");
     });
 
     it("invalid config values fall back to the default cap", async () => {
@@ -1588,7 +1588,7 @@ describe("opencode context injection limits (issue #441)", () => {
       const prompt = await runImplementHook();
 
       expect(prompt).toContain(
-        "[Trellis: truncated at 32768 bytes — read big.txt for the full content]",
+        "[Phronia: truncated at 32768 bytes — read big.txt for the full content]",
       );
     });
 
@@ -1611,10 +1611,10 @@ describe("opencode context injection limits (issue #441)", () => {
       const prompt = await runImplementHook();
 
       expect(prompt).toContain(
-        "[Trellis: truncated at 10 bytes — read refdir/a.md for the full content]",
+        "[Phronia: truncated at 10 bytes — read refdir/a.md for the full content]",
       );
       expect(prompt).toContain(
-        "[Trellis: truncated at 10 bytes — read refdir/b.md for the full content]",
+        "[Phronia: truncated at 10 bytes — read refdir/b.md for the full content]",
       );
       expect(prompt).not.toContain("IGNORED_TXT_CONTENT");
     });

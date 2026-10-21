@@ -33,7 +33,7 @@ export function collectGeminiTemplates(): Map<string, string> {
   const ctx = AI_TOOLS.gemini.templateContext;
   const files = new Map<string, string>();
   for (const cmd of resolveCommands(ctx)) {
-    const toml = `description = "Trellis: ${cmd.name}"\n\nprompt = """\n${cmd.content}\n"""\n`;
+    const toml = `description = "Phronia: ${cmd.name}"\n\nprompt = """\n${cmd.content}\n"""\n`;
     files.set(`.gemini/commands/phronia/${cmd.name}.toml`, toml);
   }
   for (const [filePath, content] of collectSkillTemplates(

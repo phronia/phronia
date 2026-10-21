@@ -2,7 +2,7 @@
 """
 Standalone reader for .phronia/config.yaml.
 
-Owns the minimal YAML parser used across Trellis. ``common.config`` imports
+Owns the minimal YAML parser used across Phronia. ``common.config`` imports
 ``parse_simple_yaml`` from here rather than keeping its own copy: this module
 imports nothing from the package, so hooks can load it as a single file, and
 one parser cannot drift from another. Returns an empty dict on

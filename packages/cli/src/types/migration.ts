@@ -1,5 +1,5 @@
 /**
- * Migration types for Trellis update command
+ * Migration types for Phronia update command
  *
  * These types support intelligent migration during updates,
  * handling file renames, deletions, and user modification detection.

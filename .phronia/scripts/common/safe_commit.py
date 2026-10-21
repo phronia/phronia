@@ -1,5 +1,5 @@
 """
-Safe git-add helpers for Trellis-owned paths.
+Safe git-add helpers for Phronia-owned paths.
 
 Why this module exists
 ----------------------
@@ -260,7 +260,7 @@ def print_gitignore_warning(paths: list[str]) -> None:
     )
     print("[WARN]", file=sys.stderr)
     print(
-        "[WARN] Trellis manages these specific paths and they should be tracked:",
+        "[WARN] Phronia manages these specific paths and they should be tracked:",
         file=sys.stderr,
     )
     if paths:

@@ -1,5 +1,5 @@
-# Trellis Configuration
-# Project-level settings for the Trellis workflow system
+# Phronia Configuration
+# Project-level settings for the Phronia workflow system
 #
 # All values have sensible defaults. Only override what you need.
 
@@ -55,7 +55,7 @@ max_journal_lines: 2000
 #-------------------------------------------------------------------------------
 
 # Declare packages for monorepo projects.
-# Trellis auto-detects workspaces during `trellis init`, but you can also
+# Phronia auto-detects workspaces during `phronia init`, but you can also
 # configure them manually here.
 #
 # packages:

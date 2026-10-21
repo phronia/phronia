@@ -1,5 +1,5 @@
 /**
- * Trellis Context Manager
+ * Phronia Context Manager
  *
  * Utility class for OpenCode plugins providing file reading,
  * JSONL parsing, and context building capabilities.
@@ -65,11 +65,11 @@ function buildContextKey(platformName, kind, value) {
 }
 
 // Matches `phronia-implement`, `phronia-check`, `phronia-research` exactly.
-// Used by chat.message plugins to skip injection inside Trellis sub-agent turns.
+// Used by chat.message plugins to skip injection inside Phronia sub-agent turns.
 const PHRONIA_SUBAGENT_RE = /^phronia-(implement|check|research)$/
 
 /**
- * Return true when the OpenCode `chat.message` input represents a Trellis
+ * Return true when the OpenCode `chat.message` input represents a Phronia
  * sub-agent turn. `input.agent` is set by OpenCode when a Task tool spawns a
  * child session with a custom agent (see `packages/opencode/src/tool/task.ts`).
  */
@@ -205,7 +205,7 @@ class ContextBudget {
 }
 
 function truncateNotice(path, cap) {
-  return `\n[Trellis: truncated at ${cap} bytes — read ${path} for the full content]`
+  return `\n[Phronia: truncated at ${cap} bytes — read ${path} for the full content]`
 }
 
 function isBinaryContent(data) {
@@ -213,11 +213,11 @@ function isBinaryContent(data) {
 }
 
 function binaryNotice(path, size, reason) {
-  return `[Trellis: not inlined (binary file) — ${path} (${size} bytes): ${reason}]`
+  return `[Phronia: not inlined (binary file) — ${path} (${size} bytes): ${reason}]`
 }
 
 function indexNotice(path, size, reason) {
-  return `[Trellis: not inlined (total context limit reached) — ${path} (${size} bytes): ${reason}]`
+  return `[Phronia: not inlined (total context limit reached) — ${path} (${size} bytes): ${reason}]`
 }
 
 /**
@@ -314,7 +314,7 @@ function materializeArtifact(basePath, filePath, headerLabel, reason, limits, bu
 }
 
 /**
- * Trellis Context Manager
+ * Phronia Context Manager
  */
 export class TrellisContext {
   constructor(directory) {
@@ -323,7 +323,7 @@ export class TrellisContext {
   }
 
   // ============================================================
-  // Trellis Project Detection
+  // Phronia Project Detection
   // ============================================================
 
   isTrellisProject() {
@@ -334,7 +334,7 @@ export class TrellisContext {
   // name in the 1.17.18 binary or the 1.18.13 source carries one. The plugin
   // hook input is the only source, and the `export PHRONIA_CONTEXT_ID=` prefix
   // this plugin adds to Bash commands is the only way that identity reaches a
-  // child process. PHRONIA_CONTEXT_ID is honored here so a nested Trellis run
+  // child process. PHRONIA_CONTEXT_ID is honored here so a nested Phronia run
   // inherits its parent's key; do not add platform-native env names next to it
   // without evidence a vendor sets them.
   getContextKey(platformInput = null) {

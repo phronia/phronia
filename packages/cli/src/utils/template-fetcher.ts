@@ -1,5 +1,5 @@
 /**
- * Remote template fetcher for Trellis CLI
+ * Remote template fetcher for Phronia CLI
  *
  * Fetches spec templates from the official marketplace:
  * https://github.com/mindfold-ai/marketplace

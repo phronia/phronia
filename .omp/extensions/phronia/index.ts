@@ -455,7 +455,7 @@ class ContextBudget {
       if (this.terminalSummaryEmitted) return null;
       this.terminalSummaryEmitted = true;
       this.stopped = true;
-      const summary = "[Trellis: context limit reached; omitted entries remain authoritative on disk and require_read paths above.]";
+      const summary = "[Phronia: context limit reached; omitted entries remain authoritative on disk and require_read paths above.]";
       if (this.maxTotalBytes <= 0) {
          this.totalBytesUsed += Buffer.byteLength(summary, "utf-8");
          return summary;
@@ -557,7 +557,7 @@ function readFully(fd: number, buffer: Buffer): number {
 
 function omittedNotice(file: string, size: number | null, reason: string): string {
    const sizeText = size === null ? "unknown bytes" : `${size} bytes`;
-   return `### ${file} [omitted]\n\n[Trellis: omitted (${reason}) — ${file} (${sizeText}); required_read: ${file}]`;
+   return `### ${file} [omitted]\n\n[Phronia: omitted (${reason}) — ${file} (${sizeText}); required_read: ${file}]`;
 }
 
 interface MaterializedFile {
@@ -586,7 +586,7 @@ function materialize(
    let status: "inline" | "truncated" = "inline";
    if (truncated.length < size) {
       status = "truncated";
-      content += `\n[Trellis: truncated at ${maxBytes} bytes — read ${displayPath} for the full content]`;
+      content += `\n[Phronia: truncated at ${maxBytes} bytes — read ${displayPath} for the full content]`;
    }
    return {
       block: `### ${displayPath} [${status}]\n\n${content}`,
@@ -791,7 +791,7 @@ function shouldSkipWorkflowState(
 // ---------------------------------------------------------------------------
 
 const SESSION_OVERVIEW_TEXT =
-   "Trellis workflow system active. Use skills and agents as directed by the workflow state.";
+   "Phronia workflow system active. Use skills and agents as directed by the workflow state.";
 
 class TurnContextCache {
    private key: string | null = null;
@@ -966,7 +966,7 @@ export default function(pi: ExtensionAPI): void {
             }
          }
 
-         ctx.ui.notify("Trellis workflow system available", "info");
+         ctx.ui.notify("Phronia workflow system available", "info");
       }
    });
 

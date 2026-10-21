@@ -236,7 +236,7 @@ def _collect_package_git_info(
     """Collect Git status for independent package repositories.
 
     Packages marked with ``git: true`` in config.yaml are authoritative.
-    When the Trellis root is not a Git repo and no configured package repos are
+    When the Phronia root is not a Git repo and no configured package repos are
     available, optionally fall back to the bounded polyrepo child scan.
 
     Returns:
@@ -349,7 +349,7 @@ def _fetch_trellis_version_output() -> str | None:
 
 def _extract_available_update_version(output: str) -> str | None:
     update_match = re.search(
-        r"(?:Trellis|Phronia) update available:\s*"
+        r"(?:Phronia|Phronia) update available:\s*"
         r"(?P<current>\S+)\s*(?:→|->)\s*(?P<latest>\S+)",
         output,
     )

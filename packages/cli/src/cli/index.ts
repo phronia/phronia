@@ -25,7 +25,7 @@ import { AI_TOOLS } from "../types/ai-tools.js";
 export { VERSION, PACKAGE_NAME };
 
 /**
- * Check if a Trellis update is available (compare project version with CLI version)
+ * Check if a Phronia update is available (compare project version with CLI version)
  */
 function checkForUpdates(cwd: string): void {
   const versionFile = path.join(cwd, DIR_NAMES.WORKFLOW, ".version");
@@ -106,7 +106,7 @@ program
   .option("--snow", "Include Snow CLI skills and commands")
   .option(
     "--with-statusline",
-    "Install the Trellis statusLine for Claude Code (off by default)",
+    "Install the Phronia statusLine for Claude Code (off by default)",
   )
   .option("-y, --yes", "Skip prompts and use defaults")
   .option(
@@ -196,7 +196,7 @@ program
 
 program
   .command("upgrade")
-  .description("Upgrade the global Trellis CLI package")
+  .description("Upgrade the global Phronia CLI package")
   .option(
     "--tag <tag>",
     "npm dist-tag or version to install (default follows current channel: latest, beta, or rc)",
@@ -223,7 +223,7 @@ program
 program
   .command("adopt")
   .description(
-    "Adopt an upstream Trellis project (rename the workflow root and regenerate platform files)",
+    "Adopt an upstream Phronia project (rename the workflow root and regenerate platform files)",
   )
   .option("--dry-run", "Report what would change without touching files")
   .option("--force", "Proceed even when the git working tree is dirty")
@@ -281,7 +281,7 @@ program
 program
   .command("ablate")
   .description(
-    "Temporarily remove all project Trellis surfaces with an external recovery transaction",
+    "Temporarily remove all project Phronia surfaces with an external recovery transaction",
   )
   .option("-y, --yes", "Skip confirmation prompt")
   .option("--dry-run", "Preview full ablation without changing files or state")

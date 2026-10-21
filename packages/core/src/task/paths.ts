@@ -6,7 +6,7 @@
  *
  *     <tasks-dir>/05-13-phronia-core-sdk-package/
  *
- * Trellis also creates system onboarding tasks during `trellis init` using a
+ * Phronia also creates system onboarding tasks during `trellis init` using a
  * `00-slug` prefix, such as `00-bootstrap-guidelines` and `00-join-new-developer`.
  *
  * `MM` is the two-digit month, `DD` is the two-digit day, and `slug` is
@@ -20,7 +20,7 @@ const SYSTEM_TASK_DIR_RE =
 
 export interface TaskDirParts {
   /**
-   * The directory prefix. Dated tasks use `MM-DD`; Trellis system onboarding
+   * The directory prefix. Dated tasks use `MM-DD`; Phronia system onboarding
    * tasks use `00`.
    */
   prefix: string;

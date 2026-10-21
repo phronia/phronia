@@ -221,7 +221,7 @@ describe("trae platform detection in shared session-start.py", () => {
 //
 // Trae is a class-2 (pull-based) platform: hooks cannot mutate sub-agent
 // prompts. The implement/check agents must have a pull-based prelude injected
-// so they load Trellis context themselves.
+// so they load Phronia context themselves.
 describe("trae pull-based prelude injection (class-2)", () => {
   it("applyPullBasedPreludeMarkdown injects context-loading instructions", () => {
     const agents = applyPullBasedPreludeMarkdown(getAllAgents());
@@ -230,7 +230,7 @@ describe("trae pull-based prelude injection (class-2)", () => {
         agent.name === "phronia-implement" ||
         agent.name === "phronia-check"
       ) {
-        expect(agent.content).toContain("Load Trellis Context First");
+        expect(agent.content).toContain("Load Phronia Context First");
         expect(agent.content).toContain("task.py current --source");
       }
     }
@@ -241,6 +241,6 @@ describe("trae pull-based prelude injection (class-2)", () => {
     const research = agents.find((a) => a.name === "phronia-research");
     expect(research).toBeDefined();
     if (!research) return; // guard for type-safety
-    expect(research.content).not.toContain("Load Trellis Context First");
+    expect(research.content).not.toContain("Load Phronia Context First");
   });
 });

@@ -163,17 +163,17 @@ describe("init + uninstall: manifest accuracy + homedir guard", () => {
     );
   });
 
-  // ----- R1.6: Trellis-written AGENTS.md with user content outside the block -----
+  // ----- R1.6: Phronia-written AGENTS.md with user content outside the block -----
 
-  it("#R1.6 uninstall strips only the Trellis block from a tracked AGENTS.md, preserving user content outside it", async () => {
-    // Trellis writes AGENTS.md (so it's manifest-tracked, unlike the
+  it("#R1.6 uninstall strips only the Phronia block from a tracked AGENTS.md, preserving user content outside it", async () => {
+    // Phronia writes AGENTS.md (so it's manifest-tracked, unlike the
     // skip-existing cases above). The user then adds their own instructions
     // OUTSIDE the <!-- PHRONIA:START/END --> block — a supported layout that
     // update.ts explicitly preserves. Uninstall must not unlink the whole
     // file and take the user content with it.
     await init({ yes: true, claude: true, force: true });
     const agentsPath = path.join(tmpDir, "AGENTS.md");
-    // Sanity: Trellis tracked it and wrote the managed block.
+    // Sanity: Phronia tracked it and wrote the managed block.
     expect(loadHashes(tmpDir)).toHaveProperty("AGENTS.md");
     const written = fs.readFileSync(agentsPath, "utf-8");
     expect(written).toContain("<!-- PHRONIA:START -->");
@@ -191,7 +191,7 @@ describe("init + uninstall: manifest accuracy + homedir guard", () => {
     expect(after).toContain("Always rebase.");
   });
 
-  it("#R1.7 uninstall still deletes a tracked AGENTS.md that is only the Trellis block", async () => {
+  it("#R1.7 uninstall still deletes a tracked AGENTS.md that is only the Phronia block", async () => {
     // Normal case: user never edited AGENTS.md, so once the block is stripped
     // nothing user-authored remains and the file is removed.
     await init({ yes: true, claude: true, force: true });

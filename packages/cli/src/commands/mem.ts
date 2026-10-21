@@ -466,7 +466,7 @@ flags:
   --cwd <path>                           override the project cwd
   --limit N                              cap output (default 50)
   --grep KW                              extract / context: filter turns by keyword (multi-token AND)
-  --phase brainstorm|implement|all       extract: slice by Trellis brainstorm windows
+  --phase brainstorm|implement|all       extract: slice by Phronia brainstorm windows
                                          (default all; brainstorm = [task.py create, task.py start);
                                          Claude/Codex/Devin/Grok/Pi/ZCode supported; OpenCode warns + returns all)
   --turns N                              context: number of hit turns to return (default 3)

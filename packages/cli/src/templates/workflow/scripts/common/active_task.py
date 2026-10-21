@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """Session-scoped active task resolution.
 
-The user-facing concept is a single "active task". Trellis stores that pointer
+The user-facing concept is a single "active task". Phronia stores that pointer
 per AI session/window under `.phronia/.runtime/sessions/`; without a stable
 session key there is no active task.
 """
@@ -115,7 +115,7 @@ _ENV_SESSION_KEYS: tuple[tuple[str, tuple[str, ...]], ...] = (
     ("zcode", ("CLAUDE_CODE_SESSION_ID", "CLAUDE_SESSION_ID")),
     # REAL by vendor design (verified 2026-08-05): Snow's sessionIdentityEnv.ts
     # exports SNOW_SESSION_ID into hook/terminal/sub-agent children and names
-    # Trellis in its source header. PHRONIA_CONTEXT_ID stays the preferred
+    # Phronia in its source header. PHRONIA_CONTEXT_ID stays the preferred
     # override — Snow sets that too.
     ("snow", ("SNOW_SESSION_ID",)),
 )

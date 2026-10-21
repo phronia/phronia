@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-Trellis configuration reader.
+Phronia configuration reader.
 
 Reads settings from .phronia/config.yaml with sensible defaults.
 """
@@ -140,7 +140,7 @@ def get_session_auto_commit(repo_root: Path | None = None) -> bool:
 def get_codex_dispatch_mode(repo_root: Path | None = None) -> str:
     """Return Codex dispatch mode.
 
-    Default is ``auto``, which dispatches Trellis sub-agents and uses native
+    Default is ``auto``, which dispatches Phronia sub-agents and uses native
     context injection with a child-side fallback. ``inline`` is an explicit
     opt-out. ``sub-agent`` remains a backwards-compatible alias for ``auto``.
 

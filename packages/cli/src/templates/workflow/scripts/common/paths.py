@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-Common path utilities for Trellis workflow.
+Common path utilities for Phronia workflow.
 
 Provides:
     get_repo_root          - Get repository root directory

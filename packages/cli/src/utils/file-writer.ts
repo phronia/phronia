@@ -134,7 +134,7 @@ export async function writeFile(
   if (existingContent === content) {
     // Content identical, but no disk write happened. Do not record it for
     // init-time manifests: pre-existing user files can legitimately be
-    // byte-identical to a Trellis template and still not be Trellis-owned.
+    // byte-identical to a Phronia template and still not be Phronia-owned.
     return false;
   }
 

@@ -91,7 +91,7 @@ async function runSessionStart(root: string, sessionId: string): Promise<string>
 }
 
 describe("omp templates", () => {
-  it("provides the three Trellis sub-agent definitions", () => {
+  it("provides the three Phronia sub-agent definitions", () => {
     const agents = getAllAgents();
     expect(agents.map((agent) => agent.name).sort()).toEqual([
       "phronia-check",
@@ -561,7 +561,7 @@ describe("omp templates", () => {
 
       const context = await runSessionStart(project.root, project.sessionId);
       expect(context).toContain("unicode.md [truncated]");
-      expect(context).toContain("### unicode.md [truncated]\n\na\n[Trellis: truncated at 3 bytes");
+      expect(context).toContain("### unicode.md [truncated]\n\na\n[Phronia: truncated at 3 bytes");
       expect(context).not.toContain("€");
       expect(context).not.toContain("unicode.md [omitted]");
     } finally {

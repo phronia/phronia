@@ -73,12 +73,12 @@ def _normalize_windows_shell_path(path_str: str) -> str:
 
 
 _FIRST_REPLY_NOTICE_HEAD = """<first-reply-notice>
-On the first visible assistant reply in this session, briefly acknowledge that Trellis SessionStart context loaded."""
+On the first visible assistant reply in this session, briefly acknowledge that Phronia SessionStart context loaded."""
 
 _FIRST_REPLY_NOTICE_TAIL = """Choose the acknowledgment language in this order:
 1. Use the language of the user's current request (the user message that triggered this reply).
 2. If that request has no clear natural language, use an explicitly established project communication language.
-3. If neither provides a language, output the language-neutral fallback exactly: `Trellis SessionStart ✓`.
+3. If neither provides a language, output the language-neutral fallback exactly: `Phronia SessionStart ✓`.
 Continue directly with the user's request after the acknowledgment.
 The acknowledgment must not alter the language used for the remainder of the response.
 This notice is one-shot: do not repeat it after the first visible assistant reply in this session.
@@ -88,7 +88,7 @@ FIRST_REPLY_NOTICE = f"{_FIRST_REPLY_NOTICE_HEAD}\n{_FIRST_REPLY_NOTICE_TAIL}"
 
 
 def _build_first_reply_notice(update_hint: str | None) -> str:
-    """First-reply notice, carrying the Trellis update reminder when there is one.
+    """First-reply notice, carrying the Phronia update reminder when there is one.
 
     The reminder has to reach the *user*, not just the model's context — a line
     buried in SessionStart context is exactly how the update step kept getting
@@ -102,7 +102,7 @@ def _build_first_reply_notice(update_hint: str | None) -> str:
         return FIRST_REPLY_NOTICE
     return (
         f"{_FIRST_REPLY_NOTICE_HEAD}\n"
-        f"Also relay this Trellis maintenance notice on its own line in that same reply: {update_hint}\n"
+        f"Also relay this Phronia maintenance notice on its own line in that same reply: {update_hint}\n"
         f"{_FIRST_REPLY_NOTICE_TAIL}"
     )
 
@@ -156,7 +156,7 @@ def _has_curated_jsonl_entry(jsonl_path: Path) -> bool:
 
 
 def should_skip_injection() -> bool:
-    """Check if any platform's non-interactive flag is set, or if Trellis
+    """Check if any platform's non-interactive flag is set, or if Phronia
     hooks are explicitly disabled via PHRONIA_HOOKS=0 / PHRONIA_DISABLE_HOOKS=1.
     """
     if os.environ.get("PHRONIA_HOOKS") == "0":
@@ -281,7 +281,7 @@ def _resolve_context_key(trellis_dir: Path, input_data: dict) -> str | None:
 
 
 def _persist_context_key_for_bash(context_key: str | None) -> None:
-    """Expose Trellis session identity to later Claude Code Bash commands.
+    """Expose Phronia session identity to later Claude Code Bash commands.
 
     Claude Code SessionStart hooks can append exports to CLAUDE_ENV_FILE; those
     variables are then available to Bash tools in the same conversation. Without
@@ -332,7 +332,7 @@ def _last_context_key_export(env_file: str) -> str | None:
 
 
 def _resolve_update_hint(trellis_dir: Path, context_key: str | None) -> str | None:
-    """Ask common.session_context whether a Trellis update is available.
+    """Ask common.session_context whether a Phronia update is available.
 
     Throttling lives there: the first SessionStart of a session writes a marker
     under `.phronia/.runtime/`, and later ones (clear, compact) return without
@@ -433,8 +433,8 @@ def _get_task_status(trellis_dir: Path, input_data: dict) -> str:
     if not active.task_path:
         return (
             "Status: NO ACTIVE TASK\n"
-            "Next-Action: Classify the current turn before creating any Trellis task. "
-            "Simple conversation / small task asks only whether this turn should create a Trellis task. "
+            "Next-Action: Classify the current turn before creating any Phronia task. "
+            "Simple conversation / small task asks only whether this turn should create a Phronia task. "
             "Complex task asks whether task creation and planning are allowed."
         )
 
@@ -520,7 +520,7 @@ def _get_task_status(trellis_dir: Path, input_data: dict) -> str:
 
 
 def _load_trellis_config(trellis_dir: Path, input_data: dict) -> tuple:
-    """Load Trellis config for session-start decisions.
+    """Load Phronia config for session-start decisions.
 
     Returns:
         (is_mono, packages_dict, spec_scope, task_pkg, default_pkg)
@@ -873,7 +873,7 @@ def main():
     spec_index_paths = _collect_spec_index_paths(trellis_dir, allowed_pkgs)
 
     output.write("""<session-context>
-Trellis compact SessionStart context. Use it to orient the session; load details on demand.
+Phronia compact SessionStart context. Use it to orient the session; load details on demand.
 </session-context>
 
 """)

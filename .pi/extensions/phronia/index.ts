@@ -104,11 +104,11 @@ const ABORT_KILL_GRACE_MS = 1500;
 const SESSION_OVERVIEW_TIMEOUT_MS = 1500;
 const THROTTLE_MS = 500;
 const FIRST_REPLY_NOTICE = `<first-reply-notice>
-On the first visible assistant reply in this session, briefly acknowledge that Trellis SessionStart context loaded.
+On the first visible assistant reply in this session, briefly acknowledge that Phronia SessionStart context loaded.
 Choose the acknowledgment language in this order:
 1. Use the language of the user's current request (the user message that triggered this reply).
 2. If that request has no clear natural language, use an explicitly established project communication language.
-3. If neither provides a language, output the language-neutral fallback exactly: \`Trellis SessionStart ✓\`.
+3. If neither provides a language, output the language-neutral fallback exactly: \`Phronia SessionStart ✓\`.
 Continue directly with the user's request after the acknowledgment.
 The acknowledgment must not alter the language used for the remainder of the response.
 This notice is one-shot: do not repeat it after the first visible assistant reply in this session.
@@ -859,16 +859,16 @@ class ContextBudget {
 }
 
 function truncateNotice(path: string, cap: number): string {
-  return `\n[Trellis: truncated at ${cap} bytes — read ${path} for the full content]`;
+  return `\n[Phronia: truncated at ${cap} bytes — read ${path} for the full content]`;
 }
 function isBinaryContent(data: Buffer): boolean {
   return data.includes(0) || !isUtf8(data);
 }
 function binaryNotice(path: string, size: number, reason: string): string {
-  return `[Trellis: not inlined (binary file) — ${path} (${size} bytes): ${reason}]`;
+  return `[Phronia: not inlined (binary file) — ${path} (${size} bytes): ${reason}]`;
 }
 function indexNotice(path: string, size: number, reason: string): string {
-  return `[Trellis: not inlined (total context limit reached) — ${path} (${size} bytes): ${reason}]`;
+  return `[Phronia: not inlined (total context limit reached) — ${path} (${size} bytes): ${reason}]`;
 }
 function budgetedBlock(
   budget: ContextBudget,
@@ -968,11 +968,11 @@ function readJsonlEntries(basePath: string, jsonlPath: string): JsonlEntry[] {
   return entries;
 }
 
-// ── Trellis Context ────────────────────────────────────────────────────
+// ── Phronia Context ────────────────────────────────────────────────────
 function findRoot(start: string): string {
   let c = resolve(start);
   while (true) {
-    // Only a directory with `.phronia/` is a Trellis project root. A bare
+    // Only a directory with `.phronia/` is a Phronia project root. A bare
     // `.pi` can be pi's global config (`~/.pi`) or an unrelated project, so
     // accepting it here made root resolution stop too early (e.g. on `~`).
     // Also reject a regular file named `.phronia` — the marker must be a
@@ -1194,11 +1194,11 @@ function buildStartupContext(
 ): string {
   const workflow = workflowOverview(root, key);
   return [
-    "<session-context>\nTrellis compact SessionStart context. Use it to orient the session; load details on demand.\n</session-context>",
+    "<session-context>\nPhronia compact SessionStart context. Use it to orient the session; load details on demand.\n</session-context>",
     FIRST_REPLY_NOTICE,
     overview,
     workflow,
-    "<ready>\nUse the current workflow state to decide whether to create, continue, or skip a Trellis task.\n</ready>",
+    "<ready>\nUse the current workflow state to decide whether to create, continue, or skip a Phronia task.\n</ready>",
   ]
     .filter(Boolean)
     .join("\n\n");
@@ -1207,7 +1207,7 @@ function buildStartupContext(
 function buildContext(root: string, agent: string, key: string | null): string {
   const dir = readTaskDir(root, key);
   if (!dir)
-    return "No active Trellis task found. Read .phronia/ before proceeding.";
+    return "No active Phronia task found. Read .phronia/ before proceeding.";
   const relTaskDir = relative(root, dir).replace(/\\/g, "/");
   const limits = readContextInjectionLimits(root);
   const budget = new ContextBudget(limits.max_total_bytes);
@@ -1255,7 +1255,7 @@ function buildContext(root: string, agent: string, key: string | null): string {
   // (from materializeArtifact) — no extra "### x.md" wrapper needed, that
   // would just double the header.
   return [
-    `## Trellis Task Context`,
+    `## Phronia Task Context`,
     `Task directory: ${dir}`,
     "",
     prd ?? `(missing) ${relTaskDir}/prd.md`,
@@ -1284,7 +1284,7 @@ function buildPrompt(
   const def = stripFM(raw);
   const ctx = buildContext(root, agent, key);
   return [
-    "## Trellis Agent Definition",
+    "## Phronia Agent Definition",
     def || "(missing)",
     "",
     ctx,
@@ -1867,10 +1867,10 @@ export default function trellisExtension(pi: {
   // Tool registration
   pi.registerTool?.({
     name: "trellis_subagent",
-    label: "Trellis Subagent",
-    description: "Run a Trellis project sub-agent with active task context.",
+    label: "Phronia Subagent",
+    description: "Run a Phronia project sub-agent with active task context.",
     promptSnippet:
-      'Sub-agent dispatch protocol (Trellis): your dispatch prompt MUST start with one line "Active task: <task path from `task.py current`>" before any other instructions.',
+      'Sub-agent dispatch protocol (Phronia): your dispatch prompt MUST start with one line "Active task: <task path from `task.py current`>" before any other instructions.',
     promptGuidelines: [
       'Use subagent for task delegation. Your dispatch prompt MUST start with "Active task: <task path from `task.py current`>".',
     ],
@@ -1921,13 +1921,13 @@ export default function trellisExtension(pi: {
             {
               type: "text",
               text:
-                "`trellis_subagent` is only for Trellis workflow agents with a definition file in .pi/agents/.\n\n" +
+                "`trellis_subagent` is only for Phronia workflow agents with a definition file in .pi/agents/.\n\n" +
                 `No definition found for: ${agentName}\n\n` +
                 "For general-purpose sub-agents, use one of these community tools:\n" +
                 "- `subagent` tool from npm:pi-subagents (nicobailon/pi-subagents)\n" +
                 "- `Agent` tool from npm:@tintinweb/pi-subagents\n\n" +
                 "If neither is installed, ask the user to either:\n" +
-                `- Create .pi/agents/${agentName}.md for your custom Trellis agent\n` +
+                `- Create .pi/agents/${agentName}.md for your custom Phronia agent\n` +
                 "- Install a community subagent package: pi install -l npm:@tintinweb/pi-subagents",
             },
           ],
@@ -2028,7 +2028,7 @@ export default function trellisExtension(pi: {
   pi.on?.("session_start", (event, ctx) => {
     getKey(event, ctx);
     ctx?.ui?.notify?.(
-      "Trellis project context is available. Use /phronia-start to bootstrap or /phronia-continue to resume.",
+      "Phronia project context is available. Use /phronia-start to bootstrap or /phronia-continue to resume.",
       "info",
     );
   });
@@ -2100,7 +2100,7 @@ export default function trellisExtension(pi: {
     ) {
       lastSentTaskCtx.set(key, freshTaskCtx);
       updates.push(
-        "<phronia-task-context-update>\nTask context changed on disk. This supersedes the Trellis Task Context in the system prompt.\n\n" +
+        "<phronia-task-context-update>\nTask context changed on disk. This supersedes the Phronia Task Context in the system prompt.\n\n" +
           freshTaskCtx +
           "\n</phronia-task-context-update>",
       );

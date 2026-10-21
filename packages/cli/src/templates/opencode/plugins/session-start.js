@@ -1,6 +1,6 @@
 /* global process */
 /**
- * Trellis Session Start Plugin
+ * Phronia Session Start Plugin
  *
  * Injects compact SessionStart context into the copy of the latest user
  * message that OpenCode sends to the model. Uses

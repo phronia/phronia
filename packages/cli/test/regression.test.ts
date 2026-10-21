@@ -2342,7 +2342,7 @@ describe("regression: SessionStart reinject on clear/compact (MIN-231)", () => {
   });
 });
 
-describe("regression: agent-session Trellis update hint", () => {
+describe("regression: agent-session Phronia update hint", () => {
   let tmpDir: string;
   const pythonCmd = process.platform === "win32" ? "python" : "python3";
 
@@ -2494,7 +2494,7 @@ describe("regression: agent-session Trellis update hint", () => {
     ]) {
       expect(
         pythonFunctionBody(commonSessionContext, functionName),
-        `${functionName} should not check Trellis updates`,
+        `${functionName} should not check Phronia updates`,
       ).not.toContain("get_update_hint");
     }
     expect(commonGitContext).toContain('if args.mode == "record":');
@@ -2778,7 +2778,7 @@ describe("regression: current-task path normalization", () => {
     (hook) => hook.name === "session-start.py",
   )?.content;
   const firstReplyNoticeSentence =
-    "Trellis SessionStart 已注入：workflow、当前任务状态、开发者身份、git 状态、active tasks、spec 索引已加载。";
+    "Phronia SessionStart 已注入：workflow、当前任务状态、开发者身份、git 状态、active tasks、spec 索引已加载。";
 
   beforeEach(() => {
     tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), "phronia-current-task-"));
@@ -4759,11 +4759,11 @@ print(json.dumps({
   // cannot catch a line that is added unconditionally, so this is pinned.
   const NOTICE_WITHOUT_UPDATE_HINT = [
     "<first-reply-notice>",
-    "On the first visible assistant reply in this session, briefly acknowledge that Trellis SessionStart context loaded.",
+    "On the first visible assistant reply in this session, briefly acknowledge that Phronia SessionStart context loaded.",
     "Choose the acknowledgment language in this order:",
     "1. Use the language of the user's current request (the user message that triggered this reply).",
     "2. If that request has no clear natural language, use an explicitly established project communication language.",
-    "3. If neither provides a language, output the language-neutral fallback exactly: `Trellis SessionStart ✓`.",
+    "3. If neither provides a language, output the language-neutral fallback exactly: `Phronia SessionStart ✓`.",
     "Continue directly with the user's request after the acknowledgment.",
     "The acknowledgment must not alter the language used for the remainder of the response.",
     "This notice is one-shot: do not repeat it after the first visible assistant reply in this session.",
@@ -5421,7 +5421,7 @@ print(json.dumps({
     expect(parsed.hookSpecificOutput?.updatedInput?.prompt).toBe(prompt);
   });
 
-  it("[session-current-task] Cursor generic subagents do not receive Trellis jsonl injection", () => {
+  it("[session-current-task] Cursor generic subagents do not receive Phronia jsonl injection", () => {
     setupTaskRepo();
     writeProjectFile(path.join(".git", "HEAD"), "ref: refs/heads/main\n");
     const injectSubagentContextScript = getSharedHookScripts().find(
@@ -5513,7 +5513,7 @@ print(json.dumps({
 
     expect(parsed.hookSpecificOutput?.hookEventName).toBe("SubagentStart");
     expect(context).toContain("<!-- phronia-hook-injected -->");
-    expect(context).toContain("Trellis Native Implement Subagent");
+    expect(context).toContain("Phronia Native Implement Subagent");
     expect(context).toContain("`phronia-implement` role");
     expect(context).toContain("Active task: .phronia/tasks/issue-106");
     expect(context).toContain("TOKEN_CODEX_IMPLEMENT");
@@ -5735,7 +5735,7 @@ print(json.dumps({
     expect(parentWins).not.toContain("TOKEN_CODEX_SESSION_B");
   });
 
-  it("[codex-native-subagents] non-Trellis SubagentStart agents stay silent", () => {
+  it("[codex-native-subagents] non-Phronia SubagentStart agents stay silent", () => {
     setupTaskRepo();
     writeProjectFile(path.join(".git", "HEAD"), "ref: refs/heads/main\n");
     writeSessionContext("codex_parent-a", ".phronia/tasks/issue-106");
@@ -5964,7 +5964,7 @@ print(json.dumps({
     ]);
     expect(codexPayload.suppressOutput).toBe(true);
     expect(codexPayload.systemMessage).toMatch(
-      /^Trellis context injected \(\d+ chars\)$/,
+      /^Phronia context injected \(\d+ chars\)$/,
     );
 
     for (const payload of [sharedPayload, codexPayload]) {
@@ -5976,7 +5976,7 @@ print(json.dumps({
 
       const ctx = payload.hookSpecificOutput.additionalContext;
       expect(ctx.startsWith("<session-context>")).toBe(true);
-      expect(ctx).toContain("Trellis compact SessionStart context");
+      expect(ctx).toContain("Phronia compact SessionStart context");
       expect(ctx).toContain("<first-reply-notice>");
       expect(ctx).toContain("the user's current request");
       expect(ctx).toContain("the user message that triggered this reply");
@@ -5984,7 +5984,7 @@ print(json.dumps({
       expect(ctx).toContain(
         "explicitly established project communication language",
       );
-      expect(ctx).toContain("Trellis SessionStart ✓");
+      expect(ctx).toContain("Phronia SessionStart ✓");
       expect(ctx).toContain("Continue directly with the user's request");
       expect(ctx).toContain(
         "must not alter the language used for the remainder of the response",
@@ -5995,7 +5995,7 @@ print(json.dumps({
       );
       expect(
         ctx.indexOf("explicitly established project communication language"),
-      ).toBeLessThan(ctx.indexOf("Trellis SessionStart ✓"));
+      ).toBeLessThan(ctx.indexOf("Phronia SessionStart ✓"));
       expect(ctx.indexOf("<first-reply-notice>")).toBeLessThan(
         ctx.indexOf("<current-state>"),
       );
@@ -6028,7 +6028,7 @@ print(json.dumps({
     const ctx = payload.hookSpecificOutput.additionalContext;
     expect(payload.hookSpecificOutput.hookEventName).toBe("SessionStart");
     expect(ctx.startsWith("<session-context>")).toBe(true);
-    expect(ctx).toContain("Trellis compact SessionStart context");
+    expect(ctx).toContain("Phronia compact SessionStart context");
     expect(ctx).toContain("Task context order for implementation/check");
     expect(ctx).toContain("design.md if present");
     expect(ctx).not.toContain("<sub-agent-notice>");
@@ -6037,9 +6037,9 @@ print(json.dumps({
   it("[#248] Copilot template does not assert Copilot ignores SessionStart hook output", () => {
     // GitHub #248: Microsoft's VS Code Agent hooks docs (preview, since VS
     // Code 1.110, Feb 2026) document SessionStart additionalContext as the
-    // injection mechanism. The previous Trellis hook hardcoded a misleading
+    // injection mechanism. The previous Phronia hook hardcoded a misleading
     // "currently ignores" claim in both the docstring and the runtime
-    // systemMessage. Both must stay removed; Trellis should not re-introduce
+    // systemMessage. Both must stay removed; Phronia should not re-introduce
     // a pessimistic absolute claim about Copilot's consumption behavior.
     const content = expectTemplateContent(
       copilotSessionStart,
@@ -6053,7 +6053,7 @@ print(json.dumps({
       "Copilot currently ignores sessionStart hook output",
     );
     expect(content).not.toContain("systemMessage");
-    expect(content).not.toContain("Trellis context injected");
+    expect(content).not.toContain("Phronia context injected");
     expect(content).not.toContain(firstReplyNoticeSentence);
   });
 
@@ -6727,7 +6727,7 @@ print(json.dumps({
     );
   });
 
-  it("[workflow-state] silent exit 0 when not a Trellis project (no .phronia/ dir)", () => {
+  it("[workflow-state] silent exit 0 when not a Phronia project (no .phronia/ dir)", () => {
     // No .phronia/ at all — hook should silently exit
     writeWorkflowStateHook();
     fs.rmSync(path.join(tmpDir, ".phronia"), { recursive: true, force: true });
@@ -7471,7 +7471,7 @@ print(len(entries))
   it("[issue-241-followup] Codex role profiles keep recursion guards without disabling native subagents", () => {
     // Native Codex subagents are bounded by their documented depth limit and
     // the profiles' direct-execution guidance. The legacy per-profile feature
-    // override blocked native Trellis subagent dispatch entirely, so it must
+    // override blocked native Phronia subagent dispatch entirely, so it must
     // not reappear.
     const templateRoot = path.join(
       path.dirname(fileURLToPath(import.meta.url)),
@@ -8323,7 +8323,7 @@ print(len(entries))
       ),
     ) as { hookSpecificOutput: { additionalContext: string } };
     expect(defaultRun.hookSpecificOutput.additionalContext).toContain(
-      "<codex-mode>auto: implement/check work defaults to Trellis sub-agents; native Codex context injection is preferred and child-side loading is the fallback. The main session still coordinates, clarifies, updates specs, commits, and finishes.</codex-mode>",
+      "<codex-mode>auto: implement/check work defaults to Phronia sub-agents; native Codex context injection is preferred and child-side loading is the fallback. The main session still coordinates, clarifies, updates specs, commits, and finishes.</codex-mode>",
     );
 
     // Legacy sub-agent alias → the auto-dispatch banner.
@@ -8335,7 +8335,7 @@ print(len(entries))
       ),
     ) as { hookSpecificOutput: { additionalContext: string } };
     expect(subAgentRun.hookSpecificOutput.additionalContext).toContain(
-      "<codex-mode>auto: implement/check work defaults to Trellis sub-agents; native Codex context injection is preferred and child-side loading is the fallback. The main session still coordinates, clarifies, updates specs, commits, and finishes.</codex-mode>",
+      "<codex-mode>auto: implement/check work defaults to Phronia sub-agents; native Codex context injection is preferred and child-side loading is the fallback. The main session still coordinates, clarifies, updates specs, commits, and finishes.</codex-mode>",
     );
   });
 
@@ -10035,7 +10035,7 @@ describe("regression: class-2 platforms use pull-based sub-agent context", () =>
       it("implement/check definitions contain pull-based prelude", () => {
         for (const file of preludeAgents) {
           const content = fs.readFileSync(path.join(tmpDir, file), "utf-8");
-          expect(content).toContain("Required: Load Trellis Context First");
+          expect(content).toContain("Required: Load Phronia Context First");
           expect(content).toContain("task.py current --source");
         }
       });
@@ -10048,7 +10048,7 @@ describe("regression: class-2 platforms use pull-based sub-agent context", () =>
         for (const file of preludeAgents) {
           const content = fs.readFileSync(path.join(tmpDir, file), "utf-8");
           const occurrences =
-            content.split("Required: Load Trellis Context First").length - 1;
+            content.split("Required: Load Phronia Context First").length - 1;
           expect(occurrences, `${file} should have exactly one prelude`).toBe(
             1,
           );
@@ -10069,7 +10069,7 @@ describe("regression: class-2 platforms use pull-based sub-agent context", () =>
         // runs before planning-time jsonl curation.
         for (const file of nonPreludeAgents) {
           const content = fs.readFileSync(path.join(tmpDir, file), "utf-8");
-          expect(content).not.toContain("Required: Load Trellis Context First");
+          expect(content).not.toContain("Required: Load Phronia Context First");
         }
       });
 
@@ -10144,7 +10144,7 @@ describe("regression: Codex uses native SubagentStart context delivery", () => {
       );
       expect(content).toContain("<!-- phronia-hook-injected -->");
       expect(content).toContain("Active task:");
-      expect(content).not.toContain("Required: Load Trellis Context First");
+      expect(content).not.toContain("Required: Load Phronia Context First");
     }
   });
 });
@@ -10258,7 +10258,7 @@ describe("regression: pi uses TypeScript extension assets instead of Python hook
         path.join(tmpDir, ".pi", "agents", agent),
         "utf-8",
       );
-      expect(content).toContain("Required: Load Trellis Context First");
+      expect(content).toContain("Required: Load Phronia Context First");
       expect(content).toContain("task.py current --source");
     }
   });
@@ -10304,7 +10304,7 @@ describe("regression: research agent persists findings to task dir", () => {
   }
 
   // Gemini CLI 0.40+ rejects the comma-separated `tools:` line that other
-  // platforms accept (Zod expects an array or omission). Trellis omits the
+  // platforms accept (Zod expects an array or omission). Phronia omits the
   // line entirely so the sub-agent inherits parent tools — see issue #224
   // and research/agent-tools-frontmatter.md. The persist contract still
   // applies (body references {TASK_DIR}/research/ and the PERSIST keyword).
@@ -10451,7 +10451,7 @@ describe("regression: Gemini CLI 0.40.x template compatibility (#224)", () => {
 
   it("[#224] gemini agent .md files do NOT carry a comma-separated tools line", () => {
     // Gemini CLI 0.40+ Zod schema rejects `tools: a, b, c` with
-    // "tools: Expected array, received string". Trellis omits the line so
+    // "tools: Expected array, received string". Phronia omits the line so
     // sub-agents inherit parent tools (per research/agent-tools-frontmatter.md).
     for (const entry of fs.readdirSync(geminiAgentsDir)) {
       if (!entry.endsWith(".md")) continue;
@@ -10533,7 +10533,7 @@ describe("regression: Gemini CLI 0.40.x template compatibility (#224)", () => {
   it("[phronia-hooks-env] all hook templates honor PHRONIA_HOOKS=0 / PHRONIA_DISABLE_HOOKS=1", () => {
     // All shipped hook scripts must early-return when the operator sets
     // PHRONIA_HOOKS=0 (or PHRONIA_DISABLE_HOOKS=1), so subprocess wrappers
-    // and casual-chat scenarios can disable Trellis injection without
+    // and casual-chat scenarios can disable Phronia injection without
     // editing config or restarting under different settings.
     const sharedHookTargets = [
       "session-start.py",
@@ -10619,7 +10619,7 @@ describe("regression: Gemini CLI 0.40.x template compatibility (#224)", () => {
 
 describe("regression: session-start.py f-string Python <=3.11 compat (0.5.2)", () => {
   // PEP 498 (Python <=3.11) forbids backslashes inside the *expression* part
-  // of an f-string. Trellis 0.5.0/0.5.1 shipped session-start hooks with
+  // of an f-string. Phronia 0.5.0/0.5.1 shipped session-start hooks with
   //   `f"{drive}:\\{rest.replace('/', '\\')}"`
   // which crashes on parse with `SyntaxError: f-string expression part cannot
   // include a backslash`. PEP 701 (Python 3.12+) lifted this restriction, so
@@ -10852,7 +10852,7 @@ describe("regression: sub-agent context injection fallback (0.5.3)", () => {
   }
 
   it("[issue-247] kiro agent JSON files use Kiro CLI's current schema (prompt / hooks-object)", () => {
-    // Kiro CLI rejected Trellis's pre-0.5.7 agent JSON with "invalid agent"
+    // Kiro CLI rejected Phronia's pre-0.5.7 agent JSON with "invalid agent"
     // because the schema drifted: `instructions` → `prompt`, `tools` field
     // gained a sibling `allowedTools`, and `hooks` switched from an array of
     // `{on, command, timeout_ms}` entries to an object keyed by event name.
@@ -10972,14 +10972,14 @@ describe("regression: configSectionsAdded (issue-codex-dispatch-mode)", () => {
     fs.mkdirSync(trellisDir, { recursive: true });
     const userConfigPath = path.join(trellisDir, "config.yaml");
     const userConfig = [
-      "# Trellis Configuration",
+      "# Phronia Configuration",
       'session_commit_message: "chore: record journal"',
       "",
     ].join("\n");
     fs.writeFileSync(userConfigPath, userConfig);
 
     const bundledTemplate = [
-      "# Trellis Configuration",
+      "# Phronia Configuration",
       'session_commit_message: "chore: record journal"',
       "",
       "#-------------------------------------------------------------------------------",
@@ -11126,7 +11126,7 @@ describe("regression: safe auto-commit when .phronia/ is gitignored (0.5.10 → 
     execSync("git init -q -b main", { cwd: tmpDir });
     // Configure user so git commit succeeds in CI sandboxes.
     execSync('git config user.email "test@trellis.local"', { cwd: tmpDir });
-    execSync('git config user.name "Trellis Test"', { cwd: tmpDir });
+    execSync('git config user.name "Phronia Test"', { cwd: tmpDir });
   });
 
   afterEach(() => {
@@ -11486,7 +11486,7 @@ describe("regression: safe auto-commit when .phronia/ is gitignored (0.5.10 → 
       tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), "phronia-safe-commit-"));
       execSync("git init -q -b main", { cwd: tmpDir });
       execSync('git config user.email "test@trellis.local"', { cwd: tmpDir });
-      execSync('git config user.name "Trellis Test"', { cwd: tmpDir });
+      execSync('git config user.name "Phronia Test"', { cwd: tmpDir });
     }
   });
 
@@ -11530,7 +11530,7 @@ describe("regression: bounded index.lock retry on archive auto-commit", () => {
     tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), "phronia-index-lock-"));
     execSync("git init -q -b main", { cwd: tmpDir });
     execSync('git config user.email "test@trellis.local"', { cwd: tmpDir });
-    execSync('git config user.name "Trellis Test"', { cwd: tmpDir });
+    execSync('git config user.name "Phronia Test"', { cwd: tmpDir });
   });
 
   afterEach(() => {
@@ -11762,7 +11762,7 @@ print(json.dumps({
 // =============================================================================
 
 describe("regression: .phronia/scripts stays byte-identical to templates/workflow/scripts", () => {
-  // `.phronia/scripts/` is Trellis's own dogfood copy;
+  // `.phronia/scripts/` is Phronia's own dogfood copy;
   // `packages/cli/src/templates/workflow/scripts/` is what ships to users.
   // They are two physical copies of the same 28 files and nothing enforced
   // parity, so one-sided edits landed silently — PR #390 changed the template's

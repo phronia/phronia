@@ -2,7 +2,7 @@
  * Codex templates
  *
  * These are GENERIC templates for user projects.
- * Do NOT use Trellis project's own .agents/skills or .codex directories
+ * Do NOT use Phronia project's own .agents/skills or .codex directories
  * (which may be customized).
  *
  * Workflow skills are NOT stored here. They come from templates/common/ and are

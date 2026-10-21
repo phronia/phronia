@@ -217,7 +217,7 @@ describe("trellis template constants", () => {
         [...templates.entries()].some(
           ([filePath, content]) =>
             /phronia-(implement|check)/.test(filePath) &&
-            content.includes("Required: Load Trellis Context First"),
+            content.includes("Required: Load Phronia Context First"),
         );
       if (!hasPullBasedPrelude) {
         return [];

@@ -334,15 +334,15 @@ Before finishing your code-spec update:
 
 ```
 Development Flow:
-  Learn something → `update-spec` (Trellis command) → Knowledge captured
+  Learn something → `update-spec` (Phronia command) → Knowledge captured
        ↑                                  ↓
-  `break-loop` (Trellis command) ←──────────────────── Future sessions benefit
+  `break-loop` (Phronia command) ←──────────────────── Future sessions benefit
   (deep bug analysis)
 ```
 
-- ``break-loop` (Trellis command)` - Analyzes bugs deeply, often reveals spec updates needed
-- ``update-spec` (Trellis command)` - Actually makes the updates
-- ``finish-work` (Trellis command)` - Reminds you to check if specs need updates
+- ``break-loop` (Phronia command)` - Analyzes bugs deeply, often reveals spec updates needed
+- ``update-spec` (Phronia command)` - Actually makes the updates
+- ``finish-work` (Phronia command)` - Reminds you to check if specs need updates
 
 ---
 

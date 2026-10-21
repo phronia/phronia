@@ -1,5 +1,5 @@
 /**
- * Load a Trellis agent definition from `.phronia/agents/<name>.md`.
+ * Load a Phronia agent definition from `.phronia/agents/<name>.md`.
  *
  * Format: YAML frontmatter (between `---` fences) + markdown body.
  *   The body becomes the system prompt injected into the worker.
@@ -15,7 +15,7 @@
  *   You are a senior system architect ...
  *
  * Unknown frontmatter fields are preserved as metadata but ignored by
- * channel runtime (they may be consumed by other Trellis layers).
+ * channel runtime (they may be consumed by other Phronia layers).
  */
 
 import fs from "node:fs";

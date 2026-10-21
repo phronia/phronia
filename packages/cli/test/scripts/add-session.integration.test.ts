@@ -281,7 +281,7 @@ describe.skipIf(!hasPython())("add_session.py auto-commit", () => {
       .map((s) => s.trim())
       .filter(Boolean);
 
-    // The chore commit contains only Trellis-owned paths.
+    // The chore commit contains only Phronia-owned paths.
     expect(lastFiles).not.toContain("README.md");
     expect(lastFiles.every((f) => f.startsWith(".phronia/"))).toBe(true);
 
@@ -419,7 +419,7 @@ describe.skipIf(!hasPython())("add_session.py auto-commit", () => {
     expect(status).toMatch(/\.phronia\/tasks\/task-b\/prd\.md/);
   });
 
-  it("stages only Trellis-owned paths in the session auto-commit", () => {
+  it("stages only Phronia-owned paths in the session auto-commit", () => {
     seedTask(tmp);
     fs.writeFileSync(path.join(tmp, "unrelated.txt"), "user work in progress\n");
 
@@ -988,7 +988,7 @@ describe.skipIf(!hasPython())("add_session.py session numbering", () => {
 /**
  * `get_repo_root` returns the nearest directory holding `.phronia/`, which is
  * not necessarily the git toplevel. Every git path the recorder builds has to
- * be interpreted relative to the Trellis root, not the git root.
+ * be interpreted relative to the Phronia root, not the git root.
  */
 describe.skipIf(!hasPython())("add_session.py with .phronia below the git root", () => {
   let outer: string;

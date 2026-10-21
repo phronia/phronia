@@ -711,7 +711,7 @@ def content_at_head(repo_root: Path, path: Path) -> str | None:
 
     The `./` prefix makes the path cwd-relative. `HEAD:<path>` alone is
     relative to the *git* toplevel, which is not always `repo_root` — the
-    Trellis root is the nearest directory holding `.phronia/`, which can sit
+    Phronia root is the nearest directory holding `.phronia/`, which can sit
     below the git root. Without it, every lookup in that layout fails and a
     committed record looks pending.
     """
@@ -1068,7 +1068,7 @@ def update_index(
 # =============================================================================
 
 def _auto_commit_workspace(repo_root: Path) -> str:
-    """Stage Trellis-owned workspace + current-task paths and commit.
+    """Stage Phronia-owned workspace + current-task paths and commit.
 
     Path scope is restricted to specific products: the current developer's
     journal files + index.md, and ONLY the current task directory (resolved

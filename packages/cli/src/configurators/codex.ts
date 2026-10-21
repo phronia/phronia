@@ -199,7 +199,7 @@ export async function configureCodex(cwd: string): Promise<void> {
   await writeTemplateMap(cwd, files);
 
   // RESIDUAL — not expressible as a path→content pair: a directory with no
-  // files in it. Trellis ships no Codex-specific skills (the workflow skills
+  // files in it. Phronia ships no Codex-specific skills (the workflow skills
   // all land in .agents/skills/, which Codex reads too), but users need the
   // conventional place for their own, and manifest-prune.ts treats
   // `.codex/skills/<custom>/` as user-owned data the manifest must not claim.
@@ -218,10 +218,10 @@ export async function configureCodex(cwd: string): Promise<void> {
     process.stderr.write(
       "⚠️  Codex hooks require `features.hooks = true` in your " +
         "~/.codex/config.toml (Codex 0.129+; older versions: `codex_hooks = true`). " +
-        "On Codex 0.129+ also run `/hooks` once to approve the Trellis " +
-        "hooks. Without these the Trellis workflow breadcrumb and native " +
+        "On Codex 0.129+ also run `/hooks` once to approve the Phronia " +
+        "hooks. Without these the Phronia workflow breadcrumb and native " +
         "sub-agent context won't auto-inject (agents retain a pull fallback). " +
-        "See Trellis docs for details.\n",
+        "See Phronia docs for details.\n",
     );
   }
 }

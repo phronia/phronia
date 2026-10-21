@@ -93,7 +93,7 @@ describe("channel storage and forum channels", () => {
       by: "main",
       scope: "global",
       type: "forum",
-      description: "Local Trellis feedback board",
+      description: "Local Phronia feedback board",
       contextFile: [linkedFile],
       contextRaw: ["watch channel UX"],
     });
@@ -172,7 +172,7 @@ describe("channel storage and forum channels", () => {
       .mocked(console.log)
       .mock.calls.map(([line]) => String(line))
       .join("\n");
-    expect(createOutput).toContain("description: Local Trellis feedback board");
+    expect(createOutput).toContain("description: Local Phronia feedback board");
     expect(createOutput).toContain(`context:file: ${linkedFile}`);
     expect(createOutput).toContain("context:raw: watch channel UX");
 

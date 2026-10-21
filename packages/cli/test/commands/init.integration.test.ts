@@ -724,7 +724,7 @@ describe("init() integration", () => {
         path.join(tmpDir, ".trae", "agents", "phronia-implement.md"),
         "utf-8",
       ),
-    ).toContain("Load Trellis Context First");
+    ).toContain("Load Phronia Context First");
 
     const hashFile = path.join(
       tmpDir,
@@ -831,7 +831,7 @@ describe("init() integration", () => {
     expect(stderr.join("")).toBe(
       "ℹ️  ZCode: if project Hooks are disabled, install trellis-bridge, then start a new session.\n" +
         "   ZCode：若项目 Hooks 被禁用，请安装 trellis-bridge，然后新建会话。\n" +
-        "   请手动在 ZCode 插件市场中添加 https://github.com/CNHLAIA/ZCode-Trellis-Plugin.git，并手动安装 ZCode 补丁插件 trellis-bridge\n",
+        "   请手动在 ZCode 插件市场中添加 https://github.com/CNHLAIA/ZCode-Phronia-Plugin.git，并手动安装 ZCode 补丁插件 trellis-bridge\n",
     );
   });
 
@@ -975,7 +975,7 @@ describe("init() integration", () => {
     );
     expect(console.log).toHaveBeenCalledWith(
       expect.stringContaining(
-        `Trellis rendered Python commands as "${expectedPythonCmd}" in generated hooks, settings, and help text`,
+        `Phronia rendered Python commands as "${expectedPythonCmd}" in generated hooks, settings, and help text`,
       ),
     );
   });

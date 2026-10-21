@@ -37,7 +37,7 @@ describe("grok pull-based prelude injection", () => {
         agent.name === "phronia-implement" ||
         agent.name === "phronia-check"
       ) {
-        expect(agent.content).toContain("Load Trellis Context First");
+        expect(agent.content).toContain("Load Phronia Context First");
         expect(agent.content).toContain("task.py current --source");
       }
     }
@@ -48,7 +48,7 @@ describe("grok pull-based prelude injection", () => {
     const research = agents.find((agent) => agent.name === "phronia-research");
     expect(research).toBeDefined();
     if (!research) return;
-    expect(research.content).not.toContain("Load Trellis Context First");
+    expect(research.content).not.toContain("Load Phronia Context First");
     expect(research.content).toContain("{TASK_DIR}/research/");
   });
 });
@@ -67,9 +67,9 @@ describe("grok collectGrokTemplates", () => {
     expect(files.has(".grok/agents/phronia-research.md")).toBe(true);
 
     const implement = files.get(".grok/agents/phronia-implement.md");
-    expect(implement).toContain("Load Trellis Context First");
+    expect(implement).toContain("Load Phronia Context First");
     const research = files.get(".grok/agents/phronia-research.md");
-    expect(research).not.toContain("Load Trellis Context First");
+    expect(research).not.toContain("Load Phronia Context First");
 
     // No shared .agents/skills/ dual-write
     expect(

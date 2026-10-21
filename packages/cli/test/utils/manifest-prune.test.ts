@@ -82,7 +82,7 @@ describe("pruneOrphanManifestKeys", () => {
     expect(kept).not.toHaveProperty(".claude/sessions/user.jsonl");
   });
 
-  it("keeps root-level AGENTS.md when it has Trellis managed-block markers", () => {
+  it("keeps root-level AGENTS.md when it has Phronia managed-block markers", () => {
     const hashes = { "AGENTS.md": "h" };
     fs.writeFileSync(
       path.join(tmpDir, "AGENTS.md"),
@@ -100,7 +100,7 @@ describe("pruneOrphanManifestKeys", () => {
     expect(kept).toHaveProperty("AGENTS.md");
   });
 
-  it("prunes poisoned root-level AGENTS.md when the file lacks Trellis markers", () => {
+  it("prunes poisoned root-level AGENTS.md when the file lacks Phronia markers", () => {
     const hashes = { "AGENTS.md": "user-hash" };
     fs.writeFileSync(path.join(tmpDir, "AGENTS.md"), "my own AGENTS.md\n");
     saveHashes(tmpDir, hashes);

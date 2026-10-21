@@ -2,7 +2,7 @@
  * Unit tests for the workflow template resolver.
  *
  * Native resolution is offline (no fetch). Marketplace resolution is exercised
- * by stubbing `fetch` on the default Trellis marketplace URL.
+ * by stubbing `fetch` on the default Phronia marketplace URL.
  */
 
 import { afterEach, describe, expect, it, vi } from "vitest";

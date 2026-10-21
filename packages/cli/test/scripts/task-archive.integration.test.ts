@@ -170,7 +170,7 @@ describe.skipIf(!hasPython())(
         .map((s) => s.trim())
         .filter(Boolean);
 
-      // The archive commit contains only Trellis-owned paths.
+      // The archive commit contains only Phronia-owned paths.
       expect(lastFiles).not.toContain("README.md");
       expect(lastFiles.every((f) => f.startsWith(".phronia/"))).toBe(true);
 

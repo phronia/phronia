@@ -155,7 +155,7 @@ export interface AIToolConfig {
   hasPythonHooks: boolean;
   /**
    * Optional user-global compatibility plugin for platform versions where
-   * project-level integration is unavailable. Trellis may surface a manual
+   * project-level integration is unavailable. Phronia may surface a manual
    * installation hint, but leaves installation and lifecycle management to
    * the platform UI.
    */
@@ -491,7 +491,7 @@ export const AI_TOOLS: Record<AITool, AIToolConfig> = {
     hasPythonHooks: true,
     globalHookPlugin: {
       name: "trellis-bridge",
-      marketplaceUrl: "https://github.com/CNHLAIA/ZCode-Trellis-Plugin.git",
+      marketplaceUrl: "https://github.com/CNHLAIA/ZCode-Phronia-Plugin.git",
     },
     templateContext: {
       cmdRefPrefix: "/phronia:",
@@ -571,11 +571,11 @@ export const AI_TOOLS: Record<AITool, AIToolConfig> = {
    * to the shared root via the neutral resolver (byte-identical to
    * Codex/Gemini/Pi writes) while user-invocable entry points
    * (`phronia-start` / `phronia-continue` / `phronia-finish-work`, invoked as
-   * `/skill:phronia-<name>`) and the Trellis sub-agent prompts live under
+   * `/skill:phronia-<name>`) and the Phronia sub-agent prompts live under
    * `.kimi-code/skills/`.
    *
-   * Kimi has no project-level hooks/settings file Trellis may write (hooks are
-   * user-level `~/.kimi-code/config.toml` only), so the Trellis agent prompts
+   * Kimi has no project-level hooks/settings file Phronia may write (hooks are
+   * user-level `~/.kimi-code/config.toml` only), so the Phronia agent prompts
    * keep the pull-based prelude. They ship both as skills and as project-level
    * custom sub-agent definitions under `.kimi-code/agents/` (Claude
    * Code-compatible frontmatter), so the main session can dispatch
@@ -611,7 +611,7 @@ export const AI_TOOLS: Record<AITool, AIToolConfig> = {
    * Primary agent path is `.snow/agents/*.md` only (no legacy JSON fragment).
    *
    * CLI flag: `--snow`.
-   * Detection requires Trellis-owned template hashes under `.snow/skills`, so
+   * Detection requires Phronia-owned template hashes under `.snow/skills`, so
    * native Snow settings, commands, agents, or skills are not false positives.
    */
   snow: {

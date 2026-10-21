@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
-"""Trellis per-turn breadcrumb hook (UserPromptSubmit / BeforeAgent equivalent).
+"""Phronia per-turn breadcrumb hook (UserPromptSubmit / BeforeAgent equivalent).
 
-Runs on every user prompt. Resolves the active task through Trellis'
+Runs on every user prompt. Resolves the active task through Phronia'
 session-aware active task resolver and emits a short <workflow-state>
 block reminding the main AI what task is active and its expected flow.
 
@@ -28,7 +28,7 @@ custom agent's ``hooks.userPromptSubmit`` and the IDE ``.kiro.hook``
 (Kiro adds hook stdout directly to the conversation context).
 
 Silent exit 0 case (no output):
-  - No .phronia/ directory found (not a Trellis project)
+  - No .phronia/ directory found (not a Phronia project)
 
 When a session points at a task directory whose task.json is missing, malformed,
 or missing a usable status, the hook emits a task_error breadcrumb instead of
@@ -77,12 +77,12 @@ from typing import Optional
 # get the full SessionStart overview; this short reminder points the main session
 # at the start skill once and leaves the per-turn state block compact.
 CODEX_NO_TASK_BOOTSTRAP_NOTICE = """<phronia-bootstrap>
-If you have not already loaded Trellis context this session, read the `phronia-start` skill once.
+If you have not already loaded Phronia context this session, read the `phronia-start` skill once.
 </phronia-bootstrap>"""
 
 
 # ---------------------------------------------------------------------------
-# CWD-robust Trellis root discovery (fixes hook-path-robustness for this hook)
+# CWD-robust Phronia root discovery (fixes hook-path-robustness for this hook)
 # ---------------------------------------------------------------------------
 
 def find_trellis_root(start: Path) -> Optional[Path]:
@@ -315,7 +315,7 @@ def _codex_mode_banner(config: dict) -> str:
     """Emit a `<codex-mode>` banner for the additionalContext payload.
 
     Reads `codex.dispatch_mode` from .phronia/config.yaml; defaults to
-    `auto`, which dispatches Trellis sub-agents using native Codex context
+    `auto`, which dispatches Phronia sub-agents using native Codex context
     injection with a child-side fallback. This does not rely on inherited
     parent transcripts: `fork_turns` remains caller-controlled, and
     fresh-history sub-agents still receive their explicit delegated task and
@@ -329,7 +329,7 @@ def _codex_mode_banner(config: dict) -> str:
     mode = _resolve_codex_dispatch_mode(config)
     if mode == "auto":
         meaning = (
-            "auto: implement/check work defaults to Trellis sub-agents; native Codex "
+            "auto: implement/check work defaults to Phronia sub-agents; native Codex "
             "context injection is preferred and child-side loading is the fallback. "
             "The main session still coordinates, clarifies, updates specs, commits, and finishes."
         )
@@ -433,7 +433,7 @@ def main() -> int:
 
     root = find_trellis_root(cwd)
     if root is None:
-        return 0  # not a Trellis project
+        return 0  # not a Phronia project
 
     config = _read_trellis_config(root)
     if prompt_has_skip_keyword(data.get("prompt", ""), _resolve_skip_keyword(config)):

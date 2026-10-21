@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Linear sync hook for Trellis task lifecycle.
+"""Linear sync hook for Phronia task lifecycle.
 
 Syncs task events to Linear via the `linearis` CLI.
 
@@ -37,7 +37,7 @@ from pathlib import Path
 
 # ─── Configuration ────────────────────────────────────────────────────────────
 
-# Trellis priority → Linear priority (1=Urgent, 2=High, 3=Medium, 4=Low)
+# Phronia priority → Linear priority (1=Urgent, 2=High, 3=Medium, 4=Low)
 PRIORITY_MAP = {"P0": 1, "P1": 2, "P2": 3, "P3": 4}
 
 # Linear status names (must match your team's workflow)

@@ -364,8 +364,8 @@ print("all-valid")
         expect(out).toContain(
           `=== ${relTask}/prd.md (Requirements) ===\nprd body`,
         );
-        expect(out).not.toContain("[Trellis: truncated");
-        expect(out).not.toContain("[Trellis: not inlined");
+        expect(out).not.toContain("[Phronia: truncated");
+        expect(out).not.toContain("[Phronia: not inlined");
       });
 
       it("keeps binary jsonl references as notices even when limits are unlimited", () => {
@@ -402,10 +402,10 @@ print("all-valid")
         );
 
         expect(out).toContain(
-          "[Trellis: not inlined (binary file) — design.png (10 bytes): visual baseline]",
+          "[Phronia: not inlined (binary file) — design.png (10 bytes): visual baseline]",
         );
         expect(out).toContain(
-          "[Trellis: not inlined (binary file) — invalid.bin (3 bytes): legacy export]",
+          "[Phronia: not inlined (binary file) — invalid.bin (3 bytes): legacy export]",
         );
         expect(out).not.toContain("=== design.png ===");
         expect(out).not.toContain("=== invalid.bin ===");
@@ -437,7 +437,7 @@ print("all-valid")
         );
 
         expect(out).toContain(`=== multibyte.md ===\n${multiByteContent}`);
-        expect(out).not.toContain("[Trellis: not inlined (binary file)");
+        expect(out).not.toContain("[Phronia: not inlined (binary file)");
       });
 
       it("classifies a file as binary when binary bytes appear only at the end", () => {
@@ -462,7 +462,7 @@ print("all-valid")
         );
 
         expect(out).toContain(
-          `[Trellis: not inlined (binary file) — mixed.dat (${mixed.length} bytes): mixed content]`,
+          `[Phronia: not inlined (binary file) — mixed.dat (${mixed.length} bytes): mixed content]`,
         );
         expect(out).not.toContain("=== mixed.dat ===");
       });
@@ -489,7 +489,7 @@ print("all-valid")
           128 * 1024 + 256, // total cap + slack for the wrapping print()/notices
         );
         expect(out).toContain(
-          "[Trellis: truncated at 32768 bytes — read big.txt for the full content]",
+          "[Phronia: truncated at 32768 bytes — read big.txt for the full content]",
         );
       });
 
@@ -523,10 +523,10 @@ print("all-valid")
         );
         expect(out).toContain("=== f1.txt ===\n" + "1".repeat(50));
         expect(out).toContain(
-          "[Trellis: not inlined (total context limit reached) — f2.txt (50 bytes): second]",
+          "[Phronia: not inlined (total context limit reached) — f2.txt (50 bytes): second]",
         );
         expect(out).toContain(
-          "[Trellis: not inlined (total context limit reached) — f3.txt (50 bytes): third]",
+          "[Phronia: not inlined (total context limit reached) — f3.txt (50 bytes): third]",
         );
         expect(out).not.toContain("=== f2.txt ===");
         expect(out).not.toContain("=== f3.txt ===");
@@ -555,7 +555,7 @@ print("all-valid")
           `print(mod.get_implement_context(REPO_ROOT, ${JSON.stringify(relTask)}))`,
         );
         expect(out).toContain("=== big.txt ===\n" + bigContent);
-        expect(out).not.toContain("[Trellis: not inlined");
+        expect(out).not.toContain("[Phronia: not inlined");
       });
 
       it("directory entries respect the per-file cap and total budget", () => {
@@ -587,10 +587,10 @@ print("all-valid")
           `print(mod.get_implement_context(REPO_ROOT, ${JSON.stringify(relTask)}))`,
         );
         expect(out).toContain(
-          "[Trellis: truncated at 10 bytes — read refdir/a.md for the full content]",
+          "[Phronia: truncated at 10 bytes — read refdir/a.md for the full content]",
         );
         expect(out).toContain(
-          "[Trellis: truncated at 10 bytes — read refdir/b.md for the full content]",
+          "[Phronia: truncated at 10 bytes — read refdir/b.md for the full content]",
         );
       });
 
@@ -618,7 +618,7 @@ print("all-valid")
         expect(out).toContain("P".repeat(20));
         expect(out).not.toContain("P".repeat(21));
         expect(out).toContain(
-          `[Trellis: truncated at 20 bytes — read ${relTask}/prd.md for the full content]`,
+          `[Phronia: truncated at 20 bytes — read ${relTask}/prd.md for the full content]`,
         );
       });
     });
@@ -706,7 +706,7 @@ print("all-valid")
           `print(mod.get_implement_context(REPO_ROOT, ${JSON.stringify(relTask)}))`,
         );
         expect(out).toContain(
-          `[Trellis] ${relTask}/implement.jsonl has no curated entries`,
+          `[Phronia] ${relTask}/implement.jsonl has no curated entries`,
         );
         expect(out).toContain(".phronia/spec/");
         // Task artifacts still follow the notice.

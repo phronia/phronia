@@ -5,7 +5,7 @@ description: |
 tools: read, write, edit, bash, find, grep
 ---
 
-## Required: Load Trellis Context First
+## Required: Load Phronia Context First
 
 This platform does NOT auto-inject task context via hook. Before doing anything else, you MUST load context yourself.
 

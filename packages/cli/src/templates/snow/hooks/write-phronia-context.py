@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
-"""Snow CLI Trellis context writer + additionalContext emitter.
+"""Snow CLI Phronia context writer + additionalContext emitter.
 
 Used by onSessionStart / onUserMessage / beforeSubAgentStart hooks.
 
@@ -367,7 +367,7 @@ def _sanitize_session_key(value: str) -> str:
 
 
 def _current_session_ids(stdin_ctx: dict[str, Any] | None = None) -> list[str]:
-    # Prefer explicit Trellis context, then Snow session identity.
+    # Prefer explicit Phronia context, then Snow session identity.
     ids: list[str] = []
     candidates = [
         os.environ.get("PHRONIA_CONTEXT_ID"),
@@ -456,7 +456,7 @@ def build_context(
     kind = _agent_kind(stdin_ctx) if mode == "subagent" else "generic"
 
     lines: list[str] = [
-        "# Trellis context (Snow CLI)",
+        "# Phronia context (Snow CLI)",
         "",
         f"Mode: {mode}" + (f" | agentKind: {kind}" if mode == "subagent" else ""),
         f"Repo: {repo}",
@@ -562,12 +562,12 @@ def build_context(
         lines.extend(
             [
                 "## Main-session checklist",
-                "1. Session/user hooks auto-inject Trellis context; `/phronia-start` is optional."
+                "1. Session/user hooks auto-inject Phronia context; `/phronia-start` is optional."
                 if not compact
                 else "1. Compact inject — full context also at `.snow/log/phronia-context.txt`.",
                 "2. When dispatching implement/check/research, start the prompt with:",
                 "   `Active task: <path from task.py current>`",
-                "3. Do not git commit/push/merge from Trellis implement/check agents.",
+                "3. Do not git commit/push/merge from Phronia implement/check agents.",
                 "",
             ]
         )
@@ -613,10 +613,10 @@ def main() -> int:
         max_bytes = COMPACT_MAX_BYTES if mode == "user" else DEFAULT_MAX_BYTES
         inject = _truncate(context, max_bytes)
         display = {
-            "session": "Trellis session context injected",
-            "user": "Trellis compact breadcrumb",
-            "subagent": f"Trellis sub-agent context ({_agent_kind(stdin_ctx)})",
-        }.get(mode, "Trellis context refreshed")
+            "session": "Phronia session context injected",
+            "user": "Phronia compact breadcrumb",
+            "subagent": f"Phronia sub-agent context ({_agent_kind(stdin_ctx)})",
+        }.get(mode, "Phronia context refreshed")
         display = f"{display} (.snow/log/phronia-context.txt)"
 
         payload = {
@@ -633,8 +633,8 @@ def main() -> int:
             sys.stdout.write(
                 json.dumps(
                     {
-                        "additionalContext": "# Trellis context unavailable (hook error)\n",
-                        "display": "Trellis context hook error (fail-open)",
+                        "additionalContext": "# Phronia context unavailable (hook error)\n",
+                        "display": "Phronia context hook error (fail-open)",
                     },
                     ensure_ascii=False,
                 )

@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 """
-Codex Session Start Hook - Inject Trellis context into Codex sessions.
+Codex Session Start Hook - Inject Phronia context into Codex sessions.
 
 Output format follows Codex hook protocol:
   stdout JSON → { hookSpecificOutput: { hookEventName: "SessionStart", additionalContext: "..." } }
@@ -97,11 +97,11 @@ def _normalize_windows_shell_path(path_str: str) -> str:
 warnings.filterwarnings("ignore")
 
 FIRST_REPLY_NOTICE = """<first-reply-notice>
-On the first visible assistant reply in this session, briefly acknowledge that Trellis SessionStart context loaded.
+On the first visible assistant reply in this session, briefly acknowledge that Phronia SessionStart context loaded.
 Choose the acknowledgment language in this order:
 1. Use the language of the user's current request (the user message that triggered this reply).
 2. If that request has no clear natural language, use an explicitly established project communication language.
-3. If neither provides a language, output the language-neutral fallback exactly: `Trellis SessionStart ✓`.
+3. If neither provides a language, output the language-neutral fallback exactly: `Phronia SessionStart ✓`.
 Continue directly with the user's request after the acknowledgment.
 The acknowledgment must not alter the language used for the remainder of the response.
 This notice is one-shot: do not repeat it after the first visible assistant reply in this session.
@@ -117,7 +117,7 @@ def should_skip_injection() -> bool:
 
 
 def configure_project_encoding(project_dir: Path) -> None:
-    """Reuse Trellis' shared Windows stdio encoding helper before JSON output."""
+    """Reuse Phronia' shared Windows stdio encoding helper before JSON output."""
     scripts_dir = project_dir / ".phronia" / "scripts"
     if str(scripts_dir) not in sys.path:
         sys.path.insert(0, str(scripts_dir))
@@ -238,7 +238,7 @@ def _get_task_status(trellis_dir: Path, hook_input: dict) -> str:
         return (
             "Status: NO ACTIVE TASK\n"
             "Next: Classify the current turn and ask for task-creation consent "
-            "before creating any Trellis task."
+            "before creating any Phronia task."
         )
 
     task_ref = active.task_path
@@ -499,7 +499,7 @@ def main() -> None:
     output = StringIO()
 
     output.write("""<session-context>
-Trellis compact SessionStart context. Use it to orient the session; load details on demand.
+Phronia compact SessionStart context. Use it to orient the session; load details on demand.
 </session-context>
 
 """)
@@ -543,7 +543,7 @@ Context loaded. Follow <task-status>. Load workflow/spec/task details only when 
     context = output.getvalue()
     result = {
         "suppressOutput": True,
-        "systemMessage": f"Trellis context injected ({len(context)} chars)",
+        "systemMessage": f"Phronia context injected ({len(context)} chars)",
         "hookSpecificOutput": {
             "hookEventName": "SessionStart",
             "additionalContext": context,

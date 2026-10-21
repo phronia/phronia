@@ -49,7 +49,7 @@ function setupRepo(tmp: string): void {
       "## Phase Index",
       "",
       "[workflow-state:no_task]",
-      "No active task. Classify the turn before creating a Trellis task.",
+      "No active task. Classify the turn before creating a Phronia task.",
       "[/workflow-state:no_task]",
       "",
       "## Phase 1: Plan",

@@ -62,7 +62,7 @@ describe("init() joiner onboarding", () => {
   });
 
   /**
-   * Helper: simulate a fresh clone of an existing Trellis project — `.phronia/`
+   * Helper: simulate a fresh clone of an existing Phronia project — `.phronia/`
    * committed (with at least one archived task indicating prior work),
    * `.developer` absent. Real fresh-clone state always has either an active or
    * archived bootstrap task; an empty `tasks/` indicates an aborted partial

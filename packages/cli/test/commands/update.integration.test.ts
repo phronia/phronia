@@ -147,7 +147,7 @@ describe("update() integration", () => {
   }
 
   /**
-   * Stage a project as if an older Trellis version installed pristine template
+   * Stage a project as if an older Phronia version installed pristine template
    * files, then the current CLI is about to update it. The hash file records
    * the older pristine content so update() must treat those files as
    * auto-update candidates.
@@ -336,7 +336,7 @@ describe("update() integration", () => {
     expect(stderr.join("")).toBe(
       "ℹ️  ZCode: if project Hooks are disabled, install trellis-bridge, then start a new session.\n" +
         "   ZCode：若项目 Hooks 被禁用，请安装 trellis-bridge，然后新建会话。\n" +
-        "   请手动在 ZCode 插件市场中添加 https://github.com/CNHLAIA/ZCode-Trellis-Plugin.git，并手动安装 ZCode 补丁插件 trellis-bridge\n",
+        "   请手动在 ZCode 插件市场中添加 https://github.com/CNHLAIA/ZCode-Phronia-Plugin.git，并手动安装 ZCode 补丁插件 trellis-bridge\n",
     );
   });
 
@@ -368,7 +368,7 @@ describe("update() integration", () => {
     expect(stderr.join("")).toBe(
       "ℹ️  ZCode: if project Hooks are disabled, install trellis-bridge, then start a new session.\n" +
         "   ZCode：若项目 Hooks 被禁用，请安装 trellis-bridge，然后新建会话。\n" +
-        "   请手动在 ZCode 插件市场中添加 https://github.com/CNHLAIA/ZCode-Trellis-Plugin.git，并手动安装 ZCode 补丁插件 trellis-bridge\n",
+        "   请手动在 ZCode 插件市场中添加 https://github.com/CNHLAIA/ZCode-Phronia-Plugin.git，并手动安装 ZCode 补丁插件 trellis-bridge\n",
     );
   });
 
@@ -577,8 +577,8 @@ describe("update() integration", () => {
     const targetFull = path.join(tmpDir, targetRelative);
     const templateContent = fs.readFileSync(targetFull, "utf-8");
     const modifiedOldContent = removeSubagentsSection(templateContent).replace(
-      "# Trellis Instructions",
-      "# Custom Trellis Instructions",
+      "# Phronia Instructions",
+      "# Custom Phronia Instructions",
     );
     fs.writeFileSync(targetFull, modifiedOldContent);
 

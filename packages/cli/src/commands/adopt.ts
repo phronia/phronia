@@ -1,5 +1,5 @@
 /**
- * One-time adoption of an upstream Trellis project into Phronia.
+ * One-time adoption of an upstream Phronia project into Phronia.
  *
  * Contract (ADR-0002):
  * - user-owned content is never deleted; generated files are regenerated;

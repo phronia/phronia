@@ -41,7 +41,7 @@ export interface SpawnOptions {
   warnBeforeMs?: number;
   /** Files (or globs) to include in the worker's system prompt. */
   files?: string[];
-  /** Trellis jsonl manifests to expand into the system prompt. */
+  /** Phronia jsonl manifests to expand into the system prompt. */
   jsonls?: string[];
   scope?: string;
   /** Identity recorded as the `spawned` event author. Defaults to
@@ -114,7 +114,7 @@ function resolveSpawn(channelName: string, opts: SpawnOptions): ResolvedSpawn {
 }
 
 /**
- * Compose the worker's system prompt: Trellis channel protocol prefix
+ * Compose the worker's system prompt: Phronia channel protocol prefix
  * (placeholder) + agent body (if any).
  *
  * NOTE: protocol prefix lives in the system prompt — NOT in any user

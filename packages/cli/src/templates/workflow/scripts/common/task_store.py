@@ -1465,7 +1465,7 @@ def _auto_commit_archive(
     repo_root: Path,
     modified_children: list[str] | None = None,
 ) -> bool:
-    """Stage Trellis-owned task paths and commit after archive.
+    """Stage Phronia-owned task paths and commit after archive.
 
     Scoped narrowly to the archived task's source + destination paths
     plus any child task dirs whose ``task.json`` was edited (parent →

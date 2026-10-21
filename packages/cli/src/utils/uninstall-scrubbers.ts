@@ -22,7 +22,7 @@ export interface ScrubResult {
 /**
  * Test whether a hook command string references any of the given manifest paths.
  *
- * Trellis-emitted hook commands always have the shape
+ * Phronia-emitted hook commands always have the shape
  *   `<python-cmd> <manifest-path>`
  * so the trailing whitespace-delimited token is the script path. We compare
  * that last token (with surrounding quotes stripped) against the manifest
@@ -93,7 +93,7 @@ function isTrellisClaudeStatusLine(
  *
  * Strips every entry whose command references a path in `deletedPaths`,
  * then bottom-up cleans empty containers (matcher block, event array, hooks
- * object). The exact opt-in Trellis Claude statusLine command is also removed;
+ * object). The exact opt-in Phronia Claude statusLine command is also removed;
  * other keys outside `hooks` (e.g. `env`, `model`, `permissions`, `version`)
  * are preserved.
  */
@@ -242,7 +242,7 @@ export function scrubOpencodePackageJson(content: string): ScrubResult {
 }
 
 /**
- * Trellis-specific values written by the Pi configurator.
+ * Phronia-specific values written by the Pi configurator.
  *
  * The `extensions`/`skills`/`prompts` arrays are paths relative to `.pi/`. We
  * remove the exact entries that the Pi configurator emits.
@@ -328,7 +328,7 @@ export function scrubPiSettings(content: string): ScrubResult {
 /**
  * Scrub `.codex/config.toml`.
  *
- * The current Trellis-emitted file has three owned chunks:
+ * The current Phronia-emitted file has three owned chunks:
  * 1. The line `project_doc_fallback_filenames = ["AGENTS.md"]`.
  * 2. Comment lines derived from the current shipped Codex config template,
  *    plus an allowlist of legacy template comments.
@@ -336,8 +336,8 @@ export function scrubPiSettings(content: string): ScrubResult {
  *
  * Strategy: line-based removal. We strip:
  *  - the `project_doc_fallback_filenames = ...` line
- *  - any line that is *only* a known Trellis template comment
- *  - Trellis's exact `max_depth = 1`, retaining `[agents]` when user keys remain
+ *  - any line that is *only* a known Phronia template comment
+ *  - Phronia's exact `max_depth = 1`, retaining `[agents]` when user keys remain
  *  - blank lines that surrounded those removals
  *
  * If the user added their own non-trellis lines, they are preserved as-is.
@@ -345,16 +345,16 @@ export function scrubPiSettings(content: string): ScrubResult {
  */
 export function scrubCodexConfigToml(content: string): ScrubResult {
   const legacyCommentMarkers = [
-    "Project-scoped Codex defaults for Trellis workflows.",
+    "Project-scoped Codex defaults for Phronia workflows.",
     "Codex loads this after ~/.codex/config.toml when you work in this project.",
     "Keep AGENTS.md as the primary project instruction file.",
-    "NOTE: Trellis's SessionStart + UserPromptSubmit hooks require opt-in.",
+    "NOTE: Phronia's SessionStart + UserPromptSubmit hooks require opt-in.",
     "Add the following to your USER-level config at ~/.codex/config.toml",
     "(not this project file — features.* must be enabled globally):",
     "[features]",
     "hooks = true",
     "codex_hooks = true",
-    "Without this flag, hooks.json is ignored and Trellis context won't",
+    "Without this flag, hooks.json is ignored and Phronia context won't",
     "be injected into Codex sessions.",
   ];
 
@@ -389,7 +389,7 @@ export function scrubCodexConfigToml(content: string): ScrubResult {
       (line) => !isTrellisAssignment(line) && !isTrellisCommentLine(line),
     );
 
-  // Trellis currently owns `[agents].max_depth = 1`. Remove the assignment,
+  // Phronia currently owns `[agents].max_depth = 1`. Remove the assignment,
   // but retain the table header if user-owned keys remain in that table.
   const withoutAgentDepth: string[] = [];
   for (let index = 0; index < filteredLines.length; index += 1) {

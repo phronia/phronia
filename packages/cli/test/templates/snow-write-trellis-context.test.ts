@@ -128,7 +128,7 @@ function runHook(
   const env: NodeJS.ProcessEnv = {
     ...process.env,
     SNOW_CWD: repo,
-    // Avoid leaking host Trellis session identity into fixture runs.
+    // Avoid leaking host Phronia session identity into fixture runs.
     PHRONIA_CONTEXT_ID: "",
     SNOW_SESSION_ID: opts.env?.SNOW_SESSION_ID ?? "",
     ...opts.env,
@@ -203,14 +203,14 @@ describe("snow write-phronia-context.py execution", () => {
       expect(res.status).toBe(0);
       expect(res.payload).not.toBeNull();
       expect(res.payload?.additionalContext).toContain(
-        "# Trellis context (Snow CLI)",
+        "# Phronia context (Snow CLI)",
       );
       expect(res.payload?.additionalContext).toContain("Mode: session");
       expect(res.payload?.additionalContext).toContain(
         ".phronia/tasks/demo-task",
       );
       expect(res.payload?.additionalContext).toContain("prd.md summary");
-      expect(res.payload?.display).toContain("Trellis session context injected");
+      expect(res.payload?.display).toContain("Phronia session context injected");
 
       const logPath = path.join(repo, ".snow", "log", "phronia-context.txt");
       expect(fs.existsSync(logPath)).toBe(true);
@@ -239,7 +239,7 @@ describe("snow write-phronia-context.py execution", () => {
       // Compact inject should not embed large prd body.
       expect(res.payload?.additionalContext).not.toContain("prd.md summary");
       expect(res.payload?.additionalContext).toContain("prd.md: present");
-      expect(res.payload?.display).toContain("Trellis compact breadcrumb");
+      expect(res.payload?.display).toContain("Phronia compact breadcrumb");
 
       const log = fs.readFileSync(
         path.join(repo, ".snow", "log", "phronia-context.txt"),

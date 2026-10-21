@@ -14,7 +14,7 @@ import type { TemplateContext } from "../types/ai-tools.js";
  */
 export interface PlatformConfigureOptions {
   /**
-   * Claude Code only: install the opt-in Trellis statusLine
+   * Claude Code only: install the opt-in Phronia statusLine
    * (`trellis init --with-statusline`). Off by default — see
    * `configureClaude` in `claude.ts`.
    */
@@ -174,12 +174,12 @@ export function resolvePlaceholders(
  * `.agents/skills/` workspace alias — Codex, Gemini CLI 0.40+, etc.).
  *
  * Identical to {@link resolvePlaceholders} except that {@link CMD_REF} is
- * rendered in a platform-neutral form (`` `name` (Trellis command) ``)
+ * rendered in a platform-neutral form (`` `name` (Phronia command) ``)
  * instead of substituting a platform-specific prefix. This is the only
  * placeholder that varies between platforms in the auto-triggered skill templates
  * from `common/skills/`, so
  * neutralizing it makes the rendered SKILL.md files byte-identical regardless
- * of which Trellis configurator wrote them — eliminating the
+ * of which Phronia configurator wrote them — eliminating the
  * "last-writer-wins" collision when both Codex and Gemini target
  * `.agents/skills/`.
  *
@@ -204,7 +204,7 @@ export function resolvePlaceholdersNeutral(
   // Neutral form for the only collision-causing placeholder
   result = result.replace(
     RE_CMD_REF,
-    (_match, name: string) => `\`${name}\` (Trellis command)`,
+    (_match, name: string) => `\`${name}\` (Phronia command)`,
   );
   result = result.replace(RE_EXECUTOR_AI, context.executorAI);
   result = result.replace(RE_USER_ACTION_LABEL, context.userActionLabel);
@@ -276,7 +276,7 @@ export function wrapWithSkillFrontmatter(
  * SKILL_DESCRIPTIONS, which is long prose aimed at the skill matcher.
  */
 const COMMAND_DESCRIPTIONS: Record<string, string> = {
-  start: "Initialize a Trellis development session.",
+  start: "Initialize a Phronia development session.",
   continue: "Resume work on the current task at the correct phase.",
   "finish-work":
     "Wrap up the current session: quality gate, commit reminder, archive, journal.",
@@ -612,13 +612,13 @@ export function collectBothTemplates(
 
 export type SubAgentType = "implement" | "check";
 
-/** Build the standard "load Trellis context first" prelude block. */
+/** Build the standard "load Phronia context first" prelude block. */
 export function buildPullBasedPrelude(agentType: SubAgentType): string {
   // JSONL filenames stay as implement.jsonl / check.jsonl — they are internal
   // context buckets keyed by role (not by platform-visible agent name).
   const jsonl = agentType === "check" ? "check.jsonl" : "implement.jsonl";
 
-  return replacePythonCommandLiterals(`## Required: Load Trellis Context First
+  return replacePythonCommandLiterals(`## Required: Load Phronia Context First
 
 This platform does NOT auto-inject task context via hook. Before doing anything else, you MUST load context yourself.
 

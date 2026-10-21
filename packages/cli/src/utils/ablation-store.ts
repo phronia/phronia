@@ -1,5 +1,5 @@
 /**
- * External, versioned recovery storage for reversible full Trellis ablation.
+ * External, versioned recovery storage for reversible full Phronia ablation.
  *
  * The store intentionally contains only manifest-owned project paths and the
  * exact `.phronia/` tree. User-authored task/spec/workspace files may contain
@@ -120,7 +120,7 @@ export class AblationConflictError extends Error {
 
   public constructor(conflicts: AblationConflict[]) {
     super(
-      `Restore refused because ${conflicts.length} Trellis-managed path(s) changed while ablated.`,
+      `Restore refused because ${conflicts.length} Phronia-managed path(s) changed while ablated.`,
     );
     this.name = "AblationConflictError";
     this.conflicts = conflicts;
@@ -635,7 +635,7 @@ function acquireProjectLock(paths: TransactionPaths): void {
     }
     if (holderPid && pidAlive(holderPid)) {
       throw new Error(
-        `Another Trellis ablation operation is already in progress for this project (pid ${holderPid}).`,
+        `Another Phronia ablation operation is already in progress for this project (pid ${holderPid}).`,
       );
     }
     try {
@@ -645,7 +645,7 @@ function acquireProjectLock(paths: TransactionPaths): void {
     }
   }
   throw new Error(
-    "Unable to acquire the Trellis ablation-operation lock; retry the command.",
+    "Unable to acquire the Phronia ablation-operation lock; retry the command.",
   );
 }
 

@@ -27,7 +27,7 @@ describe("registry-config", () => {
   it("writes and reads registry spec source", () => {
     fs.writeFileSync(
       path.join(tmpDir, ".phronia", "config.yaml"),
-      "# Trellis Configuration\n",
+      "# Phronia Configuration\n",
       "utf-8",
     );
 
@@ -41,7 +41,7 @@ describe("registry-config", () => {
   it("writes and reads registry marketplace template source", () => {
     fs.writeFileSync(
       path.join(tmpDir, ".phronia", "config.yaml"),
-      "# Trellis Configuration\n",
+      "# Phronia Configuration\n",
       "utf-8",
     );
 
@@ -59,7 +59,7 @@ describe("registry-config", () => {
   it("preserves self-hosted SSH registry source strings", () => {
     fs.writeFileSync(
       path.join(tmpDir, ".phronia", "config.yaml"),
-      "# Trellis Configuration\n",
+      "# Phronia Configuration\n",
       "utf-8",
     );
 

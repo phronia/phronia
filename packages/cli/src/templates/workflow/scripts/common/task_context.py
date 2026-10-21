@@ -13,7 +13,7 @@ Note:
     entries during planning when the task needs sub-agent/spec context. See
     ``.phronia/workflow.md`` for the current planning artifact contract.
 
-    Older Trellis versions seeded those files with a ``{"_example": ...}``
+    Older Phronia versions seeded those files with a ``{"_example": ...}``
     placeholder row. ``cmd_validate`` now rejects that row so a task cannot
     validate locally and then fail PR preflight, which treats it as
     unresolved scaffolding.
@@ -270,7 +270,7 @@ def _resolve_context_entry_path(
 def _validate_jsonl(jsonl_file: Path, repo_root: Path, task_dir: Path | None = None) -> int:
     """Validate a single JSONL file.
 
-    ``{"_example": ...}`` placeholder rows written by older Trellis versions
+    ``{"_example": ...}`` placeholder rows written by older Phronia versions
     are hard errors: PR preflight rejects them as unresolved scaffolding, so
     accepting them here would pass locally and fail later. Other rows without
     a ``file`` field are skipped silently, matching what consumers do.

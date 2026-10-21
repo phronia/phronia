@@ -132,14 +132,14 @@ export const PLATFORM_MANAGED_DIRS = PLATFORM_IDS.flatMap((id) =>
   getManagedPaths(id),
 );
 
-/** All directories managed by Trellis (including .phronia itself) */
+/** All directories managed by Phronia (including .phronia itself) */
 export const ALL_MANAGED_DIRS = [".phronia", ...new Set(PLATFORM_MANAGED_DIRS)];
 
 /**
- * Detect platforms from Trellis-owned templates, not native config directories.
+ * Detect platforms from Phronia-owned templates, not native config directories.
  *
- * A platform directory may predate Trellis. The template hash manifest records
- * only files Trellis actually wrote, while the platform template registry
+ * A platform directory may predate Phronia. The template hash manifest records
+ * only files Phronia actually wrote, while the platform template registry
  * supplies each platform's distinct file layout.
  */
 export function getConfiguredPlatforms(cwd: string): Set<AITool> {
@@ -159,8 +159,8 @@ export function getConfiguredPlatforms(cwd: string): Set<AITool> {
       platforms.add(id);
     }
   }
-  // Back-compat: Windsurf was renamed to Devin. Require Trellis ownership or
-  // a Trellis-namespaced workflow so a native Windsurf directory is not enough.
+  // Back-compat: Windsurf was renamed to Devin. Require Phronia ownership or
+  // a Phronia-namespaced workflow so a native Windsurf directory is not enough.
   const legacyWindsurfRoot = ".windsurf/workflows";
   const hasTrackedWindsurfTemplate = Object.keys(hashes).some((relativePath) =>
     relativePath.startsWith(`${legacyWindsurfRoot}/phronia-`),

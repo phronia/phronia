@@ -61,7 +61,7 @@ describe("codex getAllAgents", () => {
 });
 
 describe("codex native sub-agent hooks", () => {
-  it("preserves main-session workflow injection and scopes SubagentStart to Trellis roles", () => {
+  it("preserves main-session workflow injection and scopes SubagentStart to Phronia roles", () => {
     const config = JSON.parse(getHooksConfig()) as {
       hooks: Record<
         string,
@@ -101,7 +101,7 @@ describe("codex getConfigTemplate", () => {
   // The structured [features.multi_agent_v2] table form is only accepted by
   // Codex CLI 0.131+. On 0.130 and earlier — including the codex CLI bundled
   // in the Codex desktop app — it aborts the whole config load with
-  // `data did not match any variant of untagged enum FeatureToml`. Trellis
+  // `data did not match any variant of untagged enum FeatureToml`. Phronia
   // no longer writes the block; this test guards against reintroducing it.
   it("does not write a [features.multi_agent_v2] block (Codex 0.130 compat)", () => {
     const config = getConfigTemplate();
@@ -111,7 +111,7 @@ describe("codex getConfigTemplate", () => {
   // #445 removed the per-agent `[features] multi_agent = false` guard (the
   // #240/#241 wait_agent-deadlock structural fix), relying on Codex's default
   // `agents.max_depth = 1`. That key is global/user-level, not settable inside
-  // an individual agent's .toml, so pin it here in the project config Trellis
+  // an individual agent's .toml, so pin it here in the project config Phronia
   // owns — this is the config surface that outranks a user's global override.
   it("pins agents.max_depth = 1 to guard against recursion reopening (#240, #241, #445)", () => {
     const config = getConfigTemplate();
@@ -223,7 +223,7 @@ describe("codex session-start.py compact SessionStart context", () => {
 
   it("uses compact task artifact guidance instead of sub-agent dispatch prose", () => {
     const content = fs.readFileSync(hookPath, "utf-8");
-    expect(content).toContain("Trellis compact SessionStart context");
+    expect(content).toContain("Phronia compact SessionStart context");
     expect(content).toContain("Task context order for implementation/check");
     expect(content).toContain("design.md if present");
     expect(content).not.toContain("<sub-agent-notice>");

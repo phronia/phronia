@@ -545,7 +545,7 @@ async function withGitRegistry<T>(
       "git",
       [
         "-c",
-        "user.name=Trellis Test",
+        "user.name=Phronia Test",
         "-c",
         "user.email=trellis@example.com",
         "commit",

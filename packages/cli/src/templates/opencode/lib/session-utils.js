@@ -8,11 +8,11 @@ import { debugLog } from "./phronia-context.js"
 const PYTHON_CMD = platform() === "win32" ? "python" : "python3"
 
 const FIRST_REPLY_NOTICE = `<first-reply-notice>
-On the first visible assistant reply in this session, briefly acknowledge that Trellis SessionStart context loaded.
+On the first visible assistant reply in this session, briefly acknowledge that Phronia SessionStart context loaded.
 Choose the acknowledgment language in this order:
 1. Use the language of the user's current request (the user message that triggered this reply).
 2. If that request has no clear natural language, use an explicitly established project communication language.
-3. If neither provides a language, output the language-neutral fallback exactly: \`Trellis SessionStart ✓\`.
+3. If neither provides a language, output the language-neutral fallback exactly: \`Phronia SessionStart ✓\`.
 Continue directly with the user's request after the acknowledgment.
 The acknowledgment must not alter the language used for the remainder of the response.
 This notice is one-shot: do not repeat it after the first visible assistant reply in this session.
@@ -45,8 +45,8 @@ function getTaskStatus(ctx, platformInput = null) {
   if (!taskRef) {
     return (
       "Status: NO ACTIVE TASK\n" +
-      "Next-Action: Classify the current turn before creating any Trellis task. " +
-      "Simple conversation / small task asks only whether this turn should create a Trellis task. " +
+      "Next-Action: Classify the current turn before creating any Phronia task. " +
+      "Simple conversation / small task asks only whether this turn should create a Phronia task. " +
       "Complex task asks whether task creation and planning are allowed."
     )
   }
@@ -376,7 +376,7 @@ export function buildSessionContext(ctx, platformInput = null) {
   const parts = []
 
   parts.push(`<session-context>
-Trellis compact SessionStart context. Use it to orient the session; load details on demand.
+Phronia compact SessionStart context. Use it to orient the session; load details on demand.
 </session-context>`)
   parts.push(FIRST_REPLY_NOTICE)
 

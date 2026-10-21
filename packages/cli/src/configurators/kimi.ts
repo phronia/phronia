@@ -8,14 +8,14 @@
  *   the same shared root (Kimi discovers `.agents/skills/` natively).
  * - `.kimi-code/skills/` — Kimi-private entry points: the user-invocable
  *   commands as skills (`/skill:phronia-start`, `/skill:phronia-continue`,
- *   `/skill:phronia-finish-work`) plus the Trellis agent prompts
+ *   `/skill:phronia-finish-work`) plus the Phronia agent prompts
  *   (phronia-implement / phronia-check / phronia-research) with the
  *   pull-based prelude on implement/check.
- * - `.kimi-code/agents/` — the same Trellis agent prompts as project-level
+ * - `.kimi-code/agents/` — the same Phronia agent prompts as project-level
  *   custom sub-agent definitions (Claude Code-compatible frontmatter), so
  *   the main session can dispatch `phronia-<name>` sub-agents directly.
  *
- * Trellis does not generate project-local Kimi settings or hooks.
+ * Phronia does not generate project-local Kimi settings or hooks.
  * Project-local Kimi settings go in `.kimi-code/local.toml`; hooks are
  * configured in `$KIMI_CODE_HOME/config.toml`.
  */
@@ -51,7 +51,7 @@ function resolveKimiCommandSkills(): ReturnType<typeof resolveAllAsSkills> {
   );
 }
 
-/** Trellis agent prompts as Kimi skills (and `.kimi-code/agents/` sub-agent
+/** Phronia agent prompts as Kimi skills (and `.kimi-code/agents/` sub-agent
  *  definitions), with the pull-based prelude on implement/check. */
 function resolveKimiAgentSkills(): AgentContent[] {
   return applyPullBasedPreludeMarkdown(getAllAgents());
@@ -74,7 +74,7 @@ export function collectKimiTemplates(): Map<string, string> {
     files.set(filePath, content);
   }
 
-  // 2. Commands-as-skills + Trellis agent prompts → `.kimi-code/skills/`.
+  // 2. Commands-as-skills + Phronia agent prompts → `.kimi-code/skills/`.
   const agentPrompts = resolveKimiAgentSkills();
   for (const [filePath, content] of collectSkillTemplates(".kimi-code/skills", [
     ...resolveKimiCommandSkills(),

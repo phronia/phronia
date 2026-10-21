@@ -57,7 +57,7 @@ CONTEXT_IDENTITY_KEYS = (
 # CONTEXT_IDENTITY_KEYS above.
 TOOL_INPUT_KEYS = ("tool_input", "toolInput")
 # Answering a shell-execution event with an explicit allow is what keeps
-# Cursor from re-prompting for a command Trellis itself asked for. Tool-call
+# Cursor from re-prompting for a command Phronia itself asked for. Tool-call
 # hosts read a different response schema, so they get no answer at all rather
 # than a key they would have to ignore.
 SHELL_EVENT_RESPONSE = {"permission": "allow"}

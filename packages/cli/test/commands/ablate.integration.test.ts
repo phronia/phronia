@@ -234,14 +234,14 @@ describe("ablate()/restore() integration", () => {
     vi.mocked(console.log).mockClear();
     await ablate({ yes: true });
     expect(console.log).toHaveBeenCalledWith(
-      expect.stringContaining("Trellis is not installed in this project."),
+      expect.stringContaining("Phronia is not installed in this project."),
     );
 
     vi.mocked(console.log).mockClear();
     await restore({ yes: true });
     expect(console.log).toHaveBeenCalledWith(
       expect.stringContaining(
-        "No Trellis ablation transaction exists for this project.",
+        "No Phronia ablation transaction exists for this project.",
       ),
     );
     expect(fs.readdirSync(projectDir)).toEqual([]);

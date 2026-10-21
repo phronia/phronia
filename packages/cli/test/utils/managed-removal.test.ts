@@ -86,6 +86,6 @@ describe("managed-removal strict planning", () => {
         { ".codex/hooks.json": "hash" },
         { strictPaths: true },
       ),
-    ).toThrow(/Cannot prove Trellis content was removed/);
+    ).toThrow(/Cannot prove Phronia content was removed/);
   });
 });

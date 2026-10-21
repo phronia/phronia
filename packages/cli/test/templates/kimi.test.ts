@@ -63,7 +63,7 @@ describe("kimi pull-based prelude injection", () => {
         agent.name === "phronia-implement" ||
         agent.name === "phronia-check"
       ) {
-        expect(agent.content).toContain("Load Trellis Context First");
+        expect(agent.content).toContain("Load Phronia Context First");
         expect(agent.content).toContain("task.py current --source");
       }
     }
@@ -74,7 +74,7 @@ describe("kimi pull-based prelude injection", () => {
     const research = agents.find((agent) => agent.name === "phronia-research");
     expect(research).toBeDefined();
     if (!research) return;
-    expect(research.content).not.toContain("Load Trellis Context First");
+    expect(research.content).not.toContain("Load Phronia Context First");
     expect(research.content).toContain("{TASK_DIR}/research/");
   });
 });
@@ -90,7 +90,7 @@ describe("kimi collectKimiTemplates", () => {
       true,
     );
 
-    // Trellis agent prompts (also installed as `.kimi-code/agents/*.md`)
+    // Phronia agent prompts (also installed as `.kimi-code/agents/*.md`)
     expect(files.has(".kimi-code/skills/phronia-implement/SKILL.md")).toBe(
       true,
     );
@@ -98,9 +98,9 @@ describe("kimi collectKimiTemplates", () => {
     expect(files.has(".kimi-code/skills/phronia-research/SKILL.md")).toBe(true);
 
     const implement = files.get(".kimi-code/skills/phronia-implement/SKILL.md");
-    expect(implement).toContain("Load Trellis Context First");
+    expect(implement).toContain("Load Phronia Context First");
     const research = files.get(".kimi-code/skills/phronia-research/SKILL.md");
-    expect(research).not.toContain("Load Trellis Context First");
+    expect(research).not.toContain("Load Phronia Context First");
 
     // Custom sub-agent definitions under .kimi-code/agents/ mirror the skill
     // copies (pull-based prelude included).
@@ -115,14 +115,14 @@ describe("kimi collectKimiTemplates", () => {
       expect(agent).toContain("tools: ");
     }
     expect(files.get(".kimi-code/agents/phronia-implement.md")).toContain(
-      "Load Trellis Context First",
+      "Load Phronia Context First",
     );
     expect(files.get(".kimi-code/agents/phronia-research.md")).not.toContain(
-      "Load Trellis Context First",
+      "Load Phronia Context First",
     );
 
     // No hooks/settings/extension files — Kimi has no project-level hook or
-    // settings surface Trellis may write.
+    // settings surface Phronia may write.
     for (const key of files.keys()) {
       expect(key.startsWith(".kimi-code/hooks")).toBe(false);
       expect(key).not.toBe(".kimi-code/settings.json");

@@ -118,7 +118,7 @@ type ConflictAction = "overwrite" | "skip" | "create-new";
 const CLAUDE_SETTINGS_PATH = ".claude/settings.json";
 const LEGACY_UNTRACKED_AGENTS_MD_BLOCK_HASHES = new Set<string>([
   // v0.5.0-beta.17 and earlier wrote AGENTS.md but did not hash-track it.
-  // This hash is the pristine Trellis-managed block before the Subagents
+  // This hash is the pristine Phronia-managed block before the Subagents
   // section was added, so old untouched projects can be updated without a
   // false "modified by you" conflict.
   "c1f511b1cfc1902f2147da159f09cc51f380b0c9e341cdb3ac5dea5233f3e307",
@@ -700,11 +700,11 @@ export function normalizeLegacyWorkflowPath(relativePath: string): string {
 /**
  * Detect if legacy Codex upgrade is needed.
  *
- * Old Trellis versions used `.agents/skills/` as codex's configDir.
+ * Old Phronia versions used `.agents/skills/` as codex's configDir.
  * New versions use `.codex/` for Codex-specific config and `.agents/skills/`
  * as a shared layer.
  *
- * Detection: Trellis-tracked hashes contain `.agents/skills/` entries
+ * Detection: Phronia-tracked hashes contain `.agents/skills/` entries
  * but `.codex/` does not exist. This avoids misclassifying repos that
  * have `.agents/skills/` from other tools (Kimi CLI, Amp, etc.).
  *
@@ -1583,9 +1583,9 @@ function isFileSafeToReplace(
  */
 /**
  * Whether the manifest records any file under `dirRelativePath` — i.e. whether
- * Trellis actually created this directory. Used to gate rename-dir migrations:
- * a directory Trellis never wrote (e.g. a user's own `.windsurf/` editor
- * config that merely shares a path with a retired Trellis platform dir) must
+ * Phronia actually created this directory. Used to gate rename-dir migrations:
+ * a directory Phronia never wrote (e.g. a user's own `.windsurf/` editor
+ * config that merely shares a path with a retired Phronia platform dir) must
  * not be auto-moved.
  */
 export function dirHasManifestEntries(
@@ -1677,13 +1677,13 @@ export function classifyMigrations(
           result.conflict.push(item);
         }
       } else if (dirHasManifestEntries(item.from, hashes)) {
-        // Trellis created this directory (the manifest tracks files under it),
+        // Phronia created this directory (the manifest tracks files under it),
         // so the rename is ours to make.
         result.auto.push(item);
       } else {
         // Target absent and the source has no manifest record: this is very
         // likely a user-owned directory that merely shares a path with a
-        // retired Trellis platform dir (e.g. a real `.windsurf/` editor
+        // retired Phronia platform dir (e.g. a real `.windsurf/` editor
         // config). Skipping avoids silently moving the user's data out from
         // under their editor — even under --force, since skip never executes.
         result.skip.push(item);
@@ -1762,7 +1762,7 @@ function printMigrationSummary(classified: ClassifiedMigrations): void {
 
   if (classified.skip.length > 0) {
     console.log(
-      chalk.gray("  ○ Skipping (not found, protected, or not Trellis-owned):"),
+      chalk.gray("  ○ Skipping (not found, protected, or not Phronia-owned):"),
     );
     for (const item of classified.skip.slice(0, 3)) {
       console.log(chalk.gray(`    ${item.from}`));
@@ -1822,7 +1822,7 @@ async function promptMigrationAction(
           .join("\n"),
       )
     : chalk.gray(
-        `  Why prompted: file content doesn't match the Trellis template hash\n` +
+        `  Why prompted: file content doesn't match the Phronia template hash\n` +
           `  for this path — usually local customization. If unsure, pick [b].`,
       );
 
@@ -2139,9 +2139,9 @@ export function renameTracesToJournal(workspaceDir: string): {
 export async function update(options: UpdateOptions): Promise<void> {
   const cwd = process.cwd();
 
-  // Check if Trellis is initialized
+  // Check if Phronia is initialized
   if (!fs.existsSync(path.join(cwd, DIR_NAMES.WORKFLOW))) {
-    console.log(chalk.red("Error: Trellis not initialized in this directory."));
+    console.log(chalk.red("Error: Phronia not initialized in this directory."));
     console.log(chalk.gray("Run 'trellis init' first."));
     return;
   }
@@ -2229,7 +2229,7 @@ export async function update(options: UpdateOptions): Promise<void> {
     );
   }
 
-  // Detect legacy Codex (has .agents/skills/ tracked by Trellis but no .codex/)
+  // Detect legacy Codex (has .agents/skills/ tracked by Phronia but no .codex/)
   // NOTE: this MUST happen before pruneOrphanManifestKeys below, since the
   // detector reads the raw manifest looking for .agents/skills/ markers that
   // the prune step would otherwise consider orphans (codex hasn't been added
@@ -2563,7 +2563,7 @@ export async function update(options: UpdateOptions): Promise<void> {
           );
           console.log(
             chalk.gray(
-              "  Hash-verified: only files matching known Trellis templates are deleted. Your local customizations (hash mismatch) are still preserved.",
+              "  Hash-verified: only files matching known Phronia templates are deleted. Your local customizations (hash mismatch) are still preserved.",
             ),
           );
         }

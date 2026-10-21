@@ -8,7 +8,7 @@ import {
   type ChannelScope,
 } from "./schema.js";
 
-/** Top-level Trellis channels directory. */
+/** Top-level Phronia channels directory. */
 export function channelRoot(): string {
   const env = process.env.PHRONIA_CHANNEL_ROOT;
   if (env && env.length > 0) return path.resolve(env);

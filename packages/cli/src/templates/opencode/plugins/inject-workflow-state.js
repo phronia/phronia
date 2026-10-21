@@ -1,6 +1,6 @@
 /* global process */
 /**
- * Trellis Workflow State Injection Plugin
+ * Phronia Workflow State Injection Plugin
  *
  * Per-turn UserPromptSubmit equivalent for OpenCode.
  *
@@ -188,7 +188,7 @@ export default async ({ directory }) => {
         try {
           const messages = output?.messages
           const platformInput = platformInputFromMessages(messages)
-          // Skip Trellis sub-agent turns — the per-turn breadcrumb is for the
+          // Skip Phronia sub-agent turns — the per-turn breadcrumb is for the
           // main session only; sub-agent context comes from the parent's
           // tool.execute.before injection.
           if (isTrellisSubagent(platformInput)) {

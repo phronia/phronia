@@ -294,7 +294,7 @@ describe("shouldExcludeFromBackup", () => {
 
   // Windows `path.relative` returns backslash paths. The slash-prefixed
   // exclude patterns (/worktrees/, /tasks/, /spec/, ...) must still match
-  // after normalization, otherwise Trellis's native worktree protection
+  // after normalization, otherwise Phronia's native worktree protection
   // silently fails on Windows and `collectAllFiles` descends into nested
   // full project copies (observed in the field: stack-overflow crash on
   // `trellis update --migrate`, late April 2026).
@@ -412,7 +412,7 @@ describe("classifyMigrations rename-dir ownership gate", () => {
 
   beforeEach(() => {
     tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), "phronia-renamedir-"));
-    // A user-owned .windsurf/workflows that Trellis never created.
+    // A user-owned .windsurf/workflows that Phronia never created.
     fs.mkdirSync(path.join(tmpDir, ".windsurf", "workflows"), {
       recursive: true,
     });
@@ -437,7 +437,7 @@ describe("classifyMigrations rename-dir ownership gate", () => {
     expect(result.skip[0].from).toBe(".windsurf/workflows");
   });
 
-  it("auto-migrates when Trellis owns the source dir (manifest has entries)", () => {
+  it("auto-migrates when Phronia owns the source dir (manifest has entries)", () => {
     const hashes = { ".windsurf/workflows/user.md": "some-hash" };
     const result = classifyMigrations(migration, tmpDir, hashes, new Map());
     expect(result.skip).toHaveLength(0);

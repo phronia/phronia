@@ -18,7 +18,7 @@
  *     `.phronia/` wholesale via `fs.rmSync(..., { recursive: true })`, so
  *     manifest accuracy there doesn't affect uninstall data-loss. `update`
  *     also relies on these entries to detect user-modified workflow files.
- *   - Root-level `AGENTS.md` is kept only when it still looks Trellis-managed
+ *   - Root-level `AGENTS.md` is kept only when it still looks Phronia-managed
  *     (contains the managed block markers) or is missing on disk. This
  *     self-heals old poisoned manifests for user-owned AGENTS.md files that
  *     predated init and were skipped.
@@ -58,7 +58,7 @@ export interface PruneResult {
 /**
  * Compute the union of "what trellis writes" across:
  *   - every configured platform's collectTemplates() output
- *   - root-level AGENTS.md when it still carries Trellis managed-block markers
+ *   - root-level AGENTS.md when it still carries Phronia managed-block markers
  *   - every migration manifest's from/to path (preserve so legitimate
  *     pending migrations can find their source/target)
  */

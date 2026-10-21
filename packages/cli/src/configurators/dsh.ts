@@ -2,7 +2,7 @@
  * DeepSeek Harness (dsh) configurator.
  *
  * dsh is a class-2 pull-based platform (agentCapable, no shipped
- * session-start hook, no project-level hooks/settings Trellis may write).
+ * session-start hook, no project-level hooks/settings Phronia may write).
  * The dsh agent loads skills by name through its skill-loader tool and
  * discovers them from the project roots `<projectRoot>/.dsh/skills`
  * (rank 100) and `<projectRoot>/.agents/skills` (rank 200). Two output

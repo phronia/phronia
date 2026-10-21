@@ -2,7 +2,7 @@
   "version": "1.0.0",
   "enabled": true,
   "name": "phronia-workflow-state",
-  "description": "Inject Trellis workflow state on each prompt",
+  "description": "Inject Phronia workflow state on each prompt",
   "when": {
     "type": "promptSubmit"
   },

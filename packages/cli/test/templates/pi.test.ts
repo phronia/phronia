@@ -182,7 +182,7 @@ function createMinimalTrellisRoot(): string {
     join(root, ".phronia", "workflow.md"),
     [
       "[workflow-state:no_task]",
-      "No active task. First classify the current turn and ask for task-creation consent before creating any Trellis task.",
+      "No active task. First classify the current turn and ask for task-creation consent before creating any Phronia task.",
       "[/workflow-state:no_task]",
       "",
     ].join("\n"),
@@ -203,7 +203,7 @@ function createMinimalTrellisRoot(): string {
 }
 
 describe("pi templates", () => {
-  it("provides the three Trellis sub-agent definitions", () => {
+  it("provides the three Phronia sub-agent definitions", () => {
     const agents = getAllAgents();
     expect(agents.map((agent) => agent.name).sort()).toEqual([
       "phronia-check",
@@ -263,7 +263,7 @@ describe("pi templates", () => {
 
     // Tool name + label avoid collision with community subagent packages.
     expect(extension).toContain('name: "trellis_subagent"');
-    expect(extension).toContain('label: "Trellis Subagent"');
+    expect(extension).toContain('label: "Phronia Subagent"');
 
     // Schema must declare the three dispatch modes and the thinking enum so the LLM
     // can pick a valid mode and override thinking per call.
@@ -278,12 +278,12 @@ describe("pi templates", () => {
     expect(extension).toContain("Active task:");
   });
 
-  it("extension wires the Pi events Trellis needs for context flow", () => {
+  it("extension wires the Pi events Phronia needs for context flow", () => {
     const extension = getExtensionTemplate();
 
     // session_start: notify-only welcome
     expect(extension).toContain('pi.on?.("session_start"');
-    // input: not used; Trellis must not rewrite submitted user text
+    // input: not used; Phronia must not rewrite submitted user text
     expect(extension).not.toContain('pi.on?.("input"');
     // before_agent_start: preserves system prompt context and persists hidden runtime context
     expect(extension).toContain('pi.on?.("before_agent_start"');
@@ -334,7 +334,7 @@ describe("pi templates", () => {
 
     expect(first.systemPrompt).toContain("BASE");
     expect(first.systemPrompt).toContain(
-      "Trellis compact SessionStart context",
+      "Phronia compact SessionStart context",
     );
     expect(first.systemPrompt).toContain("<first-reply-notice>");
     expect(first.systemPrompt).toContain("the user's current request");
@@ -345,7 +345,7 @@ describe("pi templates", () => {
     expect(first.systemPrompt).toContain(
       "explicitly established project communication language",
     );
-    expect(first.systemPrompt).toContain("Trellis SessionStart ✓");
+    expect(first.systemPrompt).toContain("Phronia SessionStart ✓");
     expect(first.systemPrompt).toContain(
       "Continue directly with the user's request",
     );
@@ -358,11 +358,11 @@ describe("pi templates", () => {
       "exactly one short Chinese sentence",
     );
     expect(first.systemPrompt).not.toContain(
-      "Trellis SessionStart 已注入：workflow、当前任务状态、开发者身份、git 状态、active tasks、spec 索引已加载。",
+      "Phronia SessionStart 已注入：workflow、当前任务状态、开发者身份、git 状态、active tasks、spec 索引已加载。",
     );
     expect(first.systemPrompt).toContain("<phronia-workflow>");
     expect(first.systemPrompt).toContain("Phase 1: Plan");
-    expect(first.systemPrompt).toContain("No active Trellis task found");
+    expect(first.systemPrompt).toContain("No active Phronia task found");
     expect(first.systemPrompt).not.toContain("<workflow-state>");
     // The system prompt carries startup's session-overview snapshot.
     expect(first.systemPrompt).toContain("<session-overview>");
@@ -376,7 +376,7 @@ describe("pi templates", () => {
     expect("timestamp" in first.message).toBe(false);
     expect(first.message.content).not.toContain("BASE");
     expect(first.message.content).not.toContain(
-      "Trellis compact SessionStart context",
+      "Phronia compact SessionStart context",
     );
     expect(first.message.content).toContain("<workflow-state>");
     expect(first.message.content).toContain("Status: no_task");
@@ -440,7 +440,7 @@ describe("pi templates", () => {
       };
 
     const first = fire();
-    expect(first.systemPrompt).toContain("No active Trellis task found");
+    expect(first.systemPrompt).toContain("No active Phronia task found");
 
     // A task is created and activated mid-session.
     const taskDir = join(root, ".phronia", "tasks", "07-07-cache-fix");
@@ -1198,7 +1198,7 @@ fallbackModels:
   it("extension validates agent definition before spawning a child pi process", () => {
     const extension = getExtensionTemplate();
 
-    // Non-Trellis agent calls must short-circuit and point users to community
+    // Non-Phronia agent calls must short-circuit and point users to community
     // subagent packages instead of silently spawning a child pi process with
     // a missing agent definition.
     expect(extension).toContain("isTrellisAgent(root, agentName)");
@@ -1376,8 +1376,8 @@ describe("pi extension: context injection limits (issue #441)", () => {
       const out = buildContextForTest(root, "phronia-implement", SESSION_KEY);
       expect(out).toContain("=== small.md ===\nsmall spec content");
       expect(out).toContain("prd body");
-      expect(out).not.toContain("[Trellis: truncated");
-      expect(out).not.toContain("[Trellis: not inlined");
+      expect(out).not.toContain("[Phronia: truncated");
+      expect(out).not.toContain("[Phronia: not inlined");
     });
 
     it("keeps binary jsonl references as notices even when limits are unlimited", () => {
@@ -1409,10 +1409,10 @@ describe("pi extension: context injection limits (issue #441)", () => {
       const out = buildContextForTest(root, "phronia-implement", SESSION_KEY);
 
       expect(out).toContain(
-        "[Trellis: not inlined (binary file) — design.png (10 bytes): visual baseline]",
+        "[Phronia: not inlined (binary file) — design.png (10 bytes): visual baseline]",
       );
       expect(out).toContain(
-        "[Trellis: not inlined (binary file) — invalid.bin (3 bytes): legacy export]",
+        "[Phronia: not inlined (binary file) — invalid.bin (3 bytes): legacy export]",
       );
       expect(out).not.toContain("=== design.png ===");
       expect(out).not.toContain("=== invalid.bin ===");
@@ -1438,7 +1438,7 @@ describe("pi extension: context injection limits (issue #441)", () => {
       const out = buildContextForTest(root, "phronia-implement", SESSION_KEY);
 
       expect(out).toContain(`=== multibyte.md ===\n${multiByteContent}`);
-      expect(out).not.toContain("[Trellis: not inlined (binary file)");
+      expect(out).not.toContain("[Phronia: not inlined (binary file)");
     });
 
     it("classifies a file as binary when binary bytes appear only at the end", () => {
@@ -1460,7 +1460,7 @@ describe("pi extension: context injection limits (issue #441)", () => {
       const out = buildContextForTest(root, "phronia-implement", SESSION_KEY);
 
       expect(out).toContain(
-        `[Trellis: not inlined (binary file) — mixed.dat (${mixed.length} bytes): mixed content]`,
+        `[Phronia: not inlined (binary file) — mixed.dat (${mixed.length} bytes): mixed content]`,
       );
       expect(out).not.toContain("=== mixed.dat ===");
     });
@@ -1480,7 +1480,7 @@ describe("pi extension: context injection limits (issue #441)", () => {
         128 * 1024 + 1024,
       );
       expect(out).toContain(
-        "[Trellis: truncated at 32768 bytes — read big.txt for the full content]",
+        "[Phronia: truncated at 32768 bytes — read big.txt for the full content]",
       );
     });
 
@@ -1513,10 +1513,10 @@ describe("pi extension: context injection limits (issue #441)", () => {
       const out = buildContextForTest(root, "phronia-implement", SESSION_KEY);
       expect(out).toContain("=== f1.txt ===\n" + "1".repeat(50));
       expect(out).toContain(
-        "[Trellis: not inlined (total context limit reached) — f2.txt (50 bytes): second]",
+        "[Phronia: not inlined (total context limit reached) — f2.txt (50 bytes): second]",
       );
       expect(out).toContain(
-        "[Trellis: not inlined (total context limit reached) — f3.txt (50 bytes): third]",
+        "[Phronia: not inlined (total context limit reached) — f3.txt (50 bytes): third]",
       );
       expect(out).not.toContain("=== f2.txt ===");
       expect(out).not.toContain("=== f3.txt ===");
@@ -1544,7 +1544,7 @@ describe("pi extension: context injection limits (issue #441)", () => {
       const { buildContextForTest } = loadExtensionInternals();
       const out = buildContextForTest(root, "phronia-implement", SESSION_KEY);
       expect(out).toContain("=== big.txt ===\n" + bigContent);
-      expect(out).not.toContain("[Trellis: not inlined");
+      expect(out).not.toContain("[Phronia: not inlined");
     });
 
     it("artifacts (prd/design/implement.md) obey max_artifact_bytes independently of max_file_bytes", () => {
@@ -1570,7 +1570,7 @@ describe("pi extension: context injection limits (issue #441)", () => {
       expect(out).toContain("P".repeat(20));
       expect(out).not.toContain("P".repeat(21));
       expect(out).toContain(
-        `[Trellis: truncated at 20 bytes — read ${relTaskDir}/prd.md for the full content]`,
+        `[Phronia: truncated at 20 bytes — read ${relTaskDir}/prd.md for the full content]`,
       );
     });
   });

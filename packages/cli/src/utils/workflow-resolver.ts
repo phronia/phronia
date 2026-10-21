@@ -31,7 +31,7 @@ import {
 /**
  * The id used to refer to the bundled native workflow.
  *
- * Treated as Trellis-managed for hash-tracking: when this id is selected by
+ * Treated as Phronia-managed for hash-tracking: when this id is selected by
  * `init --workflow` or `trellis workflow`, `.phronia/workflow.md` stays in
  * `.template-hashes.json`. Any other id is user-managed local workflow and
  * must be removed from the hash file (the durable-state contract in
@@ -91,9 +91,9 @@ function nativeListingEntry(): WorkflowTemplateListing {
   return {
     id: NATIVE_WORKFLOW_ID,
     type: "workflow",
-    name: "Native Trellis Workflow",
+    name: "Native Phronia Workflow",
     description:
-      "Default Trellis Plan / Execute / Finish workflow bundled with the CLI",
+      "Default Phronia Plan / Execute / Finish workflow bundled with the CLI",
     path: "bundled:trellis/workflow.md",
     source: "bundled",
   };

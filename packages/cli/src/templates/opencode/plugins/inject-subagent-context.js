@@ -1,6 +1,6 @@
 /* global process */
 /**
- * Trellis Context Injection Plugin
+ * Phronia Context Injection Plugin
  *
  * Injects context when Task tool is called with supported subagent types.
  * Uses OpenCode's tool.execute.before hook.

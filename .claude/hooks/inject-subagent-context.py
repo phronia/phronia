@@ -12,7 +12,7 @@ Core Design Philosophy:
 
 Trigger: PreToolUse (before Task tool call)
 
-Context Source: Trellis active task resolver points to task directory
+Context Source: Phronia active task resolver points to task directory
 - implement.jsonl - Implement agent dedicated context
 - check.jsonl     - Check agent dedicated context
 - prd.md          - Requirements document
@@ -307,7 +307,7 @@ def _read_file_bytes(base_path: str, file_path: str) -> bytes | None:
 
 
 def _truncate_notice(path: str, cap: int) -> str:
-    return f"\n[Trellis: truncated at {cap} bytes — read {path} for the full content]"
+    return f"\n[Phronia: truncated at {cap} bytes — read {path} for the full content]"
 
 
 def _is_binary_content(data: bytes) -> bool:
@@ -323,14 +323,14 @@ def _is_binary_content(data: bytes) -> bool:
 
 def _binary_notice(path: str, size: int, reason: str) -> str:
     return (
-        f"[Trellis: not inlined (binary file) — "
+        f"[Phronia: not inlined (binary file) — "
         f"{path} ({size} bytes): {reason}]"
     )
 
 
 def _index_notice(path: str, size: int, reason: str) -> str:
     return (
-        f"[Trellis: not inlined (total context limit reached) — "
+        f"[Phronia: not inlined (total context limit reached) — "
         f"{path} ({size} bytes): {reason}]"
     )
 
@@ -423,7 +423,7 @@ def read_jsonl_entries(base_path: str, jsonl_path: str) -> list[dict]:
         {"file": "path/to/dir/", "type": "directory", "reason": "..."}
         {"_example": "..."}          # legacy placeholder — skipped (no `file` field)
 
-    Rows without a ``file`` field (e.g. the placeholder line older Trellis
+    Rows without a ``file`` field (e.g. the placeholder line older Phronia
     versions wrote at ``task.py create`` time) are skipped silently. If the
     resulting entry list is empty, a stderr warning is emitted so the operator
     can debug missing context.
@@ -521,7 +521,7 @@ def get_agent_context(
         # the prompt itself so the sub-agent compensates instead of assuming
         # the spec context was complete.
         return (
-            f"[Trellis] {agent_jsonl} has no curated entries, so no spec/research "
+            f"[Phronia] {agent_jsonl} has no curated entries, so no spec/research "
             "context was injected. Before working, read the guidelines relevant "
             "to the code you will touch under .phronia/spec/, and treat the task "
             "artifacts below as the only prepared context."
@@ -902,7 +902,7 @@ def _hook_event_name(input_data: dict) -> str:
 
 
 def _codex_subagent_type(input_data: dict) -> str:
-    """Return a Trellis Codex agent type only for a native start event."""
+    """Return a Phronia Codex agent type only for a native start event."""
     if _hook_event_name(input_data) != "SubagentStart":
         return ""
     agent_type = _string_value(
@@ -919,11 +919,11 @@ def build_codex_subagent_context(
     """Build developer context for a native, already-dispatched Codex role."""
     role = subagent_type.removeprefix("phronia-")
     return f"""<!-- phronia-hook-injected -->
-# Trellis Native {role.title()} Subagent
+# Phronia Native {role.title()} Subagent
 
 You are the dispatched `{subagent_type}` role for this task. Perform that role
 directly; do not follow main-session dispatch or wait instructions, and do not
-spawn another Trellis subagent.
+spawn another Phronia subagent.
 
 Active task: {task_dir}
 
@@ -933,7 +933,7 @@ Active task: {task_dir}
 
 
 def _handle_codex_subagent_start(input_data: dict) -> None:
-    """Emit Codex developer context for a recognised native Trellis subagent.
+    """Emit Codex developer context for a recognised native Phronia subagent.
 
     The event supplies the parent session id. Disabling the generic
     single-session fallback is essential here: native starts must never borrow

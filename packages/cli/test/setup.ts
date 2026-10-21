@@ -1,4 +1,4 @@
-// Strip host-shell session env vars so the OpenCode / Trellis context
+// Strip host-shell session env vars so the OpenCode / Phronia context
 // resolvers under test fall through to platform-input-derived keys
 // instead of picking up whatever the dev's terminal happens to export.
 import path from "node:path";
