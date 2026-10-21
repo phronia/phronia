@@ -1,0 +1,8 @@
+{"file": ".trellis/spec/cli/backend/index.md", "reason": "Quality checklist entry point"}
+{"file": ".trellis/spec/cli/backend/quality-guidelines.md", "reason": "Check typed APIs and forbidden patterns"}
+{"file": ".trellis/spec/cli/backend/filesystem-safety.md", "reason": "Check temp-dir writes and cleanup in fixture/idempotence tests"}
+{"file": ".trellis/spec/cli/backend/migrations.md", "reason": "Check that B0 does not alter migration behavior"}
+{"file": ".trellis/spec/cli/backend/workflow-state-contract.md", "reason": "Check that no status writer or hook behavior changed"}
+{"file": ".trellis/spec/core/backend/index.md", "reason": "Check that testing utilities do not become core dependencies"}
+{"file": "docs/adr/0001-fork-baseline.md", "reason": "Verify baseline claims match observed results"}
+{"file": "docs/adr/0003-layered-architecture.md", "reason": "Verify testing utilities do not leak into product layers"}

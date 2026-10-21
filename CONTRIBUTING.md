@@ -74,9 +74,29 @@ pnpm lint        # ESLint for TypeScript
 pnpm lint:py     # Type checking for Python (basedpyright)
 pnpm lint:all    # Run both
 pnpm typecheck   # TypeScript type checking
+pnpm verify      # typecheck + lint + build + full test suite
+pnpm test:idempotence   # dogfood tree matches template rendering
+pnpm bench:hooks        # hook cold-start p50/p95 (baseline, not a gate)
 ```
 
 > **Note:** Pre-commit hooks will automatically run `eslint --fix` and `prettier --write` on staged `.ts` files.
+
+### Refactor branches (Phronia fork)
+
+The fork is being restructured in batches. See `docs/adr/0006-batch-roadmap.md`
+for the batch list and gates.
+
+- Branch: `phronia/B<n>-<slug>`.
+- Commit prefix: `refactor(B<n>/T<x>): ...`.
+- Every batch must pass `pnpm verify`; batches touching generated files must
+  also pass `pnpm test:idempotence`.
+- Do not hand-edit generated `.trellis/` (later `.phronia/`) or platform
+  directories. Change the template under `packages/cli/src/templates/` and
+  regenerate.
+- Decisions live in `docs/adr/`. A deviation from an accepted ADR needs a new
+  ADR.
+- Removing or rewriting an upstream file requires a row in
+  `docs/legal/modification-log.md`.
 
 ## Project Structure
 

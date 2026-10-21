@@ -1,0 +1,20 @@
+{
+  "version": 1,
+  "recordedAt": "2026-10-21",
+  "note": "Known upstream dogfood drift recorded before the Phronia refactor. B1 regenerates the dogfood tree from templates; after B1 this list must be empty.",
+  "modified": [
+    ".agents/skills/trellis-meta/references/platform-files/platform-map.md",
+    ".claude/hooks/inject-subagent-context.py",
+    ".claude/skills/trellis-meta/references/platform-files/platform-map.md",
+    ".codex/hooks/inject-subagent-context.py",
+    ".cursor/hooks/inject-subagent-context.py",
+    ".cursor/skills/trellis-meta/references/platform-files/platform-map.md",
+    ".opencode/skills/trellis-meta/references/platform-files/platform-map.md",
+    ".pi/extensions/trellis/index.ts",
+    ".trellis/config.yaml",
+    ".trellis/workflow.md"
+  ],
+  "deleted": [
+    ".opencode/package.json"
+  ]
+}

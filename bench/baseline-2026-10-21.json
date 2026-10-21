@@ -1,0 +1,77 @@
+{
+  "capturedAt": "2026-10-21T07:03:00.166Z",
+  "node": "v25.9.0",
+  "python": "Python 3.9.23",
+  "platform": "darwin",
+  "arch": "arm64",
+  "repoRoot": "/Users/magicdian/Documents/personal_project/phronia",
+  "taskRef": ".trellis/tasks/06-17-architecture-diagram",
+  "iterations": 20,
+  "cases": [
+    {
+      "name": "python-startup",
+      "iterations": 20,
+      "minMs": 15.91,
+      "p50Ms": 16.5,
+      "p95Ms": 17.3,
+      "p99Ms": 17.93,
+      "meanMs": 16.57,
+      "maxMs": 17.93,
+      "exitStatus": 0,
+      "stdoutBytes": 0,
+      "stderr": ""
+    },
+    {
+      "name": "session-start",
+      "iterations": 20,
+      "minMs": 82.88,
+      "p50Ms": 87.39,
+      "p95Ms": 91.75,
+      "p99Ms": 153.13,
+      "meanMs": 90.4,
+      "maxMs": 153.13,
+      "exitStatus": 0,
+      "stdoutBytes": 16407,
+      "stderr": ""
+    },
+    {
+      "name": "workflow-state",
+      "iterations": 20,
+      "minMs": 37.02,
+      "p50Ms": 38.39,
+      "p95Ms": 39.95,
+      "p99Ms": 41.04,
+      "meanMs": 38.42,
+      "maxMs": 41.04,
+      "exitStatus": 0,
+      "stdoutBytes": 564,
+      "stderr": ""
+    },
+    {
+      "name": "subagent-context",
+      "iterations": 20,
+      "minMs": 40.11,
+      "p50Ms": 41.05,
+      "p95Ms": 41.97,
+      "p99Ms": 43.05,
+      "meanMs": 41.17,
+      "maxMs": 43.05,
+      "exitStatus": 0,
+      "stdoutBytes": 63051,
+      "stderr": "[inject-subagent-context] WARN: .trellis/tasks/06-17-architecture-diagram/implement.jsonl has no curated entries (only seed / empty) — sub-agent will receive only task artifacts. See workflow.md planning artifact guidance.\n"
+    },
+    {
+      "name": "pre-shell",
+      "iterations": 20,
+      "minMs": 36.67,
+      "p50Ms": 38.69,
+      "p95Ms": 40.63,
+      "p99Ms": 40.86,
+      "meanMs": 38.8,
+      "maxMs": 40.86,
+      "exitStatus": 0,
+      "stdoutBytes": 0,
+      "stderr": ""
+    }
+  ]
+}

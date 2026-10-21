@@ -97,6 +97,18 @@ importers:
         specifier: ^4.0.18
         version: 4.0.18(@types/node@20.19.28)(yaml@2.8.2)
 
+  packages/testing:
+    devDependencies:
+      '@types/node':
+        specifier: ^20.17.10
+        version: 20.19.28
+      typescript:
+        specifier: ^5.7.2
+        version: 5.9.3
+      vitest:
+        specifier: ^4.0.18
+        version: 4.0.18(@types/node@20.19.28)(yaml@2.8.2)
+
 packages:
 
   '@babel/helper-string-parser@7.27.1':
