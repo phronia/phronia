@@ -1,15 +1,15 @@
 # Hooks And Settings
 
-Hooks/settings are the entry layer that connects a platform to Trellis. They decide which scripts, plugins, or extensions a platform runs for which events.
+Hooks/settings are the entry layer that connects a platform to Phronia. They decide which scripts, plugins, or extensions a platform runs for which events.
 
 ## Settings Responsibilities
 
 settings/config files usually register:
 
-- session-start hook: injects a Trellis overview when a new session starts or context resets.
+- session-start hook: injects a Phronia overview when a new session starts or context resets.
 - workflow-state hook: parses `[workflow-state:STATUS]` blocks from `.phronia/workflow.md` and emits the body matching the current task `status` on each user input. Parser-only; the script does not embed fallback content.
 - sub-agent context hook: injects task context when implementation/check/research agents start.
-- shell/session bridge: lets shell commands see the same Trellis session identity.
+- shell/session bridge: lets shell commands see the same Phronia session identity.
 - platform plugin or extension entry points.
 
 Common files:
@@ -26,12 +26,12 @@ Common files:
 | CodeBuddy | `.codebuddy/settings.json` |
 | GitHub Copilot | `.github/copilot/hooks.json` |
 | Factory Droid | `.factory/settings.json` |
-| Pi Agent | `.pi/settings.json`, `.pi/extensions/trellis/` |
+| Pi Agent | `.pi/settings.json`, `.pi/extensions/phronia/` |
 | Trae IDE | `.trae/hooks.json` |
 
-Reasonix is a pull-based platform whose agent files contain prelude instructions to read context after startup. ZCode uses `.zcode/config.json` with shared hooks, including PreToolUse for sub-agent prompt injection. Kimi Code is likewise pull-based and has no project-level settings/hooks file Trellis writes (hooks live only in the user-level `~/.kimi-code/config.toml`), so its agent prompts ship as skills and `.kimi-code/agents/` sub-agent definitions with the same prelude.
+Reasonix is a pull-based platform whose agent files contain prelude instructions to read context after startup. ZCode uses `.zcode/config.json` with shared hooks, including PreToolUse for sub-agent prompt injection. Kimi Code is likewise pull-based and has no project-level settings/hooks file Phronia writes (hooks live only in the user-level `~/.kimi-code/config.toml`), so its agent prompts ship as skills and `.kimi-code/agents/` sub-agent definitions with the same prelude.
 
-Whether these files exist in a project depends on which `trellis init --<platform>` flags the user ran.
+Whether these files exist in a project depends on which `phronia init --<platform>` flags the user ran.
 
 ## Hook Script Types
 
@@ -40,7 +40,7 @@ Whether these files exist in a project depends on which `trellis init --<platfor
 | `session-start.py` | Generates session-start context. |
 | `inject-workflow-state.py` | Parses `[workflow-state:STATUS]` blocks in `.phronia/workflow.md` and emits the body matching the current task status. Falls back to `Refer to workflow.md for current step.` when no matching block exists. |
 | `inject-subagent-context.py` | Injects PRD, JSONL context, and related spec/research into sub-agents. |
-| `inject-shell-session-context.py` | Lets shell commands inherit Trellis session identity. |
+| `inject-shell-session-context.py` | Lets shell commands inherit Phronia session identity. |
 
 Not every platform has every hook. Do not copy files from another platform just because a platform lacks a hook; first confirm whether that platform supports the corresponding event.
 
@@ -63,7 +63,7 @@ Not every platform has every hook. Do not copy files from another platform just 
 
 ## Troubleshooting Path
 
-If the user says "AI did not read Trellis state":
+If the user says "AI did not read Phronia state":
 
 1. Check whether the platform settings register the hook.
 2. Check whether the hook file exists.

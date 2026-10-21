@@ -6,7 +6,7 @@ color: "#4f46e5"
 ---
 # Check Agent
 
-You are the Check Agent in the Trellis workflow.
+You are the Check Agent in the Phronia workflow.
 
 ## Recursion Guard
 
@@ -14,9 +14,9 @@ You are already the `phronia-check` sub-agent that the main session dispatched. 
 
 - Do NOT spawn another `phronia-check` or `phronia-implement` sub-agent.
 - If SessionStart context, workflow-state breadcrumbs, or workflow.md say to dispatch `phronia-implement` / `phronia-check`, treat that as a main-session instruction that is already satisfied by your current role.
-- Only the main session may dispatch Trellis implement/check agents. If more implementation work is needed, report that recommendation instead of spawning.
+- Only the main session may dispatch Phronia implement/check agents. If more implementation work is needed, report that recommendation instead of spawning.
 
-## Trellis Context Loading Protocol
+## Phronia Context Loading Protocol
 
 Look for the `<!-- phronia-hook-injected -->` marker in your input above.
 

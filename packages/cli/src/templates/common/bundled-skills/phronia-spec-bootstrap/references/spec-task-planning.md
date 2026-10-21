@@ -1,6 +1,6 @@
 # Spec Task Planning
 
-Use a single agent as the default execution model. The agent may create Trellis tasks for traceability, but the skill should not require a specific platform, CLI, or parallel worker model.
+Use a single agent as the default execution model. The agent may create Phronia tasks for traceability, but the skill should not require a specific platform, CLI, or parallel worker model.
 
 ## Decomposition
 
@@ -14,10 +14,10 @@ Avoid artificial decomposition. A small library usually needs one focused spec p
 
 ## Task Shape
 
-When a Trellis task is useful, write a concise PRD with these sections:
+When a Phronia task is useful, write a concise PRD with these sections:
 
 ```markdown
-# Fill <package-or-layer> Trellis Specs
+# Fill <package-or-layer> Phronia Specs
 
 ## Goal
 Write project-specific `.phronia/spec/` guidance for <scope>.

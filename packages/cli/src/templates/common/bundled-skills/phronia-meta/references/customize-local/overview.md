@@ -1,12 +1,12 @@
 # Local Customization Overview
 
-This directory is for local AI working in a user project where Trellis was installed through npm and `trellis init` has already been run. The AI should modify generated `.phronia/` and platform directories inside the project, not Trellis CLI upstream source code.
+This directory is for local AI working in a user project where Phronia was installed through npm and `phronia init` has already been run. The AI should modify generated `.phronia/` and platform directories inside the project, not Phronia CLI upstream source code.
 
 ## First Determine What The User Actually Wants To Change
 
 | User wording | Read first |
 | --- | --- |
-| "Change the Trellis flow / phases / next prompt" | `change-workflow.md` |
+| "Change the Phronia flow / phases / next prompt" | `change-workflow.md` |
 | "Change task creation, status, archive, or hooks" | `change-task-lifecycle.md` |
 | "AI did not read context / change injected content" | `change-context-loading.md` |
 | "A platform hook is not behaving as expected" | `change-hooks.md` |
@@ -39,7 +39,7 @@ This directory is for local AI working in a user project where Trellis was insta
 
 - Do not edit the global npm install directory.
 - Do not edit `node_modules/@phronia/cli`.
-- Do not assume the user has the Trellis GitHub repository.
+- Do not assume the user has the Phronia GitHub repository.
 - Do not overwrite local files already modified by the user with default templates.
 - Do not put team project rules into public `phronia-meta`; project rules belong in `.phronia/spec/` or a local skill.
 
@@ -47,9 +47,9 @@ This directory is for local AI working in a user project where Trellis was insta
 
 Switch to an upstream source-code perspective only when the user explicitly expresses one of these goals:
 
-- "I want to open a PR to Trellis"
+- "I want to open a PR to Phronia"
 - "I want to change npm package publish contents"
-- "I want to fork Trellis"
-- "I want to modify the generation logic for `trellis init/update`"
+- "I want to fork Phronia"
+- "I want to modify the generation logic for `phronia init/update`"
 
-Otherwise, default to modifying local Trellis files inside the user project.
+Otherwise, default to modifying local Phronia files inside the user project.

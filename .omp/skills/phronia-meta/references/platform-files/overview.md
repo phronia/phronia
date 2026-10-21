@@ -1,13 +1,13 @@
 # Platform Files Overview
 
-Trellis connects the same local architecture to different AI tools. `.phronia/` stores the shared runtime; platform directories store adapter files that define how each AI tool enters Trellis.
+Phronia connects the same local architecture to different AI tools. `.phronia/` stores the shared runtime; platform directories store adapter files that define how each AI tool enters Phronia.
 
-When a local AI modifies Trellis, it should distinguish two file categories first:
+When a local AI modifies Phronia, it should distinguish two file categories first:
 
 - **Shared files**: `.phronia/workflow.md`, `.phronia/tasks/`, `.phronia/spec/`, `.phronia/scripts/`.
 - **Platform files**: `.claude/`, `.snow/`, `.codex/`, `.cursor/`, `.opencode/`, `.kiro/`, `.gemini/`, `.qoder/`, `.codebuddy/`, `.github/`, `.factory/`, `.pi/`, `.trae/`, `.kilocode/`, `.agent/`, `.devin/`, `.reasonix/`, `.zcode/`, `.kimi-code/`, and similar directories.
 
-Platform files do not store business state. They let the corresponding AI tool read Trellis state, call Trellis scripts, and load Trellis skills/agents/hooks.
+Platform files do not store business state. They let the corresponding AI tool read Phronia state, call Phronia scripts, and load Phronia skills/agents/hooks.
 
 ## Platform File Categories
 
@@ -23,7 +23,7 @@ Platform files do not store business state. They let the corresponding AI tool r
 
 ### 1. Hook / Extension Driven
 
-These platforms can trigger scripts or plugins on specific events and actively inject Trellis context into AI.
+These platforms can trigger scripts or plugins on specific events and actively inject Phronia context into AI.
 
 Common capabilities:
 
@@ -42,7 +42,7 @@ To change how sub-agents load context, inspect the agent files themselves.
 
 ### 3. Main-Session Workflow
 
-Some platforms do not have Trellis sub-agent or hook capabilities. They rely on workflows/skills/commands to guide the main-session AI to read files, run scripts, and move tasks forward.
+Some platforms do not have Phronia sub-agent or hook capabilities. They rely on workflows/skills/commands to guide the main-session AI to read files, run scripts, and move tasks forward.
 
 To change behavior, inspect platform workflows/skills/commands and `.phronia/workflow.md`.
 

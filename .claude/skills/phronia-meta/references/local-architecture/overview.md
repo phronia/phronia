@@ -1,6 +1,6 @@
-# Local Trellis Architecture Overview
+# Local Phronia Architecture Overview
 
-`phronia-meta` is for user projects that have already run `trellis init`. The user's machine usually has only the npm-installed `trellis` command plus the Trellis files generated inside the project; it may not have the Trellis CLI source code.
+`phronia-meta` is for user projects that have already run `phronia init`. The user's machine usually has only the npm-installed `phronia` command plus the Phronia files generated inside the project; it may not have the Phronia CLI source code.
 
 Therefore, when an AI uses this skill, the default customization target is local files inside the user project:
 
@@ -8,15 +8,15 @@ Therefore, when an AI uses this skill, the default customization target is local
 - Platform directories: `.claude/`, `.codex/`, `.cursor/`, `.opencode/`, `.kiro/`, `.gemini/`, `.qoder/`, `.codebuddy/`, `.github/`, `.factory/`, `.pi/`, `.kilocode/`, `.agent/`, `.devin/`, `.reasonix/`, `.zcode/`, and similar directories.
 - Shared skill layer: `.agents/skills/`.
 
-Do not default to guiding the user to fork the Trellis CLI repository. Treat upstream source code as the operating target only when the user explicitly says they want to change Trellis upstream source, publish an npm package, or contribute a PR.
+Do not default to guiding the user to fork the Phronia CLI repository. Treat upstream source code as the operating target only when the user explicitly says they want to change Phronia upstream source, publish an npm package, or contribute a PR.
 
 ## Local System Model
 
-Trellis provides three layers inside a user project:
+Phronia provides three layers inside a user project:
 
 1. **Workflow layer**: `.phronia/workflow.md` defines phases, routing, next actions, and prompt blocks.
 2. **Persistence layer**: `.phronia/tasks/`, `.phronia/spec/`, and `.phronia/workspace/` store tasks, specs, and session memory.
-3. **Platform integration layer**: hooks, settings, agents, skills, commands, prompts, and workflows in platform directories connect the Trellis workflow to different AI tools.
+3. **Platform integration layer**: hooks, settings, agents, skills, commands, prompts, and workflows in platform directories connect the Phronia workflow to different AI tools.
 
 All three layers live inside the user project, so an AI can read and modify them directly.
 
@@ -31,7 +31,7 @@ All three layers live inside the user project, so an AI can read and modify them
 | `.phronia/workspace/` | Per-developer journals and cross-session memory. |
 | `.phronia/scripts/` | Local Python runtime used by commands, hooks, and context injection. |
 | `.phronia/.runtime/` | Session-level runtime state, such as the current task pointer. |
-| `.phronia/.template-hashes.json` | Template hashes for Trellis-managed files, used by update to determine whether local files were modified by the user. |
+| `.phronia/.template-hashes.json` | Template hashes for Phronia-managed files, used by update to determine whether local files were modified by the user. |
 
 ## AI Customization Principles
 

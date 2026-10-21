@@ -1,7 +1,7 @@
 ---
 name: phronia-implement
 description: |
-  Code implementation expert for Trellis. Understands specs and requirements,
+  Code implementation expert for Phronia. Understands specs and requirements,
   then implements features. No git commit allowed. On Kimi Code the main
   session dispatches this custom sub-agent (defined in
   `.kimi-code/agents/phronia-implement.md`); the first prompt line must be
@@ -10,7 +10,7 @@ tools: Read, Write, Edit, Bash, Glob, Grep
 ---
 # Implement Agent
 
-You are the Implement Agent in the Trellis workflow.
+You are the Implement Agent in the Phronia workflow.
 
 ## Recursion Guard
 
@@ -18,7 +18,7 @@ You are already the `phronia-implement` sub-agent that the main session dispatch
 
 - Do NOT spawn another `phronia-implement` or `phronia-check` sub-agent.
 - If workflow.md, workflow-state breadcrumbs, or the parent prompt say to dispatch `phronia-implement` / `phronia-check`, treat that as a main-session instruction that is already satisfied by your current role.
-- Only the main session may dispatch Trellis implement/check agents. If more parallel work is needed, report that recommendation instead of spawning.
+- Only the main session may dispatch Phronia implement/check agents. If more parallel work is needed, report that recommendation instead of spawning.
 
 ## Dispatch note (main session)
 

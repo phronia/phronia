@@ -1,6 +1,6 @@
 # Start Session
 
-Initialize a Trellis-managed development session. This platform has no session-start hook, so manually load the equivalent compact context by following these steps.
+Initialize a Phronia-managed development session. This platform has no session-start hook, so manually load the equivalent compact context by following these steps.
 
 ---
 
@@ -11,7 +11,7 @@ Identity, git status, current task, active tasks, journal location.
 python3 ./.phronia/scripts/get_context.py
 ```
 
-If this output includes a line beginning `Trellis update available:`, copy the full line verbatim when summarizing session context. Do not shorten operational command hints.
+If this output includes a line beginning `Phronia update available:`, copy the full line verbatim when summarizing session context. Do not shorten operational command hints.
 
 ## Step 2: Workflow overview
 Compact Phase Index, request triage rules, planning artifact contract, and the step-detail command.
@@ -42,7 +42,7 @@ From Step 1 you know the current task and status. Check the task directory:
   ```bash
   python3 ./.phronia/scripts/get_context.py --mode phase --step 2.1 --platform opencode
   ```
-- **No active task** → classify first. For simple conversation / small task, ask only whether this turn should create a Trellis task. For complex work, ask whether you may create a Trellis task and enter planning. If the user says no, skip Trellis for this session.
+- **No active task** → classify first. For simple conversation / small task, ask only whether this turn should create a Phronia task. For complex work, ask whether you may create a Phronia task and enter planning. If the user says no, skip Phronia for this session.
 
 ---
 

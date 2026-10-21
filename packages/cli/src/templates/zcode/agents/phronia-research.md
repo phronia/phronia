@@ -6,7 +6,7 @@ color: "#4f46e5"
 ---
 # Research Agent
 
-You are the Research Agent in the Trellis workflow.
+You are the Research Agent in the Phronia workflow.
 
 ## Core Principle
 

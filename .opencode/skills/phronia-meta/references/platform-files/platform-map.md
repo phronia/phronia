@@ -1,6 +1,6 @@
 # Platform File Map
 
-This page lists common Trellis file locations in a user project by platform. Whether a platform directory exists in an actual project depends on which `trellis init --<platform>` commands the user ran.
+This page lists common Phronia file locations in a user project by platform. Whether a platform directory exists in an actual project depends on which `phronia init --<platform>` commands the user ran.
 
 ## Matrix
 
@@ -20,7 +20,7 @@ This page lists common Trellis file locations in a user project by platform. Whe
 | GitHub Copilot | `--copilot` | `.github/` | `.github/skills/` | `.github/agents/` | `.github/copilot/hooks/` + prompts |
 | Factory Droid | `--droid` | `.factory/` | `.factory/skills/` | `.factory/droids/` | `.factory/hooks/` + settings |
 | DeepSeek Harness (dsh) | `--dsh` | `.dsh/` | `.agents/skills/` (shared) + `.dsh/skills/` (entry skills) | None (workflow skills run implement/check inline) | None (class-2 pull-based; no project hooks/settings) |
-| Pi Agent | `--pi` | `.pi/` | `.agents/skills/` | `.pi/agents/` | `.pi/extensions/trellis/` (native `trellis_subagent` tool) + `.pi/settings.json` |
+| Pi Agent | `--pi` | `.pi/` | `.agents/skills/` | `.pi/agents/` | `.pi/extensions/phronia/` (native `trellis_subagent` tool) + `.pi/settings.json` |
 | Trae IDE | `--trae` | `.trae/` | `.trae/skills/` | `.trae/agents/` | `.trae/hooks/` + `.trae/hooks.json` |
 | Reasonix | `--reasonix` | `.reasonix/` | `.reasonix/skills/` | None — sub-agents are skills with `runAs: subagent` frontmatter | None |
 | ZCode | `--zcode` | `.zcode/` | `.zcode/skills/` | `.zcode/agents/` | `.zcode/hooks/` + `.zcode/config.json` (SessionStart + UserPromptSubmit + PreToolUse Agent/Task); sub-agents use hook-injected context |
@@ -30,7 +30,7 @@ This page lists common Trellis file locations in a user project by platform. Whe
 
 ## Capability Groups
 
-### Trellis Sub-Agent Support
+### Phronia Sub-Agent Support
 
 These platforms usually have `phronia-research`, `phronia-implement`, and `phronia-check` files:
 
@@ -54,11 +54,11 @@ These platforms usually have `phronia-research`, `phronia-implement`, and `phron
 
 When changing implementation/check/research behavior, look for the corresponding platform agent files first.
 
-### Native Trellis Sub-Agent Tool
+### Native Phronia Sub-Agent Tool
 
 Some platforms expose a first-class tool that the host runtime understands. The model calls it like any other tool and the host renders progress cards, validates the agent name against `.<platform>/agents/`, and enforces dispatch modes.
 
-- Pi Agent — `trellis_subagent` tool, defined in `.pi/extensions/trellis/index.ts`. Supports `single` / `parallel` / `chain` dispatch modes and emits live `phronia-subagent-progress` events.
+- Pi Agent — `trellis_subagent` tool, defined in `.pi/extensions/phronia/index.ts`. Supports `single` / `parallel` / `chain` dispatch modes and emits live `phronia-subagent-progress` events.
 
 When changing sub-agent dispatch behavior on these platforms, edit the extension file, **not** the agent markdown — the agent markdown defines responsibilities, but the host extension owns dispatch, validation, and progress rendering.
 
@@ -70,11 +70,11 @@ These platforms rely more on workflows/skills to guide the main session:
 - Antigravity
 - Devin
 
-When changing behavior, inspect workflows and skills first. Do not assume Trellis sub-agents exist.
+When changing behavior, inspect workflows and skills first. Do not assume Phronia sub-agents exist.
 
 ### Shared `.agents/skills/`
 
-Codex, Gemini CLI, Pi Agent, Kimi Code, and DeepSeek Harness (dsh) write the shared `.agents/skills/` layer. Some tools that support agentskills.io can also read this directory. If the user wants multiple compatible tools to share one skill, consider `.agents/skills/` first, but do not assume every platform reads it. ZCode keeps Trellis-managed skills under `.zcode/skills/`.
+Codex, Gemini CLI, Pi Agent, Kimi Code, and DeepSeek Harness (dsh) write the shared `.agents/skills/` layer. Some tools that support agentskills.io can also read this directory. If the user wants multiple compatible tools to share one skill, consider `.agents/skills/` first, but do not assume every platform reads it. ZCode keeps Phronia-managed skills under `.zcode/skills/`.
 
 ## Decision Rules When Modifying Platform Files
 
@@ -82,7 +82,7 @@ Codex, Gemini CLI, Pi Agent, Kimi Code, and DeepSeek Harness (dsh) write the sha
 2. User says "all platforms should do this": synchronize equivalent entry points platform by platform; do not modify only one directory.
 3. User only says "my AI": inspect the configuration directories that actually exist in the project and infer the current AI platform.
 4. User wants project rules: prefer `.phronia/spec/` or a project-local skill.
-5. User wants Trellis behavior: edit `.phronia/workflow.md` plus platform hooks/agents/skills/commands.
+5. User wants Phronia behavior: edit `.phronia/workflow.md` plus platform hooks/agents/skills/commands.
 
 ## When Paths Differ
 
@@ -104,8 +104,8 @@ Extension-backed platform. OMP native provider auto-discovers all subdirectories
 ├── skills/            # Auto-triggered skills (SKILL.md per dir)
 ├── agents/            # Agent definitions (.md)
 └── extensions/
-    └── trellis/
-        └── index.ts   # Trellis extension (context injection)
+    └── phronia/
+        └── index.ts   # Phronia extension (context injection)
 ```
 
 No `settings.json` — OMP scans `.omp/` subdirectories automatically.

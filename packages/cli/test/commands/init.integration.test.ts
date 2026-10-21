@@ -570,7 +570,7 @@ describe("init() integration", () => {
     ).toBe(true);
     expect(
       fs.existsSync(
-        path.join(tmpDir, ".pi", "extensions", "trellis", "index.ts"),
+        path.join(tmpDir, ".pi", "extensions", "phronia", "index.ts"),
       ),
     ).toBe(true);
     expect(fs.existsSync(path.join(tmpDir, ".pi", "hooks"))).toBe(false);

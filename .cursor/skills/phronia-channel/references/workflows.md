@@ -9,19 +9,19 @@ Use when the user says "和 codex/claude 讨论一下", "brainstorm", or "拉一
 进来一起看".
 
 ```bash
-trellis channel create brainstorm-storage-layer --by main \
+phronia channel create brainstorm-storage-layer --by main \
   --task .phronia/tasks/05-XX-storage-adapter
 
-trellis channel spawn brainstorm-storage-layer \
+phronia channel spawn brainstorm-storage-layer \
   --agent architect --provider codex \
   --file .phronia/tasks/05-XX-storage-adapter/prd.md \
   --file .phronia/tasks/05-XX-storage-adapter/design.md \
   --as cx-arch --timeout 30m
 
-trellis channel send brainstorm-storage-layer \
+phronia channel send brainstorm-storage-layer \
   --as main --to cx-arch --text-file /tmp/brainstorm-r1.md
 
-trellis channel wait brainstorm-storage-layer \
+phronia channel wait brainstorm-storage-layer \
   --as main --kind done --from cx-arch --timeout 10m
 ```
 
@@ -52,9 +52,9 @@ Use when the user asks to dispatch implementation or review work.
 
 ```bash
 TASK=.phronia/tasks/05-12-foo
-trellis channel create cr-foo --task "$TASK" --by main
+phronia channel create cr-foo --task "$TASK" --by main
 
-trellis channel spawn cr-foo \
+phronia channel spawn cr-foo \
   --agent check \
   --jsonl "$TASK/check.jsonl" \
   --file "$TASK/prd.md" \
@@ -62,9 +62,9 @@ trellis channel spawn cr-foo \
   --file "$TASK/implement.md" \
   --cwd "$PWD" --timeout 15m
 
-trellis channel send cr-foo --as main --to check --text-file /tmp/cr-brief.md
-trellis channel wait cr-foo --as main --kind done --from check --timeout 15m
-trellis channel messages cr-foo --kind message --from check --tag final_answer
+phronia channel send cr-foo --as main --to check --text-file /tmp/cr-brief.md
+phronia channel wait cr-foo --as main --kind done --from check --timeout 15m
+phronia channel messages cr-foo --kind message --from check --tag final_answer
 ```
 
 For implement work, use `--agent implement` and send an implementation brief.
@@ -76,19 +76,19 @@ already run.
 Use one channel and distinct worker names.
 
 ```bash
-trellis channel create cr-feature --by main --ephemeral
+phronia channel create cr-feature --by main --ephemeral
 
-trellis channel spawn cr-feature --agent check \
+phronia channel spawn cr-feature --agent check \
   --jsonl "$TASK/check.jsonl" --file "$TASK/prd.md" --file "$TASK/design.md" \
   --timeout 15m
 
-trellis channel spawn cr-feature --agent check --provider codex --as check-cx \
+phronia channel spawn cr-feature --agent check --provider codex --as check-cx \
   --jsonl "$TASK/check.jsonl" --file "$TASK/prd.md" --file "$TASK/design.md" \
   --timeout 15m
 
-trellis channel send cr-feature --as main --to check --text-file /tmp/cr-brief.md
-trellis channel send cr-feature --as main --to check-cx --text-file /tmp/cr-brief.md
-trellis channel wait cr-feature --as main --kind done --from check,check-cx --all --timeout 15m
+phronia channel send cr-feature --as main --to check --text-file /tmp/cr-brief.md
+phronia channel send cr-feature --as main --to check-cx --text-file /tmp/cr-brief.md
+phronia channel wait cr-feature --as main --kind done --from check,check-cx --all --timeout 15m
 ```
 
 `--all` means every listed worker must emit a matching event.
@@ -96,8 +96,8 @@ trellis channel wait cr-feature --as main --kind done --from check,check-cx --al
 ## Pattern D: One-shot Worker
 
 ```bash
-trellis channel run --provider codex --message "say hi in 3 words" --timeout 1m
-trellis channel run --agent plan --message-file /tmp/plan-question.md --timeout 10m
+phronia channel run --provider codex --message "say hi in 3 words" --timeout 1m
+phronia channel run --agent plan --message-file /tmp/plan-question.md --timeout 10m
 ```
 
 On success, `run` removes the ephemeral channel. On error/timeout/killed, it
@@ -113,10 +113,10 @@ internal changelogs. Read `forum.md` for the full model.
 If the user gives a forum/thread name, restore context yourself:
 
 ```bash
-trellis channel forum <board> --scope global
-trellis channel thread <board> <thread> --scope global --raw
-trellis channel context list <board> --scope global --thread <thread>
-trellis channel messages <board> --scope global --raw --thread <thread>
+phronia channel forum <board> --scope global
+phronia channel thread <board> <thread> --scope global --raw
+phronia channel context list <board> --scope global --thread <thread>
+phronia channel messages <board> --scope global --raw --thread <thread>
 ```
 
 Output a constraint summary, not a transcript dump:

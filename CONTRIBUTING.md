@@ -1,6 +1,6 @@
-# Contributing to Trellis
+# Contributing to Phronia
 
-Thanks for your interest in contributing to Trellis! This document provides guidelines for contributing to the project.
+Thanks for your interest in contributing to Phronia! This document provides guidelines for contributing to the project.
 
 ## Ways to Contribute
 
@@ -9,7 +9,7 @@ Thanks for your interest in contributing to Trellis! This document provides guid
 Before creating a bug report, please check [existing issues](https://github.com/mindfold-ai/Trellis/issues) to avoid duplicates.
 
 When reporting a bug, include:
-- Trellis version (`trellis --version`)
+- Phronia version (`phronia --version`)
 - Node.js version (`node --version`)
 - Operating system
 - Steps to reproduce
@@ -53,8 +53,8 @@ Code contributions are welcome for:
 
 2. **Clone your fork**
    ```bash
-   git clone https://github.com/YOUR_USERNAME/Trellis.git
-   cd Trellis
+   git clone https://github.com/YOUR_USERNAME/Phronia.git
+   cd Phronia
    ```
 
 3. **Install dependencies**
@@ -101,7 +101,7 @@ for the batch list and gates.
 ## Project Structure
 
 ```
-Trellis/
+Phronia/
 ├── src/                    # TypeScript source code
 │   ├── cli/                # CLI entry point
 │   ├── commands/           # CLI commands (init, update)
@@ -112,7 +112,7 @@ Trellis/
 │   ├── agents/             # Agent definitions
 │   ├── commands/           # Slash commands
 │   └── hooks/              # Python hook scripts
-├── .phronia/               # Trellis workflow (project's own) ←
+├── .phronia/               # Phronia workflow (project's own) ←
 │   ├── scripts/            # Bash scripts
 │   └── spec/               # Spec file templates
 └── docs/                   # Documentation
@@ -171,4 +171,4 @@ docs(readme): update quick start instructions
 
 ## Thank You
 
-Every contribution helps make Trellis better. We appreciate your time and effort!
+Every contribution helps make Phronia better. We appreciate your time and effort!

@@ -247,7 +247,7 @@ export function scrubOpencodePackageJson(content: string): ScrubResult {
  * The `extensions`/`skills`/`prompts` arrays are paths relative to `.pi/`. We
  * remove the exact entries that the Pi configurator emits.
  */
-const PI_TRELLIS_EXTENSION = "./extensions/trellis/index.ts";
+const PI_PHRONIA_EXTENSION = "./extensions/phronia/index.ts";
 const PI_TRELLIS_SKILLS = "./skills";
 const PI_TRELLIS_PROMPTS = "./prompts";
 const PI_SUBAGENTS_PACKAGE = "npm:pi-subagents";
@@ -281,7 +281,7 @@ export function scrubPiSettings(content: string): ScrubResult {
   }
 
   const arrayCleanups: [string, string][] = [
-    ["extensions", PI_TRELLIS_EXTENSION],
+    ["extensions", PI_PHRONIA_EXTENSION],
     ["skills", PI_TRELLIS_SKILLS],
     ["prompts", PI_TRELLIS_PROMPTS],
   ];

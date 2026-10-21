@@ -1,5 +1,5 @@
 ---
-description: "Trellis Copilot prompt: Multi-Agent Pipeline Orchestrator"
+description: "Phronia Copilot prompt: Multi-Agent Pipeline Orchestrator"
 ---
 
 # Multi-Agent Pipeline Orchestrator
@@ -28,7 +28,7 @@ Operations in this document are categorized as:
 
 ## Startup Flow
 
-### Step 1: Understand Trellis Workflow `[AI]`
+### Step 1: Understand Phronia Workflow `[AI]`
 
 First, read the workflow guide to understand the development process:
 

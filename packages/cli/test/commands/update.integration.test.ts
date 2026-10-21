@@ -626,7 +626,7 @@ describe("update() integration", () => {
     expect(result.endsWith(templateContent.trimEnd() + "\n")).toBe(true);
   });
 
-  it("#4e appends Trellis Copilot guidance to existing repo instructions", async () => {
+  it("#4e appends Phronia Copilot guidance to existing repo instructions", async () => {
     await init({ yes: true, force: true, copilot: true });
 
     const userContent =
@@ -647,7 +647,7 @@ describe("update() integration", () => {
     expect(result).toContain("Review app code first.");
     expect(result).toContain(COPILOT_INSTRUCTIONS_BLOCK_START);
     expect(result).toContain(COPILOT_INSTRUCTIONS_BLOCK_END);
-    expect(result).toContain("Trellis-generated runtime");
+    expect(result).toContain("Phronia-generated runtime");
     expect(result.indexOf("# Repo Copilot Instructions")).toBeLessThan(
       result.indexOf(COPILOT_INSTRUCTIONS_BLOCK_START),
     );
@@ -656,7 +656,7 @@ describe("update() integration", () => {
     );
   });
 
-  it("#4f refreshes only the Trellis Copilot guidance block", async () => {
+  it("#4f refreshes only the Phronia Copilot guidance block", async () => {
     await init({ yes: true, force: true, copilot: true });
 
     const oldBlock = getCopilotInstructions().replace(

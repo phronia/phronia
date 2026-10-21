@@ -1,7 +1,7 @@
-# Trellis on DeepSeek Harness (dsh)
+# Phronia on DeepSeek Harness (dsh)
 
-dsh is a **class-2 pull-based** Trellis host: no session-start hook auto-injects
-workflow context, so the agent loads the Trellis skills on demand through its
+dsh is a **class-2 pull-based** Phronia host: no session-start hook auto-injects
+workflow context, so the agent loads the Phronia skills on demand through its
 skill-loader tool.
 
 | Capability | Status |
@@ -14,8 +14,8 @@ skill-loader tool.
 ## Quick start
 
 ```bash
-trellis init --dsh -u your-name
-dsh web        # or: dsh --profile headless "start a Trellis task for ..."
+phronia init --dsh -u your-name
+dsh web        # or: dsh --profile headless "start a Phronia task for ..."
 ```
 
 In dsh:
@@ -29,7 +29,7 @@ In dsh:
 2. Entry skills are `phronia-start` / `phronia-continue` / `phronia-finish-work`
    in `.dsh/skills/`. You can also ask for them by name at any time.
 3. Type `/phronia:finish-work` is a slash-command convention from other hosts —
-   dsh has no slash palette, so say "finish the trellis task" instead, and the
+   dsh has no slash palette, so say "finish the phronia task" instead, and the
    agent loads `phronia-finish-work`.
 
 ## File map
@@ -51,6 +51,6 @@ In dsh:
 - The shipped `minimal` agent preset composes only `bash` +
   `str_replace_editor`; the default presets include `web_search` and the
   filesystem/terminal tools the skills assume.
-- dsh has no project-level sub-agent definition surface, so Trellis ships no
+- dsh has no project-level sub-agent definition surface, so Phronia ships no
   `phronia-implement` / `phronia-check` / `phronia-research` agent prompts
   here — the workflow skills run those phases inline in the main session.

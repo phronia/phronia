@@ -30,6 +30,7 @@ that removes or rewrites upstream code.
 | 2026-10-21 | B1/T5 | skill/agent/command identifiers and managed markers | renamed/rewritten | `f089cb32` | `trellis-*` -> `phronia-*`; `commands/trellis/` -> `commands/phronia/`; `TRELLIS:START/END` -> `PHRONIA:START/END`; `templates/trellis/` -> `templates/workflow/`. Legacy names accepted for one major version. |
 | 2026-10-21 | B1/T6 | `packages/cli/src/commands/adopt.ts` | added | — | One-time upstream adoption: backup, rename, hash-verified regeneration, auditable report. |
 | 2026-10-21 | B1/T7 | `packages/cli/src/migrations/manifests/*` -> `migrations/upstream/*` | renamed | `f089cb32` | Upstream migration history archived and no longer replayed; Phronia history starts at 1.0.0. |
+| 2026-10-21 | B1/T9 | README, CONTRIBUTING, AGENTS/CLAUDE, template prose | rewritten | `f089cb32` | Brand strings Trellis -> Phronia in user-facing documentation and templates; upstream provenance and NOTICE unchanged. Pi/OMP extension directories moved to `extensions/phronia/`. |
 
 ## Not yet modified
 

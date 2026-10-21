@@ -10246,7 +10246,7 @@ describe("regression: pi uses TypeScript extension assets instead of Python hook
 
   it("installs a subagent-capable extension and pull-based agent context", () => {
     const extension = fs.readFileSync(
-      path.join(tmpDir, ".pi", "extensions", "trellis", "index.ts"),
+      path.join(tmpDir, ".pi", "extensions", "phronia", "index.ts"),
       "utf-8",
     );
     expect(extension).toContain('name: "trellis_subagent"');
@@ -10688,7 +10688,7 @@ describe("regression: sub-agent context injection fallback (0.5.3)", () => {
   //
   // The fix: hook output now begins with a `<!-- phronia-hook-injected -->`
   // marker, and every class-1 phronia-implement / phronia-check definition
-  // file carries a Trellis Context Loading Protocol section telling the
+  // file carries a Phronia Context Loading Protocol section telling the
   // sub-agent to load context itself when the marker is absent.
   const HOOK_INJECTED_MARKER = "<!-- phronia-hook-injected -->";
 
@@ -10794,7 +10794,7 @@ describe("regression: sub-agent context injection fallback (0.5.3)", () => {
       // 1. References the marker
       expect(content).toContain(HOOK_INJECTED_MARKER);
       // 2. Has the protocol heading
-      expect(content).toContain("Trellis Context Loading Protocol");
+      expect(content).toContain("Phronia Context Loading Protocol");
       // 3. Tells AI how to find the active task path
       expect(content).toContain("Active task:");
       // 4. Tells AI which task files to Read in fallback path
@@ -10815,7 +10815,7 @@ describe("regression: sub-agent context injection fallback (0.5.3)", () => {
       const json = JSON.parse(fs.readFileSync(filePath, "utf-8"));
       const prompt: string = json.prompt ?? "";
       expect(prompt).toContain(HOOK_INJECTED_MARKER);
-      expect(prompt).toContain("Trellis Context Loading Protocol");
+      expect(prompt).toContain("Phronia Context Loading Protocol");
       expect(prompt).toContain("Active task:");
       expectTaskArtifactContract(prompt);
       const expectedJsonl =

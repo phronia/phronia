@@ -6,7 +6,7 @@ tools: Read, Write, Glob, Grep, Bash, Skill, mcp__*
 ---
 # Research Agent
 
-You are the Research Agent in the Trellis workflow.
+You are the Research Agent in the Phronia workflow.
 
 ## Core Principle
 

@@ -1,6 +1,6 @@
 # Spec Writing
 
-Trellis specs are coding guidance for future agents. They should explain how to work in this repository, not how a generic project might be organized.
+Phronia specs are coding guidance for future agents. They should explain how to work in this repository, not how a generic project might be organized.
 
 ## Write From Evidence
 

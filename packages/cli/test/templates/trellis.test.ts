@@ -143,7 +143,7 @@ describe("trellis template constants", () => {
       "utf-8",
     );
     const headings = (text: string): string[] =>
-      [...text.matchAll(/^##\s+(.+)$/gm)].map((match) => match[1].trim());
+      [...text.matchAll(/^##\s+(.+)$/gm)].map((match) => match[1].replace(/\bTrellis\b/g, "Phronia").trim());
     expect(headings(marketplaceNative)).toEqual(headings(workflowMdTemplate));
   });
 

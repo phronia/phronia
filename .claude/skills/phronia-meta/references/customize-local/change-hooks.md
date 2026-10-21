@@ -1,6 +1,6 @@
 # Change Local Hooks
 
-Hooks are the automation layer that connects a platform to Trellis. When the user wants to change "when context is injected," "how shell commands inherit a session," or "which files are read before an agent starts," hooks are usually the edit point.
+Hooks are the automation layer that connects a platform to Phronia. When the user wants to change "when context is injected," "how shell commands inherit a session," or "which files are read before an agent starts," hooks are usually the edit point.
 
 ## Read These Files First
 
@@ -14,7 +14,7 @@ Hooks are the automation layer that connects a platform to Trellis. When the use
 
 | Hook | Purpose |
 | --- | --- |
-| session-start | Injects a Trellis overview when a session starts, clears, or compacts. |
+| session-start | Injects a Phronia overview when a session starts, clears, or compacts. |
 | workflow-state | Injects a state hint on each user input. |
 | sub-agent context | Injects PRD/spec/research before an agent starts. |
 | shell session bridge | Lets `task.py` commands in shell see the same session identity. |
@@ -53,5 +53,5 @@ If the task and JSONL are correct, determine whether the platform uses hook push
 
 - Settings handle registration, hook scripts handle behavior; inspect both together.
 - Different platforms support different hook events. Do not directly copy another platform's settings.
-- Hooks should read project-local `.phronia/`; they should not depend on Trellis upstream source paths.
+- Hooks should read project-local `.phronia/`; they should not depend on Phronia upstream source paths.
 - Hook failures should produce visible errors so AI does not silently lose context.

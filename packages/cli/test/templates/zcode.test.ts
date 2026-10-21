@@ -86,7 +86,7 @@ describe("zcode class-1 agent fallback protocol", () => {
         agent.name === "phronia-check"
       ) {
         expect(agent.content).not.toContain("Load Trellis Context First");
-        expect(agent.content).toContain("Trellis Context Loading Protocol");
+        expect(agent.content).toContain("Phronia Context Loading Protocol");
         expect(agent.content).toContain("<!-- phronia-hook-injected -->");
         expect(agent.content).toContain("Active task:");
       }
@@ -98,7 +98,7 @@ describe("zcode class-1 agent fallback protocol", () => {
     const research = agents.find((agent) => agent.name === "phronia-research");
     expect(research).toBeDefined();
     if (!research) return;
-    expect(research.content).not.toContain("Trellis Context Loading Protocol");
+    expect(research.content).not.toContain("Phronia Context Loading Protocol");
     expect(research.content).not.toContain("Load Trellis Context First");
     expect(research.content).toContain("{TASK_DIR}/research/");
   });

@@ -27,7 +27,7 @@ Shows the Phase Index (Plan / Execute / Finish) with routing + skill mapping.
 
 ## Step 3: Decide Where You Are
 
-`get_context.py` shows the active task's `status` field. Route by `status` + artifact presence. This command replaces the user needing to remember the Trellis flow; it does not itself approve implementation.
+`get_context.py` shows the active task's `status` field. Route by `status` + artifact presence. This command replaces the user needing to remember the Phronia flow; it does not itself approve implementation.
 
 - `status=planning` + no `prd.md` → **1.1** (load `phronia-brainstorm`)
 - `status=planning` + `prd.md` only → decide whether the task is lightweight or complex. Lightweight can move to **1.4** review; complex returns to **1.1** to add `design.md` + `implement.md`.

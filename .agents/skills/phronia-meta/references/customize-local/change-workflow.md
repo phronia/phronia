@@ -1,6 +1,6 @@
 # Change Local Workflow
 
-When the user wants to change Trellis phases, next-action hints, whether to create tasks, whether to use sub-agents, or when to check/wrap up, edit `.phronia/workflow.md` first.
+When the user wants to change Phronia phases, next-action hints, whether to create tasks, whether to use sub-agents, or when to check/wrap up, edit `.phronia/workflow.md` first.
 
 ## Read These Files First
 

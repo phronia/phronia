@@ -1,5 +1,5 @@
 ---
-description: "Trellis Copilot prompt: Method 1: Simple parameters"
+description: "Phronia Copilot prompt: Method 1: Simple parameters"
 ---
 
 [!] **Prerequisite**: This command should only be used AFTER the human has tested and committed the code.

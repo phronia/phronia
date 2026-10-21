@@ -42,7 +42,7 @@ export function collectOmpTemplates(): Map<string, string> {
 
   // Extension
   files.set(
-    ".omp/extensions/trellis/index.ts",
+    ".omp/extensions/phronia/index.ts",
     replacePythonCommandLiterals(getExtensionTemplate()),
   );
 

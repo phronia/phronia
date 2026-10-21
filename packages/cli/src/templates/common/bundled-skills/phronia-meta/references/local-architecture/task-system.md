@@ -1,6 +1,6 @@
 # Local Task System
 
-The Trellis task system is stored entirely under `.phronia/tasks/` in the user project. Each task is a directory containing requirements, context, research, state, and relationship information.
+The Phronia task system is stored entirely under `.phronia/tasks/` in the user project. Each task is a directory containing requirements, context, research, state, and relationship information.
 
 ## Task Directory Structure
 
@@ -69,13 +69,13 @@ python3 ./.phronia/scripts/task.py add-subtask <parent-dir> <child-dir>
 python3 ./.phronia/scripts/task.py remove-subtask <parent-dir> <child-dir>
 ```
 
-`children` on the parent is a historical list. When a child is archived, Trellis keeps that child name in the parent so progress like `[2/3 done]` remains meaningful after completed children move to `archive/`.
+`children` on the parent is a historical list. When a child is archived, Phronia keeps that child name in the parent so progress like `[2/3 done]` remains meaningful after completed children move to `archive/`.
 
 The AI should not treat phase numbers as task status. Task progress is mainly determined by `status`, artifact presence (`prd.md`, optional `design.md` / `implement.md`), whether JSONL context is configured for sub-agent mode, and the phase descriptions in `workflow.md`.
 
 ## Active Task
 
-The user sees a "current task," but Trellis stores active task state per session.
+The user sees a "current task," but Phronia stores active task state per session.
 
 ```text
 .phronia/.runtime/sessions/<context-key>.json
@@ -127,4 +127,4 @@ When modifying the task system, the AI should prefer script commands to maintain
 | Change context rules | Planning artifact guidance in `.phronia/workflow.md` and related platform agent/hook instructions. |
 | Change archive policy | `.phronia/scripts/common/task_store.py` / `task_utils.py`. |
 
-These are local files in the user project. Do not default to editing Trellis CLI source code unless the user wants to contribute upstream.
+These are local files in the user project. Do not default to editing Phronia CLI source code unless the user wants to contribute upstream.

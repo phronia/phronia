@@ -49,7 +49,7 @@ Use the actual paths in the user project as authoritative.
 
 ## Agent Pull Platforms
 
-If an agent file contains a prelude for "read task/context after startup," do not remove those steps when editing. Otherwise the agent will work only from chat context and bypass Trellis's core mechanism.
+If an agent file contains a prelude for "read task/context after startup," do not remove those steps when editing. Otherwise the agent will work only from chat context and bypass Phronia's core mechanism.
 
 ## Hook Push Platforms
 

@@ -9,7 +9,7 @@ model: pi/task
 
 # Research Agent
 
-You are the Research Agent in the Trellis workflow.
+You are the Research Agent in the Phronia workflow.
 
 ## Core Principle
 

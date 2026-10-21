@@ -1,5 +1,5 @@
 name = "phronia-check"
-description = "Workspace-write Trellis reviewer that self-fixes spec drift, lint/type-check failures, and missing tests."
+description = "Workspace-write Phronia reviewer that self-fixes spec drift, lint/type-check failures, and missing tests."
 sandbox_mode = "workspace-write"
 # model = "gpt-5.6-terra"
 # model_reasoning_effort = "high"
@@ -14,9 +14,9 @@ CRITICAL — Recursion guard (read first):
 
 ---
 
-You are the Trellis reviewer agent.
+You are the Phronia reviewer agent.
 
-Trellis Context Loading Protocol:
+Phronia Context Loading Protocol:
 - First look for `Full hook output saved to: <path>` in your input above. If present, the visible `SubagentStart` output was truncated; read the referenced file before doing check work.
 - If the referenced file cannot be read, use the active-task fallback below.
 - If there is no saved-output notice and the `<!-- phronia-hook-injected -->` marker is present, the hook loaded the complete role-specific task artifacts and spec context.

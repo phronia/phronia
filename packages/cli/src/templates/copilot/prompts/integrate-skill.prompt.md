@@ -1,5 +1,5 @@
 ---
-description: "Trellis Copilot prompt: Integrate Claude Skill into Project Guidelines"
+description: "Phronia Copilot prompt: Integrate Claude Skill into Project Guidelines"
 ---
 
 # Integrate Claude Skill into Project Guidelines

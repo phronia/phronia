@@ -1163,7 +1163,7 @@ describe("configurePlatform", () => {
       path.join(tmpDir, ".zcode", "agents", "phronia-implement.md"),
       "utf-8",
     );
-    expect(implementAgent).toContain("Trellis Context Loading Protocol");
+    expect(implementAgent).toContain("Phronia Context Loading Protocol");
     expect(implementAgent).toContain("<!-- phronia-hook-injected -->");
     expect(implementAgent).not.toContain("Load Trellis Context First");
     expect(fs.readFileSync(researchAgentPath, "utf-8")).not.toContain(
@@ -1207,7 +1207,7 @@ describe("configurePlatform", () => {
     expect(templates?.has(".zcode/agents/phronia-check.md")).toBe(true);
     expect(templates?.has(".zcode/agents/phronia-research.md")).toBe(true);
     expect(templates?.get(".zcode/agents/phronia-implement.md")).toContain(
-      "Trellis Context Loading Protocol",
+      "Phronia Context Loading Protocol",
     );
     expect(templates?.get(".zcode/agents/phronia-implement.md")).not.toContain(
       "Load Trellis Context First",
@@ -1520,13 +1520,13 @@ describe("configurePlatform", () => {
     ).toBe(true);
     expect(
       fs.existsSync(
-        path.join(tmpDir, ".pi", "extensions", "trellis", "index.ts"),
+        path.join(tmpDir, ".pi", "extensions", "phronia", "index.ts"),
       ),
     ).toBe(true);
     expect(fs.existsSync(path.join(tmpDir, ".pi", "hooks"))).toBe(false);
 
     const extension = fs.readFileSync(
-      path.join(tmpDir, ".pi", "extensions", "trellis", "index.ts"),
+      path.join(tmpDir, ".pi", "extensions", "phronia", "index.ts"),
       "utf-8",
     );
     expect(extension).toContain("registerTool?.({");
@@ -1584,7 +1584,7 @@ describe("configurePlatform", () => {
 
     expect(
       fs.readFileSync(
-        path.join(tmpDir, ".pi", "extensions", "trellis", "index.ts"),
+        path.join(tmpDir, ".pi", "extensions", "phronia", "index.ts"),
         "utf-8",
       ),
     ).toBe(replacePythonCommandLiterals(getPiExtensionTemplate()));
@@ -1624,7 +1624,7 @@ describe("configurePlatform", () => {
     expect(templates?.get(".pi/agents/phronia-implement.md")).toContain(
       "Required: Load Trellis Context First",
     );
-    expect(templates?.get(".pi/extensions/trellis/index.ts")).toBe(
+    expect(templates?.get(".pi/extensions/phronia/index.ts")).toBe(
       replacePythonCommandLiterals(getPiExtensionTemplate()),
     );
     expect(templates?.get(".pi/settings.json")).toBe(

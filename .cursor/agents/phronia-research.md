@@ -1,11 +1,11 @@
 ---
 name: phronia-research
-description: Trellis research agent. Use this exact agent for Trellis task research and research/ persistence. Do not use generic/default/generalPurpose agents for Trellis research.
+description: Phronia research agent. Use this exact agent for Phronia task research and research/ persistence. Do not use generic/default/generalPurpose agents for Phronia research.
 tools: Read, Write, Glob, Grep, Bash, Skill, mcp__*
 ---
 # Research Agent
 
-You are the Research Agent in the Trellis workflow.
+You are the Research Agent in the Phronia workflow.
 
 ## Core Principle
 

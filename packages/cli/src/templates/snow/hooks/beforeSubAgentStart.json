@@ -1,7 +1,7 @@
 {
   "beforeSubAgentStart": [
     {
-      "description": "Inject Trellis active-task context before sub-agent buildInitialMessages",
+      "description": "Inject Phronia active-task context before sub-agent buildInitialMessages",
       "hooks": [
         {
           "type": "command",

@@ -1,17 +1,17 @@
 ---
 name: phronia-session-insight
-description: "Reach into past AI conversation history through the `trellis mem` CLI. Use whenever the user asks 'how did we solve X last time', 'have we discussed this before', 'what was the decision on X', 'remind me what we did in this task', '上次怎么解的', '之前讨论过吗', '想起一段对话', or when starting a brainstorm that overlaps prior work, debugging a familiar bug, continuing a task across sessions, or doing a finish-work review. Returns raw past dialogue; decide for the moment whether to update spec, append to task notes, quote inline in the answer, or just internalize."
+description: "Reach into past AI conversation history through the `phronia mem` CLI. Use whenever the user asks 'how did we solve X last time', 'have we discussed this before', 'what was the decision on X', 'remind me what we did in this task', '上次怎么解的', '之前讨论过吗', '想起一段对话', or when starting a brainstorm that overlaps prior work, debugging a familiar bug, continuing a task across sessions, or doing a finish-work review. Returns raw past dialogue; decide for the moment whether to update spec, append to task notes, quote inline in the answer, or just internalize."
 ---
 
-# Trellis Session Insight
+# Phronia Session Insight
 
-This skill teaches an AI **how to call `trellis mem`** — the project's cross-session memory feedstock — and **when reaching for it is the right move**.
+This skill teaches an AI **how to call `phronia mem`** — the project's cross-session memory feedstock — and **when reaching for it is the right move**.
 
 It is intentionally a **capability skill, not a workflow**. There is no fixed output file, no required write-back step, no "always run after finish-work" rule. What to do with what `mem` returns is a judgement call made in the moment of the conversation. The skill exists so the AI knows the capability is there and can decide.
 
-## What `trellis mem` is
+## What `phronia mem` is
 
-A local CLI that indexes the user's past Claude Code, Codex, Devin CLI, Grok, OpenCode, Pi Agent, and ZCode conversation logs and lets you list, search, slice by Trellis task boundaries, and dump cleaned dialogue from them. Claude and Codex use `~/.claude/projects/` and `~/.codex/sessions/`. Devin CLI (Cognition terminal agent, not `trellis init --devin` Desktop) uses `~/.local/share/devin/cli/sessions.db`. Grok uses `~/.grok/sessions/`. OpenCode uses `~/.local/share/opencode/opencode.db` (zero-dependency SQLite reader). Pi uses its default or environment-configured session root, global `~/.pi/agent/settings.json`, and the scoped project's `.pi/settings.json`; relative `sessionDir` values resolve from the settings file directory. Project-local Pi settings require project-scoped lookup through the current cwd or `--cwd`. ZCode uses `~/.zcode/cli/db/db.sqlite`.
+A local CLI that indexes the user's past Claude Code, Codex, Devin CLI, Grok, OpenCode, Pi Agent, and ZCode conversation logs and lets you list, search, slice by Phronia task boundaries, and dump cleaned dialogue from them. Claude and Codex use `~/.claude/projects/` and `~/.codex/sessions/`. Devin CLI (Cognition terminal agent, not `phronia init --devin` Desktop) uses `~/.local/share/devin/cli/sessions.db`. Grok uses `~/.grok/sessions/`. OpenCode uses `~/.local/share/opencode/opencode.db` (zero-dependency SQLite reader). Pi uses its default or environment-configured session root, global `~/.pi/agent/settings.json`, and the scoped project's `.pi/settings.json`; relative `sessionDir` values resolve from the settings file directory. Project-local Pi settings require project-scoped lookup through the current cwd or `--cwd`. ZCode uses `~/.zcode/cli/db/db.sqlite`.
 
 Nothing in `mem` is uploaded. All reads are local.
 
@@ -45,7 +45,7 @@ Treat the output as **raw material**, not a deliverable. Once you have it, decid
 - **Update `.phronia/spec/`** if the finding is a project-wide convention or gotcha that would help future tasks. Run the `phronia-update-spec` skill for that — `session-insight` ends at the discovery.
 - **Just absorb it** for the next few turns and answer better, without writing anything. This is often the right move for one-off recall.
 
-Trellis does not prescribe a single destination. Forcing every recall into a fixed file makes the file grow into noise. Let the situation decide.
+Phronia does not prescribe a single destination. Forcing every recall into a fixed file makes the file grow into noise. Let the situation decide.
 
 ## How to call it
 
@@ -54,18 +54,18 @@ Full CLI reference is in `references/cli-quick-reference.md`. The 80% case is on
 ```bash
 # Find sessions whose contents mention a keyword (project-scope is default;
 # add --global to search every project on this machine).
-trellis mem search "<keyword>"
+phronia mem search "<keyword>"
 
 # Dump dialogue from one session, optionally filtered by phase or keyword.
-trellis mem extract <session-id> --phase brainstorm
-trellis mem extract <session-id> --grep "<keyword>"
+phronia mem extract <session-id> --phase brainstorm
+phronia mem extract <session-id> --grep "<keyword>"
 
 # Drill into a session: top-N hit turns + surrounding context.
-trellis mem context <session-id> --turns 3 --around 2
+phronia mem context <session-id> --turns 3 --around 2
 
 # When you do not know the session id yet, start with list + filter.
-trellis mem list --cwd <project-path>
-trellis mem projects   # → list active project cwds, then narrow
+phronia mem list --cwd <project-path>
+phronia mem projects   # → list active project cwds, then narrow
 ```
 
 Phase slicing (`--phase brainstorm|implement|all`) cuts the session at `task.py create` and `task.py start` boundaries. For a finish-work review of the current task, `--phase brainstorm` recovers the planning discussion and `--phase implement` recovers the execution loop. Default is `all`.

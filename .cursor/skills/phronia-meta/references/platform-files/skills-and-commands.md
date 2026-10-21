@@ -1,6 +1,6 @@
 # Skills, Commands, Prompts, And Workflows
 
-Skills and commands are textual entry points for user interaction with Trellis. Different platforms use different names, but their core purpose is the same: tell the AI how to enter the Trellis flow when the user expresses a certain intent.
+Skills and commands are textual entry points for user interaction with Phronia. Different platforms use different names, but their core purpose is the same: tell the AI how to enter the Phronia flow when the user expresses a certain intent.
 
 ## Conceptual Differences
 
@@ -11,7 +11,7 @@ Skills and commands are textual entry points for user interaction with Trellis. 
 | prompt | Explicit user invocation or platform selection | Similar to command, but in a platform prompt format. |
 | workflow | Explicit user selection or platform auto-match | Guides the main session when no sub-agent/hook exists. |
 
-Trellis workflow skills usually share one semantic set: brainstorm, before-dev, check, update-spec, break-loop. Multi-file built-in skills such as `phronia-meta` use layered references.
+Phronia workflow skills usually share one semantic set: brainstorm, before-dev, check, update-spec, break-loop. Multi-file built-in skills such as `phronia-meta` use layered references.
 
 ## Common Paths
 
@@ -83,4 +83,4 @@ They should not store task state; task state belongs in `.phronia/tasks/` and `.
 3. **Keep the same semantics consistent across platforms**. File formats can differ, but behavior descriptions should match.
 4. **Put project-specific capabilities in local skills**. Do not put team-private flows into public `phronia-meta`.
 
-If the user only wants local AI to know one more project rule, usually create a project-local skill or update `.phronia/spec/` instead of changing a Trellis built-in workflow skill.
+If the user only wants local AI to know one more project rule, usually create a project-local skill or update `.phronia/spec/` instead of changing a Phronia built-in workflow skill.

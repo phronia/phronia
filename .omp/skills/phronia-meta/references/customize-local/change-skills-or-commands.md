@@ -4,8 +4,8 @@ When the user wants to change AI entry points, auto-trigger rules, or explicit c
 
 Before editing, classify the skill you are about to touch:
 
-- **Bundled upstream skill** — `phronia-meta`, `phronia-spec-bootstrap`, `phronia-session-insight`, `phronia-channel`. Source of truth lives in the Trellis CLI repo under `packages/cli/src/templates/common/bundled-skills/<name>/`; auto-dispatched to every platform's skill root by `getBundledSkillTemplates()` on `trellis init` / `trellis update`. Local edits here are tracked by `.phronia/.template-hashes.json` and will be flagged on the next update.
-- **Project-local skill** — anything else under `.{platform}/skills/`. Owned by the user; not refreshed by `trellis update`.
+- **Bundled upstream skill** — `phronia-meta`, `phronia-spec-bootstrap`, `phronia-session-insight`, `phronia-channel`. Source of truth lives in the Phronia CLI repo under `packages/cli/src/templates/common/bundled-skills/<name>/`; auto-dispatched to every platform's skill root by `getBundledSkillTemplates()` on `phronia init` / `phronia update`. Local edits here are tracked by `.phronia/.template-hashes.json` and will be flagged on the next update.
+- **Project-local skill** — anything else under `.{platform}/skills/`. Owned by the user; not refreshed by `phronia update`.
 
 The remainder of this file uses "skill" for the local file; the override and conflict rules differ between the two cases.
 
@@ -24,9 +24,9 @@ The remainder of this file uses "skill" for the local file; the override and con
 | AI should automatically know a capability | Add or modify a skill. |
 | User wants to trigger manually with a command | Add or modify a command/prompt/workflow. |
 | Team project conventions | Prefer `.phronia/spec/` or a project-local skill — never a bundled skill directory. |
-| Tweak a bundled skill (`phronia-meta` et al.) for the user's own project | Create a project-local sibling skill (different name) that overrides intent, or edit `.phronia/spec/`. Edits inside the bundled skill directory survive only until the next `trellis update` and will need a "keep" choice each time. |
-| Contribute the change back upstream | Edit `packages/cli/src/templates/common/bundled-skills/<name>/` in the Trellis CLI repo, not the deployed copy. |
-| Change Trellis flow semantics | Synchronize `.phronia/workflow.md`. |
+| Tweak a bundled skill (`phronia-meta` et al.) for the user's own project | Create a project-local sibling skill (different name) that overrides intent, or edit `.phronia/spec/`. Edits inside the bundled skill directory survive only until the next `phronia update` and will need a "keep" choice each time. |
+| Contribute the change back upstream | Edit `packages/cli/src/templates/common/bundled-skills/<name>/` in the Phronia CLI repo, not the deployed copy. |
+| Change Phronia flow semantics | Synchronize `.phronia/workflow.md`. |
 
 ## Modify A Skill
 
@@ -54,8 +54,8 @@ The same directory shape is used by two very different ownership models:
 
 | Aspect | Bundled (`phronia-meta`, `phronia-spec-bootstrap`, `phronia-session-insight`, `phronia-channel`) | Project-local |
 | --- | --- | --- |
-| Source of truth | `packages/cli/src/templates/common/bundled-skills/<name>/` in Trellis CLI repo | Inside the user project itself |
-| Dispatch | Auto-dispatched to every platform skill root by `getBundledSkillTemplates()` (`packages/cli/src/templates/common/index.ts`) on `trellis init` / `trellis update` | Created by the user (or another skill) and never moved |
+| Source of truth | `packages/cli/src/templates/common/bundled-skills/<name>/` in Phronia CLI repo | Inside the user project itself |
+| Dispatch | Auto-dispatched to every platform skill root by `getBundledSkillTemplates()` (`packages/cli/src/templates/common/index.ts`) on `phronia init` / `phronia update` | Created by the user (or another skill) and never moved |
 | Hash tracking | Every file recorded in `.phronia/.template-hashes.json`; conflict prompt on update | Not tracked |
 | Editing locally | Allowed but will be marked "modified by user" on next update | Free editing |
 | The right way to customize | Add a *new* project-local skill with a *different* name that supplements (or supersedes) the bundled one | Edit the file directly |
@@ -92,11 +92,11 @@ If a command only repeats workflow rules, prefer making it reference/read `.phro
 | ZCode | `.zcode/skills/`, `.zcode/commands/` |
 | Kilo / Antigravity / Devin | workflows + skills |
 
-Every directory above is a deploy target for the four bundled skills. Each platform receives a full copy on `trellis init` and refresh on `trellis update`; nothing has to be wired by hand.
+Every directory above is a deploy target for the four bundled skills. Each platform receives a full copy on `phronia init` and refresh on `phronia update`; nothing has to be wired by hand.
 
 ## Add A Project-Local Skill
 
-If the user wants to document team-private customizations, create a project-local skill — never put project-private content into a bundled skill directory, since `trellis update` will overwrite it.
+If the user wants to document team-private customizations, create a project-local skill — never put project-private content into a bundled skill directory, since `phronia update` will overwrite it.
 
 ```text
 .claude/skills/project-phronia-local/
@@ -119,5 +119,5 @@ A reused name causes `getBundledSkillTemplates()` to overwrite the project-local
 - Do not mix every platform's syntax into one file.
 - Do not change only one platform entry point while claiming all platforms are supported.
 - Do not hide long-term engineering conventions inside a command; write them to `.phronia/spec/`.
-- Do not hand-edit files inside `phronia-meta/`, `phronia-spec-bootstrap/`, `phronia-session-insight/`, or `phronia-channel/` under any `.{platform}/skills/` directory expecting the change to persist — they are bundled and refreshed by `trellis update`. Either contribute upstream or add a project-local skill that complements them.
-- After `trellis update` reports a "modified by you" conflict on a bundled skill file, choose **keep** only if you accept maintaining the divergence by hand; otherwise accept the overwrite and re-apply the intent as a project-local skill.
+- Do not hand-edit files inside `phronia-meta/`, `phronia-spec-bootstrap/`, `phronia-session-insight/`, or `phronia-channel/` under any `.{platform}/skills/` directory expecting the change to persist — they are bundled and refreshed by `phronia update`. Either contribute upstream or add a project-local skill that complements them.
+- After `phronia update` reports a "modified by you" conflict on a bundled skill file, choose **keep** only if you accept maintaining the divergence by hand; otherwise accept the overwrite and re-apply the intent as a project-local skill.

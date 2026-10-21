@@ -1,20 +1,20 @@
 # Local Context Injection System
 
-Trellis context injection aims to make AI read the right files at the right time instead of relying on model memory. In a user project, injection is implemented by `.phronia/` scripts together with platform hooks, agents, and skills.
+Phronia context injection aims to make AI read the right files at the right time instead of relying on model memory. In a user project, injection is implemented by `.phronia/` scripts together with platform hooks, agents, and skills.
 
 ## Injected Context Types
 
 | Type | Source | Purpose |
 | --- | --- | --- |
 | session context | `.phronia/scripts/get_context.py` | Current developer, git status, active task, active tasks, journal, packages. |
-| workflow context | `.phronia/workflow.md` | Current Trellis flow and next action. |
+| workflow context | `.phronia/workflow.md` | Current Phronia flow and next action. |
 | spec context | `.phronia/spec/` + task JSONL | Specs that must be followed during implementation/checking. |
 | task context | `.phronia/tasks/<task>/prd.md`, `design.md`, `implement.md`, `research/` | Current task requirements, design, execution plan, and research. |
 | platform context | Platform hooks/settings/agents | Lets different AI tools read the files above through their own mechanisms. |
 
 ## session-start
 
-Platforms with session-start support inject a Trellis overview when a session starts, clears, compacts, or receives a similar event. Injected content usually includes:
+Platforms with session-start support inject a Phronia overview when a session starts, clears, compacts, or receives a similar event. Injected content usually includes:
 
 - workflow summary.
 - current task status.
@@ -32,7 +32,7 @@ If the user wants to change "what the AI should do next in a given state," edit 
 
 ## sub-agent context
 
-Implement and check agents need task context. Trellis has two loading modes:
+Implement and check agents need task context. Phronia has two loading modes:
 
 1. **hook push**: a platform hook injects jsonl-referenced files plus `prd.md`, `design.md` if present, and `implement.md` if present before the agent starts.
 2. **agent pull**: the agent definition instructs the agent to read the active task, jsonl context, and task artifacts after startup.

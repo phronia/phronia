@@ -1,6 +1,6 @@
 # Local Spec System
 
-`.phronia/spec/` is the user's project-specific engineering spec library. Trellis is not about making AI memorize conventions; it injects relevant specs or requires the AI to read them at the right time.
+`.phronia/spec/` is the user's project-specific engineering spec library. Phronia is not about making AI memorize conventions; it injects relevant specs or requires the AI to read them at the right time.
 
 ## Directory Model
 
@@ -99,4 +99,4 @@ When the AI learns a new rule during implementation or debugging, it should upda
 
 ## Boundaries
 
-`.phronia/spec/` is the user's project specification, not a permanent copy of Trellis built-in templates. The AI should encourage the user to update it according to the actual project code instead of treating Trellis default templates as immutable documents.
+`.phronia/spec/` is the user's project specification, not a permanent copy of Phronia built-in templates. The AI should encourage the user to update it according to the actual project code instead of treating Phronia default templates as immutable documents.

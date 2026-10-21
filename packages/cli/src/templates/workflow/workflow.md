@@ -12,7 +12,7 @@
 
 ---
 
-## Trellis System
+## Phronia System
 
 ### Developer Identity
 
@@ -138,7 +138,7 @@ python3 ./.phronia/scripts/get_context.py --mode phase --step <X.Y>  # detailed 
   Editing checklist:
     - When you change a [workflow-state:STATUS] block, also check the
       matching phase's `[required · once]` walkthrough steps for sync
-    - Run `trellis update` after editing to push the new bodies to
+    - Run `phronia update` after editing to push the new bodies to
       downstream user projects (block-level managed replacement)
     - Full runtime contract:
       .phronia/spec/cli/backend/workflow-state-contract.md
@@ -154,8 +154,8 @@ Phase 3: Finish  → verify, update spec, commit, and wrap up
 
 ### Request Triage
 
-- Simple conversation or small task: ask only whether this turn should create a Trellis task. If the user says no, skip Trellis for this session.
-- Complex task: ask whether you may create a Trellis task and enter planning. If the user says no, do not do broad inline implementation; explain, clarify scope, or suggest a smaller split.
+- Simple conversation or small task: ask only whether this turn should create a Phronia task. If the user says no, skip Phronia for this session.
+- Complex task: ask whether you may create a Phronia task and enter planning. If the user says no, do not do broad inline implementation; explain, clarify scope, or suggest a smaller split.
 - User approval to create a task is not approval to start implementation. Planning still happens first.
 
 ### Planning Artifacts
@@ -177,9 +177,9 @@ Create new children with `task.py create "<title>" --slug <name> --parent <paren
 <!-- Per-turn breadcrumb: shown when there is no active task (before Phase 1) -->
 
 [workflow-state:no_task]
-No active task. First classify the current turn and ask for task-creation consent before creating any Trellis task.
-Simple conversation / small task: ask only whether this turn should create a Trellis task. If the user says no, skip Trellis for this session.
-Complex task: ask the user if you can create a Trellis task and enter the planning phase. If the user says no, explain, clarify scope, or suggest a smaller split.
+No active task. First classify the current turn and ask for task-creation consent before creating any Phronia task.
+Simple conversation / small task: ask only whether this turn should create a Phronia task. If the user says no, skip Phronia for this session.
+Complex task: ask the user if you can create a Phronia task and enter the planning phase. If the user says no, explain, clarify scope, or suggest a smaller split.
 [/workflow-state:no_task]
 
 <!-- Per-turn breadcrumb: shown when the active task record cannot be read. -->
@@ -231,7 +231,7 @@ Inline mode: skip jsonl curation; Phase 2 reads artifacts/specs via `phronia-bef
      therefore must cover every required step from implementation through
      commit, including Phase 3.3 spec update and Phase 3.4 commit. -->
 
-Sub-agent dispatch protocol applies to all platforms and all sub-agents, including native Codex `SubagentStart` context injection with child-side pull fallback, class-2 Gemini/Qoder/Copilot/Reasonix/Trae/Grok/Kimi Code, hook-backed ZCode/Snow, and `phronia-research`: every dispatch prompt starts with `Active task: <task path from task.py current>` before role-specific instructions. On Grok Build, use `spawn_subagent` with `subagent_type` set to the Trellis agent name (e.g. `phronia-implement`). On Kimi Code, dispatch the built-in `coder` / `explore` sub-agent with the matching `.kimi-code/skills/phronia-<role>/SKILL.md` instructions.
+Sub-agent dispatch protocol applies to all platforms and all sub-agents, including native Codex `SubagentStart` context injection with child-side pull fallback, class-2 Gemini/Qoder/Copilot/Reasonix/Trae/Grok/Kimi Code, hook-backed ZCode/Snow, and `phronia-research`: every dispatch prompt starts with `Active task: <task path from task.py current>` before role-specific instructions. On Grok Build, use `spawn_subagent` with `subagent_type` set to the Phronia agent name (e.g. `phronia-implement`). On Kimi Code, dispatch the built-in `coder` / `explore` sub-agent with the matching `.kimi-code/skills/phronia-<role>/SKILL.md` instructions.
 
 [workflow-state:in_progress]
 Tools: `phronia-implement` / `phronia-research` are sub-agent types only (Task/Agent tool, NOT Skill; there is no skill by these names). `phronia-update-spec` is a skill. `phronia-check` exists as both; prefer the Agent form when verifying after code changes.
@@ -655,14 +655,14 @@ After the above, remind the user they can run `/finish-work` to wrap up (archive
 
 ---
 
-## Customizing Trellis (for forks)
+## Customizing Phronia (for forks)
 
-This section is for developers who want to modify the Trellis workflow itself. All customization is done by editing this file; the scripts are parsers only.
+This section is for developers who want to modify the Phronia workflow itself. All customization is done by editing this file; the scripts are parsers only.
 
 ### Changing what a step means
 
 Edit the corresponding step's walkthrough body in the Phase 1 / 2 / 3 sections above. Critical invariants:
-- No active task must triage first and ask for task-creation consent before creating a Trellis task.
+- No active task must triage first and ask for task-creation consent before creating a Phronia task.
 - Planning must distinguish lightweight PRD-only tasks from complex tasks that require `prd.md`, `design.md`, and `implement.md` before start.
 - Every required execution path must keep the Phase 3.4 commit reminder reachable before `/phronia:finish-work`.
 
@@ -680,7 +680,7 @@ All tag blocks live in the `## Phase Index` section above, immediately after eac
 
 ### Changing the per-turn prompt text
 
-Directly edit the body of the corresponding `[workflow-state:STATUS]` block. After editing, run `trellis update` (if you're a template maintainer) or restart your AI session (if you're customizing your own project) — no script changes required.
+Directly edit the body of the corresponding `[workflow-state:STATUS]` block. After editing, run `phronia update` (if you're a template maintainer) or restart your AI session (if you're customizing your own project) — no script changes required.
 
 ### Adding a custom status
 

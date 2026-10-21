@@ -1,7 +1,7 @@
 {
   "onSessionStart": [
     {
-      "description": "Inject Trellis session context on Snow session start (additionalContext + .snow/log breadcrumb)",
+      "description": "Inject Phronia session context on Snow session start (additionalContext + .snow/log breadcrumb)",
       "hooks": [
         {
           "type": "command",

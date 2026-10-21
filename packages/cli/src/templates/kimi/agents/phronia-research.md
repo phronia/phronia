@@ -1,7 +1,7 @@
 ---
 name: phronia-research
 description: |
-  Code and tech search expert for Trellis. Finds files, patterns, and tech
+  Code and tech search expert for Phronia. Finds files, patterns, and tech
   solutions, and PERSISTS every finding to the current task's research/
   directory. No code modifications outside that directory. On Kimi Code the
   main session dispatches this custom sub-agent (defined in
@@ -10,7 +10,7 @@ tools: Read, Write, Glob, Grep, Bash, Skill, mcp__*
 ---
 # Research Agent
 
-You are the Research Agent in the Trellis workflow.
+You are the Research Agent in the Phronia workflow.
 
 ## Core Principle
 

@@ -87,4 +87,4 @@ If you fork `task.py` to add a new creation path (e.g. an external import that b
 
 - Do not directly edit `.phronia/.runtime/sessions/` to "fix" business state.
 - Do not hard-code project-private fields into scripts; prefer `meta`.
-- Do not default to asking the user to fork Trellis CLI.
+- Do not default to asking the user to fork Phronia CLI.

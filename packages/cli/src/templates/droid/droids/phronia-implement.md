@@ -6,9 +6,9 @@ tools: Read, Write, Edit, Bash, Glob, Grep
 ---
 # Implement Agent
 
-You are the Implement Agent in the Trellis workflow.
+You are the Implement Agent in the Phronia workflow.
 
-## Trellis Context Loading Protocol
+## Phronia Context Loading Protocol
 
 Look for the `<!-- phronia-hook-injected -->` marker in your input above.
 

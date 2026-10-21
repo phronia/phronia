@@ -227,7 +227,7 @@ describe("pi templates", () => {
     };
 
     expect(settings.enableSkillCommands).toBe(true);
-    expect(settings.extensions).toEqual(["./extensions/trellis/index.ts"]);
+    expect(settings.extensions).toEqual(["./extensions/phronia/index.ts"]);
     expect(settings.skills).toBeUndefined();
     expect(settings.prompts).toEqual(["./prompts"]);
     expect(settings.packages).toBeUndefined();
@@ -832,7 +832,7 @@ fallbackModels:
       fallbackModels: [],
     };
     const dogfoodExtension = readFileSync(
-      join(process.cwd(), "..", "..", ".pi", "extensions", "trellis", "index.ts"),
+      join(process.cwd(), "..", "..", ".pi", "extensions", "phronia", "index.ts"),
       "utf-8",
     );
 
@@ -1181,7 +1181,7 @@ fallbackModels:
 
   it("forwards permission asks to the serving parent session (#610)", () => {
     const dogfoodExtension = readFileSync(
-      join(process.cwd(), "..", "..", ".pi", "extensions", "trellis", "index.ts"),
+      join(process.cwd(), "..", "..", ".pi", "extensions", "phronia", "index.ts"),
       "utf-8",
     );
 

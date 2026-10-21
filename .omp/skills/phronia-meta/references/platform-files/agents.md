@@ -1,6 +1,6 @@
 # Agents
 
-Trellis agent files define specialized roles. Common Trellis agents in a user project are:
+Phronia agent files define specialized roles. Common Phronia agents in a user project are:
 
 - `phronia-research`
 - `phronia-implement`
@@ -38,7 +38,7 @@ Agent files should not become generic chat prompts. They should define input sou
 
 GitHub Copilot agent/prompt support is provided by a combination of directories such as `.github/agents/`, `.github/prompts/`, and `.github/skills/`; inspect the files actually generated in the user project.
 
-Main-session workflow platforms such as Kilo, Antigravity, and Devin may not have Trellis sub-agent files. They usually rely on workflows/skills to guide the main session.
+Main-session workflow platforms such as Kilo, Antigravity, and Devin may not have Phronia sub-agent files. They usually rely on workflows/skills to guide the main session.
 
 ## Two Context Loading Modes
 
@@ -80,4 +80,4 @@ This mode fits platforms whose hooks cannot reliably rewrite sub-agent prompts.
 
 ## Do Not Default To Editing Upstream Templates
 
-Local AI should default to modifying platform agent files inside the user project. Discuss upstream template source only when the user explicitly wants to contribute the change back to Trellis.
+Local AI should default to modifying platform agent files inside the user project. Discuss upstream template source only when the user explicitly wants to contribute the change back to Phronia.

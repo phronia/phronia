@@ -1,7 +1,7 @@
 {
   "onUserMessage": [
     {
-      "description": "Prepend Trellis breadcrumb on each user message (UI keeps original typed text)",
+      "description": "Prepend Phronia breadcrumb on each user message (UI keeps original typed text)",
       "hooks": [
         {
           "type": "command",

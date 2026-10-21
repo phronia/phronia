@@ -1,5 +1,5 @@
 ---
-description: "Trellis Copilot prompt: Update Code-Spec - Capture Executable Contracts"
+description: "Phronia Copilot prompt: Update Code-Spec - Capture Executable Contracts"
 ---
 
 # Update Code-Spec - Capture Executable Contracts

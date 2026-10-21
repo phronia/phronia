@@ -75,7 +75,7 @@ describe("isManagedPath", () => {
     expect(isManagedPath(".github/prompts/start.prompt.md")).toBe(true);
     expect(isManagedPath(".github/copilot/hooks/session-start.py")).toBe(true);
     expect(isManagedPath(".github/hooks/trellis.json")).toBe(true);
-    expect(isManagedPath(".pi/extensions/trellis/index.ts")).toBe(true);
+    expect(isManagedPath(".pi/extensions/phronia/index.ts")).toBe(true);
     expect(isManagedPath(".pi/prompts/phronia-continue.md")).toBe(true);
     expect(isManagedPath(".dsh/skills/phronia-start/SKILL.md")).toBe(true);
   });
@@ -426,7 +426,7 @@ describe("collectPlatformTemplates", () => {
     expect(result?.has(".pi/prompts/phronia-start.md")).toBe(true);
     expect(result?.has(".pi/prompts/phronia-finish-work.md")).toBe(true);
     expect(result?.has(".pi/agents/phronia-implement.md")).toBe(true);
-    expect(result?.has(".pi/extensions/trellis/index.ts")).toBe(true);
+    expect(result?.has(".pi/extensions/phronia/index.ts")).toBe(true);
     expect(result?.has(".pi/settings.json")).toBe(true);
   });
 

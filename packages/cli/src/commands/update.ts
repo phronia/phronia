@@ -202,16 +202,18 @@ function mergeManagedBlockContent(
   const existingStart = existingContent.indexOf(startMarker);
   if (existingStart === -1) {
     const templateBlock = getManagedBlock(templateContent, startMarker, endMarker);
-    const legacyStart = existingContent.indexOf(LEGACY_BLOCK_START);
+    const legacyStartMarker = startMarker.replace("PHRONIA", "TRELLIS");
+    const legacyEndMarker = endMarker.replace("PHRONIA", "TRELLIS");
+    const legacyStart = existingContent.indexOf(legacyStartMarker);
     const legacyEnd =
       legacyStart === -1
         ? -1
-        : existingContent.indexOf(LEGACY_BLOCK_END, legacyStart);
+        : existingContent.indexOf(legacyEndMarker, legacyStart);
     if (templateBlock && legacyStart !== -1 && legacyEnd !== -1) {
       return (
         existingContent.slice(0, legacyStart) +
         templateBlock +
-        existingContent.slice(legacyEnd + LEGACY_BLOCK_END.length)
+        existingContent.slice(legacyEnd + legacyEndMarker.length)
       );
     }
   }

@@ -1,8 +1,8 @@
 ---
-description: "Guide requirements discovery for a Trellis task after task-creation consent."
+description: "Guide requirements discovery for a Phronia task after task-creation consent."
 ---
 
-# Trellis Brainstorm
+# Phronia Brainstorm
 
 ## Non-Negotiable Planning Contract
 
@@ -28,7 +28,7 @@ Use this skill during Phase 1 planning to turn the user's request into clear req
 
 ## Preconditions
 
-Use this skill only after task-creation consent has been given and the user is ready to enter Trellis planning.
+Use this skill only after task-creation consent has been given and the user is ready to enter Phronia planning.
 
 If no task exists yet, create one:
 
@@ -46,7 +46,7 @@ Use a concise title from the user's request. Both the title and `--description` 
 2. Inspect available evidence before asking questions:
    - code, tests, fixtures, and configs
    - README files, docs, existing specs, and domain notes
-   - related Trellis tasks, research files, and session history when present
+   - related Phronia tasks, research files, and session history when present
 3. Separate what you found into:
    - confirmed facts
    - product intent still needed from the user

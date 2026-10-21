@@ -1,13 +1,13 @@
 ---
 name: phronia-implement
 description: |
-  Code implementation expert for Trellis. Understands specs and requirements,
+  Code implementation expert for Phronia. Understands specs and requirements,
   then implements features. No git commit allowed. Dispatch via spawn_subagent
   with subagent_type phronia-implement; first prompt line must be Active task: <path>.
 ---
 # Implement Agent
 
-You are the Implement Agent in the Trellis workflow.
+You are the Implement Agent in the Phronia workflow.
 
 ## Recursion Guard
 
@@ -15,7 +15,7 @@ You are already the `phronia-implement` sub-agent that the main session dispatch
 
 - Do NOT call `spawn_subagent` for another `phronia-implement` or `phronia-check`.
 - If workflow.md, skills, or the parent prompt say to dispatch `phronia-implement` / `phronia-check`, treat that as a main-session instruction that is already satisfied by your current role.
-- Only the main session may dispatch Trellis implement/check agents. If more parallel work is needed, report that recommendation instead of spawning.
+- Only the main session may dispatch Phronia implement/check agents. If more parallel work is needed, report that recommendation instead of spawning.
 
 ## Dispatch note (main session)
 

@@ -1,6 +1,6 @@
 # Local Files Generated After Init
 
-`trellis init` writes the Trellis runtime into the user project. Later, `trellis update` tries to update Trellis-managed template files, but it uses `.phronia/.template-hashes.json` to determine which files have already been modified by the user.
+`phronia init` writes the Phronia runtime into the user project. Later, `phronia update` tries to update Phronia-managed template files, but it uses `.phronia/.template-hashes.json` to determine which files have already been modified by the user.
 
 This page only describes files that are visible and editable inside the user project.
 
@@ -30,7 +30,7 @@ This page only describes files that are visible and editable inside the user pro
 | `.phronia/scripts/` | Carefully | Local runtime. It can be customized, but only after understanding the call chain. |
 | `.phronia/.runtime/` | No | Runtime state, usually written automatically by hooks/scripts. |
 | `.phronia/.developer` | Carefully | Current developer identity. |
-| `.phronia/.version` | No | Trellis version record used by update/migration logic. |
+| `.phronia/.version` | No | Phronia version record used by update/migration logic. |
 | `.phronia/.template-hashes.json` | No | Template hash record. Do not hand-write business rules here. |
 
 ## Platform Directories
@@ -49,7 +49,7 @@ When modifying a platform directory, also confirm whether `.phronia/workflow.md`
 
 ## Meaning Of Template Hashes
 
-`.phronia/.template-hashes.json` records the content hash from the last time Trellis wrote a template file. `trellis update` uses it to distinguish three cases:
+`.phronia/.template-hashes.json` records the content hash from the last time Phronia wrote a template file. `phronia update` uses it to distinguish three cases:
 
 | Case | Update behavior |
 | --- | --- |
@@ -57,7 +57,7 @@ When modifying a platform directory, also confirm whether `.phronia/workflow.md`
 | File was modified by the user | Prompt the user to overwrite, keep, or generate `.new`. |
 | File is no longer a current template | It may be deleted, renamed, or preserved according to migration rules. |
 
-When an AI customizes local Trellis files, it does not need to maintain hashes manually. It is normal for Trellis update to recognize the result as "modified by the user."
+When an AI customizes local Phronia files, it does not need to maintain hashes manually. It is normal for Phronia update to recognize the result as "modified by the user."
 
 ## Local Customization Boundaries
 
@@ -73,8 +73,8 @@ Do not edit by default:
 
 - Global npm install directory
 - `node_modules/@phronia/cli`
-- Trellis GitHub repository source code
+- Phronia GitHub repository source code
 - Concrete state files under `.phronia/.runtime/**`
 - Hash contents inside `.phronia/.template-hashes.json`
 
-Switch to the Trellis CLI source-code perspective only when the user explicitly wants to contribute upstream.
+Switch to the Phronia CLI source-code perspective only when the user explicitly wants to contribute upstream.

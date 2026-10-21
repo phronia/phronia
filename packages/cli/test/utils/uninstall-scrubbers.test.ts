@@ -449,7 +449,7 @@ describe("scrubPiSettings", () => {
   it("strips trellis entries and reports fullyEmpty", () => {
     const input = {
       enableSkillCommands: true,
-      extensions: ["./extensions/trellis/index.ts"],
+      extensions: ["./extensions/phronia/index.ts"],
       skills: ["./skills"],
       prompts: ["./prompts"],
       packages: [
@@ -472,7 +472,7 @@ describe("scrubPiSettings", () => {
   it("preserves user-added array entries", () => {
     const input = {
       enableSkillCommands: true,
-      extensions: ["./extensions/trellis/index.ts", "./extensions/my-ext"],
+      extensions: ["./extensions/phronia/index.ts", "./extensions/my-ext"],
       skills: ["./skills", "./other-skills"],
       prompts: ["./prompts"],
       packages: [

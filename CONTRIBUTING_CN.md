@@ -1,6 +1,6 @@
 # 贡献指南
 
-感谢你对 Trellis 的关注！本文档提供参与项目贡献的指南。
+感谢你对 Phronia 的关注！本文档提供参与项目贡献的指南。
 
 ## 贡献方式
 
@@ -9,7 +9,7 @@
 提交 Bug 前，请先查看 [已有 Issues](https://github.com/mindfold-ai/Trellis/issues) 避免重复。
 
 报告 Bug 时请包含：
-- Trellis 版本 (`trellis --version`)
+- Phronia 版本 (`phronia --version`)
 - Node.js 版本 (`node --version`)
 - 操作系统
 - 复现步骤
@@ -53,8 +53,8 @@
 
 2. **克隆你的 Fork**
    ```bash
-   git clone https://github.com/YOUR_USERNAME/Trellis.git
-   cd Trellis
+   git clone https://github.com/YOUR_USERNAME/Phronia.git
+   cd Phronia
    ```
 
 3. **安装依赖**
@@ -81,7 +81,7 @@ pnpm typecheck   # TypeScript 类型检查
 ## 项目结构
 
 ```
-Trellis/
+Phronia/
 ├── src/                    # TypeScript 源代码
 │   ├── cli/                # CLI 入口
 │   ├── commands/           # CLI 命令 (init, update)
@@ -92,7 +92,7 @@ Trellis/
 │   ├── agents/             # Agent 定义
 │   ├── commands/           # 斜杠命令
 │   └── hooks/              # Python Hook 脚本
-├── .phronia/               # Trellis 工作流（项目自用）←
+├── .phronia/               # Phronia 工作流（项目自用）←
 │   ├── scripts/            # Bash 脚本
 │   └── spec/               # Spec 文件模板
 └── docs/                   # 文档
@@ -151,4 +151,4 @@ docs(readme): update quick start instructions
 
 ## 感谢
 
-每一份贡献都让 Trellis 变得更好。感谢你的付出！
+每一份贡献都让 Phronia 变得更好。感谢你的付出！

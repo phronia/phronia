@@ -1,5 +1,5 @@
 ---
-description: "Trellis Copilot prompt: check.prompt"
+description: "Phronia Copilot prompt: check.prompt"
 ---
 
 # Code Quality Check

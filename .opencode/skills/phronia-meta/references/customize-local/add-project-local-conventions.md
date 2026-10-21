@@ -1,6 +1,6 @@
 # Add Project-Local Conventions
 
-Often the user does not need to change Trellis mechanics; they need local AI to understand their team's conventions. In that case, prefer `.phronia/spec/` or a project-local skill instead of editing `phronia-meta`.
+Often the user does not need to change Phronia mechanics; they need local AI to understand their team's conventions. In that case, prefer `.phronia/spec/` or a project-local skill instead of editing `phronia-meta`.
 
 ## Where To Put Things
 
@@ -14,7 +14,7 @@ Often the user does not need to change Trellis mechanics; they need local AI to 
 
 ## Create A Project-Local Skill
 
-If the user wants AI to know "how this project customizes Trellis," create a local skill:
+If the user wants AI to know "how this project customizes Phronia," create a local skill:
 
 ```text
 .claude/skills/phronia-local/
@@ -26,14 +26,14 @@ Example:
 ```md
 ---
 name: phronia-local
-description: "Project-local Trellis customizations for this repository. Use when changing this project's Trellis workflow, hooks, local agents, or team-specific conventions."
+description: "Project-local Phronia customizations for this repository. Use when changing this project's Phronia workflow, hooks, local agents, or team-specific conventions."
 ---
 
-# Trellis Local
+# Phronia Local
 
 ## Local Scope
 
-This skill documents this repository's Trellis customizations only.
+This skill documents this repository's Phronia customizations only.
 
 ## Custom Workflow Rules
 
@@ -73,11 +73,11 @@ python3 ./.phronia/scripts/task.py add-context <task> check ".phronia/spec/backe
 
 ## Do Not Store Project-Private Rules In `phronia-meta`
 
-`phronia-meta` is a public skill for understanding Trellis architecture and local customization entry points. Put project-private content in:
+`phronia-meta` is a public skill for understanding Phronia architecture and local customization entry points. Put project-private content in:
 
 - `.phronia/spec/`
 - a project-local skill
 - the current task
 - workspace journal
 
-This prevents future updates to Trellis's built-in `phronia-meta` from overwriting the team's own conventions.
+This prevents future updates to Phronia's built-in `phronia-meta` from overwriting the team's own conventions.

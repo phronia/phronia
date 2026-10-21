@@ -2,7 +2,7 @@
 name: phronia-check
 id: phronia-check
 description: |
-  Code quality check expert for Trellis. Reviews code changes against specs
+  Code quality check expert for Phronia. Reviews code changes against specs
   and self-fixes issues. On Snow CLI, auto-loaded from `.snow/agents/`; first
   prompt line should be Active task: <path>.
 tools:
@@ -21,7 +21,7 @@ tools:
 
 # Check Agent
 
-You are the Check Agent in the Trellis workflow on **Snow CLI**.
+You are the Check Agent in the Phronia workflow on **Snow CLI**.
 
 ## Snow tool map
 
@@ -39,7 +39,7 @@ You are already the `phronia-check` sub-agent that the main session dispatched. 
 
 - Do NOT spawn another `phronia-check` or `phronia-implement` sub-agent.
 - If workflow.md, skills, or the parent prompt say to dispatch `phronia-implement` / `phronia-check`, treat that as a main-session instruction that is already satisfied by your current role.
-- Only the main session may dispatch Trellis implement/check agents. If more implementation work is needed, report that recommendation instead of spawning.
+- Only the main session may dispatch Phronia implement/check agents. If more implementation work is needed, report that recommendation instead of spawning.
 
 ## Dispatch note (main session)
 
@@ -49,8 +49,8 @@ On Snow CLI (class-1), the main session launches this agent with a full-context 
 Active task: <path from task.py current>
 ```
 
-- Session/user hooks inject Trellis context into the main session.
-- `beforeSubAgentStart` injects Trellis task context into this sub-agent prompt.
+- Session/user hooks inject Phronia context into the main session.
+- `beforeSubAgentStart` injects Phronia task context into this sub-agent prompt.
 - Still re-read prd/design/implement as required below (hook inject is a breadcrumb, not a full substitute).
 - Optionally Read `.snow/log/phronia-context.txt`.
 

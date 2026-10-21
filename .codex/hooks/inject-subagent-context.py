@@ -192,7 +192,7 @@ def get_current_task(
 # Context Injection Limits (issue #441)
 #
 # Notice text and behavior mirrored byte-for-byte in the Pi TS extension
-# (templates/pi/extensions/trellis/index.ts.txt). Changing wording here
+# (templates/pi/extensions/phronia/index.ts.txt). Changing wording here
 # requires changing it there too.
 # =============================================================================
 

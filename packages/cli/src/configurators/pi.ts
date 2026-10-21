@@ -54,7 +54,7 @@ export function collectPiTemplates(): Map<string, string> {
     files.set(`.pi/agents/${agent.name}.md`, agent.content);
   }
 
-  files.set(".pi/extensions/trellis/index.ts", getExtensionTemplate());
+  files.set(".pi/extensions/phronia/index.ts", getExtensionTemplate());
 
   const settings = getSettingsTemplate();
   files.set(

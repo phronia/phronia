@@ -1,5 +1,5 @@
 ---
-description: "Trellis Copilot prompt: Break the Loop - Deep Bug Analysis"
+description: "Phronia Copilot prompt: Break the Loop - Deep Bug Analysis"
 ---
 
 # Break the Loop - Deep Bug Analysis

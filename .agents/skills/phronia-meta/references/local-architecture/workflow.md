@@ -1,6 +1,6 @@
 # Local Workflow System
 
-`.phronia/workflow.md` is the Trellis workflow source of truth inside the user project. An AI does not need Trellis source code to understand how the current project should move tasks forward; this file is enough.
+`.phronia/workflow.md` is the Phronia workflow source of truth inside the user project. An AI does not need Phronia source code to understand how the current project should move tasks forward; this file is enough.
 
 ## File Responsibilities
 
