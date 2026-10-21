@@ -81,7 +81,7 @@ import {
   PHRONIA_BLOCK_END,
   PHRONIA_BLOCK_START,
 } from "../utils/managed-paths.js";
-import { writeCompiledRules } from "@phronia/core";
+import { compileRules, writeCompiledRules, writeGate } from "@phronia/core";
 import { refreshAdapterManifest } from "./adapter-manifest.js";
 
 export {
@@ -2993,6 +2993,7 @@ export async function update(options: UpdateOptions): Promise<void> {
   try {
     refreshAdapterManifest(cwd)
     writeCompiledRules(cwd)
+    writeGate(cwd, compileRules(cwd).rules)
   } catch {
     // manifest is diagnostic state, not required for the update to succeed
   }

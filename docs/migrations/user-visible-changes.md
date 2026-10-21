@@ -122,6 +122,11 @@ Batches that must update this file:
     --input <file|->` validates per-rule verdicts and writes
     `.phronia/tasks/<ref>/check-results.json` with `pass|fail|partial` and
     a `missing` list for verified rules that were not evaluated.
+  - Fifth-level gate: `phronia rules compile` also writes `.phronia/gate.yaml`;
+    `phronia rules gate --changed` blocks protected paths, `--task` blocks
+    missing high/critical verdicts and coverage below 100%, and
+    `rules verdict --check` applies the same gate. `phronia doctor` reports
+    gate status for `loopControl: full` platforms (dsh).
 - **B10**: hooks stop invoking Python; a platform package is used when
   available.
 - **B11**: task worktrees and session GC.

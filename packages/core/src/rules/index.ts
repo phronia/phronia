@@ -295,3 +295,4 @@ function findRuleFiles(dir: string): string[] {
   return out;
 }
 export * from "./verdict.js";
+export * from "./gate.js";

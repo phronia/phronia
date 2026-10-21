@@ -11,6 +11,9 @@ import { execFileSync } from "node:child_process";
 import path from "node:path";
 import {
   featureStatus,
+  CAPABILITIES,
+  compileRules,
+  gateReportForDoctor,
   handshakeAgeMs,
   PLATFORM_IDS,
   nodeFs,
@@ -55,6 +58,13 @@ export interface DoctorPlatformReport {
   id: PlatformId;
   name: string;
   adapter: DoctorAdapterReport;
+  /** Present only for loopControl: full platforms. */
+  gate?: {
+    allowed: boolean;
+    coverage: number;
+    requiredCoverage: number;
+    violations: { code: string; severity: string; message: string }[];
+  };
   /** Present only for ZCode: which of the three integration paths is active. */
   zcode?: {
     path: ZcodePathState["selected"]["kind"];
@@ -117,6 +127,9 @@ export function collectDoctorReport(options: DoctorOptions): DoctorReport {
         id,
         name: AI_TOOLS[id].name,
         adapter: adapterReport(selection, handshake, age),
+        ...(CAPABILITIES[id].loopControl === "full"
+          ? { gate: gateReport(projectRoot) }
+          : {}),
         ...(id === "zcode"
           ? { zcode: zcodeReport(projectRoot, selection, handshake) }
           : {}),
@@ -155,6 +168,14 @@ export function runDoctorCommand(options: DoctorOptions): number {
       `  adapter ${adapter.adapterId ?? "(none)"}  harness ${adapter.harnessVersion ?? "unknown"} (${adapter.source})  ${adapter.status}${adapter.reason ? `: ${adapter.reason}` : ""}`,
       `  last handshake ${formatAge(adapter.lastHandshakeAgeMs)}`,
     );
+    if (platform.gate) {
+      lines.push(
+        `  gate ${platform.gate.allowed ? "pass" : "blocked"}: coverage ${(platform.gate.coverage * 100).toFixed(1)}% (required ${(platform.gate.requiredCoverage * 100).toFixed(1)}%)`,
+      );
+      for (const violation of platform.gate.violations) {
+        lines.push(`    ${violation.severity} ${violation.code}: ${violation.message}`);
+      }
+    }
     if (platform.zcode) {
       lines.push(
         `  zcode path ${platform.zcode.path} (${platform.zcode.buildClass}, trust ${platform.zcode.trust}): ${platform.zcode.reason}`,
@@ -343,4 +364,33 @@ export function runZcodeDetectCommand(options: {
     ].join("\n") + "\n",
   );
   return 0;
+}
+
+function gateReport(projectRoot: string): NonNullable<DoctorPlatformReport["gate"]> {
+  const rules = compileRules(projectRoot).rules;
+  const changedPaths = gitChangedPaths(projectRoot);
+  const report = gateReportForDoctor(projectRoot, rules, changedPaths);
+  if (!report) {
+    return { allowed: true, coverage: 1, requiredCoverage: 1, violations: [] };
+  }
+  return {
+    allowed: report.result.allowed,
+    coverage: report.result.coverage,
+    requiredCoverage: report.result.requiredCoverage,
+    violations: report.result.violations.map((violation) => ({
+      code: violation.code,
+      severity: violation.severity,
+      message: violation.message,
+    })),
+  };
+}
+
+function gitChangedPaths(root: string): string[] {
+  const output = git(root, ["status", "--porcelain"]);
+  return output
+    .split(/\r?\n/)
+    .map((line) => line.trim())
+    .filter(Boolean)
+    .map((line) => line.slice(3).trim())
+    .filter(Boolean);
 }

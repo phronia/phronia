@@ -13,6 +13,7 @@ import { runContextCommand } from "../commands/context.js";
 import { runDoctorCommand, runZcodeDetectCommand } from "../commands/doctor.js";
 import {
   runRulesCompile,
+  runRulesGate,
   runRulesList,
   runRulesVerdict,
 } from "../commands/rules.js";
@@ -650,6 +651,21 @@ rulesCommand
   .option("--check", "Exit non-zero when the ledger has errors")
   .action((options: Record<string, unknown>) => {
     const exitCode = runRulesCompile({ cwd, ...options });
+    if (exitCode !== 0) process.exit(exitCode);
+  });
+
+rulesCommand
+  .command("gate")
+  .option("--changed", "Check changed paths against protected scopes")
+  .option("--task <ref>", "Task whose check-results.json provides verdicts")
+  .option("--json", "Output machine-readable JSON")
+  .action((options: Record<string, unknown>) => {
+    const exitCode = runRulesGate({
+      cwd,
+      changed: Boolean(options.changed),
+      task: options.task as string | undefined,
+      json: Boolean(options.json),
+    });
     if (exitCode !== 0) process.exit(exitCode);
   });
 
