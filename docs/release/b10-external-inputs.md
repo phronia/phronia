@@ -58,9 +58,11 @@ that only the maintainer can supply. This file is the exact checklist.
 
 ## Current decision
 
-**B10 is deferred at the release step, not unstarted.** The repository now
-contains `packages/runtime` (launcher, JS fallback, Bun/Deno compile script)
-and `.github/workflows/release-binaries.yml` (manual matrix, signing steps
-gated on secrets). The JS fallback builds and runs today; native binaries and
-publishing stop at the missing credentials/toolchain above. Re-open B10 when
-section A and at least one of B/C are supplied.
+**B10 is code-complete and blocked only at signing/publishing.** `bun build
+--compile` produces all five targets on this machine; the binary embeds the
+templates, extracts them to a cache directory, and runs `--version` and
+`context session-start` successfully. `packages/runtime/scripts/package-npm.mjs`
+stages the five platform packages and the main package with
+`optionalDependencies` populated. What remains is exactly section A and
+B/C: credentials to sign, notarize, and publish. Re-open B10 when those are
+supplied.

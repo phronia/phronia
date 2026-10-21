@@ -19,9 +19,15 @@ Packaging only: no business logic. The CLI and context pipeline live in
 ## Local build
 
 ```bash
-pnpm --filter @phronia/runtime build:bundle # writes the launcher
-pnpm --filter @phronia/runtime build:binary # requires Bun or Deno
+pnpm build                                  # CLI dist + shim artifacts
+pnpm --filter @phronia/runtime build:bundle # JS fallback launcher
+pnpm --filter @phronia/runtime build:binary # five targets via Bun/Deno
+pnpm --filter @phronia/runtime package:npm  # staging tree with optionalDependencies
 ```
+
+`build:binary` first generates `src/assets.generated.ts`; the binary extracts
+those templates to `~/.cache/phronia/runtime/<asset-hash>` and sets
+`PHRONIA_ASSET_ROOT`, so template reads work without a source checkout.
 
 ## Release blockers
 

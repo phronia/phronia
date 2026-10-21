@@ -32,6 +32,7 @@
     "release:plan": "node packages/cli/scripts/release-preflight.js publish-plan"
   },
   "devDependencies": {
+    "bun": "1.4.3",
     "esbuild": "0.27.3",
     "husky": "^9.1.7",
     "lint-staged": "^16.2.7"

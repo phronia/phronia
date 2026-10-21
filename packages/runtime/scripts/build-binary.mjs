@@ -24,6 +24,8 @@ const targets = [
 
 mkdirSync(dist, { recursive: true });
 
+execFileSync(process.execPath, [resolve(root, "scripts/build-assets.mjs")], { stdio: "inherit" });
+
 function has(command) {
   try {
     execFileSync(command, ["--version"], { stdio: "ignore" });

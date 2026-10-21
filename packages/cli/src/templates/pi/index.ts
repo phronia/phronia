@@ -4,9 +4,7 @@ import {
   type HookTemplate,
 } from "../template-utils.js";
 
-const { listMdAgents, getSettings, readTemplate } = createTemplateReader(
-  import.meta.url,
-);
+const { listMdAgents, getSettings, readTemplate } = createTemplateReader(import.meta.url, "templates/pi");
 
 export function getAllAgents(): AgentTemplate[] {
   return listMdAgents();

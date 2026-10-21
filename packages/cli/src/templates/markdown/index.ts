@@ -6,11 +6,10 @@
  */
 
 import { readFileSync } from "node:fs";
-import { dirname, join } from "node:path";
-import { fileURLToPath } from "node:url";
+import { join } from "node:path";
+import { assetDir } from "../asset-root.js";
 
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = dirname(__filename);
+const __dirname = assetDir(import.meta.url, "templates/markdown");
 
 /**
  * Read a template file from src/templates/markdown/

@@ -18,17 +18,17 @@
  */
 
 import { readFileSync } from "node:fs";
-import { dirname, join } from "node:path";
-import { fileURLToPath } from "node:url";
+import { join } from "node:path";
 import {
   createTemplateReader,
   type AgentTemplate,
   type HookTemplate,
 } from "../template-utils.js";
+import { assetDir } from "../asset-root.js";
 
 export type { AgentTemplate, HookTemplate };
 
-const { listMdAgents, getSettings } = createTemplateReader(import.meta.url);
+const { listMdAgents, getSettings } = createTemplateReader(import.meta.url, "templates/zcode");
 
 /** Sub-agent definitions (phronia-implement, phronia-check, phronia-research). */
 export function getAllAgents(): AgentTemplate[] {
@@ -46,6 +46,6 @@ export function getHooksConfig(): HookTemplate {
  * without depending on a third-party repository.
  */
 export function getBridgeTemplate(): string {
-  const here = dirname(fileURLToPath(import.meta.url));
+  const here = assetDir(import.meta.url, "templates/zcode");
   return readFileSync(join(here, "bridge", "phronia-zcode-bridge.mjs"), "utf-8");
 }

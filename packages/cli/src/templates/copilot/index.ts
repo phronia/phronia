@@ -12,11 +12,10 @@
  */
 
 import { readdirSync, readFileSync } from "node:fs";
-import { dirname, join } from "node:path";
-import { fileURLToPath } from "node:url";
+import { join } from "node:path";
+import { assetDir } from "../asset-root.js";
 
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = dirname(__filename);
+const __dirname = assetDir(import.meta.url, "templates/copilot");
 
 export const COPILOT_INSTRUCTIONS_PATH = ".github/copilot-instructions.md";
 export const COPILOT_INSTRUCTIONS_BLOCK_START =

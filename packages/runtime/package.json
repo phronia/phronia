@@ -6,6 +6,8 @@
   "description": "Binary/JS bundle packaging for the Phronia CLI. No business logic.",
   "scripts": {
     "build:bundle": "node scripts/build-js-bundle.mjs",
+    "build:assets": "node scripts/build-assets.mjs",
+    "package:npm": "node scripts/package-npm.mjs",
     "build:binary": "node scripts/build-binary.mjs",
     "build": "node scripts/build-js-bundle.mjs && node scripts/build-binary.mjs"
   },

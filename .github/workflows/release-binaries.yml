@@ -43,6 +43,8 @@ jobs:
           bun-version: "1.4.0"
       - name: Build binary
         run: pnpm --filter @phronia/runtime build:binary
+      - name: Stage npm packages
+        run: pnpm --filter @phronia/runtime package:npm
       - name: Sign macOS
         if: startsWith(matrix.os, 'macos') && env.MACOS_CERT_P12 != ''
         env:
@@ -60,7 +62,9 @@ jobs:
       - uses: actions/upload-artifact@v4
         with:
           name: phronia-${{ matrix.target }}
-          path: packages/runtime/dist/phronia-*
+          path: |
+            packages/runtime/dist/phronia-*
+            packages/runtime/dist/npm/**
 
   publish:
     needs: build

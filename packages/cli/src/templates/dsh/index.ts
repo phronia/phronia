@@ -19,7 +19,7 @@
 
 import { createTemplateReader } from "../template-utils.js";
 
-const { readTemplate } = createTemplateReader(import.meta.url);
+const { readTemplate } = createTemplateReader(import.meta.url, "templates/dsh");
 
 /** Operator guide copied to `.dsh/DSH.md`. */
 export function getDshGuide(): string {

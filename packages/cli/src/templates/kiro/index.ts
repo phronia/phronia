@@ -15,9 +15,7 @@
 import { createTemplateReader, type AgentTemplate } from "../template-utils.js";
 export type { AgentTemplate };
 
-const { listFiles, readTemplate, listJsonAgents } = createTemplateReader(
-  import.meta.url,
-);
+const { listFiles, readTemplate, listJsonAgents } = createTemplateReader(import.meta.url, "templates/kiro");
 
 /**
  * Get all Kiro agent templates (JSON format).

@@ -1,11 +1,12 @@
 import * as fs from "node:fs";
 import * as path from "node:path";
 import { fileURLToPath } from "node:url";
+import { assetDir } from "./asset-root.js";
 import { ensureDir, writeFile } from "../utils/file-writer.js";
 import { replacePythonCommandLiterals } from "../configurators/shared.js";
 
 const __filename = fileURLToPath(import.meta.url);
-const __dirname = path.dirname(__filename);
+const __dirname = assetDir(import.meta.url, "templates");
 
 type TemplateCategory = "scripts" | "markdown" | "commands";
 

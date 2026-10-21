@@ -13,7 +13,7 @@
 
 import { createTemplateReader, type AgentTemplate } from "../template-utils.js";
 
-const { listMdAgents } = createTemplateReader(import.meta.url);
+const { listMdAgents } = createTemplateReader(import.meta.url, "templates/grok");
 
 /** Sub-agent definitions (phronia-implement, phronia-check, phronia-research). */
 export function getAllAgents(): AgentTemplate[] {

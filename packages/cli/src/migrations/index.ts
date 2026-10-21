@@ -7,7 +7,7 @@
 
 import fs from "node:fs";
 import path from "node:path";
-import { fileURLToPath } from "node:url";
+import { assetDir } from "../templates/asset-root.js";
 
 import type {
   ConfigSectionAdded,
@@ -17,7 +17,7 @@ import type {
 import { compareVersions } from "../utils/compare-versions.js";
 import { LAYOUT } from "@phronia/core/layout";
 
-const __dirname = path.dirname(fileURLToPath(import.meta.url));
+const __dirname = assetDir(import.meta.url, "migrations");
 
 /**
  * Production reads only Phronia's own manifests. Tests point this at

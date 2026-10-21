@@ -17,7 +17,7 @@
 
 import { createTemplateReader, type AgentTemplate } from "../template-utils.js";
 
-const { listMdAgents } = createTemplateReader(import.meta.url);
+const { listMdAgents } = createTemplateReader(import.meta.url, "templates/kimi");
 
 /** Phronia agent prompts (phronia-implement, phronia-check, phronia-research), installed as Kimi skills. */
 export function getAllAgents(): AgentTemplate[] {

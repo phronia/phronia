@@ -15,7 +15,9 @@ interface PackageJson {
 }
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
-const packageJsonPath = path.resolve(__dirname, "../../package.json");
+const packageJsonPath = process.env.PHRONIA_ASSET_ROOT
+  ? path.join(process.env.PHRONIA_ASSET_ROOT, "package.json")
+  : path.resolve(__dirname, "../../package.json");
 const packageJson: PackageJson = JSON.parse(
   fs.readFileSync(packageJsonPath, "utf-8"),
 );

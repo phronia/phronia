@@ -23,9 +23,7 @@ import {
   type HookTemplate,
 } from "../template-utils.js";
 
-const { listMdAgents, readTemplate, listFiles } = createTemplateReader(
-  import.meta.url,
-);
+const { listMdAgents, readTemplate, listFiles } = createTemplateReader(import.meta.url, "templates/snow");
 
 /** Sub-agent definitions (phronia-implement, phronia-check, phronia-research). */
 export function getAllAgents(): AgentTemplate[] {
