@@ -22,6 +22,11 @@
       "import": "./dist/mem/index.js",
       "default": "./dist/mem/index.js"
     },
+    "./layout": {
+      "types": "./dist/layout/index.d.ts",
+      "import": "./dist/layout/index.js",
+      "default": "./dist/layout/index.js"
+    },
     "./task": {
       "types": "./dist/task/index.d.ts",
       "import": "./dist/task/index.js",

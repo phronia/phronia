@@ -10,6 +10,7 @@ import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
 import { downloadTemplate } from "giget";
+import { DIR_NAMES } from "../constants/paths.js";
 import { toPosix } from "./posix.js";
 
 // =============================================================================
@@ -23,7 +24,7 @@ const TEMPLATE_REPO = "gh:mindfold-ai/marketplace";
 
 /** Map template type to installation path */
 const INSTALL_PATHS: Record<string, string> = {
-  spec: ".trellis/spec",
+  spec: `${DIR_NAMES.WORKFLOW}/spec`,
   skill: ".agents/skills",
   command: ".claude/commands",
   full: ".", // Entire project root
@@ -1386,8 +1387,8 @@ export async function fetchRegistrySpecTemplates(
     return {
       success: true,
       files: collectDirectoryFiles(
-        path.join(tempRoot, ".trellis", "spec"),
-        ".trellis/spec",
+        path.join(tempRoot, DIR_NAMES.WORKFLOW, "spec"),
+        `${DIR_NAMES.WORKFLOW}/spec`,
       ),
     };
   } finally {

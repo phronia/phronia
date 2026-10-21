@@ -269,7 +269,7 @@ const EXCLUDE_FROM_HASH = [
   "workspace/", // Workspace files (user data)
   "tasks/", // Task files (user data)
   ".current-task", // Current task marker (file, not directory)
-  ".trellis/spec/", // User-customized spec files
+  `${DIR_NAMES.WORKFLOW}/spec/`, // User-customized spec files
   ".backup-", // Backup directories
 ];
 
@@ -365,8 +365,11 @@ export function initializeHashes(
   // Platform + root files: hash only paths actually written this run.
   if (trackedPaths) {
     for (const relativePath of trackedPaths) {
-      // `.trellis/` paths are handled by the walk below — don't double-track.
-      if (relativePath.startsWith(".trellis/") || relativePath === ".trellis") {
+      // Workflow-root paths are handled by the walk below — don't double-track.
+      if (
+        relativePath.startsWith(`${DIR_NAMES.WORKFLOW}/`) ||
+        relativePath === DIR_NAMES.WORKFLOW
+      ) {
         continue;
       }
       const fullPath = path.join(cwd, ...relativePath.split("/"));
@@ -384,7 +387,7 @@ export function initializeHashes(
   // `trellis update`'s 3-way merge of workflow.md / config.yaml / scripts;
   // uninstall removes .trellis/ wholesale so it does not matter for the
   // data-loss bug this contract addresses.
-  const files = collectFiles(cwd, ".trellis");
+  const files = collectFiles(cwd, DIR_NAMES.WORKFLOW);
   for (const relativePath of files) {
     const fullPath = path.join(cwd, relativePath);
     try {

@@ -35,7 +35,7 @@ import fs from "node:fs";
 import path from "node:path";
 
 import { collectPlatformTemplates } from "../configurators/index.js";
-import { FILE_NAMES } from "../constants/paths.js";
+import { DIR_NAMES, FILE_NAMES } from "../constants/paths.js";
 import { getAllMigrations } from "../migrations/index.js";
 import { saveHashes } from "./template-hash.js";
 import { toPosix } from "./posix.js";
@@ -133,10 +133,13 @@ export function pruneOrphanManifestKeys(
 
   for (const [rawKey, value] of Object.entries(hashes)) {
     const key = toPosix(rawKey);
-    // Always preserve .trellis/ entries — they're for the workflow tree
+    // Always preserve workflow-root entries — they're for the workflow tree
     // which uninstall removes wholesale and which update needs for
     // modified-file detection.
-    if (key.startsWith(".trellis/") || key === ".trellis") {
+    if (
+      key.startsWith(`${DIR_NAMES.WORKFLOW}/`) ||
+      key === DIR_NAMES.WORKFLOW
+    ) {
       kept[key] = value;
       continue;
     }

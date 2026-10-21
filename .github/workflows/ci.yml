@@ -126,5 +126,8 @@ jobs:
       - name: Dogfood idempotence
         run: pnpm test:idempotence
 
+      - name: Layout literal ratchet
+        run: pnpm check:layout
+
       - name: Hook cold-start baseline (archived, not gated)
         run: pnpm bench:hooks -- --iterations 5 > /dev/null
