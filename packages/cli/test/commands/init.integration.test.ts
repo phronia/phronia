@@ -835,17 +835,17 @@ describe("init() integration", () => {
     );
   });
 
-  it("#3n opencode platform emits start slash command", async () => {
+  it("#3n opencode platform auto-injects and omits the start slash command", async () => {
     await init({ yes: true, opencode: true });
 
-    // OpenCode is agentCapable && !hasHooks per registry (plugins/session-start.js
-    // provides equivalent injection, but the user-invocable /phronia:start is
-    // still emitted as fallback for plugin failures / manual reload).
+    // OpenCode's session-start plugin now injects the workflow overview, so
+    // the user-invocable /phronia:start fallback is filtered like other
+    // auto-injecting platforms.
     expect(
       fs.existsSync(
         path.join(tmpDir, ".opencode", "commands", "phronia", "start.md"),
       ),
-    ).toBe(true);
+    ).toBe(false);
     expect(
       fs.existsSync(
         path.join(tmpDir, ".opencode", "commands", "phronia", "finish-work.md"),

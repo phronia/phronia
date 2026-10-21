@@ -1,6 +1,7 @@
 import "./env-compat.js";
 import fs from "node:fs";
 import path from "node:path";
+import { fileURLToPath } from "node:url";
 import chalk from "chalk";
 import { Command } from "commander";
 import { init } from "../commands/init.js";
@@ -9,6 +10,7 @@ import { upgrade } from "../commands/upgrade.js";
 import { uninstall } from "../commands/uninstall.js";
 import { adopt, printAdoptReport } from "../commands/adopt.js";
 import { runContextCommand } from "../commands/context.js";
+import { runDoctorCommand } from "../commands/doctor.js";
 import { ablate, restore } from "../commands/ablate.js";
 import { runMem } from "../commands/mem.js";
 import {
@@ -20,13 +22,17 @@ import { DIR_NAMES } from "../constants/paths.js";
 import { PACKAGE_NAME, VERSION } from "../constants/version.js";
 import { compareVersions } from "../utils/compare-versions.js";
 import { getConfiguredPlatforms } from "../configurators/index.js";
-import { AI_TOOLS } from "../types/ai-tools.js";
+import { AI_TOOLS, getManagedPaths } from "../types/ai-tools.js";
 import {
   CAPABILITIES,
   PLATFORM_IDS,
   validateCapabilities,
-  type Mechanism,
 } from "@phronia/core";
+import {
+  checkMatrixStructure,
+  renderMatrixMarkdown,
+  renderMatrixTable,
+} from "./platform-matrix.js";
 
 // Re-export for backwards compatibility (consumers should prefer constants/version.js)
 export { VERSION, PACKAGE_NAME };
@@ -427,23 +433,63 @@ program
   });
 
 program
+  .command("doctor")
+  .description("Report platform capability and environment feature availability")
+  .option("--platform <id>", "Inspect one platform instead of configured ones")
+  .option("--json", "Output machine-readable JSON")
+  .action((options: Record<string, unknown>) => {
+    const exitCode = runDoctorCommand({
+      cwd,
+      platform: options.platform as string | undefined,
+      json: Boolean(options.json),
+    });
+    if (exitCode !== 0) process.exit(exitCode);
+  });
+
+program
   .command("platforms")
   .description(
     "Show which AI platforms are configured (active) in the current project",
   )
   .option("--json", "Output machine-readable JSON")
   .option("--matrix", "Print the full capability matrix")
+  .option("--markdown", "Print the capability matrix as Markdown (for docs)")
   .option("--check", "Validate capability coverage and exit non-zero on failure")
   .action((options: Record<string, unknown>) => {
     try {
       if (options.check) {
-        const problems: string[] = [];
-        for (const id of PLATFORM_IDS) {
-          if (!AI_TOOLS[id]) problems.push(`${id}: missing AI_TOOLS entry`);
-          if (!CAPABILITIES[id]) problems.push(`${id}: missing capability entry`);
-        }
+        const problems = checkMatrixStructure().problems;
         for (const violation of validateCapabilities()) {
           problems.push(`${violation.platform}: ${violation.message}`);
+        }
+        const templatesRoot = fileURLToPath(
+          new URL("../templates", import.meta.url),
+        );
+        for (const id of PLATFORM_IDS) {
+          const tool = AI_TOOLS[id];
+          for (const dir of tool.templateDirs) {
+            if (dir === "common") continue;
+            if (!fs.existsSync(path.join(templatesRoot, dir))) {
+              problems.push(`${id}: template directory missing: ${dir}`);
+            }
+          }
+          const managed = getManagedPaths(id);
+          if (new Set(managed).size !== managed.length) {
+            problems.push(`${id}: duplicate managed path`);
+          }
+          if (managed.some((entry) => !entry)) {
+            problems.push(`${id}: empty managed path`);
+          }
+        }
+        const docsFile = path.join(cwd, "docs", "platform-matrix.md");
+        if (fs.existsSync(docsFile)) {
+          const expected = renderMatrixMarkdown();
+          const actual = fs.readFileSync(docsFile, "utf8");
+          if (actual !== expected) {
+            problems.push(
+              "docs/platform-matrix.md is stale; run `phronia platforms --matrix --markdown > docs/platform-matrix.md`",
+            );
+          }
         }
         if (problems.length > 0) {
           for (const problem of problems) console.error(chalk.red(`  ${problem}`));
@@ -463,28 +509,11 @@ program
           console.log(JSON.stringify({ platforms: matrix }, null, 2));
           return;
         }
-        console.log(
-          [
-            "Platform".padEnd(16),
-            "SessionStart".padEnd(34),
-            "Subagent".padEnd(34),
-            "WorkflowState".padEnd(34),
-            "Shell".padEnd(24),
-            "Loop",
-          ].join(" "),
-        );
-        for (const entry of matrix) {
-          console.log(
-            [
-              entry.id.padEnd(16),
-              formatMechanism(entry.behavior.sessionStart).padEnd(34),
-              formatMechanism(entry.behavior.subagentContext).padEnd(34),
-              formatMechanism(entry.behavior.workflowState).padEnd(34),
-              formatMechanism(entry.behavior.shellIdentity).padEnd(24),
-              entry.loopControl,
-            ].join(" "),
-          );
+        if (options.markdown) {
+          process.stdout.write(renderMatrixMarkdown());
+          return;
         }
+        console.log(renderMatrixTable());
         return;
       }
 
@@ -521,11 +550,7 @@ program
     }
   });
 
-function formatMechanism(mechanism: Mechanism): string {
-  if (mechanism.kind === "none") return "—";
-  if ("event" in mechanism && mechanism.event) return `${mechanism.kind} ${mechanism.event}`;
-  return mechanism.detail ? `${mechanism.kind} ${mechanism.detail}` : mechanism.kind;
-}
+
 
 registerChannelCommand(program);
 

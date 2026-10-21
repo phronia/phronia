@@ -2,90 +2,59 @@
  * AI Tool Types and Registry
  *
  * Defines supported AI coding tools and which command templates they can use.
+ * The platform union and capability matrix live in `@phronia/core/platform`;
+ * this module only adds CLI-side render metadata and derives the legacy
+ * booleans from the matrix.
  */
 
-/**
- * Supported AI coding tools
- */
-export type AITool =
-  | "claude-code"
-  | "cursor"
-  | "opencode"
-  | "codex"
-  | "kilo"
-  | "kiro"
-  | "gemini"
-  | "antigravity"
-  | "devin"
-  | "qoder"
-  | "codebuddy"
-  | "copilot"
-  | "droid"
-  | "dsh"
-  | "pi"
-  | "reasonix"
-  | "zcode"
-  | "trae"
-  | "omp"
-  | "grok"
-  | "kimi"
-  | "snow";
+import {
+  CAPABILITIES,
+  PLATFORM_IDS,
+  type Mechanism,
+  type PlatformCapabilities,
+  type PlatformId,
+} from "@phronia/core/platform";
+
+/** Supported AI coding tools. */
+export type AITool = PlatformId;
 
 /**
- * Template directory categories
+ * Directory name for each platform's template + CLI flag. Kept as a map so a
+ * platform whose id differs from its directory (claude-code) still derives
+ * both unions from `PLATFORM_IDS`.
  */
-export type TemplateDir =
-  | "common"
-  | "claude"
-  | "cursor"
-  | "opencode"
-  | "codex"
-  | "kilo"
-  | "kiro"
-  | "gemini"
-  | "antigravity"
-  | "devin"
-  | "qoder"
-  | "codebuddy"
-  | "copilot"
-  | "droid"
-  | "dsh"
-  | "pi"
-  | "reasonix"
-  | "zcode"
-  | "trae"
-  | "omp"
-  | "grok"
-  | "kimi"
-  | "snow";
+export const PLATFORM_DIR_NAMES = {
+  "claude-code": "claude",
+  cursor: "cursor",
+  opencode: "opencode",
+  codex: "codex",
+  kilo: "kilo",
+  kiro: "kiro",
+  gemini: "gemini",
+  antigravity: "antigravity",
+  devin: "devin",
+  qoder: "qoder",
+  codebuddy: "codebuddy",
+  copilot: "copilot",
+  droid: "droid",
+  dsh: "dsh",
+  pi: "pi",
+  reasonix: "reasonix",
+  zcode: "zcode",
+  trae: "trae",
+  omp: "omp",
+  grok: "grok",
+  kimi: "kimi",
+  snow: "snow",
+} as const satisfies Record<PlatformId, string>;
 
-/**
- * CLI flag names for platform selection (e.g., --claude, --cursor, --kilo, --kiro, --gemini, --antigravity)
- * Must match keys in InitOptions (src/commands/init.ts)
- */
-export type CliFlag =
-  | "claude"
-  | "cursor"
-  | "opencode"
-  | "codex"
-  | "kilo"
-  | "kiro"
-  | "gemini"
-  | "antigravity"
-  | "devin"
-  | "qoder"
-  | "codebuddy"
-  | "copilot"
-  | "droid"
-  | "dsh"
-  | "pi"
-  | "reasonix"
-  | "zcode"
-  | "trae"
-  | "omp"
-  | "grok"
-  | "kimi"
-  | "snow";
+type PlatformDirName = (typeof PLATFORM_DIR_NAMES)[PlatformId];
+
+/** Template directory categories. */
+export type TemplateDir = "common" | PlatformDirName;
+
+/** CLI flag names for platform selection (e.g., --claude, --cursor). */
+export type CliFlag = PlatformDirName;
 
 /**
  * Template context for placeholder resolution.
@@ -115,9 +84,13 @@ export interface TemplateContext {
     | "Prompts"
     | "Commands";
   /** Platform supports spawning sub-agents with isolated context */
-  agentCapable: boolean;
-  /** Platform has hook system (SessionStart, PreToolUse) */
-  hasHooks: boolean;
+  readonly agentCapable: boolean;
+  /**
+   * @deprecated Use `autoSessionStart`. Kept for `{{#HAS_HOOKS}}` one version.
+   */
+  readonly hasHooks: boolean;
+  /** Any automatic session-start injection (hook/plugin/extension/config) */
+  readonly autoSessionStart: boolean;
   /**
    * CLI flag value for this platform (e.g. "claude", "codex", "kiro").
    * Substituted into template commands via {{CLI_FLAG}} so rendered skill /
@@ -151,8 +124,10 @@ export interface AIToolConfig {
   cliFlag: CliFlag;
   /** Whether this tool is checked by default in interactive init prompt */
   defaultChecked: boolean;
-  /** Whether this tool uses Python hooks (affects Windows encoding detection) */
-  hasPythonHooks: boolean;
+  /** Capability matrix entry (single source for behaviour bindings). */
+  readonly capabilities: PlatformCapabilities;
+  /** Derived: one or more behaviours run through the Python shim */
+  readonly hasPythonHooks: boolean;
   /**
    * Optional user-global compatibility plugin for platform versions where
    * project-level integration is unavailable. Phronia may surface a manual
@@ -167,31 +142,35 @@ export interface AIToolConfig {
   templateContext: TemplateContext;
 }
 
+/** Render metadata before the capability matrix fills in the derived bits. */
+type AIToolBase = Omit<
+  AIToolConfig,
+  "capabilities" | "hasPythonHooks" | "templateContext"
+> & {
+  templateContext: Omit<
+    TemplateContext,
+    "agentCapable" | "hasHooks" | "autoSessionStart"
+  >;
+};
+
 /**
  * Registry of all supported AI tools and their configurations.
  * This is the single source of truth for platform data.
  *
- * When adding a new platform, add an entry here and create:
- * 1. src/configurators/{platform}.ts — configure function
- * 2. src/templates/{platform}/ — template files
- * 3. Register in src/configurators/index.ts — PLATFORM_FUNCTIONS
- * 4. Add CLI flag in src/cli/index.ts
- * 5. Add to InitOptions in src/commands/init.ts
+ * When adding a new platform, add an entry to `PLATFORM_IDS`, the capability
+ * matrix, and this registry; the unions and derived booleans follow.
  */
-export const AI_TOOLS: Record<AITool, AIToolConfig> = {
+const AI_TOOL_BASES: Record<AITool, AIToolBase> = {
   "claude-code": {
     name: "Claude Code",
     templateDirs: ["common", "claude"],
     configDir: ".claude",
     cliFlag: "claude",
     defaultChecked: true,
-    hasPythonHooks: true,
     templateContext: {
       cmdRefPrefix: "/phronia:",
       executorAI: "Bash scripts or Task calls",
       userActionLabel: "Slash commands",
-      agentCapable: true,
-      hasHooks: true,
       cliFlag: "claude",
     },
   },
@@ -201,13 +180,10 @@ export const AI_TOOLS: Record<AITool, AIToolConfig> = {
     configDir: ".cursor",
     cliFlag: "cursor",
     defaultChecked: true,
-    hasPythonHooks: true,
     templateContext: {
       cmdRefPrefix: "/phronia-",
       executorAI: "Bash scripts or Task calls",
       userActionLabel: "Slash commands",
-      agentCapable: true,
-      hasHooks: true,
       cliFlag: "cursor",
     },
   },
@@ -217,19 +193,13 @@ export const AI_TOOLS: Record<AITool, AIToolConfig> = {
     configDir: ".opencode",
     cliFlag: "opencode",
     defaultChecked: false,
-    // hasHooks: false — OpenCode has no session-start hook. The pre-v0.5.0
-    // `.opencode/commands/phronia/start.md` deprecation in
-    // migrations/manifests/0.5.0-beta.0.json assumed a hook would replace it;
-    // that never happened for OpenCode, so `resolveCommands`/`filterCommands`
-    // (see configurators/shared.ts) still generate `/start` as the live
-    // fallback command for this `agentCapable && !hasHooks` platform.
-    hasPythonHooks: false,
+    // The session-start plugin auto-injects context, so `autoSessionStart` is
+    // true and `filterCommands` drops the `/start` fallback. The capability
+    // matrix is the source of that decision.
     templateContext: {
       cmdRefPrefix: "/phronia:",
       executorAI: "Bash scripts or Task calls",
       userActionLabel: "Slash commands",
-      agentCapable: true,
-      hasHooks: false,
       cliFlag: "opencode",
     },
   },
@@ -240,29 +210,23 @@ export const AI_TOOLS: Record<AITool, AIToolConfig> = {
     supportsAgentSkills: true,
     cliFlag: "codex",
     defaultChecked: false,
-    hasPythonHooks: true,
     templateContext: {
       cmdRefPrefix: "$",
       executorAI: "Bash scripts or tool calls",
       userActionLabel: "Skills",
-      agentCapable: true,
-      hasHooks: false,
       cliFlag: "codex",
     },
   },
   kilo: {
     name: "Kilo CLI",
-    templateDirs: ["common", "kilo"],
+    templateDirs: ["common"],
     configDir: ".kilocode",
     cliFlag: "kilo",
     defaultChecked: false,
-    hasPythonHooks: false,
     templateContext: {
       cmdRefPrefix: "/phronia:",
       executorAI: "Bash scripts or file reads",
       userActionLabel: "Workflows",
-      agentCapable: false,
-      hasHooks: false,
       cliFlag: "kilo",
     },
   },
@@ -273,13 +237,10 @@ export const AI_TOOLS: Record<AITool, AIToolConfig> = {
     extraManagedPaths: [".kiro/agents", ".kiro/hooks"],
     cliFlag: "kiro",
     defaultChecked: false,
-    hasPythonHooks: true,
     templateContext: {
       cmdRefPrefix: "$",
       executorAI: "Bash scripts or tool calls",
       userActionLabel: "Skills",
-      agentCapable: true,
-      hasHooks: true,
       cliFlag: "kiro",
     },
   },
@@ -290,47 +251,38 @@ export const AI_TOOLS: Record<AITool, AIToolConfig> = {
     supportsAgentSkills: true,
     cliFlag: "gemini",
     defaultChecked: false,
-    hasPythonHooks: true,
     templateContext: {
       cmdRefPrefix: "/phronia:",
       executorAI: "Bash scripts or tool calls",
       userActionLabel: "Slash commands",
-      agentCapable: true,
-      hasHooks: true,
       cliFlag: "gemini",
     },
   },
   antigravity: {
     name: "Antigravity",
-    templateDirs: ["common", "antigravity"],
+    templateDirs: ["common"],
     configDir: ".agent/workflows",
     extraManagedPaths: [".agent/skills"],
     cliFlag: "antigravity",
     defaultChecked: false,
-    hasPythonHooks: false,
     templateContext: {
       cmdRefPrefix: "/",
       executorAI: "Bash scripts or file reads",
       userActionLabel: "Workflows",
-      agentCapable: false,
-      hasHooks: false,
       cliFlag: "antigravity",
     },
   },
   devin: {
     name: "Devin",
-    templateDirs: ["common", "devin"],
+    templateDirs: ["common"],
     configDir: ".devin/workflows",
     extraManagedPaths: [".devin/skills"],
     cliFlag: "devin",
     defaultChecked: false,
-    hasPythonHooks: false,
     templateContext: {
       cmdRefPrefix: "/phronia-",
       executorAI: "Bash scripts or file reads",
       userActionLabel: "Workflows",
-      agentCapable: false,
-      hasHooks: false,
       cliFlag: "devin",
     },
   },
@@ -340,13 +292,10 @@ export const AI_TOOLS: Record<AITool, AIToolConfig> = {
     configDir: ".qoder",
     cliFlag: "qoder",
     defaultChecked: false,
-    hasPythonHooks: true,
     templateContext: {
       cmdRefPrefix: "$",
       executorAI: "Bash scripts or tool calls",
       userActionLabel: "Skills",
-      agentCapable: true,
-      hasHooks: true,
       cliFlag: "qoder",
     },
   },
@@ -356,13 +305,10 @@ export const AI_TOOLS: Record<AITool, AIToolConfig> = {
     configDir: ".codebuddy",
     cliFlag: "codebuddy",
     defaultChecked: false,
-    hasPythonHooks: true,
     templateContext: {
       cmdRefPrefix: "/phronia:",
       executorAI: "Bash scripts or Task calls",
       userActionLabel: "Slash commands",
-      agentCapable: true,
-      hasHooks: true,
       cliFlag: "codebuddy",
     },
   },
@@ -379,13 +325,10 @@ export const AI_TOOLS: Record<AITool, AIToolConfig> = {
     ],
     cliFlag: "copilot",
     defaultChecked: false,
-    hasPythonHooks: true,
     templateContext: {
       cmdRefPrefix: "/",
       executorAI: "Bash scripts or tool calls",
       userActionLabel: "Prompts",
-      agentCapable: true,
-      hasHooks: true,
       cliFlag: "copilot",
     },
   },
@@ -395,13 +338,10 @@ export const AI_TOOLS: Record<AITool, AIToolConfig> = {
     configDir: ".factory",
     cliFlag: "droid",
     defaultChecked: false,
-    hasPythonHooks: true,
     templateContext: {
       cmdRefPrefix: "/phronia-",
       executorAI: "Bash scripts or Task calls",
       userActionLabel: "Slash commands",
-      agentCapable: true,
-      hasHooks: true,
       cliFlag: "droid",
     },
   },
@@ -420,13 +360,10 @@ export const AI_TOOLS: Record<AITool, AIToolConfig> = {
     supportsAgentSkills: true,
     cliFlag: "dsh",
     defaultChecked: false,
-    hasPythonHooks: false,
     templateContext: {
       cmdRefPrefix: "phronia-",
       executorAI: "Bash scripts or tool calls",
       userActionLabel: "Skills",
-      agentCapable: true,
-      hasHooks: false,
       cliFlag: "dsh",
     },
   },
@@ -441,13 +378,10 @@ export const AI_TOOLS: Record<AITool, AIToolConfig> = {
     supportsAgentSkills: true,
     cliFlag: "pi",
     defaultChecked: false,
-    hasPythonHooks: false,
     templateContext: {
       cmdRefPrefix: "/phronia-",
       executorAI: "Bash scripts or tool calls",
       userActionLabel: "Slash commands",
-      agentCapable: true,
-      hasHooks: true,
       cliFlag: "pi",
     },
   },
@@ -457,13 +391,10 @@ export const AI_TOOLS: Record<AITool, AIToolConfig> = {
     configDir: ".reasonix",
     cliFlag: "reasonix",
     defaultChecked: false,
-    hasPythonHooks: false,
     templateContext: {
       cmdRefPrefix: "/skill phronia-",
       executorAI: "Bash scripts or tool calls",
       userActionLabel: "Skills",
-      agentCapable: true,
-      hasHooks: false,
       cliFlag: "reasonix",
     },
   },
@@ -488,7 +419,6 @@ export const AI_TOOLS: Record<AITool, AIToolConfig> = {
     ],
     cliFlag: "zcode",
     defaultChecked: false,
-    hasPythonHooks: true,
     globalHookPlugin: {
       name: "trellis-bridge",
       marketplaceUrl: "https://github.com/CNHLAIA/ZCode-Phronia-Plugin.git",
@@ -497,12 +427,10 @@ export const AI_TOOLS: Record<AITool, AIToolConfig> = {
       cmdRefPrefix: "/phronia:",
       executorAI: "Bash scripts or Agent calls",
       userActionLabel: "Skills",
-      agentCapable: true,
       // ZCode supports project hook registration through .zcode/config.json.
       // On builds that disable it, the optional global trellis-bridge plugin
       // registers the same events and delegates to the project hook scripts.
       // PreToolUse can mutate sub-agent prompts, so either path is class-1.
-      hasHooks: true,
       cliFlag: "zcode",
     },
   },
@@ -512,13 +440,10 @@ export const AI_TOOLS: Record<AITool, AIToolConfig> = {
     configDir: ".trae",
     cliFlag: "trae",
     defaultChecked: false,
-    hasPythonHooks: true,
     templateContext: {
       cmdRefPrefix: "/phronia-",
       executorAI: "Bash scripts or tool calls",
       userActionLabel: "Commands",
-      agentCapable: true,
-      hasHooks: true,
       cliFlag: "trae",
     },
   },
@@ -528,13 +453,10 @@ export const AI_TOOLS: Record<AITool, AIToolConfig> = {
     configDir: ".omp",
     cliFlag: "omp",
     defaultChecked: false,
-    hasPythonHooks: false,
     templateContext: {
       cmdRefPrefix: "/phronia:",
       executorAI: "Bash scripts or Task calls",
       userActionLabel: "Slash commands",
-      agentCapable: true,
-      hasHooks: true,
       cliFlag: "omp",
     },
   },
@@ -553,13 +475,10 @@ export const AI_TOOLS: Record<AITool, AIToolConfig> = {
     extraManagedPaths: [".grok/skills", ".grok/commands", ".grok/agents"],
     cliFlag: "grok",
     defaultChecked: false,
-    hasPythonHooks: false,
     templateContext: {
       cmdRefPrefix: "/phronia-",
       executorAI: "Bash scripts or Agent calls",
       userActionLabel: "Skills",
-      agentCapable: true,
-      hasHooks: false,
       cliFlag: "grok",
     },
   },
@@ -588,13 +507,10 @@ export const AI_TOOLS: Record<AITool, AIToolConfig> = {
     supportsAgentSkills: true,
     cliFlag: "kimi",
     defaultChecked: false,
-    hasPythonHooks: false,
     templateContext: {
       cmdRefPrefix: "/skill:phronia-",
       executorAI: "Bash scripts or Agent calls",
       userActionLabel: "Slash commands",
-      agentCapable: true,
-      hasHooks: false,
       cliFlag: "kimi",
     },
   },
@@ -626,17 +542,61 @@ export const AI_TOOLS: Record<AITool, AIToolConfig> = {
     ],
     cliFlag: "snow",
     defaultChecked: false,
-    hasPythonHooks: true,
     templateContext: {
       cmdRefPrefix: "/phronia-",
       executorAI: "Bash scripts or Agent calls",
       userActionLabel: "Skills",
-      agentCapable: true,
-      hasHooks: true,
       cliFlag: "snow",
     },
   },
 };
+
+/**
+ * Derive the compatibility booleans from the capability matrix.
+ *
+ * `hasPythonHooks` asks whether any *runtime* behaviour is a Python hook; the
+ * native agent-definition marker is excluded because it is not a shim.
+ */
+function mechanismIsAutoSessionStart(mechanism: Mechanism): boolean {
+  return (
+    mechanism.kind === "hook" ||
+    mechanism.kind === "plugin" ||
+    mechanism.kind === "extension" ||
+    mechanism.kind === "config"
+  );
+}
+
+function defineTool(id: AITool, base: AIToolBase): AIToolConfig {
+  const capabilities = CAPABILITIES[id];
+  const behavior = capabilities.behavior;
+  const agentCapable = behavior.agentDefinitions.kind !== "none";
+  const autoSessionStart = mechanismIsAutoSessionStart(behavior.sessionStart);
+  const hasPythonHooks = [
+    behavior.sessionStart,
+    behavior.subagentContext,
+    behavior.workflowState,
+    behavior.shellIdentity,
+  ].some(
+    (mechanism) => mechanism.kind === "hook" || mechanism.kind === "config",
+  );
+  const templateContext = { ...base.templateContext } as TemplateContext;
+  Object.defineProperties(templateContext, {
+    agentCapable: { value: agentCapable, enumerable: true },
+    hasHooks: { value: autoSessionStart, enumerable: true },
+    autoSessionStart: { value: autoSessionStart, enumerable: true },
+  });
+  return Object.defineProperties(
+    { ...base, capabilities, templateContext } as AIToolConfig,
+    {
+      hasPythonHooks: { value: hasPythonHooks, enumerable: true },
+    },
+  );
+}
+
+/** Platform registry with capability-derived compatibility flags. */
+export const AI_TOOLS: Record<AITool, AIToolConfig> = Object.fromEntries(
+  PLATFORM_IDS.map((id) => [id, defineTool(id, AI_TOOL_BASES[id])]),
+) as Record<AITool, AIToolConfig>;
 
 /**
  * Get the configuration for a specific AI tool

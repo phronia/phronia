@@ -259,14 +259,14 @@ describe("update() integration", () => {
   });
 
   it("#1b current OpenCode templates are not classified as deprecated", async () => {
-    const startPath = ".opencode/commands/phronia/start.md";
+    const currentPath = ".opencode/commands/phronia/finish-work.md";
     await init({ yes: true, force: true, opencode: true });
-    expect(fs.existsSync(projectFile(startPath))).toBe(true);
+    expect(fs.existsSync(projectFile(currentPath))).toBe(true);
 
     await update({ dryRun: true });
 
     const output = vi.mocked(console.log).mock.calls.flat().join("\n");
-    expect(output).not.toContain(`${startPath} (modified, skipped)`);
+    expect(output).not.toContain(`${currentPath} (modified, skipped)`);
   });
 
   it("[issue-zcode-codex-upgrade] zcode private skills do not trigger legacy Codex backfill", async () => {

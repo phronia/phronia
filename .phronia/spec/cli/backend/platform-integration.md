@@ -23,39 +23,49 @@ All lists (backup dirs, template dirs, platform detection, cleanup whitelist) ar
 
 ## Checklist: Adding a New Platform
 
-When adding a new platform `{platform}`, update the following:
+When adding a new platform `{platform}`, update the following.
 
-### Step 1: Type Definitions (data registry)
+### Step 1: Core identity and capabilities
 
-| File                    | Change                                                                                                  |
-| ----------------------- | ------------------------------------------------------------------------------------------------------- |
-| `src/types/ai-tools.ts` | Add to `AITool` union type                                                                              |
-| `src/types/ai-tools.ts` | Add to `CliFlag` union type                                                                             |
-| `src/types/ai-tools.ts` | Add to `TemplateDir` union type                                                                         |
-| `src/types/ai-tools.ts` | Add entry to `AI_TOOLS` record (name, configDir, cliFlag, defaultChecked, hasPythonHooks, templateDirs) |
+| File | Change |
+| ---- | ------ |
+| `packages/core/src/platform/ids.ts` | Add the id to `PLATFORM_IDS` and `PLATFORM_SHORT_IDS` |
+| `packages/core/src/platform/capabilities.ts` | Add a `CAPABILITIES` entry: five behaviours, three environment bits, `loopControl`, and `evidence` |
 
-**This single entry automatically propagates to**: `BACKUP_DIRS`, `TEMPLATE_DIRS`, `getConfiguredPlatforms()`, `cleanupEmptyDirs()`, `initializeHashes()`, init `TOOLS[]` prompt, Windows detection.
+`PlatformId`, the CLI `AITool` / `TemplateDir` / `CliFlag` unions, and the
+`agentCapable` / `hasHooks` / `hasPythonHooks` booleans are all derived from
+these two declarations — do not add them by hand. Every `none` mechanism needs
+a reason of at least 10 characters; `phronia platforms --check` enforces it.
 
-### Step 2: CLI Flag
+### Step 2: Render metadata and configurator
 
-| File                   | Change                                                |
-| ---------------------- | ----------------------------------------------------- |
-| `src/cli/index.ts`     | Add `--{platform}` option                             |
-| `src/commands/init.ts` | Add `{platform}?: boolean` to `InitOptions` interface |
-
-> Note: Commander.js options and TypeScript interfaces require static declarations — cannot be derived from registry. A compile-time assertion `_AssertCliFlagsInOptions` in `init.ts` will catch missing `InitOptions` fields — you'll get a build error if `CliFlag` has a value not present in `InitOptions`.
-
-### Step 3: Configurator (function registry)
-
-| File                              | Change                                                                                         |
-| --------------------------------- | ----------------------------------------------------------------------------------------------- |
-| `src/configurators/{platform}.ts` | Create new configurator exporting **`collect{Platform}Templates(): Map<string, string>`**       |
-| `src/configurators/index.ts`      | Add **`{platform}: fromTemplates(collect{Platform}Templates)`** to `PLATFORM_FUNCTIONS`         |
+| File | Change |
+| ---- | ------ |
+| `packages/cli/src/types/ai-tools.ts` | Add the directory/flag name to `PLATFORM_DIR_NAMES` and an `AI_TOOL_BASES` entry (name, configDir, defaultChecked, templateDirs) |
+| `packages/cli/src/configurators/{platform}.ts` | Create `collect{Platform}Templates(): Map<string, string>` |
+| `packages/cli/src/configurators/index.ts` | Add `{platform}: fromTemplates(collect{Platform}Templates)` to `PLATFORM_FUNCTIONS` |
 
 Do **not** write a `configure{Platform}` — `fromTemplates` derives it, so the
-platform's file set is described exactly once and `trellis init` and `trellis
+platform's file set is described exactly once and `phronia init` and `phronia
 update` cannot disagree about it. Copy `configurators/cursor.ts` (30 lines) or
 `configurators/antigravity.ts` (15 lines) as the shape.
+
+### Step 3: Static CLI surfaces
+
+| File | Change |
+| ---- | ------ |
+| `src/cli/index.ts` | Add `--{platform}` option |
+| `src/commands/init.ts` | Add `{platform}?: boolean` to `InitOptions` |
+
+Commander.js options and TypeScript interfaces require static declarations and
+cannot be derived from the registry. A compile-time assertion
+`_AssertCliFlagsInOptions` in `init.ts` catches a missing `InitOptions` field.
+
+The single registry entry automatically propagates to `BACKUP_DIRS`,
+`TEMPLATE_DIRS`, `getConfiguredPlatforms()`, `cleanupEmptyDirs()`,
+`initializeHashes()`, the init prompt, Windows detection, `phronia doctor`, and
+`docs/platform-matrix.md` (regenerate it with
+`phronia platforms --matrix --markdown`).
 
 Only three platforms spell both fields, each for a named residual: claude-code
 (the `--with-statusline` flag), codex (an intentionally empty `.codex/skills/`),

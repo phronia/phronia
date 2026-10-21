@@ -373,24 +373,21 @@ export interface ResolvedSkillFile {
 /**
  * Filter command templates based on platform capabilities.
  *
- * `start.md` is stripped only on platforms that are BOTH `agentCapable` AND
- * `hasHooks` — those platforms (Claude Code, Cursor, Kiro, Gemini, Qoder,
- * CodeBuddy, Copilot, Droid, Pi) have a SessionStart-style hook that
- * auto-injects the workflow overview, so a user-facing `start` would be
- * redundant.
+ * `start.md` is stripped only on platforms that are BOTH agent-capable AND
+ * have an automatic session-start injection (hook, plugin, extension, or
+ * config). Those platforms already receive the workflow overview, so a
+ * user-facing `start` would be redundant.
  *
- * `agentCapable && !hasHooks` platforms (Codex, ZCode, OpenCode, Reasonix, Grok)
- * have no such hook (or use an out-of-band plugin), so they need the
- * user-invocable `phronia-start` skill / `start.md` command as fallback.
- * Snow is class-1 (`hasHooks: true`) with auto inject + project agents.
- * Agent-less platforms (Kilo, Antigravity, Devin) also keep `start` since
- * they rely entirely on user-triggered workflows.
+ * Agent-capable platforms without automatic injection (Codex, Reasonix, Grok)
+ * keep the user-invocable `phronia-start` skill / `start.md` as fallback.
+ * Agent-less platforms (Kilo, Antigravity, Devin) also keep `start` since they
+ * rely entirely on user-triggered workflows.
  */
 function filterCommands(
   templates: CommonTemplate[],
   ctx: TemplateContext,
 ): CommonTemplate[] {
-  if (ctx.agentCapable && ctx.hasHooks) {
+  if (ctx.agentCapable && ctx.autoSessionStart) {
     return templates.filter((t) => t.name !== "start");
   }
   return templates;

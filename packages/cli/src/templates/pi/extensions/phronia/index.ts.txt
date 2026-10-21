@@ -1720,6 +1720,11 @@ export default function trellisExtension(pi: {
     const key = cacheKey(k, ctx);
     const cur = (event as { systemPrompt?: string }).systemPrompt ?? "";
     const root = resolveRoot(ctx);
+    // before_agent_start fires once per turn. A TTL-only cache could carry the
+    // previous turn's breadcrumb into this one after a slow first turn, so the
+    // per-turn comparison starts clean; the `context` handler still reuses the
+    // value computed here within the same turn.
+    turnCache = null;
     const turn = getTurnCtx(k, ctx);
     const startup = getStartupCtx(k, ctx);
     // Task context is snapshotted into systemPrompt once; later on-disk

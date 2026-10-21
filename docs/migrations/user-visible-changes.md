@@ -53,6 +53,9 @@ Batches that must update this file:
     `.pi/agents/<name>.md` definition (Pi has no `--agent` flag); per-turn
     runtime context carries only the core breadcrumb, while the startup
     snapshot stays in `systemPrompt`.
+  - **OpenCode**: the session-start plugin now injects context, so the
+    generated `.opencode/commands/phronia/start.md` fallback is no longer
+    written; existing copies are harmless and can be deleted.
   - Why: one assembly implementation; OMP/Pi/Snow had three drifting copies.
   - Migration: no action for users; custom text that matched Snow's
     `Sub-agent checklist (...)` headings must read the task artifacts instead.

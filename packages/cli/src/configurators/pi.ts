@@ -21,7 +21,7 @@ function resolvePiCommands(): ReturnType<typeof resolveCommands> {
   // Pi has extension hooks, so the shared command resolver filters `start`.
   // Keep a manual fallback because Pi's `session_start` event cannot mutate
   // model context; the strong startup injection happens later at agent start.
-  const start = resolveCommands({ ...ctx, hasHooks: false }).find(
+  const start = resolveCommands({ ...ctx, autoSessionStart: false }).find(
     (command) => command.name === "start",
   );
   return start ? [start, ...commands] : commands;
