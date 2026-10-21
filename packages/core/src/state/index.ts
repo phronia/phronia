@@ -41,6 +41,8 @@ import {
   type SpecScopeResult,
 } from "./spec/index.js";
 import { readText } from "./fs.js";
+import { readDeveloper, readJournal, type DeveloperState, type JournalState } from "./identity.js";
+import { readGitState, type GitExec, type GitState } from "./git.js";
 
 export * from "./diagnostics.js";
 export * from "./fs.js";
@@ -57,6 +59,8 @@ export * from "./tasks/list.js";
 export * from "./workflow/breadcrumb.js";
 export * from "./workflow/phase.js";
 export * from "./spec/index.js";
+export * from "./identity.js";
+export * from "./git.js";
 
 export interface StateReaderOptions {
   /** Explicit project root. The state layer never infers it from cwd. */
@@ -67,6 +71,8 @@ export interface StateReaderOptions {
   argv?: readonly string[];
   /** Injectable clock (epoch seconds) for ticket freshness. */
   now?: () => number;
+  /** Injectable git runner (tests). */
+  exec?: GitExec;
 }
 
 export interface SessionReadOptions {
@@ -103,6 +109,9 @@ export interface StateReader {
     indexPaths(taskPackage?: string | null): readonly string[];
     legacyWarning(): Diagnostic | null;
   };
+  developer(): DeveloperState;
+  git(): GitState;
+  journal(): JournalState;
   diagnostics(): readonly Diagnostic[];
 }
 
@@ -257,6 +266,17 @@ export function openState(options: StateReaderOptions): StateReader {
       legacyWarning(): Diagnostic | null {
         return legacySpecWarning(root, io, configView().packages);
       },
+    },
+    developer(): DeveloperState {
+      const state = readDeveloper(root, io, { env: options.env, exec: options.exec });
+      collected.addAll(state.diagnostics);
+      return state;
+    },
+    git(): GitState {
+      return readGitState(root, options.exec);
+    },
+    journal(): JournalState {
+      return readJournal(root, readDeveloper(root, io, { env: options.env, exec: options.exec }).name, io);
     },
     diagnostics(): readonly Diagnostic[] {
       if (!configLoaded) {

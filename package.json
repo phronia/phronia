@@ -13,6 +13,7 @@
     "test:parity": "pnpm --filter @phronia/testing test -- parity",
     "test:idempotence": "pnpm --filter @phronia/testing test -- idempotence",
     "bench:hooks": "node bench/hook-bench.mjs",
+    "bench:state": "node bench/state-bench.mjs",
     "check:layout": "node scripts/check-layout-literals.mjs",
     "gen:layout": "node scripts/gen-layout.mjs",
     "check:layout-json": "node scripts/gen-layout.mjs --check",
