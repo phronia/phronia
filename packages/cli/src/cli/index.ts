@@ -29,6 +29,10 @@ import {
 } from "../commands/spec.js";
 import { runDocsGenerate } from "../commands/docs.js";
 import { runOnboard } from "../commands/onboard.js";
+import {
+  runCrossRepoAttach,
+  runCrossRepoStatus,
+} from "../commands/cross-repo.js";
 import { SessionStore } from "@phronia/core";
 import { ablate, restore } from "../commands/ablate.js";
 import { runMem } from "../commands/mem.js";
@@ -619,6 +623,32 @@ worktreeCommand
         `${record.taskRef.padEnd(40)} ${record.branch.padEnd(30)} ${record.path}`,
       );
     }
+  });
+
+const crossRepoCommand = taskCommand
+  .command("cross-repo")
+  .description("Link tasks across repositories (git as transport)");
+
+crossRepoCommand
+  .command("attach <task-ref> <repos...>")
+  .option("--consume <repo:path@ref>", "Record a spec dependency (repeatable)", (value, previous: string[] = []) => [...previous, value], [])
+  .option("--json", "Output machine-readable JSON")
+  .action((taskRef: string, repos: string[], options: Record<string, unknown>) => {
+    process.exitCode = runCrossRepoAttach(taskRef, repos, {
+      cwd,
+      json: Boolean(options.json),
+      consumes: options.consume as string[],
+    });
+  });
+
+crossRepoCommand
+  .command("status <task-ref>")
+  .option("--json", "Output machine-readable JSON")
+  .action((taskRef: string, options: Record<string, unknown>) => {
+    process.exitCode = runCrossRepoStatus(taskRef, {
+      cwd,
+      json: Boolean(options.json),
+    });
   });
 
 worktreeCommand

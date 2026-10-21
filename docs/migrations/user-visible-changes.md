@@ -140,6 +140,10 @@ Batches that must update this file:
     `sessions/<worktreeId>/` namespace first, then the legacy flat path.
   - Session writes now use an exclusive lock and a revision CAS; a lost
     update retries instead of silently overwriting another window.
+  - `phronia task cross-repo attach <task> <repo=path|remote>...` stores
+    touches/consumes under `task.json.meta.crossRepo`; `task cross-repo
+    status` reads `phronia/<task-id>:task.yaml` from each repo, reports
+    `unresolvable` instead of guessing, and flags consumed ref drift.
 - **B12**: spec status and the visible knowledge layer.
   - Spec files may carry `phronia.status: draft|verified|deprecated`; files
     without frontmatter stay `verified`. `phronia spec status|verify|

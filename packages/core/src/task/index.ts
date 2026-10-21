@@ -29,3 +29,4 @@ export { validateTaskDirName, isValidTaskDirName } from "./paths.js";
 
 export type { TrellisTaskPhase } from "./phase.js";
 export { inferTaskPhase } from "./phase.js";
+export * from "./cross-repo.js";
