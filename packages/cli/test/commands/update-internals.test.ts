@@ -26,7 +26,7 @@ describe("cleanupEmptyDirs", () => {
   let tmpDir: string;
 
   beforeEach(() => {
-    tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), "trellis-cleanup-"));
+    tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), "phronia-cleanup-"));
   });
 
   afterEach(() => {
@@ -105,7 +105,7 @@ describe("cleanupEmptyDirs", () => {
     "does not follow a managed parent symlink outside the project",
     () => {
       const external = fs.mkdtempSync(
-        path.join(os.tmpdir(), "trellis-cleanup-external-"),
+        path.join(os.tmpdir(), "phronia-cleanup-external-"),
       );
       const externalEmpty = path.join(external, "empty");
       fs.mkdirSync(externalEmpty);
@@ -130,7 +130,7 @@ describe("loadUpdateSkipPaths", () => {
   let tmpDir: string;
 
   beforeEach(() => {
-    tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), "trellis-skip-"));
+    tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), "phronia-skip-"));
     fs.mkdirSync(path.join(tmpDir, ".phronia"), { recursive: true });
   });
 
@@ -277,11 +277,11 @@ describe("shouldExcludeFromBackup", () => {
   });
 
   it.each([
-    ".claude/commands/trellis/continue.md",
-    ".claude/skills/trellis-check/SKILL.md",
+    ".claude/commands/phronia/continue.md",
+    ".claude/skills/phronia-check/SKILL.md",
     ".phronia/workflow.md",
     ".phronia/scripts/get_context.py",
-    ".agents/skills/trellis-check/SKILL.md",
+    ".agents/skills/phronia-check/SKILL.md",
   ])("includes managed file %s", (p) => {
     expect(shouldExcludeFromBackup(p)).toBe(false);
   });
@@ -317,7 +317,7 @@ describe("renameTracesToJournal", () => {
   let ws: string;
 
   beforeEach(() => {
-    tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), "trellis-traces-"));
+    tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), "phronia-traces-"));
     ws = path.join(tmpDir, "workspace");
     fs.mkdirSync(path.join(ws, "alice"), { recursive: true });
   });
@@ -411,7 +411,7 @@ describe("classifyMigrations rename-dir ownership gate", () => {
   let tmpDir: string;
 
   beforeEach(() => {
-    tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), "trellis-renamedir-"));
+    tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), "phronia-renamedir-"));
     // A user-owned .windsurf/workflows that Trellis never created.
     fs.mkdirSync(path.join(tmpDir, ".windsurf", "workflows"), {
       recursive: true,

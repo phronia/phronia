@@ -162,9 +162,9 @@ describe("UserPromptSubmit hook wiring", () => {
     });
   }
 
-  it("kiro main `trellis` agent wires userPromptSubmit; sub-agents do not", async () => {
+  it("kiro main `phronia` agent wires userPromptSubmit; sub-agents do not", async () => {
     // Kiro DOES support per-turn hooks (official docs: CLI agent
-    // `hooks.userPromptSubmit`). The main `trellis` agent wires the per-turn
+    // `hooks.userPromptSubmit`). The main `phronia` agent wires the per-turn
     // breadcrumb; the 3 sub-agents only inject sub-agent context on spawn.
     const fs = await import("node:fs");
     const { dirname, join } = await import("node:path");
@@ -184,7 +184,7 @@ describe("UserPromptSubmit hook wiring", () => {
       const parsed = JSON.parse(content) as {
         hooks?: Record<string, unknown>;
       };
-      if (entry === "trellis.json") {
+      if (entry === "phronia.json") {
         expect(Object.keys(parsed.hooks ?? {})).toContain("userPromptSubmit");
         expect(content).toContain("inject-workflow-state.py");
       } else {
@@ -297,13 +297,13 @@ describe("every platform resolves to a marker label workflow.md uses", () => {
     const { fileURLToPath } = await import("node:url");
 
     const testDir = dirname(fileURLToPath(import.meta.url));
-    const scriptsDir = join(testDir, "..", "src", "templates", "trellis", "scripts");
+    const scriptsDir = join(testDir, "..", "src", "templates", "workflow", "scripts");
     const workflowPath = join(
       testDir,
       "..",
       "src",
       "templates",
-      "trellis",
+      "workflow",
       "workflow.md",
     );
     const flags = PLATFORM_IDS.map((id) => AI_TOOLS[id].cliFlag);

@@ -5,8 +5,8 @@
  * collaboration. It stores agents as `.zcode/agents/<name>.md`
  * (Markdown with YAML frontmatter: name, description, color).
  *
- * trellis-implement and trellis-check use pull-based context injection.
- * trellis-research is intentionally standalone: it does not receive the
+ * phronia-implement and phronia-check use pull-based context injection.
+ * phronia-research is intentionally standalone: it does not receive the
  * implement/check prelude, and persists findings under the active task's
  * research directory instead.
  *
@@ -27,7 +27,7 @@ export type { AgentTemplate, HookTemplate };
 
 const { listMdAgents, getSettings } = createTemplateReader(import.meta.url);
 
-/** Sub-agent definitions (trellis-implement, trellis-check, trellis-research). */
+/** Sub-agent definitions (phronia-implement, phronia-check, phronia-research). */
 export function getAllAgents(): AgentTemplate[] {
   return listMdAgents();
 }

@@ -14,9 +14,9 @@ const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const repoRoot = path.resolve(__dirname, "../../../..");
 
 const EXPECTED_AGENT_NAMES = [
-  "trellis-check",
-  "trellis-implement",
-  "trellis-research",
+  "phronia-check",
+  "phronia-implement",
+  "phronia-research",
 ];
 
 const EMPTY_EXCEPT_PASS_RE = /except[^\n]*:\n\s*pass\s*$/m;
@@ -35,8 +35,8 @@ describe("codex shared skills (from common source)", () => {
   it("does not include platform-specific syntax in resolved output", () => {
     const skills = resolveAllAsSkills(AI_TOOLS.codex.templateContext);
     for (const skill of skills) {
-      // Codex uses $ prefix, not /trellis:
-      expect(skill.content).not.toContain("/trellis:");
+      // Codex uses $ prefix, not /phronia:
+      expect(skill.content).not.toContain("/phronia:");
       expect(skill.content).not.toContain(".claude/");
       expect(skill.content).not.toContain(".cursor/");
     }
@@ -77,13 +77,13 @@ describe("codex native sub-agent hooks", () => {
     expect(config.hooks.SubagentStart).toHaveLength(1);
     const subagentStart = config.hooks.SubagentStart[0];
     expect(subagentStart?.matcher).toBe(
-      "^(?:trellis-implement|trellis-check|trellis-research)$",
+      "^(?:phronia-implement|phronia-check|phronia-research)$",
     );
     const matcher = new RegExp(subagentStart?.matcher ?? "");
-    expect(matcher.test("trellis-implement")).toBe(true);
-    expect(matcher.test("trellis-check")).toBe(true);
-    expect(matcher.test("trellis-research")).toBe(true);
-    expect(matcher.test("trellis-implement-extra")).toBe(false);
+    expect(matcher.test("phronia-implement")).toBe(true);
+    expect(matcher.test("phronia-check")).toBe(true);
+    expect(matcher.test("phronia-research")).toBe(true);
+    expect(matcher.test("phronia-implement-extra")).toBe(false);
     expect(subagentStart?.hooks[0]?.command).toContain(
       ".codex/hooks/inject-subagent-context.py",
     );
@@ -123,14 +123,14 @@ describe("codex getConfigTemplate", () => {
 // Issue #234 — Codex sub-agent recursion guard
 // =============================================================================
 //
-// trellis-implement / trellis-check agent toml MUST contain a hard recursion
+// phronia-implement / phronia-check agent toml MUST contain a hard recursion
 // guard that tells the sub-agent it is already the dispatched agent and must
-// not spawn another trellis-implement / trellis-check sub-agent. Without this,
-// SessionStart's "dispatch trellis-implement" guidance leaks into sub-agent
+// not spawn another phronia-implement / phronia-check sub-agent. Without this,
+// SessionStart's "dispatch phronia-implement" guidance leaks into sub-agent
 // sessions and causes infinite recursion (see PRD).
 describe("codex sub-agent recursion guard (issue #234)", () => {
-  for (const name of ["trellis-implement", "trellis-check"] as const) {
-    it(`${name}.toml developer_instructions forbids spawning trellis-implement / trellis-check`, () => {
+  for (const name of ["phronia-implement", "phronia-check"] as const) {
+    it(`${name}.toml developer_instructions forbids spawning phronia-implement / phronia-check`, () => {
       const tomlPath = path.join(
         repoRoot,
         "packages/cli/src/templates/codex/agents",
@@ -140,8 +140,8 @@ describe("codex sub-agent recursion guard (issue #234)", () => {
       // Hard prohibition keyword
       expect(content).toMatch(/MUST NOT spawn/i);
       // Mentions both sibling agent kinds explicitly
-      expect(content).toContain("trellis-implement");
-      expect(content).toContain("trellis-check");
+      expect(content).toContain("phronia-implement");
+      expect(content).toContain("phronia-check");
       // Mentions the leakage source so the reader knows why
       expect(content).toMatch(/SessionStart|dispatch.*main session|breadcrumb/i);
     });
@@ -150,9 +150,9 @@ describe("codex sub-agent recursion guard (issue #234)", () => {
 
 describe("codex two-channel sub-agent context (native SubagentStart)", () => {
   for (const name of [
-    "trellis-implement",
-    "trellis-check",
-    "trellis-research",
+    "phronia-implement",
+    "phronia-check",
+    "phronia-research",
   ] as const) {
     it(`${name}.toml uses a marker-gated active-task fallback without legacy collaboration disables`, () => {
       const tomlPath = path.join(
@@ -166,7 +166,7 @@ describe("codex two-channel sub-agent context (native SubagentStart)", () => {
         "Full hook output saved to: <path>",
       );
       const injectionMarker = content.indexOf(
-        "<!-- trellis-hook-injected -->",
+        "<!-- phronia-hook-injected -->",
       );
 
       expect(savedOutputNotice).toBeGreaterThan(-1);
@@ -174,7 +174,7 @@ describe("codex two-channel sub-agent context (native SubagentStart)", () => {
       expect(content).toMatch(/read the referenced\s+file/i);
       expect(content).toMatch(/referenced file cannot be read/i);
       expect(content).toMatch(/marker is absent/i);
-      expect(content).toContain("<!-- trellis-hook-injected -->");
+      expect(content).toContain("<!-- phronia-hook-injected -->");
       expect(content).toContain("Active task: <path>");
       expect(content).not.toContain("[features]");
       expect(content).not.toContain("multi_agent = false");
@@ -184,8 +184,8 @@ describe("codex two-channel sub-agent context (native SubagentStart)", () => {
 
   it("keeps implement and check pull fallbacks role-specific", () => {
     for (const [name, manifest] of [
-      ["trellis-implement", "implement.jsonl"],
-      ["trellis-check", "check.jsonl"],
+      ["phronia-implement", "implement.jsonl"],
+      ["phronia-check", "check.jsonl"],
     ] as const) {
       const tomlPath = path.join(
         repoRoot,
@@ -204,7 +204,7 @@ describe("codex two-channel sub-agent context (native SubagentStart)", () => {
   it("keeps research task resolution role-isolated from implement/check manifests", () => {
     const researchPath = path.join(
       repoRoot,
-      "packages/cli/src/templates/codex/agents/trellis-research.toml",
+      "packages/cli/src/templates/codex/agents/phronia-research.toml",
     );
     const content = fs.readFileSync(researchPath, "utf-8");
 

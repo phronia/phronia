@@ -24,7 +24,7 @@ Shows the Phase Index (Plan / Execute / Finish) with routing + skill mapping.
 
 `get_context.py` shows the active task's `status` field. Route by `status` + artifact presence. This command replaces the user needing to remember the Trellis flow; it does not itself approve implementation.
 
-- `status=planning` + no `prd.md` → **1.1** (load `trellis-brainstorm`)
+- `status=planning` + no `prd.md` → **1.1** (load `phronia-brainstorm`)
 - `status=planning` + `prd.md` only → decide whether the task is lightweight or complex. Lightweight can move to **1.4** review; complex returns to **1.1** to add `design.md` + `implement.md`.
 - `status=planning` + complex artifacts complete + sub-agent jsonl not curated (empty, or only a legacy `_example` placeholder row) → **1.3**
 - `status=planning` + required artifacts complete + required jsonl curated or inline mode → **1.4** (ask for start review; only run `task.py start` after user confirms)

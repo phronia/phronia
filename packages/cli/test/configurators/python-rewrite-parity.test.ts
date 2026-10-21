@@ -69,14 +69,14 @@ const { resetResolvedPythonCommand, setResolvedPythonCommand } = await import(
 const RAW_WRITE_SITES = [
   ["snow", ".snow/SNOW.md"],
   ["copilot", ".github/copilot-instructions.md"],
-  ["reasonix", ".reasonix/skills/trellis-implement/SKILL.md"],
+  ["reasonix", ".reasonix/skills/phronia-implement/SKILL.md"],
 ] as const;
 
 async function configureInto(
   id: (typeof RAW_WRITE_SITES)[number][0],
   relPath: string,
 ): Promise<string> {
-  const dir = fs.mkdtempSync(path.join(os.tmpdir(), `trellis-pyrewrite-${id}-`));
+  const dir = fs.mkdtempSync(path.join(os.tmpdir(), `phronia-pyrewrite-${id}-`));
   try {
     await configurePlatform(id, dir);
     return fs.readFileSync(path.join(dir, ...relPath.split("/")), "utf-8");

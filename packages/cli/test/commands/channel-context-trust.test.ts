@@ -83,7 +83,7 @@ describe("resolveTrustedRoots", () => {
   let cwd: string;
 
   beforeEach(() => {
-    tmpDir = fs.mkdtempSync(path.join(realTmp(), "trellis-trust-test-"));
+    tmpDir = fs.mkdtempSync(path.join(realTmp(), "phronia-trust-test-"));
     cwd = path.join(tmpDir, "project");
     fs.mkdirSync(path.join(cwd, ".phronia"), { recursive: true });
   });
@@ -190,7 +190,7 @@ describe("assembleContext with trusted roots (#414 repro)", () => {
   let cwd: string;
 
   beforeEach(() => {
-    tmpDir = fs.mkdtempSync(path.join(realTmp(), "trellis-trust-ctx-test-"));
+    tmpDir = fs.mkdtempSync(path.join(realTmp(), "phronia-trust-ctx-test-"));
     cwd = path.join(tmpDir, "project");
     fs.mkdirSync(path.join(cwd, ".phronia"), { recursive: true });
   });
@@ -344,7 +344,7 @@ describe("agent-loader honors trusted roots", () => {
   let cwd: string;
 
   beforeEach(() => {
-    tmpDir = fs.mkdtempSync(path.join(realTmp(), "trellis-trust-agent-test-"));
+    tmpDir = fs.mkdtempSync(path.join(realTmp(), "phronia-trust-agent-test-"));
     cwd = path.join(tmpDir, "project");
     fs.mkdirSync(path.join(cwd, ".phronia"), { recursive: true });
   });

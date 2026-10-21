@@ -300,12 +300,12 @@ function buildSessionContext(projectRoot: string, contextKey: string | null): st
 // Task context — prd.md, info.md, and jsonl-referenced spec/research files
 // ---------------------------------------------------------------------------
 
-type AgentType = "trellis-implement" | "trellis-check" | "trellis-research" | null;
+type AgentType = "phronia-implement" | "phronia-check" | "phronia-research" | null;
 
 function taskContextJsonlNames(agentType?: AgentType): string[] {
-   if (agentType === "trellis-implement") return ["implement.jsonl"];
-   if (agentType === "trellis-check") return ["check.jsonl"];
-   if (agentType === "trellis-research") return [];
+   if (agentType === "phronia-implement") return ["implement.jsonl"];
+   if (agentType === "phronia-check") return ["check.jsonl"];
+   if (agentType === "phronia-research") return [];
    return ["implement.jsonl", "check.jsonl"];
 }
 
@@ -874,7 +874,7 @@ function parseWorkflowStateBlocks(markdown: string): WorkflowStateBlock[] {
 // Sub-agent detection
 // ---------------------------------------------------------------------------
 
-const PHRONIA_AGENTS = new Set(["trellis-implement", "trellis-check", "trellis-research"]);
+const PHRONIA_AGENTS = new Set(["phronia-implement", "phronia-check", "phronia-research"]);
 
 function detectAgentType(): AgentType {
    const blocked = process.env.PI_BLOCKED_AGENT;
@@ -937,7 +937,7 @@ export default function(pi: ExtensionAPI): void {
             const taskContext = getTaskContext(taskDir, projectRoot);
             if (taskContext) {
                await pi.sendMessage({
-                  customType: "trellis-task-context",
+                  customType: "phronia-task-context",
                   content: taskContext,
                   display: false,
                });
@@ -948,7 +948,7 @@ export default function(pi: ExtensionAPI): void {
          const sessionContext = buildSessionContext(projectRoot, contextKey);
          if (sessionContext) {
             await pi.sendMessage({
-               customType: "trellis-session-context",
+               customType: "phronia-session-context",
                content: sessionContext,
                display: false,
             });
@@ -959,7 +959,7 @@ export default function(pi: ExtensionAPI): void {
             const taskContext = getTaskContext(taskDir, projectRoot);
             if (taskContext) {
                await pi.sendMessage({
-                  customType: "trellis-task-context",
+                  customType: "phronia-task-context",
                   content: taskContext,
                   display: false,
                });
@@ -990,7 +990,7 @@ export default function(pi: ExtensionAPI): void {
 
       return {
          message: {
-            customType: "trellis-workflow-state",
+            customType: "phronia-workflow-state",
             content: cached.workflowMsg,
             display: false,
          },
@@ -1008,7 +1008,7 @@ export default function(pi: ExtensionAPI): void {
       const { taskDir } = resolveActiveTaskStatus(projectRoot, contextKey);
       const currentTaskContext = taskDir ? getTaskContext(taskDir, projectRoot) : "";
       const taskContextIndexes = messages
-         .map((message, index) => message.customType === "trellis-task-context" ? index : -1)
+         .map((message, index) => message.customType === "phronia-task-context" ? index : -1)
          .filter((index) => index >= 0);
       const existingTaskContext = taskContextIndexes.length > 0
          ? messages[taskContextIndexes[0]]?.content ?? ""
@@ -1017,11 +1017,11 @@ export default function(pi: ExtensionAPI): void {
       let projectedMessages = messages;
       if (taskContextChanged) {
          const replacement = currentTaskContext
-            ? { role: "custom" as const, customType: "trellis-task-context", content: currentTaskContext, display: false, timestamp: Date.now() }
+            ? { role: "custom" as const, customType: "phronia-task-context", content: currentTaskContext, display: false, timestamp: Date.now() }
             : null;
          let replaced = false;
          projectedMessages = messages.flatMap((message) => {
-            if (message.customType !== "trellis-task-context") return [message];
+            if (message.customType !== "phronia-task-context") return [message];
             if (replaced || !replacement) return [];
             replaced = true;
             return [replacement];
@@ -1041,7 +1041,7 @@ export default function(pi: ExtensionAPI): void {
          // Skip turn (escape hatch): drop any persisted breadcrumb from an
          // earlier turn so the skip actually takes effect.
          const withoutBreadcrumb = projectedMessages.filter(
-            (message) => !(message.role === "custom" && message.customType === "trellis-workflow-state"),
+            (message) => !(message.role === "custom" && message.customType === "phronia-workflow-state"),
          );
          if (withoutBreadcrumb.length === projectedMessages.length && !taskContextChanged) return;
          lastInjectionTs = Date.now();
@@ -1050,7 +1050,7 @@ export default function(pi: ExtensionAPI): void {
 
       // Post-compaction: reverse-scan to confirm absence before injecting
       for (let i = projectedMessages.length - 1; i >= 0; i--) {
-         if (projectedMessages[i].role === "custom" && projectedMessages[i].customType === "trellis-workflow-state") {
+         if (projectedMessages[i].role === "custom" && projectedMessages[i].customType === "phronia-workflow-state") {
             lastInjectionTs = Date.now();
             return taskContextChanged ? { messages: projectedMessages } : undefined;
          }
@@ -1062,7 +1062,7 @@ export default function(pi: ExtensionAPI): void {
             ...projectedMessages,
             {
                role: "custom" as const,
-               customType: "trellis-workflow-state",
+               customType: "phronia-workflow-state",
                content: cached.workflowMsg,
                display: false,
                timestamp: Date.now(),

@@ -6,8 +6,8 @@ skill-loader tool.
 
 | Capability | Status |
 | --- | --- |
-| Skills (`.agents/skills/trellis-*/SKILL.md`) | Works — dsh discovers this shared root natively |
-| Entry skills (`.dsh/skills/trellis-*/SKILL.md`) | Works — dsh's own project skill root (highest rank) |
+| Skills (`.agents/skills/phronia-*/SKILL.md`) | Works — dsh discovers this shared root natively |
+| Entry skills (`.dsh/skills/phronia-*/SKILL.md`) | Works — dsh's own project skill root (highest rank) |
 | Context hooks | None — pull-based: skills read `.phronia/` files directly |
 | Sub-agents | None shipped — implement/check/research run inline via the workflow skills |
 
@@ -21,26 +21,26 @@ dsh web        # or: dsh --profile headless "start a Trellis task for ..."
 In dsh:
 
 1. Open a session in the project root and describe the work in natural
-   language. For a new task the agent should load the `trellis-start` skill,
+   language. For a new task the agent should load the `phronia-start` skill,
    which reads the current task state from `.phronia/` and routes to
-   `trellis-brainstorm` (unclear requirements), `trellis-before-dev` (about to
-   write code), `trellis-check` (done coding), or `trellis-update-spec`
+   `phronia-brainstorm` (unclear requirements), `phronia-before-dev` (about to
+   write code), `phronia-check` (done coding), or `phronia-update-spec`
    (learned something worth capturing).
-2. Entry skills are `trellis-start` / `trellis-continue` / `trellis-finish-work`
+2. Entry skills are `phronia-start` / `phronia-continue` / `phronia-finish-work`
    in `.dsh/skills/`. You can also ask for them by name at any time.
-3. Type `/trellis:finish-work` is a slash-command convention from other hosts —
+3. Type `/phronia:finish-work` is a slash-command convention from other hosts —
    dsh has no slash palette, so say "finish the trellis task" instead, and the
-   agent loads `trellis-finish-work`.
+   agent loads `phronia-finish-work`.
 
 ## File map
 
-- `.agents/skills/` — auto-triggered workflow skills (`trellis-before-dev`,
-  `trellis-brainstorm`, `trellis-check`, `trellis-break-loop`,
-  `trellis-update-spec`) plus the bundled `trellis-meta` /
-  `trellis-spec-bootstrap` / `trellis-session-insight` skills. Byte-identical
+- `.agents/skills/` — auto-triggered workflow skills (`phronia-before-dev`,
+  `phronia-brainstorm`, `phronia-check`, `phronia-break-loop`,
+  `phronia-update-spec`) plus the bundled `phronia-meta` /
+  `phronia-spec-bootstrap` / `phronia-session-insight` skills. Byte-identical
   to Codex / Gemini CLI / Pi / Kimi writes into the same shared root.
-- `.dsh/skills/` — dsh-private entry skills (`trellis-start` /
-  `trellis-continue` / `trellis-finish-work`).
+- `.dsh/skills/` — dsh-private entry skills (`phronia-start` /
+  `phronia-continue` / `phronia-finish-work`).
 - `.phronia/` — specs, tasks, workspace memory, and the shared scripts the
   skills invoke (`get_context.py`, `task.py`, ...).
 
@@ -52,5 +52,5 @@ In dsh:
   `str_replace_editor`; the default presets include `web_search` and the
   filesystem/terminal tools the skills assume.
 - dsh has no project-level sub-agent definition surface, so Trellis ships no
-  `trellis-implement` / `trellis-check` / `trellis-research` agent prompts
+  `phronia-implement` / `phronia-check` / `phronia-research` agent prompts
   here — the workflow skills run those phases inline in the main session.

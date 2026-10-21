@@ -2,11 +2,11 @@
  * Integration tests for sub-agent context injection limits (issue #441).
  *
  * Covers two templates:
- *   - `src/templates/trellis/scripts/common/config.py` — config parsing
+ *   - `src/templates/workflow/scripts/common/config.py` — config parsing
  *     (`get_context_injection_limits`)
  *   - `src/templates/shared-hooks/inject-subagent-context.py` — truncation,
  *     total-budget degradation, UTF-8 safety
- *   - `src/templates/trellis/scripts/common/task_context.py` — `task.py
+ *   - `src/templates/workflow/scripts/common/task_context.py` — `task.py
  *     validate` path resolution and hygiene warnings
  *
  * Scripts are stamped into a fresh temp dir and exercised through the real
@@ -21,7 +21,7 @@ import path from "node:path";
 
 const TEMPLATE_SCRIPTS = path.resolve(
   __dirname,
-  "../../src/templates/trellis/scripts",
+  "../../src/templates/workflow/scripts",
 );
 const TASK_CONTEXT_PATH = path.join(
   TEMPLATE_SCRIPTS,
@@ -155,7 +155,7 @@ describe.skipIf(!hasPython())(
 
     beforeEach(() => {
       tmp = fs.mkdtempSync(
-        path.join(os.tmpdir(), "trellis-context-limits-test-"),
+        path.join(os.tmpdir(), "phronia-context-limits-test-"),
       );
       setupRepo(tmp);
     });
@@ -627,7 +627,7 @@ print("all-valid")
       it("does not read a file outside base_path via an absolute jsonl reference", () => {
         const taskDir = makeTask(tmp, "task-absolute-escape");
         const secretDir = fs.mkdtempSync(
-          path.join(os.tmpdir(), "trellis-580-secret-"),
+          path.join(os.tmpdir(), "phronia-580-secret-"),
         );
         const secretPath = path.join(secretDir, "secret.txt");
         fs.writeFileSync(secretPath, "TOP SECRET CONTENT", "utf-8");
@@ -648,7 +648,7 @@ print("all-valid")
       it("does not read a file outside base_path via a ../ traversal jsonl reference", () => {
         const taskDir = makeTask(tmp, "task-traversal-escape");
         const secretDir = fs.mkdtempSync(
-          path.join(os.tmpdir(), "trellis-580-secret-"),
+          path.join(os.tmpdir(), "phronia-580-secret-"),
         );
         fs.writeFileSync(
           path.join(secretDir, "secret.txt"),

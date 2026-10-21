@@ -619,8 +619,8 @@ cd packages/cli
 npm pack --dry-run --json | grep 'dist/templates/common/bundled-skills/<skill>/SKILL.md'
 cd ../..
 
-tmpdir=$(mktemp -d /tmp/trellis-built-bin-smoke-XXXXXX)
-printf '{"name":"trellis-smoke","version":"0.0.0"}\n' > "$tmpdir/package.json"
+tmpdir=$(mktemp -d /tmp/phronia-built-bin-smoke-XXXXXX)
+printf '{"name":"phronia-smoke","version":"0.0.0"}\n' > "$tmpdir/package.json"
 git -C "$tmpdir" init -q
 (
   cd "$tmpdir"

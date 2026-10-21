@@ -14,7 +14,7 @@ import {
   readContextInjectionLimits,
   ContextBudget,
   materializeArtifact,
-} from "../lib/trellis-context.js"
+} from "../lib/phronia-context.js"
 
 // Supported subagent types
 const AGENTS_ALL = ["implement", "check", "research"]
@@ -214,7 +214,7 @@ function getResearchContext(ctx) {
  */
 function buildPrompt(agentType, originalPrompt, context, isFinish = false) {
   const templates = {
-    implement: `<!-- trellis-hook-injected -->
+    implement: `<!-- phronia-hook-injected -->
 # Implement Agent Task
 
 You are the Implement Agent in the Multi-Agent Pipeline.
@@ -244,7 +244,7 @@ ${originalPrompt}
 - Follow all dev specs injected above
 - Report list of modified/created files when done`,
 
-    check: isFinish ? `<!-- trellis-hook-injected -->
+    check: isFinish ? `<!-- phronia-hook-injected -->
 # Finish Agent Task
 
 You are performing the final check before creating a PR.
@@ -280,7 +280,7 @@ ${originalPrompt}
 - If critical CODE issues found, report them clearly (fix specs, not code)
 - Verify all acceptance criteria in prd.md are met
 - Verify design.md and implement.md constraints when those files are present` :
-      `<!-- trellis-hook-injected -->
+      `<!-- phronia-hook-injected -->
 # Check Agent Task
 
 You are the Check Agent in the Multi-Agent Pipeline.
@@ -309,7 +309,7 @@ ${originalPrompt}
 - Fix issues yourself, don't just report
 - Must execute complete checklist`,
 
-    research: `<!-- trellis-hook-injected -->
+    research: `<!-- phronia-hook-injected -->
 # Research Agent Task
 
 You are the Research Agent in the Multi-Agent Pipeline.
@@ -456,8 +456,8 @@ export default async ({ directory, platform: hostPlatform = process.platform, en
           if (!args) return
 
           const rawSubagentType = args.subagent_type
-          // Strip "trellis-" prefix added by v0.5.0-beta.5 agent rename migration
-          const subagentType = (rawSubagentType || "").replace(/^trellis-/, "")
+          // Strip "phronia-" prefix added by v0.5.0-beta.5 agent rename migration
+          const subagentType = (rawSubagentType || "").replace(/^phronia-/, "")
           const originalPrompt = args.prompt || ""
 
           debugLog("inject", "Task tool called, subagent_type:", rawSubagentType)
@@ -517,7 +517,7 @@ export default async ({ directory, platform: hostPlatform = process.platform, en
 
           // Agents requiring task directory
           if (AGENTS_REQUIRE_TASK.includes(subagentType)) {
-            // subagentType is already stripped of "trellis-" prefix above
+            // subagentType is already stripped of "phronia-" prefix above
             if (!taskDir) {
               debugLog("inject", "Skipping - no current task")
               return

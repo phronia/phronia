@@ -59,7 +59,7 @@ import {
 import { VERSION } from "../../src/constants/version.js";
 import { DIR_NAMES, FILE_NAMES, PATHS } from "../../src/constants/paths.js";
 import { computeHash } from "../../src/utils/template-hash.js";
-import { workflowMdTemplate } from "../../src/templates/trellis/index.js";
+import { workflowMdTemplate } from "../../src/templates/workflow/index.js";
 import {
   COPILOT_INSTRUCTIONS_BLOCK_END,
   COPILOT_INSTRUCTIONS_BLOCK_START,
@@ -176,7 +176,7 @@ describe("update() integration", () => {
   }
 
   beforeEach(() => {
-    tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), "trellis-update-int-"));
+    tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), "phronia-update-int-"));
     vi.spyOn(process, "cwd").mockReturnValue(tmpDir);
     registryDownload.files.clear();
     // eslint-disable-next-line @typescript-eslint/no-empty-function
@@ -259,7 +259,7 @@ describe("update() integration", () => {
   });
 
   it("#1b current OpenCode templates are not classified as deprecated", async () => {
-    const startPath = ".opencode/commands/trellis/start.md";
+    const startPath = ".opencode/commands/phronia/start.md";
     await init({ yes: true, force: true, opencode: true });
     expect(fs.existsSync(projectFile(startPath))).toBe(true);
 
@@ -272,24 +272,24 @@ describe("update() integration", () => {
   it("[issue-zcode-codex-upgrade] zcode private skills do not trigger legacy Codex backfill", async () => {
     await init({ yes: true, force: true, zcode: true });
 
-    expect(fs.existsSync(projectFile(".zcode/commands/trellis/start.md"))).toBe(
+    expect(fs.existsSync(projectFile(".zcode/commands/phronia/start.md"))).toBe(
       false,
     );
     expect(
-      fs.existsSync(projectFile(".zcode/skills/trellis-start/SKILL.md")),
+      fs.existsSync(projectFile(".zcode/skills/phronia-start/SKILL.md")),
     ).toBe(false);
     expect(
-      fs.existsSync(projectFile(".zcode/skills/trellis-check/SKILL.md")),
+      fs.existsSync(projectFile(".zcode/skills/phronia-check/SKILL.md")),
     ).toBe(true);
     expect(
-      fs.existsSync(projectFile(".zcode/agents/trellis-research.md")),
+      fs.existsSync(projectFile(".zcode/agents/phronia-research.md")),
     ).toBe(true);
     expect(
-      fs.existsSync(projectFile(".agents/skills/trellis-start/SKILL.md")),
+      fs.existsSync(projectFile(".agents/skills/phronia-start/SKILL.md")),
     ).toBe(false);
     expect(fs.existsSync(projectFile(".agents/skills"))).toBe(false);
     expect(
-      fs.existsSync(projectFile(".agents/skills/trellis-continue/SKILL.md")),
+      fs.existsSync(projectFile(".agents/skills/phronia-continue/SKILL.md")),
     ).toBe(false);
 
     await update({});
@@ -298,13 +298,13 @@ describe("update() integration", () => {
     expect(logOutput).not.toContain("Legacy Codex detected");
     expect(fs.existsSync(projectFile(".codex"))).toBe(false);
     expect(
-      fs.existsSync(projectFile(".zcode/skills/trellis-start/SKILL.md")),
+      fs.existsSync(projectFile(".zcode/skills/phronia-start/SKILL.md")),
     ).toBe(false);
     expect(
-      fs.existsSync(projectFile(".zcode/skills/trellis-check/SKILL.md")),
+      fs.existsSync(projectFile(".zcode/skills/phronia-check/SKILL.md")),
     ).toBe(true);
     expect(
-      fs.existsSync(projectFile(".zcode/agents/trellis-research.md")),
+      fs.existsSync(projectFile(".zcode/agents/phronia-research.md")),
     ).toBe(true);
     expect(fs.existsSync(projectFile(".agents/skills"))).toBe(false);
   });
@@ -389,7 +389,7 @@ describe("update() integration", () => {
     // `.agents/skills/` now holds the correct, neutral, current-version
     // content (written by both Codex and current Pi in current code).
     const neutralContent = readProjectFile(
-      ".agents/skills/trellis-update-spec/SKILL.md",
+      ".agents/skills/phronia-update-spec/SKILL.md",
     );
 
     // Fabricate the pre-fix `.pi/skills/` leftover with Pi-flavored bytes
@@ -402,7 +402,7 @@ describe("update() integration", () => {
     );
 
     const legacyContent = legacyPiSkillFiles.get(
-      ".pi/skills/trellis-update-spec/SKILL.md",
+      ".pi/skills/phronia-update-spec/SKILL.md",
     );
     expect(legacyContent).toBeDefined();
     // Sanity: the Pi-flavored bytes actually differ from the shared neutral
@@ -417,11 +417,11 @@ describe("update() integration", () => {
     }
     writeHashesV2(hashFilePath(), hashes);
 
-    expect(fs.existsSync(projectFile(".pi/skills/trellis-update-spec"))).toBe(
+    expect(fs.existsSync(projectFile(".pi/skills/phronia-update-spec"))).toBe(
       true,
     );
     expect(
-      fs.existsSync(projectFile(".agents/skills/trellis-update-spec")),
+      fs.existsSync(projectFile(".agents/skills/phronia-update-spec")),
     ).toBe(true);
 
     // Build the current-version templates map for `.agents/skills/` the way
@@ -467,7 +467,7 @@ describe("update() integration", () => {
     // `.agents/skills/` must end up with the correct, current, neutral
     // content — not the stale Pi-flavored bytes from the deleted legacy dir.
     expect(
-      readProjectFile(".agents/skills/trellis-update-spec/SKILL.md"),
+      readProjectFile(".agents/skills/phronia-update-spec/SKILL.md"),
     ).toBe(neutralContent);
   });
 
@@ -605,7 +605,7 @@ describe("update() integration", () => {
     const targetFull = path.join(tmpDir, targetRelative);
     const templateContent = fs.readFileSync(targetFull, "utf-8");
 
-    // User has a hand-written AGENTS.md with no TRELLIS:START/END markers at
+    // User has a hand-written AGENTS.md with no PHRONIA:START/END markers at
     // all (predates 0.5.0-beta.18 or was authored by hand). Pre-fix behavior
     // would clobber this content; post-fix should append the managed block.
     const userContent = "# Project notes\n\nThings the team agreed on.\n";
@@ -616,11 +616,11 @@ describe("update() integration", () => {
     const result = fs.readFileSync(targetFull, "utf-8");
     expect(result).toContain("# Project notes");
     expect(result).toContain("Things the team agreed on.");
-    expect(result).toContain("<!-- TRELLIS:START -->");
-    expect(result).toContain("<!-- TRELLIS:END -->");
+    expect(result).toContain("<!-- PHRONIA:START -->");
+    expect(result).toContain("<!-- PHRONIA:END -->");
     // Managed block should sit AFTER the user content, not replace it.
     expect(result.indexOf("# Project notes")).toBeLessThan(
-      result.indexOf("<!-- TRELLIS:START -->"),
+      result.indexOf("<!-- PHRONIA:START -->"),
     );
     // Tail equals the canonical template (force-applied managed block).
     expect(result.endsWith(templateContent.trimEnd() + "\n")).toBe(true);
@@ -852,7 +852,7 @@ describe("update() integration", () => {
       "#### 2.1 Implement `[required · repeatable]`\n\n" +
       "[Codex]\nSpawn the implement sub-agent:\n[/Codex]\n\n" +
       "[Kilo, Antigravity, Windsurf]\n" +
-      "1. Load the `trellis-before-dev` skill to read project guidelines\n" +
+      "1. Load the `phronia-before-dev` skill to read project guidelines\n" +
       "[/Kilo, Antigravity, Windsurf]\n";
 
     stageVersionedUpgradeProject({
@@ -1549,7 +1549,7 @@ describe("update() integration", () => {
       "#### 2.1 Implement `[required · repeatable]`\n\n" +
       "[Codex]\nSpawn the implement sub-agent:\n[/Codex]\n\n" +
       "[Kilo, Antigravity, Windsurf]\n" +
-      "1. Load the `trellis-before-dev` skill to read project guidelines\n" +
+      "1. Load the `phronia-before-dev` skill to read project guidelines\n" +
       "[/Kilo, Antigravity, Windsurf]\n";
 
     fs.writeFileSync(workflowPath, staleWorkflow, "utf-8");

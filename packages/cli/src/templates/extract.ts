@@ -13,12 +13,12 @@ type TemplateCategory = "scripts" | "markdown" | "commands";
  * Get the path to the trellis templates directory (.phronia/ scaffolding).
  */
 export function getTrellisTemplatePath(): string {
-  const templatePath = path.join(__dirname, "trellis");
+  const templatePath = path.join(__dirname, "workflow");
   if (fs.existsSync(templatePath)) {
     return templatePath;
   }
   throw new Error(
-    "Could not find trellis templates directory. Expected at templates/trellis/",
+    "Could not find trellis templates directory. Expected at templates/workflow/",
   );
 }
 

@@ -13,7 +13,7 @@ describe("managed-removal strict planning", () => {
   let tmpDir: string;
 
   beforeEach(() => {
-    tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), "trellis-removal-plan-"));
+    tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), "phronia-removal-plan-"));
   });
 
   afterEach(() => {

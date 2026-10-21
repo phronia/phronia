@@ -6,7 +6,7 @@
  * UserPromptSubmit, and PreToolUse for Agent/Task), so `hasHooks` is true.
  * Four output paths:
  * - `.zcode/skills/` — ZCode-private workflow and bundled skills
- * - `.zcode/commands/trellis/` — slash commands (invoked as /trellis:<name>)
+ * - `.zcode/commands/phronia/` — slash commands (invoked as /phronia:<name>)
  * - `.zcode/agents/` — sub-agent definitions with hook-injection fallback
  * - `.zcode/hooks/` + `.zcode/config.json` — shared Python hook scripts and
  *   the workspace hook registration
@@ -44,9 +44,9 @@ export function collectZcodeTemplates(): Map<string, string> {
     files.set(filePath, content);
   }
 
-  // 2. Commands → .zcode/commands/trellis/
+  // 2. Commands → .zcode/commands/phronia/
   for (const cmd of resolveCommands(ctx)) {
-    files.set(`.zcode/commands/trellis/${cmd.name}.md`, cmd.content);
+    files.set(`.zcode/commands/phronia/${cmd.name}.md`, cmd.content);
   }
 
   // 3. Sub-agents → .zcode/agents/ (hook-inject; templates carry fallback).

@@ -33,7 +33,7 @@ describe("ablation-store", () => {
   let originalStateRoot: string | undefined;
 
   beforeEach(() => {
-    tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), "trellis-ablation-store-"));
+    tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), "phronia-ablation-store-"));
     projectDir = path.join(tmpDir, "project");
     stateRoot = path.join(tmpDir, "state");
     fs.mkdirSync(path.join(projectDir, ".phronia"), { recursive: true });

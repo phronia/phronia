@@ -405,7 +405,7 @@ this task from a session that provides Trellis session identity.
 
 **Your job**: help them populate \`.phronia/spec/\` with the team's real
 coding conventions. Every future AI session — this project's
-\`trellis-implement\` and \`trellis-check\` sub-agents — auto-loads spec files
+\`phronia-implement\` and \`phronia-check\` sub-agents — auto-loads spec files
 listed in per-task jsonl manifests. Empty spec = sub-agents write generic
 code. Real spec = sub-agents match the team's actual patterns.
 
@@ -503,8 +503,8 @@ is a separate conversation, not a bootstrap concern.
 
 ## Quick explainer of the runtime (share when they ask "why do we need spec at all")
 
-- Every AI coding task spawns two sub-agents: \`trellis-implement\` (writes
-  code) and \`trellis-check\` (verifies quality).
+- Every AI coding task spawns two sub-agents: \`phronia-implement\` (writes
+  code) and \`phronia-check\` (verifies quality).
 - Each task has \`implement.jsonl\` / \`check.jsonl\` manifests listing which
   spec files to load.
 - The platform hook auto-injects those spec files + the task's \`prd.md\`
@@ -673,9 +673,9 @@ code every session.
 - **Task lifecycle**: planning → in_progress → done → archive, under
   \`.phronia/tasks/\`.
 - **Core slash commands**:
-  - \`/trellis:continue\` — resume the current session's active task
-  - \`/trellis:finish-work\` — wrap up a finished task
-  - \`/trellis:start\` — session boot from scratch (not needed here; the
+  - \`/phronia:continue\` — resume the current session's active task
+  - \`/phronia:finish-work\` — wrap up a finished task
+  - \`/phronia:start\` — session boot from scratch (not needed here; the
     SessionStart hook does its job automatically)
 
 ### 2. Runtime mechanics (explain when they ask "how does it know what to do")
@@ -685,14 +685,14 @@ code every session.
   conversation at every session start.
 - **\`<workflow-state>\` tag** is auto-injected with every user message,
   carrying the current task + phase hint.
-- **\`/trellis:continue\`** loads the Phase Index, reads \`prd.md\` + recent
-  activity, and routes to the right skill (\`trellis-brainstorm\` for planning,
-  \`trellis-implement\` for coding, \`trellis-check\` for verification).
-- **\`trellis-implement\` sub-agent** is spawned when code needs to be written.
+- **\`/phronia:continue\`** loads the Phase Index, reads \`prd.md\` + recent
+  activity, and routes to the right skill (\`phronia-brainstorm\` for planning,
+  \`phronia-implement\` for coding, \`phronia-check\` for verification).
+- **\`phronia-implement\` sub-agent** is spawned when code needs to be written.
   The platform hook reads \`{TASK_DIR}/implement.jsonl\` and auto-injects those
   spec files + \`prd.md\` into the sub-agent's prompt so it codes per project
   conventions.
-- **\`trellis-check\` sub-agent** follows the same pattern with \`check.jsonl\`
+- **\`phronia-check\` sub-agent** follows the same pattern with \`check.jsonl\`
   — reviews changes against specs, auto-fixes issues, runs lint/typecheck.
 
 File layout (mention when they ask "where does what live"):
@@ -726,8 +726,8 @@ File layout (mention when they ask "where does what live"):
 ## Optional: walk through a small task end-to-end
 
 If they want to practice before touching real work, offer to pick a tiny
-P3 task or a typo fix and run the full cycle together: \`/trellis:continue\`
-→ you implement via sub-agents → \`/trellis:finish-work\`.
+P3 task or a typo fix and run the full cycle together: \`/phronia:continue\`
+→ you implement via sub-agents → \`/phronia:finish-work\`.
 
 ---
 

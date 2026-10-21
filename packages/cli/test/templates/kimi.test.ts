@@ -5,9 +5,9 @@ import { collectKimiTemplates } from "../../src/configurators/kimi.js";
 import { collectPiTemplates } from "../../src/configurators/pi.js";
 
 const EXPECTED_AGENT_NAMES = [
-  "trellis-check",
-  "trellis-implement",
-  "trellis-research",
+  "phronia-check",
+  "phronia-implement",
+  "phronia-research",
 ];
 
 describe("kimi getAllAgents", () => {
@@ -42,13 +42,13 @@ describe("kimi getAllAgents", () => {
 
   it("dispatches research as a custom sub-agent with write scope limited to research/", () => {
     const research = getAllAgents().find(
-      (agent) => agent.name === "trellis-research",
+      (agent) => agent.name === "phronia-research",
     );
     expect(research).toBeDefined();
     if (!research) return;
 
     expect(research.content).toContain(
-      "dispatches the `trellis-research` sub-agent",
+      "dispatches the `phronia-research` sub-agent",
     );
     expect(research.content).toContain("may write only under");
     expect(research.content).not.toContain("built-in `coder` sub-agent");
@@ -60,8 +60,8 @@ describe("kimi pull-based prelude injection", () => {
     const agents = applyPullBasedPreludeMarkdown(getAllAgents());
     for (const agent of agents) {
       if (
-        agent.name === "trellis-implement" ||
-        agent.name === "trellis-check"
+        agent.name === "phronia-implement" ||
+        agent.name === "phronia-check"
       ) {
         expect(agent.content).toContain("Load Trellis Context First");
         expect(agent.content).toContain("task.py current --source");
@@ -71,7 +71,7 @@ describe("kimi pull-based prelude injection", () => {
 
   it("does not inject the pull-based prelude into research", () => {
     const agents = applyPullBasedPreludeMarkdown(getAllAgents());
-    const research = agents.find((agent) => agent.name === "trellis-research");
+    const research = agents.find((agent) => agent.name === "phronia-research");
     expect(research).toBeDefined();
     if (!research) return;
     expect(research.content).not.toContain("Load Trellis Context First");
@@ -83,41 +83,41 @@ describe("kimi collectKimiTemplates", () => {
   it("writes commands-as-skills and agent prompts under .kimi-code/skills/", () => {
     const files = collectKimiTemplates();
 
-    // User-invocable entry points (/skill:trellis-<name>)
-    expect(files.has(".kimi-code/skills/trellis-start/SKILL.md")).toBe(true);
-    expect(files.has(".kimi-code/skills/trellis-continue/SKILL.md")).toBe(true);
-    expect(files.has(".kimi-code/skills/trellis-finish-work/SKILL.md")).toBe(
+    // User-invocable entry points (/skill:phronia-<name>)
+    expect(files.has(".kimi-code/skills/phronia-start/SKILL.md")).toBe(true);
+    expect(files.has(".kimi-code/skills/phronia-continue/SKILL.md")).toBe(true);
+    expect(files.has(".kimi-code/skills/phronia-finish-work/SKILL.md")).toBe(
       true,
     );
 
     // Trellis agent prompts (also installed as `.kimi-code/agents/*.md`)
-    expect(files.has(".kimi-code/skills/trellis-implement/SKILL.md")).toBe(
+    expect(files.has(".kimi-code/skills/phronia-implement/SKILL.md")).toBe(
       true,
     );
-    expect(files.has(".kimi-code/skills/trellis-check/SKILL.md")).toBe(true);
-    expect(files.has(".kimi-code/skills/trellis-research/SKILL.md")).toBe(true);
+    expect(files.has(".kimi-code/skills/phronia-check/SKILL.md")).toBe(true);
+    expect(files.has(".kimi-code/skills/phronia-research/SKILL.md")).toBe(true);
 
-    const implement = files.get(".kimi-code/skills/trellis-implement/SKILL.md");
+    const implement = files.get(".kimi-code/skills/phronia-implement/SKILL.md");
     expect(implement).toContain("Load Trellis Context First");
-    const research = files.get(".kimi-code/skills/trellis-research/SKILL.md");
+    const research = files.get(".kimi-code/skills/phronia-research/SKILL.md");
     expect(research).not.toContain("Load Trellis Context First");
 
     // Custom sub-agent definitions under .kimi-code/agents/ mirror the skill
     // copies (pull-based prelude included).
     for (const name of [
-      "trellis-implement",
-      "trellis-check",
-      "trellis-research",
+      "phronia-implement",
+      "phronia-check",
+      "phronia-research",
     ]) {
       const agent = files.get(`.kimi-code/agents/${name}.md`);
       expect(agent, `.kimi-code/agents/${name}.md`).toBeDefined();
       expect(agent).toContain(`name: ${name}`);
       expect(agent).toContain("tools: ");
     }
-    expect(files.get(".kimi-code/agents/trellis-implement.md")).toContain(
+    expect(files.get(".kimi-code/agents/phronia-implement.md")).toContain(
       "Load Trellis Context First",
     );
-    expect(files.get(".kimi-code/agents/trellis-research.md")).not.toContain(
+    expect(files.get(".kimi-code/agents/phronia-research.md")).not.toContain(
       "Load Trellis Context First",
     );
 
@@ -132,13 +132,13 @@ describe("kimi collectKimiTemplates", () => {
 
   it("writes workflow + bundled skills to the shared .agents/skills/ root", () => {
     const files = collectKimiTemplates();
-    expect(files.has(".agents/skills/trellis-check/SKILL.md")).toBe(true);
-    expect(files.has(".agents/skills/trellis-before-dev/SKILL.md")).toBe(true);
-    expect(files.has(".agents/skills/trellis-meta/SKILL.md")).toBe(true);
+    expect(files.has(".agents/skills/phronia-check/SKILL.md")).toBe(true);
+    expect(files.has(".agents/skills/phronia-before-dev/SKILL.md")).toBe(true);
+    expect(files.has(".agents/skills/phronia-meta/SKILL.md")).toBe(true);
     // Command-as-skill files stay Kimi-private (Codex owns the shared
-    // trellis-start/continue/finish-work fallback copies).
-    expect(files.has(".agents/skills/trellis-start/SKILL.md")).toBe(false);
-    expect(files.has(".agents/skills/trellis-finish-work/SKILL.md")).toBe(
+    // phronia-start/continue/finish-work fallback copies).
+    expect(files.has(".agents/skills/phronia-start/SKILL.md")).toBe(false);
+    expect(files.has(".agents/skills/phronia-finish-work/SKILL.md")).toBe(
       false,
     );
   });

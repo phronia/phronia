@@ -7,7 +7,7 @@
  *
  * Output paths:
  * - `.snow/skills/` — workflow + bundled skills (Claude Code Skills layout)
- * - `.snow/commands/trellis-*.json` — custom prompt slash commands (no trellis-start)
+ * - `.snow/commands/phronia-*.json` — custom prompt slash commands (no phronia-start)
  * - `.snow/agents/` — project sub-agents (auto-discovered by Snow; primary path)
  * - `.snow/hooks/` — inject hooks (session / user / beforeSubAgentStart)
  * - `.snow/SNOW.md` — operator guide
@@ -72,7 +72,7 @@ export function collectSnowTemplates(): Map<string, string> {
   const ctx = config.templateContext;
   const files = new Map<string, string>();
 
-  // hasHooks=true → resolveAllAsSkills drops trellis-start.
+  // hasHooks=true → resolveAllAsSkills drops phronia-start.
   for (const [filePath, content] of collectSkillTemplates(
     ".snow/skills",
     resolveAllAsSkills(ctx),
@@ -84,7 +84,7 @@ export function collectSnowTemplates(): Map<string, string> {
   for (const cmd of resolveCommands(ctx)) {
     const body = replacePythonCommandLiterals(cmd.content);
     files.set(
-      `.snow/commands/trellis-${cmd.name}.json`,
+      `.snow/commands/phronia-${cmd.name}.json`,
       buildSnowCommandJson(cmd.name, body),
     );
   }

@@ -20,7 +20,7 @@ import path from "node:path";
 
 const TEMPLATE_SCRIPTS = path.resolve(
   __dirname,
-  "../../src/templates/trellis/scripts",
+  "../../src/templates/workflow/scripts",
 );
 
 function hasPython(): boolean {
@@ -107,7 +107,7 @@ describe.skipIf(!hasPython())("non-list `children` in a parent task.json", () =>
   let tmp: string;
 
   beforeEach(() => {
-    tmp = fs.mkdtempSync(path.join(os.tmpdir(), "trellis-children-test-"));
+    tmp = fs.mkdtempSync(path.join(os.tmpdir(), "phronia-children-test-"));
     setupRepo(tmp);
     makeTask(tmp, PARENT, { children: null });
   });

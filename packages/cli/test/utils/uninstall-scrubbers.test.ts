@@ -527,7 +527,7 @@ project_doc_fallback_filenames = ["AGENTS.md"]
 # be injected into Codex sessions.
 `;
 
-  it("removes the entire trellis-shipped file and reports fullyEmpty", () => {
+  it("removes the entire phronia-shipped file and reports fullyEmpty", () => {
     const { content, fullyEmpty } = scrubCodexConfigToml(TEMPLATE);
     expect(fullyEmpty).toBe(true);
     expect(content.trim()).toBe("");

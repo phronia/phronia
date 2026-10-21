@@ -55,7 +55,7 @@ jobs:
 
       - name: Check Python 3.9 syntax
         run: |
-          export PYTHONPYCACHEPREFIX="$RUNNER_TEMP/trellis-pycache"
+          export PYTHONPYCACHEPREFIX="$RUNNER_TEMP/phronia-pycache"
           git ls-files -z --recurse-submodules '*.py' | xargs -0 python -m py_compile
 
       - name: Setup pnpm

@@ -331,7 +331,7 @@ def _read_project_version(repo_root: Path) -> str | None:
 def _fetch_trellis_version_output() -> str | None:
     try:
         result = subprocess.run(
-            ["trellis", "--version"],
+            ["phronia", "--version"],
             capture_output=True,
             text=True,
             encoding="utf-8",
@@ -349,7 +349,7 @@ def _fetch_trellis_version_output() -> str | None:
 
 def _extract_available_update_version(output: str) -> str | None:
     update_match = re.search(
-        r"Trellis update available:\s*"
+        r"(?:Trellis|Phronia) update available:\s*"
         r"(?P<current>\S+)\s*(?:→|->)\s*(?P<latest>\S+)",
         output,
     )
@@ -482,8 +482,8 @@ def get_update_hint(repo_root: Path, context_key: str | None = None) -> str | No
         return None
 
     return (
-        f"Trellis update available: {current_version} -> {latest_version}, "
-        "run trellis update"
+        f"Phronia update available: {current_version} -> {latest_version}, "
+        "run phronia update"
     )
 
 

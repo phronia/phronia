@@ -14,7 +14,7 @@ describe("watchEvents", () => {
   let oldProject: string | undefined;
 
   beforeEach(() => {
-    tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), "trellis-watch-test-"));
+    tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), "phronia-watch-test-"));
     projectDir = path.join(tmpDir, "project");
     fs.mkdirSync(projectDir);
     oldRoot = process.env.PHRONIA_CHANNEL_ROOT;

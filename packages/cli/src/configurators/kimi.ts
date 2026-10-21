@@ -7,13 +7,13 @@
  *   resolver so the files stay byte-identical to Codex/Gemini/Pi writes into
  *   the same shared root (Kimi discovers `.agents/skills/` natively).
  * - `.kimi-code/skills/` — Kimi-private entry points: the user-invocable
- *   commands as skills (`/skill:trellis-start`, `/skill:trellis-continue`,
- *   `/skill:trellis-finish-work`) plus the Trellis agent prompts
- *   (trellis-implement / trellis-check / trellis-research) with the
+ *   commands as skills (`/skill:phronia-start`, `/skill:phronia-continue`,
+ *   `/skill:phronia-finish-work`) plus the Trellis agent prompts
+ *   (phronia-implement / phronia-check / phronia-research) with the
  *   pull-based prelude on implement/check.
  * - `.kimi-code/agents/` — the same Trellis agent prompts as project-level
  *   custom sub-agent definitions (Claude Code-compatible frontmatter), so
- *   the main session can dispatch `trellis-<name>` sub-agents directly.
+ *   the main session can dispatch `phronia-<name>` sub-agents directly.
  *
  * Trellis does not generate project-local Kimi settings or hooks.
  * Project-local Kimi settings go in `.kimi-code/local.toml`; hooks are
@@ -33,13 +33,13 @@ import {
 
 /**
  * Command templates that become user-invocable Kimi skills
- * (`/skill:trellis-<name>`). Kimi has no slash-command mechanism besides
+ * (`/skill:phronia-<name>`). Kimi has no slash-command mechanism besides
  * skills, so the session-boundary commands are delivered as SKILL.md files.
  */
 const KIMI_COMMAND_SKILL_NAMES = new Set([
-  "trellis-start",
-  "trellis-continue",
-  "trellis-finish-work",
+  "phronia-start",
+  "phronia-continue",
+  "phronia-finish-work",
 ]);
 
 /** Session-boundary commands resolved as Kimi skills (Kimi-private root, so
@@ -86,7 +86,7 @@ export function collectKimiTemplates(): Map<string, string> {
   // 3. Custom sub-agent definitions → `.kimi-code/agents/`. Kimi Code
   //    discovers project-level agents there (Claude Code-compatible
   //    frontmatter); content mirrors the skill copies, pull-based prelude
-  //    included, so dispatching `trellis-<name>` directly behaves the same.
+  //    included, so dispatching `phronia-<name>` directly behaves the same.
   for (const agent of agentPrompts) {
     files.set(`.kimi-code/agents/${agent.name}.md`, agent.content);
   }

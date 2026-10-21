@@ -51,7 +51,7 @@ describe("collectMissingAgents", () => {
   let cwd: string;
 
   beforeEach(() => {
-    cwd = fs.mkdtempSync(path.join(os.tmpdir(), "trellis-agent-refs-"));
+    cwd = fs.mkdtempSync(path.join(os.tmpdir(), "phronia-agent-refs-"));
     fs.mkdirSync(path.join(cwd, ".phronia", "agents"), { recursive: true });
   });
 

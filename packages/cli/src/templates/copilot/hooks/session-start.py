@@ -279,7 +279,7 @@ def _get_task_status(trellis_dir: Path, hook_input: dict) -> str:
     if not has_prd:
         return (
             f"Status: PLANNING\nTask: {task_title}\nPresent: {present_line}\n"
-            "Next: Load trellis-brainstorm and write prd.md. Stay in planning."
+            "Next: Load phronia-brainstorm and write prd.md. Stay in planning."
         )
 
     if task_status == "planning":
@@ -507,9 +507,9 @@ Trellis compact SessionStart context. Use it to orient the session; load details
     output.write(_build_compact_current_state(trellis_dir, hook_input, spec_index_paths))
     output.write("\n</current-state>\n\n")
 
-    output.write("<trellis-workflow>\n")
+    output.write("<phronia-workflow>\n")
     output.write(_build_workflow_toc(trellis_dir / "workflow.md"))
-    output.write("\n</trellis-workflow>\n\n")
+    output.write("\n</phronia-workflow>\n\n")
 
     output.write("<guidelines>\n")
     output.write(

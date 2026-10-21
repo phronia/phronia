@@ -21,7 +21,7 @@ import path from "node:path";
 
 const TEMPLATE_SCRIPTS = path.resolve(
   __dirname,
-  "../../src/templates/trellis/scripts",
+  "../../src/templates/workflow/scripts",
 );
 const SHARED_HOOKS = path.resolve(
   __dirname,
@@ -106,7 +106,7 @@ describeFn("no-trellis skip keyword (issue #427)", () => {
   let tmp: string;
 
   beforeEach(() => {
-    tmp = fs.mkdtempSync(path.join(os.tmpdir(), "trellis-skip-keyword-"));
+    tmp = fs.mkdtempSync(path.join(os.tmpdir(), "phronia-skip-keyword-"));
     setupRepo(tmp);
   });
 

@@ -13,7 +13,7 @@
     ],
     "SubagentStart": [
       {
-        "matcher": "^(?:trellis-implement|trellis-check|trellis-research)$",
+        "matcher": "^(?:phronia-implement|phronia-check|phronia-research)$",
         "hooks": [
           {
             "type": "command",

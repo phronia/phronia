@@ -17,7 +17,7 @@ import path from "node:path";
 
 const GITATTRIBUTES_TEMPLATE = path.resolve(
   __dirname,
-  "../../src/templates/trellis/gitattributes.txt",
+  "../../src/templates/workflow/gitattributes.txt",
 );
 
 function git(cwd: string, ...args: string[]): { status: number; stdout: string; stderr: string } {
@@ -37,7 +37,7 @@ describe("journal-*.md merge=union gitattributes rule", () => {
   let tmp: string;
 
   beforeEach(() => {
-    tmp = fs.mkdtempSync(path.join(os.tmpdir(), "trellis-gitattr-merge-"));
+    tmp = fs.mkdtempSync(path.join(os.tmpdir(), "phronia-gitattr-merge-"));
     gitOk(tmp, "init", "-q", "-b", "main");
     gitOk(tmp, "config", "user.email", "test@example.com");
     gitOk(tmp, "config", "user.name", "Test");

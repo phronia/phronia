@@ -3,8 +3,12 @@ import path from "node:path";
 
 import { isManagedPath, isManagedRootDir } from "../configurators/index.js";
 
-export const PHRONIA_BLOCK_START = "<!-- TRELLIS:START -->";
-export const PHRONIA_BLOCK_END = "<!-- TRELLIS:END -->";
+export const PHRONIA_BLOCK_START = "<!-- PHRONIA:START -->";
+export const PHRONIA_BLOCK_END = "<!-- PHRONIA:END -->";
+
+/** Pre-rename managed markers, read for one major version. */
+export const LEGACY_BLOCK_START = "<!-- TRELLIS:START -->";
+export const LEGACY_BLOCK_END = "<!-- TRELLIS:END -->";
 
 /** Remove empty managed parents without deleting a managed root directory. */
 export function cleanupEmptyDirs(cwd: string, dirPath: string): void {

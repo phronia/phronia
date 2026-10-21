@@ -11,7 +11,7 @@ import {
   gitignoreTemplate,
   gitattributesTemplate,
   getAllAgents,
-} from "../templates/trellis/index.js";
+} from "../templates/workflow/index.js";
 
 // Import markdown templates
 import {

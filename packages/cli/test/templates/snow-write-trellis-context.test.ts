@@ -1,5 +1,5 @@
 /**
- * Execute Snow's write-trellis-context.py for session / user / subagent modes.
+ * Execute Snow's write-phronia-context.py for session / user / subagent modes.
  *
  * Complements platforms.test.ts (which only scans generated source). These
  * tests spawn the real Python hook against a fixture repo so regressions in
@@ -22,7 +22,7 @@ const HOOK_SCRIPT = path.join(
   "templates",
   "snow",
   "hooks",
-  "write-trellis-context.py",
+  "write-phronia-context.py",
 );
 
 function resolvePython(): string | null {
@@ -171,7 +171,7 @@ function runHook(
   };
 }
 
-describe("snow write-trellis-context.py execution", () => {
+describe("snow write-phronia-context.py execution", () => {
   const tmpRoots: string[] = [];
 
   afterEach(() => {
@@ -181,7 +181,7 @@ describe("snow write-trellis-context.py execution", () => {
   });
 
   function makeRepo(): string {
-    const root = fs.mkdtempSync(path.join(os.tmpdir(), "trellis-snow-hook-"));
+    const root = fs.mkdtempSync(path.join(os.tmpdir(), "phronia-snow-hook-"));
     tmpRoots.push(root);
     writeFixtureRepo(root);
     return root;
@@ -212,7 +212,7 @@ describe("snow write-trellis-context.py execution", () => {
       expect(res.payload?.additionalContext).toContain("prd.md summary");
       expect(res.payload?.display).toContain("Trellis session context injected");
 
-      const logPath = path.join(repo, ".snow", "log", "trellis-context.txt");
+      const logPath = path.join(repo, ".snow", "log", "phronia-context.txt");
       expect(fs.existsSync(logPath)).toBe(true);
       const log = fs.readFileSync(logPath, "utf-8");
       expect(log).toContain("Mode: session");
@@ -242,7 +242,7 @@ describe("snow write-trellis-context.py execution", () => {
       expect(res.payload?.display).toContain("Trellis compact breadcrumb");
 
       const log = fs.readFileSync(
-        path.join(repo, ".snow", "log", "trellis-context.txt"),
+        path.join(repo, ".snow", "log", "phronia-context.txt"),
         "utf-8",
       );
       // Log must stay full (session-depth), not the compact inject.
@@ -261,8 +261,8 @@ describe("snow write-trellis-context.py execution", () => {
         stdin: JSON.stringify({
           sessionId: "sess-sub-1",
           cwd: repo,
-          agentId: "trellis-implement",
-          agentName: "trellis-implement",
+          agentId: "phronia-implement",
+          agentName: "phronia-implement",
           prompt: "Active task: .phronia/tasks/demo-task\nImplement feature",
         }),
         env: { SNOW_SESSION_ID: "sess-sub-1" },
@@ -287,7 +287,7 @@ describe("snow write-trellis-context.py execution", () => {
         stdin: JSON.stringify({
           sessionId: "sess-sub-2",
           cwd: repo,
-          agentName: "trellis-check",
+          agentName: "phronia-check",
           prompt: "review changes",
         }),
         env: { SNOW_SESSION_ID: "sess-sub-2" },
@@ -301,7 +301,7 @@ describe("snow write-trellis-context.py execution", () => {
         stdin: JSON.stringify({
           sessionId: "sess-sub-3",
           cwd: repo,
-          agentName: "trellis-research",
+          agentName: "phronia-research",
           prompt: "research topic",
         }),
         env: { SNOW_SESSION_ID: "sess-sub-3" },

@@ -20,7 +20,7 @@ interface TmpEnv {
 
 function setup(): TmpEnv {
   const tmpDir = fs.mkdtempSync(
-    path.join(os.tmpdir(), "trellis-channel-seq-test-"),
+    path.join(os.tmpdir(), "phronia-channel-seq-test-"),
   );
   const projectDir = path.join(tmpDir, "project");
   fs.mkdirSync(projectDir);

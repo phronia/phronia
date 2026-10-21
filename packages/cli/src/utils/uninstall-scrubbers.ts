@@ -4,7 +4,7 @@
  * Each scrubber takes the file content (and any context it needs) and returns
  * `{ content, fullyEmpty }`:
  * - `content` is the post-scrub text to write back if the file should remain.
- * - `fullyEmpty` is true when, after stripping every trellis-managed value,
+ * - `fullyEmpty` is true when, after stripping every phronia-managed value,
  *   nothing meaningful is left. The caller deletes the file in that case.
  *
  * Manifest path matching (for hooks.json scrubbers) uses substring containment
@@ -258,9 +258,9 @@ function isTrellisPiEntry(value: unknown, target: string): boolean {
 
 /**
  * Scrub `.pi/settings.json`:
- * - drop `enableSkillCommands` (trellis-flagged)
+ * - drop `enableSkillCommands` (phronia-flagged)
  * - remove trellis entries from `extensions`/`skills`/`prompts` arrays
- * - remove trellis-managed `packages["npm:pi-subagents"]` isolation override
+ * - remove phronia-managed `packages["npm:pi-subagents"]` isolation override
  * - drop arrays that become empty
  */
 export function scrubPiSettings(content: string): ScrubResult {
@@ -369,7 +369,7 @@ export function scrubCodexConfigToml(content: string): ScrubResult {
     ...currentTemplateCommentMarkers,
   ]);
 
-  // A comment line is "trellis-known" if its content (after `#` and spaces)
+  // A comment line is "phronia-known" if its content (after `#` and spaces)
   // matches one of the known marker strings exactly OR is an empty `#` line.
   function isTrellisCommentLine(line: string): boolean {
     const trimmed = line.trim();

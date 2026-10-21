@@ -44,7 +44,7 @@ describe("init + uninstall: manifest accuracy + homedir guard", () => {
   let tmpDir: string;
 
   beforeEach(() => {
-    tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), "trellis-overdelete-"));
+    tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), "phronia-overdelete-"));
     vi.spyOn(process, "cwd").mockReturnValue(tmpDir);
     vi.spyOn(console, "log").mockImplementation(noop);
     vi.spyOn(console, "error").mockImplementation(noop);
@@ -168,7 +168,7 @@ describe("init + uninstall: manifest accuracy + homedir guard", () => {
   it("#R1.6 uninstall strips only the Trellis block from a tracked AGENTS.md, preserving user content outside it", async () => {
     // Trellis writes AGENTS.md (so it's manifest-tracked, unlike the
     // skip-existing cases above). The user then adds their own instructions
-    // OUTSIDE the <!-- TRELLIS:START/END --> block — a supported layout that
+    // OUTSIDE the <!-- PHRONIA:START/END --> block — a supported layout that
     // update.ts explicitly preserves. Uninstall must not unlink the whole
     // file and take the user content with it.
     await init({ yes: true, claude: true, force: true });
@@ -176,7 +176,7 @@ describe("init + uninstall: manifest accuracy + homedir guard", () => {
     // Sanity: Trellis tracked it and wrote the managed block.
     expect(loadHashes(tmpDir)).toHaveProperty("AGENTS.md");
     const written = fs.readFileSync(agentsPath, "utf-8");
-    expect(written).toContain("<!-- TRELLIS:START -->");
+    expect(written).toContain("<!-- PHRONIA:START -->");
 
     const userSection = "\n## My project rules\n\nAlways rebase.\n";
     fs.writeFileSync(agentsPath, written + userSection);
@@ -185,8 +185,8 @@ describe("init + uninstall: manifest accuracy + homedir guard", () => {
 
     expect(fs.existsSync(agentsPath)).toBe(true);
     const after = fs.readFileSync(agentsPath, "utf-8");
-    expect(after).not.toContain("<!-- TRELLIS:START -->");
-    expect(after).not.toContain("<!-- TRELLIS:END -->");
+    expect(after).not.toContain("<!-- PHRONIA:START -->");
+    expect(after).not.toContain("<!-- PHRONIA:END -->");
     expect(after).toContain("## My project rules");
     expect(after).toContain("Always rebase.");
   });

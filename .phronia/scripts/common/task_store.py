@@ -581,7 +581,7 @@ def cmd_create(args: argparse.Namespace) -> int:
     # `task.py validate` and to PR preflight, so the curation instructions go
     # to the console below instead of into the files. Agent-less platforms
     # (Kilo / Antigravity / Devin) skip this — they load specs via the
-    # trellis-before-dev skill instead of JSONL.
+    # phronia-before-dev skill instead of JSONL.
     created_jsonl = False
     if _has_subagent_platform(repo_root):
         for jsonl_name in ("implement.jsonl", "check.jsonl"):
@@ -701,7 +701,7 @@ def cmd_create(args: argparse.Namespace) -> int:
             "      list available specs: python3 .phronia/scripts/get_context.py --mode packages",
             file=sys.stderr,
         )
-    print("  - Use /trellis:continue or phase context to decide the next step", file=sys.stderr)
+    print("  - Use /phronia:continue or phase context to decide the next step", file=sys.stderr)
     print("", file=sys.stderr)
 
     # Output relative path for script chaining

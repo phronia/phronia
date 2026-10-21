@@ -39,8 +39,8 @@ describe("ablate()/restore() integration", () => {
   let originalStdinIsTtyDescriptor: PropertyDescriptor | undefined;
 
   beforeEach(() => {
-    projectDir = fs.mkdtempSync(path.join(os.tmpdir(), "trellis-ablate-int-"));
-    stateRoot = fs.mkdtempSync(path.join(os.tmpdir(), "trellis-ablate-state-"));
+    projectDir = fs.mkdtempSync(path.join(os.tmpdir(), "phronia-ablate-int-"));
+    stateRoot = fs.mkdtempSync(path.join(os.tmpdir(), "phronia-ablate-state-"));
     originalStateRoot = process.env[ABLATION_STATE_ROOT_ENV];
     originalStdinIsTtyDescriptor = Object.getOwnPropertyDescriptor(
       process.stdin,
@@ -209,7 +209,7 @@ describe("ablate()/restore() integration", () => {
       await init({ yes: true, codex: true, force: true });
       const originalCodex = path.join(projectDir, ".codex");
       const externalCodex = fs.mkdtempSync(
-        path.join(os.tmpdir(), "trellis-ablate-external-"),
+        path.join(os.tmpdir(), "phronia-ablate-external-"),
       );
       fs.cpSync(originalCodex, externalCodex, { recursive: true });
       fs.rmSync(originalCodex, { recursive: true });

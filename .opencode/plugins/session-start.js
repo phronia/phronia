@@ -8,7 +8,7 @@
  * stay untouched (issue #553).
  */
 
-import { TrellisContext, debugLog, isTrellisSubagent } from "../lib/trellis-context.js"
+import { TrellisContext, debugLog, isTrellisSubagent } from "../lib/phronia-context.js"
 import {
   MESSAGES_TRANSFORM_HOOK,
   platformInputFromMessages,

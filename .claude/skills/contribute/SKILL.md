@@ -59,7 +59,7 @@ marketplace/
 │       ├── guides/
 │       └── shared/
 └── skills/                # Skills
-    └── trellis-meta/
+    └── phronia-meta/
         ├── SKILL.md
         └── references/
 ```
@@ -89,7 +89,7 @@ The navigation uses a **language-based structure**:
               {
                 "group": "Skills",
                 "expanded": false,
-                "pages": ["skills-market/index", "skills-market/trellis-meta"]
+                "pages": ["skills-market/index", "skills-market/phronia-meta"]
               },
               {
                 "group": "Spec Templates",

@@ -29,7 +29,7 @@ import {
   platformInputFromMessages,
   prependEphemeralText,
 } from "../lib/context-visibility.js"
-import { TrellisContext, debugLog, isTrellisSubagent } from "../lib/trellis-context.js"
+import { TrellisContext, debugLog, isTrellisSubagent } from "../lib/phronia-context.js"
 
 // Supports STATUS values with letters, digits, underscores, hyphens
 // (so "in-review" / "blocked-by-team" work alongside "in_progress").

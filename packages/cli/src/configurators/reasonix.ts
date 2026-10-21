@@ -5,9 +5,9 @@
  * with YAML frontmatter (name + description). Slash commands are code-built-in,
  * so no commands directory is generated.
  *
- * Workflow templates are surfaced as skills with `trellis-` prefix (invocable
- * via `/skill trellis-start`, `/skill trellis-continue`, etc.).
- * Subagent skills (trellis-implement, trellis-check) use `runAs: subagent`
+ * Workflow templates are surfaced as skills with `phronia-` prefix (invocable
+ * via `/skill phronia-start`, `/skill phronia-continue`, etc.).
+ * Subagent skills (phronia-implement, phronia-check) use `runAs: subagent`
  * frontmatter so Reasonix spawns them as isolated subagent loops.
  */
 
@@ -41,7 +41,7 @@ export function collectReasonixTemplates(): Map<string, string> {
     files.set(filePath, content);
   }
 
-  // Subagent skills (trellis-implement, trellis-check) — written with
+  // Subagent skills (phronia-implement, phronia-check) — written with
   // runAs: subagent frontmatter for isolated subagent loops.
   for (const agent of getAllAgents()) {
     files.set(`.reasonix/skills/${agent.name}/SKILL.md`, agent.content);

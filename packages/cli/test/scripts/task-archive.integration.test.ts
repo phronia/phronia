@@ -2,7 +2,7 @@
  * Integration tests for `task.py archive` auto-commit behavior.
  *
  * The python script lives under
- * `src/templates/trellis/scripts/common/task_store.py`; this test stamps
+ * `src/templates/workflow/scripts/common/task_store.py`; this test stamps
  * the templates into a fresh git repo and exercises the real `python3
  * task.py archive` path. Two scenarios:
  *
@@ -24,7 +24,7 @@ import path from "node:path";
 
 const TEMPLATE_SCRIPTS = path.resolve(
   __dirname,
-  "../../src/templates/trellis/scripts",
+  "../../src/templates/workflow/scripts",
 );
 
 function hasPython(): boolean {
@@ -105,7 +105,7 @@ describe.skipIf(!hasPython())(
     let tmp: string;
 
     beforeEach(() => {
-      tmp = fs.mkdtempSync(path.join(os.tmpdir(), "trellis-archive-test-"));
+      tmp = fs.mkdtempSync(path.join(os.tmpdir(), "phronia-archive-test-"));
       setupRepo(tmp);
     });
 

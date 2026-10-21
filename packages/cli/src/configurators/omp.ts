@@ -21,7 +21,7 @@ export function collectOmpTemplates(): Map<string, string> {
   // Commands → .omp/commands/
   for (const command of resolveCommands(ctx)) {
     files.set(
-      `.omp/commands/trellis-${command.name}.md`,
+      `.omp/commands/phronia-${command.name}.md`,
       wrapWithOmpFrontmatter(command.name, command.content),
     );
   }

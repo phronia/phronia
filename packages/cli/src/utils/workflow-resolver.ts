@@ -16,7 +16,7 @@ import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
 
-import { workflowMdTemplate } from "../templates/trellis/index.js";
+import { workflowMdTemplate } from "../templates/workflow/index.js";
 import {
   TIMEOUTS,
   TEMPLATE_INDEX_URL,
@@ -322,7 +322,7 @@ async function fetchWorkflowFileGit(
   // workflow resolution is a single-file fetch (not a directory copy).
   const { execFile } = await import("node:child_process");
   const dir = await fs.promises.mkdtemp(
-    path.join(os.tmpdir(), "trellis-workflow-"),
+    path.join(os.tmpdir(), "phronia-workflow-"),
   );
 
   function run(args: string[]): Promise<void> {

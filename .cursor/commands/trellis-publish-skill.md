@@ -40,7 +40,7 @@ If pages already exist, ask user if they want to update them.
 
 Create `docs-site/skills-market/<skill-name>.mdx`.
 
-Follow the format of existing skill pages (see `docs-site/skills-market/trellis-meta.mdx` as reference):
+Follow the format of existing skill pages (see `docs-site/skills-market/phronia-meta.mdx` as reference):
 
 ```markdown
 ---

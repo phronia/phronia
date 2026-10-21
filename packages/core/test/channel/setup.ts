@@ -9,7 +9,7 @@ export interface TmpEnv {
 }
 
 export function setupChannelTmp(): TmpEnv {
-  const tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), "trellis-core-test-"));
+  const tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), "phronia-core-test-"));
   const projectDir = path.join(tmpDir, "project");
   fs.mkdirSync(projectDir);
   process.env.PHRONIA_CHANNEL_ROOT = path.join(tmpDir, "channels");

@@ -186,8 +186,8 @@ export function resolvePlaceholders(
  * `{{CLI_FLAG}}`, `{{EXECUTOR_AI}}`, `{{USER_ACTION_LABEL}}`, conditionals,
  * and `{{PYTHON_CMD}}` are still resolved from the platform context. The
  * shared skills do not use those placeholders, so they remain platform-
- * neutral. Codex-only skill files (e.g. `trellis-continue/SKILL.md`,
- * `trellis-finish-work/SKILL.md` written via `resolveAllAsSkillsNeutral`) DO
+ * neutral. Codex-only skill files (e.g. `phronia-continue/SKILL.md`,
+ * `phronia-finish-work/SKILL.md` written via `resolveAllAsSkillsNeutral`) DO
  * use `{{CLI_FLAG}}` / `{{PYTHON_CMD}}` and resolve to Codex-correct values
  * — no other platform writes those files, so byte-identity is not required.
  */
@@ -260,8 +260,8 @@ export function wrapWithSkillFrontmatter(
   name: string,
   content: string,
 ): string {
-  // Look up description by base name (without trellis- prefix)
-  const baseName = name.replace(/^trellis-/, "");
+  // Look up description by base name (without phronia- prefix)
+  const baseName = name.replace(/^phronia-/, "");
   const description = SKILL_DESCRIPTIONS[baseName];
   if (!description) {
     throw new Error(
@@ -287,7 +287,7 @@ export function wrapWithCommandFrontmatter(
   name: string,
   content: string,
 ): string {
-  const baseName = name.replace(/^trellis-/, "");
+  const baseName = name.replace(/^phronia-/, "");
   const description = COMMAND_DESCRIPTIONS[baseName];
   if (!description) {
     throw new Error(
@@ -318,7 +318,7 @@ const COMMAND_ARGUMENT_HINTS: Record<string, string> = {
  * because OMP's frontmatter replaces its role.
  */
 export function wrapWithOmpFrontmatter(name: string, content: string): string {
-  const baseName = name.replace(/^trellis-/, "");
+  const baseName = name.replace(/^phronia-/, "");
   const description = COMMAND_DESCRIPTIONS[baseName];
   if (!description) {
     throw new Error(
@@ -365,7 +365,7 @@ export interface ResolvedTemplate {
 
 /** A resolved file inside a multi-file skill directory. */
 export interface ResolvedSkillFile {
-  /** POSIX path relative to the skills root, e.g. "trellis-meta/SKILL.md" */
+  /** POSIX path relative to the skills root, e.g. "phronia-meta/SKILL.md" */
   relativePath: string;
   content: string;
 }
@@ -381,7 +381,7 @@ export interface ResolvedSkillFile {
  *
  * `agentCapable && !hasHooks` platforms (Codex, ZCode, OpenCode, Reasonix, Grok)
  * have no such hook (or use an out-of-band plugin), so they need the
- * user-invocable `trellis-start` skill / `start.md` command as fallback.
+ * user-invocable `phronia-start` skill / `start.md` command as fallback.
  * Snow is class-1 (`hasHooks: true`) with auto inject + project agents.
  * Agent-less platforms (Kilo, Antigravity, Devin) also keep `start` since
  * they rely entirely on user-triggered workflows.
@@ -397,7 +397,7 @@ function filterCommands(
 }
 
 /**
- * Resolve ALL templates as skills with trellis- prefix.
+ * Resolve ALL templates as skills with phronia- prefix.
  * Used by skill-only platforms (Kiro, Qoder, Codex) where everything is a skill.
  *
  * `start` is filtered out on agent-capable platforms — the session-start hook
@@ -409,9 +409,9 @@ export function resolveAllAsSkills(ctx: TemplateContext): ResolvedTemplate[] {
     ...getSkillTemplates(),
   ];
   return templates.map((tmpl) => ({
-    name: `trellis-${tmpl.name}`,
+    name: `phronia-${tmpl.name}`,
     content: wrapWithSkillFrontmatter(
-      `trellis-${tmpl.name}`,
+      `phronia-${tmpl.name}`,
       resolvePlaceholders(tmpl.content, ctx),
     ),
   }));
@@ -431,14 +431,14 @@ export function resolveCommands(ctx: TemplateContext): ResolvedTemplate[] {
 }
 
 /**
- * Resolve the auto-triggered skill templates from `common/skills/` with trellis- prefix + SKILL.md frontmatter.
+ * Resolve the auto-triggered skill templates from `common/skills/` with phronia- prefix + SKILL.md frontmatter.
  * Used by "both" platforms for the auto-triggered skills.
  */
 export function resolveSkills(ctx: TemplateContext): ResolvedTemplate[] {
   return getSkillTemplates().map((tmpl) => ({
-    name: `trellis-${tmpl.name}`,
+    name: `phronia-${tmpl.name}`,
     content: wrapWithSkillFrontmatter(
-      `trellis-${tmpl.name}`,
+      `phronia-${tmpl.name}`,
       resolvePlaceholders(tmpl.content, ctx),
     ),
   }));
@@ -453,9 +453,9 @@ export function resolveSkills(ctx: TemplateContext): ResolvedTemplate[] {
  */
 export function resolveSkillsNeutral(ctx: TemplateContext): ResolvedTemplate[] {
   return getSkillTemplates().map((tmpl) => ({
-    name: `trellis-${tmpl.name}`,
+    name: `phronia-${tmpl.name}`,
     content: wrapWithSkillFrontmatter(
-      `trellis-${tmpl.name}`,
+      `phronia-${tmpl.name}`,
       resolvePlaceholdersNeutral(tmpl.content, ctx),
     ),
   }));
@@ -476,9 +476,9 @@ export function resolveAllAsSkillsNeutral(
     ...getSkillTemplates(),
   ];
   return templates.map((tmpl) => ({
-    name: `trellis-${tmpl.name}`,
+    name: `phronia-${tmpl.name}`,
     content: wrapWithSkillFrontmatter(
-      `trellis-${tmpl.name}`,
+      `phronia-${tmpl.name}`,
       resolvePlaceholdersNeutral(tmpl.content, ctx),
     ),
   }));
@@ -677,13 +677,17 @@ export function injectPullBasedPreludeToml(
   return content.replace(re, `$1$2${prelude}`);
 }
 
-/** Best-effort detect agent type from filename ("trellis-implement.md" → "implement").
+/** Best-effort detect agent type from filename ("phronia-implement.md" → "implement").
  *  Returns null for research and unknown names — they skip the prelude.
  */
 export function detectSubAgentType(name: string): SubAgentType | null {
   const base = name.replace(/\.(md|toml|prompt\.md)$/, "");
-  if (base === "trellis-implement" || base === "trellis-check") {
-    return base === "trellis-implement" ? "implement" : "check";
+  // `trellis-*` is the pre-rename name, accepted for one major version.
+  if (base === "phronia-implement" || base === "trellis-implement") {
+    return "implement";
+  }
+  if (base === "phronia-check" || base === "trellis-check") {
+    return "check";
   }
   return null;
 }
@@ -742,7 +746,7 @@ function mapLegacyToolToCopilot(tool: string): string[] {
       return ["search"];
     case "Bash":
       return ["execute"];
-    // Generic MCP wildcard — used by trellis-research to opt into "any MCP
+    // Generic MCP wildcard — used by phronia-research to opt into "any MCP
     // tool the user has configured" without locking the source template to a
     // specific provider. Claude Code parses wildcards as glob-match-at-runtime
     // (no silent agent-registration skip if nothing matches), so this is the

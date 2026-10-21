@@ -11,15 +11,15 @@
  *   resolver so the files stay byte-identical to Codex/Gemini/Pi/Kimi
  *   writes into the same shared root.
  * - `.dsh/skills/` — dsh-private user-invocable entry skills
- *   (`trellis-start` / `trellis-continue` / `trellis-finish-work`),
- *   platform-resolved (`--platform dsh`, `trellis-<name>` skill refs), in
+ *   (`phronia-start` / `phronia-continue` / `phronia-finish-work`),
+ *   platform-resolved (`--platform dsh`, `phronia-<name>` skill refs), in
  *   dsh's own highest-rank project skill root.
  * - `.dsh/DSH.md` — operator guide; also gives the platform a
  *   configDir-owned tracked file so `trellis platforms` / `uninstall`
  *   can detect and scope dsh.
  *
  * dsh ships no project-level sub-agent definition surface, so no
- * trellis-implement / trellis-check / trellis-research agent prompts are
+ * phronia-implement / phronia-check / phronia-research agent prompts are
  * written; implement/check/research run inline through the workflow skills.
  */
 
@@ -34,14 +34,14 @@ import {
 
 /**
  * Command templates that become user-invocable dsh skills
- * (`trellis-start` / `trellis-continue` / `trellis-finish-work`). dsh has
+ * (`phronia-start` / `phronia-continue` / `phronia-finish-work`). dsh has
  * no slash-command palette, so the session-boundary commands are delivered
  * as SKILL.md files in `.dsh/skills/`.
  */
 const DSH_COMMAND_SKILL_NAMES = new Set([
-  "trellis-start",
-  "trellis-continue",
-  "trellis-finish-work",
+  "phronia-start",
+  "phronia-continue",
+  "phronia-finish-work",
 ]);
 
 /** Session-boundary commands resolved as dsh skills (dsh-private root, so

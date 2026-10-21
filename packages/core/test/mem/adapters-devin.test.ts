@@ -33,7 +33,7 @@ const { fakeHome, snapshotTestState } = vi.hoisted(() => {
   const o = require("node:os") as typeof import("node:os");
   // eslint-disable-next-line @typescript-eslint/no-require-imports
   const p = require("node:path") as typeof import("node:path");
-  const fakeHome = f.mkdtempSync(p.join(o.tmpdir(), "trellis-mem-devin-home-"));
+  const fakeHome = f.mkdtempSync(p.join(o.tmpdir(), "phronia-mem-devin-home-"));
   return {
     fakeHome,
     snapshotTestState: {

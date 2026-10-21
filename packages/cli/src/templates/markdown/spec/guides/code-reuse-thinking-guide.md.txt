@@ -192,9 +192,9 @@ def cli_name(self) -> str:
 
 ## Template File Registration (Trellis-specific)
 
-When adding new files to `src/templates/trellis/scripts/`:
+When adding new files to `src/templates/workflow/scripts/`:
 
-**Single registration point**: `src/templates/trellis/index.ts`
+**Single registration point**: `src/templates/workflow/index.ts`
 
 1. Add `export const xxxScript = readTemplate("scripts/path/file.py");`
 2. Add to `getAllScripts()` Map
@@ -209,15 +209,15 @@ That's it. `commands/update.ts` uses `getAllScripts()` directly — no manual sy
 
 ```bash
 # After adding a new .py file, verify it's in getAllScripts():
-grep -l "newFileName" src/templates/trellis/index.ts  # Should match
+grep -l "newFileName" src/templates/workflow/index.ts  # Should match
 ```
 
 ### Template Sync Convention
 
-`.phronia/scripts/` (dogfooded) and `packages/cli/src/templates/trellis/scripts/` (template) must stay identical. After editing `.phronia/scripts/`, always sync:
+`.phronia/scripts/` (dogfooded) and `packages/cli/src/templates/workflow/scripts/` (template) must stay identical. After editing `.phronia/scripts/`, always sync:
 
 ```bash
-rsync -av --delete --exclude='__pycache__' .phronia/scripts/ packages/cli/src/templates/trellis/scripts/
+rsync -av --delete --exclude='__pycache__' .phronia/scripts/ packages/cli/src/templates/workflow/scripts/
 ```
 
 **Gotcha**: Running rsync with wrong source/destination paths can create nested garbage directories (e.g., `.phronia/scripts/packages/cli/...`). Always double-check paths before running.

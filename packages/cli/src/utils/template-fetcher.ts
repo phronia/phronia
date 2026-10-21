@@ -724,7 +724,7 @@ async function cloneRegistryRef(
   registry: RegistrySource,
 ): Promise<GitCheckout> {
   const dir = await fs.promises.mkdtemp(
-    path.join(os.tmpdir(), "trellis-registry-"),
+    path.join(os.tmpdir(), "phronia-registry-"),
   );
   try {
     try {
@@ -915,7 +915,7 @@ export async function downloadWithStrategy(
     // and millisecond resolution is not enough to keep two of them apart.
     // Two runs landing in the same millisecond share a directory, and the
     // first to finish cleaning up deletes the other's download mid-read.
-    const tempDir = path.join(os.tmpdir(), `trellis-template-${randomUUID()}`);
+    const tempDir = path.join(os.tmpdir(), `phronia-template-${randomUUID()}`);
     try {
       await withTimeout(
         downloadTemplate(gigetSource, {
@@ -948,7 +948,7 @@ export async function downloadWithStrategy(
     // and millisecond resolution is not enough to keep two of them apart.
     // Two runs landing in the same millisecond share a directory, and the
     // first to finish cleaning up deletes the other's download mid-read.
-    const tempDir = path.join(os.tmpdir(), `trellis-template-${randomUUID()}`);
+    const tempDir = path.join(os.tmpdir(), `phronia-template-${randomUUID()}`);
     try {
       await withTimeout(
         downloadTemplate(gigetSource, {
@@ -1371,7 +1371,7 @@ export async function fetchRegistrySpecTemplates(
   registryBackend?: RegistryBackend,
 ): Promise<{ success: boolean; message?: string; files: Map<string, string> }> {
   const tempRoot = await fs.promises.mkdtemp(
-    path.join(os.tmpdir(), "trellis-registry-spec-"),
+    path.join(os.tmpdir(), "phronia-registry-spec-"),
   );
   try {
     const result = await downloadRegistryDirect(

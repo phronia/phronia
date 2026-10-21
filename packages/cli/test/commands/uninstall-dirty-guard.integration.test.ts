@@ -52,7 +52,7 @@ describe.skipIf(!canRun)("uninstall uncommitted-data guard", () => {
 
   beforeEach(async () => {
     tmpDir = fs.realpathSync(
-      fs.mkdtempSync(path.join(os.tmpdir(), "trellis-dirty-")),
+      fs.mkdtempSync(path.join(os.tmpdir(), "phronia-dirty-")),
     );
     git(tmpDir, "init", "-q", "-b", "main");
     git(tmpDir, "config", "user.email", "t@example.com");
@@ -80,7 +80,7 @@ describe.skipIf(!canRun)("uninstall uncommitted-data guard", () => {
     // Commit the init'd tree first so git reports the new file individually
     // (an entirely-untracked .phronia collapses to the dir name instead).
     git(tmpDir, "add", "-A");
-    git(tmpDir, "commit", "-q", "-m", "trellis");
+    git(tmpDir, "commit", "-q", "-m", "phronia");
 
     const specFile = path.join(tmpDir, ".phronia", "spec", "my-rules.md");
     fs.mkdirSync(path.dirname(specFile), { recursive: true });
@@ -92,7 +92,7 @@ describe.skipIf(!canRun)("uninstall uncommitted-data guard", () => {
 
   it("reports nothing once the .phronia tree is committed", () => {
     git(tmpDir, "add", "-A");
-    git(tmpDir, "commit", "-q", "-m", "trellis");
+    git(tmpDir, "commit", "-q", "-m", "phronia");
     expect(collectUncommittedTrellisData(tmpDir)).toEqual([]);
   });
 
@@ -128,7 +128,7 @@ describe.skipIf(!canRun)("uninstall uncommitted-data guard", () => {
 
   it("committed user data does not block --yes uninstall", async () => {
     git(tmpDir, "add", "-A");
-    git(tmpDir, "commit", "-q", "-m", "trellis");
+    git(tmpDir, "commit", "-q", "-m", "phronia");
 
     await uninstall({ yes: true });
 

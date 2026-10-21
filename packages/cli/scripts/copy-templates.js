@@ -6,7 +6,7 @@
  * This script copies src/templates/ to dist/templates/ (excluding .ts files).
  *
  * The templates are GENERIC templates for user projects:
- * - src/templates/trellis/ - Workflow scripts and config
+ * - src/templates/workflow/ - Workflow scripts and config
  * - src/templates/claude/ - Claude Code commands, agents, hooks
  * - src/templates/cursor/ - Cursor commands
  * - src/templates/iflow/ - iFlow CLI commands, agents, hooks

@@ -12,7 +12,7 @@ describe("registry-config", () => {
   let tmpDir: string;
 
   beforeEach(() => {
-    tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), "trellis-reg-config-"));
+    tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), "phronia-reg-config-"));
     fs.mkdirSync(path.join(tmpDir, ".phronia"), { recursive: true });
   });
 
@@ -64,12 +64,12 @@ describe("registry-config", () => {
     );
 
     writeSpecRegistryConfig(tmpDir, {
-      source: "git@git.ppdaicorp.com:xionghongwei/trellis-spec.git",
+      source: "git@git.ppdaicorp.com:xionghongwei/phronia-spec.git",
       template: "golang-spec",
     });
 
     expect(loadSpecRegistryConfig(tmpDir)).toEqual({
-      source: "git@git.ppdaicorp.com:xionghongwei/trellis-spec.git",
+      source: "git@git.ppdaicorp.com:xionghongwei/phronia-spec.git",
       template: "golang-spec",
     });
   });
@@ -113,14 +113,14 @@ describe("registry-config", () => {
     );
 
     writeSpecRegistryConfig(tmpDir, {
-      source: "git@git.ppdaicorp.com:xionghongwei/trellis-spec.git",
+      source: "git@git.ppdaicorp.com:xionghongwei/phronia-spec.git",
       template: "golang-spec",
     });
 
     const config = fs.readFileSync(configPath, "utf-8");
     expect(config.match(/^registry:/gm)).toHaveLength(1);
     expect(loadSpecRegistryConfig(tmpDir)).toEqual({
-      source: "git@git.ppdaicorp.com:xionghongwei/trellis-spec.git",
+      source: "git@git.ppdaicorp.com:xionghongwei/phronia-spec.git",
       template: "golang-spec",
     });
   });

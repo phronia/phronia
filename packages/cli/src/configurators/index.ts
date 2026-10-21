@@ -156,13 +156,13 @@ export function getConfiguredPlatforms(cwd: string): Set<AITool> {
   // a Trellis-namespaced workflow so a native Windsurf directory is not enough.
   const legacyWindsurfRoot = ".windsurf/workflows";
   const hasTrackedWindsurfTemplate = Object.keys(hashes).some((relativePath) =>
-    relativePath.startsWith(`${legacyWindsurfRoot}/trellis-`),
+    relativePath.startsWith(`${legacyWindsurfRoot}/phronia-`),
   );
   let hasLegacyWindsurfTemplate = false;
   try {
     hasLegacyWindsurfTemplate = fs
       .readdirSync(path.join(cwd, legacyWindsurfRoot))
-      .some((name) => name.startsWith("trellis-"));
+      .some((name) => name.startsWith("phronia-"));
   } catch {
     // Missing or unreadable legacy directory is not a configured platform.
   }

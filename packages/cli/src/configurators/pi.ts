@@ -35,7 +35,7 @@ export function collectPiTemplates(): Map<string, string> {
   const ctx = AI_TOOLS.pi.templateContext;
 
   for (const command of resolvePiCommands()) {
-    files.set(`.pi/prompts/trellis-${command.name}.md`, command.content);
+    files.set(`.pi/prompts/phronia-${command.name}.md`, command.content);
   }
 
   // Shared skills go to `.agents/skills/` (Pi discovers this cross-platform

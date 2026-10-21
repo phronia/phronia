@@ -58,7 +58,7 @@ function captureOmpHandlers(): Map<string, OmpEventHandler> {
 }
 
 function makeOmpProject(): { root: string; taskDir: string; sessionId: string } {
-  const root = fs.mkdtempSync(path.join(process.env.TMPDIR ?? "/tmp", "trellis-omp-") );
+  const root = fs.mkdtempSync(path.join(process.env.TMPDIR ?? "/tmp", "phronia-omp-") );
   const taskDir = path.join(root, ".phronia", "tasks", "08-13-context-limits");
   const sessionId = "context_limits";
   fs.mkdirSync(path.join(root, ".phronia", ".runtime", "sessions"), { recursive: true });
@@ -87,16 +87,16 @@ async function runSessionStart(root: string, sessionId: string): Promise<string>
     sessionManager: { getSessionId: () => sessionId },
     ui: { notify: () => undefined },
   });
-  return messages.find((message) => message.customType === "trellis-task-context")?.content ?? "";
+  return messages.find((message) => message.customType === "phronia-task-context")?.content ?? "";
 }
 
 describe("omp templates", () => {
   it("provides the three Trellis sub-agent definitions", () => {
     const agents = getAllAgents();
     expect(agents.map((agent) => agent.name).sort()).toEqual([
-      "trellis-check",
-      "trellis-implement",
-      "trellis-research",
+      "phronia-check",
+      "phronia-implement",
+      "phronia-research",
     ]);
   });
 
@@ -196,7 +196,7 @@ describe("omp templates", () => {
     const extension = getExtensionTemplate();
     // R1: Session start rich injection via get_context.py
     expect(extension).toContain("buildSessionContext");
-    expect(extension).toContain("trellis-session-context");
+    expect(extension).toContain("phronia-session-context");
     expect(extension).toContain("get_context.py");
     expect(extension).toContain("session-context");
   });
@@ -206,9 +206,9 @@ describe("omp templates", () => {
     // R2: Sub-agent detection via PI_BLOCKED_AGENT
     expect(extension).toContain("PI_BLOCKED_AGENT");
     expect(extension).toContain("detectAgentType");
-    expect(extension).toContain("trellis-implement");
-    expect(extension).toContain("trellis-check");
-    expect(extension).toContain("trellis-research");
+    expect(extension).toContain("phronia-implement");
+    expect(extension).toContain("phronia-check");
+    expect(extension).toContain("phronia-research");
     // Agent-type-specific jsonl selection
     expect(extension).toContain("implement.jsonl");
     expect(extension).toContain("check.jsonl");
@@ -216,7 +216,7 @@ describe("omp templates", () => {
 
   it("deduplicates files referenced by both main-session manifests", async () => {
     const projectRoot = fs.mkdtempSync(
-      path.join(os.tmpdir(), "trellis-omp-dedupe-"),
+      path.join(os.tmpdir(), "phronia-omp-dedupe-"),
     );
     const taskDir = path.join(projectRoot, ".phronia", "tasks", "demo-task");
     const sessionDir = path.join(
@@ -277,7 +277,7 @@ describe("omp templates", () => {
       );
 
       const taskContext = messages.find(
-        (message) => message.customType === "trellis-task-context",
+        (message) => message.customType === "phronia-task-context",
       );
       expect(taskContext?.content).toContain("## implement.jsonl");
       expect(taskContext?.content).toContain("## check.jsonl");
@@ -291,7 +291,7 @@ describe("omp templates", () => {
   });
 
   it("refreshes task context when a referenced file changes mid-session", async () => {
-    const projectRoot = fs.mkdtempSync(path.join(os.tmpdir(), "trellis-omp-refresh-"));
+    const projectRoot = fs.mkdtempSync(path.join(os.tmpdir(), "phronia-omp-refresh-"));
     const taskDir = path.join(projectRoot, ".phronia", "tasks", "demo-task");
     const sessionsDir = path.join(projectRoot, ".phronia", ".runtime", "sessions");
     const referencedFile = path.join(projectRoot, "docs", "changing.md");
@@ -327,7 +327,7 @@ describe("omp templates", () => {
       };
 
       await sessionStart({}, ctx);
-      const initial = messages.find((message) => message.customType === "trellis-task-context");
+      const initial = messages.find((message) => message.customType === "phronia-task-context");
       expect(initial?.content).toContain("old context body");
       expect(initial?.content).not.toContain("created later body");
 
@@ -336,15 +336,15 @@ describe("omp templates", () => {
       const result = await context(
         {
           messages: [
-            { role: "custom", customType: "trellis-task-context", content: initial?.content },
-            { role: "custom", customType: "trellis-workflow-state", content: "workflow" },
+            { role: "custom", customType: "phronia-task-context", content: initial?.content },
+            { role: "custom", customType: "phronia-workflow-state", content: "workflow" },
           ],
         },
         ctx,
       ) as { messages?: { customType?: string; content?: string }[] } | undefined;
 
       const refreshed = result?.messages?.filter(
-        (message) => message.customType === "trellis-task-context",
+        (message) => message.customType === "phronia-task-context",
       ) ?? [];
       expect(refreshed).toHaveLength(1);
       expect(refreshed[0]?.content).toContain("new context body with changed size");
@@ -396,7 +396,7 @@ describe("omp templates", () => {
 
       await sessionStart({}, ctx);
       const initial = messages.find(
-        (message) => message.customType === "trellis-task-context",
+        (message) => message.customType === "phronia-task-context",
       );
       expect(initial?.content).toContain("earlier.md [inline]");
       expect(initial?.content).toContain("later.md [omitted]");
@@ -407,12 +407,12 @@ describe("omp templates", () => {
           messages: [
             {
               role: "custom",
-              customType: "trellis-task-context",
+              customType: "phronia-task-context",
               content: initial?.content,
             },
             {
               role: "custom",
-              customType: "trellis-workflow-state",
+              customType: "phronia-workflow-state",
               content: "workflow",
             },
           ],
@@ -423,7 +423,7 @@ describe("omp templates", () => {
         | undefined;
 
       const refreshed = result?.messages?.filter(
-        (message) => message.customType === "trellis-task-context",
+        (message) => message.customType === "phronia-task-context",
       );
       expect(refreshed).toHaveLength(1);
       expect(refreshed?.[0]?.content).toContain("short earlier content");
@@ -635,8 +635,8 @@ describe("omp templates", () => {
 describe("omp command frontmatter", () => {
   it("collectOmpTemplates produces commands with YAML frontmatter", () => {
     const templates = collectOmpTemplates();
-    const continueCmd = templates.get(".omp/commands/trellis-continue.md");
-    const finishCmd = templates.get(".omp/commands/trellis-finish-work.md");
+    const continueCmd = templates.get(".omp/commands/phronia-continue.md");
+    const finishCmd = templates.get(".omp/commands/phronia-finish-work.md");
 
     expect(continueCmd).toBeDefined();
     expect(finishCmd).toBeDefined();
@@ -654,6 +654,6 @@ describe("omp command frontmatter", () => {
 
   it("collectOmpTemplates does not emit a start command", () => {
     const templates = collectOmpTemplates();
-    expect(templates.has(".omp/commands/trellis-start.md")).toBe(false);
+    expect(templates.has(".omp/commands/phronia-start.md")).toBe(false);
   });
 });

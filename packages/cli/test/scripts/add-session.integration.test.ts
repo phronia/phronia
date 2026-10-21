@@ -3,7 +3,7 @@
  * recording state machine (commit evidence, retry convergence, numbering).
  *
  * The python script lives under
- * `src/templates/trellis/scripts/add_session.py`; this test stamps the real
+ * `src/templates/workflow/scripts/add_session.py`; this test stamps the real
  * templates into a fresh git repo and exercises the actual `python3
  * add_session.py` paths — no source-string assertions.
  *
@@ -22,7 +22,7 @@ import path from "node:path";
 
 const TEMPLATE_SCRIPTS = path.resolve(
   __dirname,
-  "../../src/templates/trellis/scripts",
+  "../../src/templates/workflow/scripts",
 );
 
 const DEVELOPER = "tester";
@@ -185,12 +185,12 @@ function sessionNumbers(repo: string, num = 1): number[] {
 }
 
 function countMarkers(repo: string, num = 1): number {
-  return readJournal(repo, num).split("<!-- trellis-session:").length - 1;
+  return readJournal(repo, num).split("<!-- phronia-session:").length - 1;
 }
 
 /** Every distinct record marker present in a journal, in order of appearance. */
 function distinctMarkers(repo: string, num = 1): string[] {
-  const seen = readJournal(repo, num).match(/<!-- trellis-session:[^>]*-->/g) ?? [];
+  const seen = readJournal(repo, num).match(/<!-- phronia-session:[^>]*-->/g) ?? [];
   return [...new Set(seen)];
 }
 
@@ -217,7 +217,7 @@ describe.skipIf(!hasPython())("add_session.py auto-commit", () => {
   let tmp: string;
 
   beforeEach(() => {
-    tmp = fs.mkdtempSync(path.join(os.tmpdir(), "trellis-session-test-"));
+    tmp = fs.mkdtempSync(path.join(os.tmpdir(), "phronia-session-test-"));
     setupRepo(tmp);
   });
 
@@ -444,7 +444,7 @@ describe.skipIf(!hasPython())("add_session.py commit evidence (R1)", () => {
   let tmp: string;
 
   beforeEach(() => {
-    tmp = fs.mkdtempSync(path.join(os.tmpdir(), "trellis-session-evidence-"));
+    tmp = fs.mkdtempSync(path.join(os.tmpdir(), "phronia-session-evidence-"));
     setupRepo(tmp);
     seedTask(tmp);
   });
@@ -627,7 +627,7 @@ describe.skipIf(!hasPython())("add_session.py fingerprint date rollover", () => 
   const ARGS = ["--summary", SUMMARY, "--branch", BRANCH];
 
   beforeEach(() => {
-    tmp = fs.mkdtempSync(path.join(os.tmpdir(), "trellis-session-rollover-"));
+    tmp = fs.mkdtempSync(path.join(os.tmpdir(), "phronia-session-rollover-"));
     setupRepo(tmp);
     seedTask(tmp);
   });
@@ -709,7 +709,7 @@ describe.skipIf(!hasPython())("add_session.py fingerprint date rollover", () => 
   it("writes the versioned marker form", () => {
     runAddSession(tmp, TITLE, ARGS);
     expect(readJournal(tmp)).toMatch(
-      /^<!-- trellis-session: v=2 fp=[0-9a-f]{16} -->$/m,
+      /^<!-- phronia-session: v=2 fp=[0-9a-f]{16} -->$/m,
     );
   });
 });
@@ -718,7 +718,7 @@ describe.skipIf(!hasPython())("add_session.py retry convergence (R2-R5)", () => 
   let tmp: string;
 
   beforeEach(() => {
-    tmp = fs.mkdtempSync(path.join(os.tmpdir(), "trellis-session-retry-"));
+    tmp = fs.mkdtempSync(path.join(os.tmpdir(), "phronia-session-retry-"));
     setupRepo(tmp);
     seedTask(tmp);
   });
@@ -939,7 +939,7 @@ describe.skipIf(!hasPython())("add_session.py session numbering", () => {
   let tmp: string;
 
   beforeEach(() => {
-    tmp = fs.mkdtempSync(path.join(os.tmpdir(), "trellis-session-number-"));
+    tmp = fs.mkdtempSync(path.join(os.tmpdir(), "phronia-session-number-"));
     setupRepo(tmp);
     seedTask(tmp);
   });
@@ -995,7 +995,7 @@ describe.skipIf(!hasPython())("add_session.py with .phronia below the git root",
   let project: string;
 
   beforeEach(() => {
-    outer = fs.mkdtempSync(path.join(os.tmpdir(), "trellis-session-nested-"));
+    outer = fs.mkdtempSync(path.join(os.tmpdir(), "phronia-session-nested-"));
     git(outer, "init", "-q", "-b", "main");
     git(outer, "config", "user.email", "test@example.com");
     git(outer, "config", "user.name", "Test");
@@ -1035,7 +1035,7 @@ describe.skipIf(!hasPython())("add_session.py outside any git repository", () =>
   let project: string;
 
   beforeEach(() => {
-    project = fs.mkdtempSync(path.join(os.tmpdir(), "trellis-session-nogit-"));
+    project = fs.mkdtempSync(path.join(os.tmpdir(), "phronia-session-nogit-"));
     stampTrellis(project);
     // seedTask() commits via git; there is no repo here by design.
     makeTask(project, "task-a", "task-a prd\n");

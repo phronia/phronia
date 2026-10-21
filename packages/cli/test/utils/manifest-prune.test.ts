@@ -20,7 +20,7 @@ describe("pruneOrphanManifestKeys", () => {
   let tmpDir: string;
 
   beforeEach(() => {
-    tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), "trellis-prune-"));
+    tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), "phronia-prune-"));
     fs.mkdirSync(path.join(tmpDir, ".phronia"), { recursive: true });
   });
 
@@ -86,7 +86,7 @@ describe("pruneOrphanManifestKeys", () => {
     const hashes = { "AGENTS.md": "h" };
     fs.writeFileSync(
       path.join(tmpDir, "AGENTS.md"),
-      "<!-- TRELLIS:START -->\nmanaged\n<!-- TRELLIS:END -->\n",
+      "<!-- PHRONIA:START -->\nmanaged\n<!-- PHRONIA:END -->\n",
     );
     saveHashes(tmpDir, hashes);
 

@@ -92,11 +92,11 @@ MAX_SUBJECT_LEN = 500
 
 # Machine-readable record identity. An HTML comment renders as nothing, so the
 # human evidence in the entry is unchanged by its presence.
-MARKER_PREFIX = "<!-- trellis-session:"
+MARKER_PREFIX = "<!-- phronia-session:"
 # Bumped when the fingerprint inputs change. Untagged markers are v1, whose
 # fingerprint mixed in the calendar date; see compute_record_fingerprint.
 MARKER_VERSION = 2
-LEGACY_MARKER_RE = re.compile(r"^<!-- trellis-session: fp=([0-9a-f]{16}) -->$")
+LEGACY_MARKER_RE = re.compile(r"^<!-- phronia-session: fp=([0-9a-f]{16}) -->$")
 ENTRY_DATE_RE = re.compile(r"^\*\*Date\*\*: (\d{4}-\d{2}-\d{2})\s*$")
 SESSION_HEADING_RE = re.compile(r"^## Session (\d+):", re.MULTILINE)
 

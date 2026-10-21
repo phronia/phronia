@@ -18,7 +18,7 @@ describe("downloadWithStrategy overwrite: temp-first swap", () => {
   let destDir: string;
 
   beforeEach(() => {
-    cwd = fs.mkdtempSync(path.join(os.tmpdir(), "trellis-overwrite-"));
+    cwd = fs.mkdtempSync(path.join(os.tmpdir(), "phronia-overwrite-"));
     destDir = path.join(cwd, ".phronia", "spec");
     fs.mkdirSync(destDir, { recursive: true });
     // Pre-existing user-authored spec.

@@ -182,7 +182,7 @@ export async function uninstall(options: UninstallOptions = {}): Promise<void> {
   }
 
   // Pre-check 2: must have a manifest. Without it we cannot determine which
-  // platform files are trellis-owned vs user-owned.
+  // platform files are phronia-owned vs user-owned.
   const hashes = loadHashes(cwd);
   if (Object.keys(hashes).length === 0) {
     console.error(

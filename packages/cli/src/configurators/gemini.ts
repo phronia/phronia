@@ -16,8 +16,8 @@ import {
 /**
  * The Gemini CLI file set — written at init and diffed by `trellis update`.
  * Gemini is a pull-based class-2 platform.
- * - commands/trellis/ — start + finish-work as TOML slash commands
- * - .agents/skills/trellis-{name}/SKILL.md — auto-triggered shared skills
+ * - commands/phronia/ — start + finish-work as TOML slash commands
+ * - .agents/skills/phronia-{name}/SKILL.md — auto-triggered shared skills
  *   written to the cross-platform `.agents/skills/` workspace alias (Gemini
  *   CLI 0.40+ reads it natively; previously `.gemini/skills/` was used,
  *   which collided with Codex's identical write target and caused
@@ -34,7 +34,7 @@ export function collectGeminiTemplates(): Map<string, string> {
   const files = new Map<string, string>();
   for (const cmd of resolveCommands(ctx)) {
     const toml = `description = "Trellis: ${cmd.name}"\n\nprompt = """\n${cmd.content}\n"""\n`;
-    files.set(`.gemini/commands/trellis/${cmd.name}.toml`, toml);
+    files.set(`.gemini/commands/phronia/${cmd.name}.toml`, toml);
   }
   for (const [filePath, content] of collectSkillTemplates(
     ".agents/skills",

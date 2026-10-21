@@ -13,7 +13,7 @@ import {
   listWorkflowTemplates,
   resolveWorkflowTemplate,
 } from "../../src/utils/workflow-resolver.js";
-import { workflowMdTemplate } from "../../src/templates/trellis/index.js";
+import { workflowMdTemplate } from "../../src/templates/workflow/index.js";
 
 afterEach(() => {
   vi.unstubAllGlobals();

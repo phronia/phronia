@@ -45,7 +45,7 @@ import {
   configYamlTemplate,
   gitignoreTemplate,
   workflowMdTemplate,
-} from "../templates/trellis/index.js";
+} from "../templates/workflow/index.js";
 import { agentsMdContent } from "../templates/markdown/index.js";
 import {
   COPILOT_INSTRUCTIONS_BLOCK_END,
@@ -76,6 +76,8 @@ import {
 import { loadSpecRegistryConfig } from "../utils/registry-config.js";
 import {
   cleanupEmptyDirs,
+  LEGACY_BLOCK_END,
+  LEGACY_BLOCK_START,
   PHRONIA_BLOCK_END,
   PHRONIA_BLOCK_START,
 } from "../utils/managed-paths.js";
@@ -151,7 +153,10 @@ function getManagedBlock(
 }
 
 function getTrellisManagedBlock(content: string): string | null {
-  return getManagedBlock(content, PHRONIA_BLOCK_START, PHRONIA_BLOCK_END);
+  return (
+    getManagedBlock(content, PHRONIA_BLOCK_START, PHRONIA_BLOCK_END) ??
+    getManagedBlock(content, LEGACY_BLOCK_START, LEGACY_BLOCK_END)
+  );
 }
 
 function replaceManagedBlock(
@@ -192,6 +197,25 @@ function mergeManagedBlockContent(
   startMarker: string,
   endMarker: string,
 ): string {
+  // Pre-rename projects carry TRELLIS markers. Replace that block in place so
+  // the file migrates to PHRONIA markers without duplicating content.
+  const existingStart = existingContent.indexOf(startMarker);
+  if (existingStart === -1) {
+    const templateBlock = getManagedBlock(templateContent, startMarker, endMarker);
+    const legacyStart = existingContent.indexOf(LEGACY_BLOCK_START);
+    const legacyEnd =
+      legacyStart === -1
+        ? -1
+        : existingContent.indexOf(LEGACY_BLOCK_END, legacyStart);
+    if (templateBlock && legacyStart !== -1 && legacyEnd !== -1) {
+      return (
+        existingContent.slice(0, legacyStart) +
+        templateBlock +
+        existingContent.slice(legacyEnd + LEGACY_BLOCK_END.length)
+      );
+    }
+  }
+
   const replaced = replaceManagedBlock(
     existingContent,
     templateContent,
@@ -697,8 +721,8 @@ function needsCodexUpgrade(cwd: string): boolean {
   // the marker paths in its templates.
   const hashes = loadHashes(cwd);
   const legacyMarkers = [
-    ".agents/skills/trellis-continue/SKILL.md",
-    ".agents/skills/trellis-finish-work/SKILL.md",
+    ".agents/skills/phronia-continue/SKILL.md",
+    ".agents/skills/phronia-finish-work/SKILL.md",
   ];
   const hasLegacyMarker = legacyMarkers.some(
     (key) => hashes[key] !== undefined,
@@ -822,7 +846,7 @@ async function collectRegistrySpecTemplates(
       return new Map();
     }
     const tempRoot = await fs.promises.mkdtemp(
-      path.join(os.tmpdir(), "trellis-registry-template-"),
+      path.join(os.tmpdir(), "phronia-registry-template-"),
     );
     try {
       const result = await downloadTemplateById(
@@ -2838,7 +2862,7 @@ export async function update(options: UpdateOptions): Promise<void> {
           status: "planning",
           scope: "migration",
           priority: "P1",
-          creator: "trellis-update",
+          creator: "phronia-update",
           assignee: currentDeveloper,
           createdAt: todayStr,
         });

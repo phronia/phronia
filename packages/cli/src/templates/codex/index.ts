@@ -6,7 +6,7 @@
  * (which may be customized).
  *
  * Workflow skills are NOT stored here. They come from templates/common/ and are
- * written to .agents/skills/ as trellis-*, which Codex reads alongside
+ * written to .agents/skills/ as phronia-*, which Codex reads alongside
  * .codex/skills/ (see configurators/codex.ts).
  *
  * Directory structure:

@@ -5,12 +5,12 @@ Snow is a **class-1** Trellis host: auto context inject + project agent discover
 
 | Capability                                        | Status                                                                       |
 | ------------------------------------------------- | ---------------------------------------------------------------------------- |
-| Skills (`.snow/skills/trellis-*/SKILL.md`)        | Works                                                                        |
-| Prompt commands (`.snow/commands/trellis-*.json`) | Works (`/trellis-continue`, `/trellis-finish-work`, …)                       |
-| Context hooks (`.snow/hooks/`)                    | Inject model context via stdout JSON + write `.snow/log/trellis-context.txt` |
-| Project agents (`.snow/agents/*.md`)              | Auto-discovered by Snow (`#trellis-implement`, …)                            |
+| Skills (`.snow/skills/phronia-*/SKILL.md`)        | Works                                                                        |
+| Prompt commands (`.snow/commands/phronia-*.json`) | Works (`/phronia-continue`, `/phronia-finish-work`, …)                       |
+| Context hooks (`.snow/hooks/`)                    | Inject model context via stdout JSON + write `.snow/log/phronia-context.txt` |
+| Project agents (`.snow/agents/*.md`)              | Auto-discovered by Snow (`#phronia-implement`, …)                            |
 | `beforeSubAgentStart`                             | Injects active-task breadcrumb into sub-agent prompts                        |
-| `trellis-start`                                   | Optional — session hooks replace the old manual ritual                       |
+| `phronia-start`                                   | Optional — session hooks replace the old manual ritual                       |
 
 ## Quick start
 
@@ -28,7 +28,7 @@ In Snow:
 Active task: .phronia/tasks/<id>
 ```
 
-3. Optional: `/trellis-continue` / `/trellis-finish-work`, or `skill-execute` on `trellis-*` skills.
+3. Optional: `/phronia-continue` / `/phronia-finish-work`, or `skill-execute` on `phronia-*` skills.
 4. Debug injects: set `SNOW_DEBUG_HOOKS=1` and inspect `.snow/log/hooks-inject.txt`.
 
 ## Agents

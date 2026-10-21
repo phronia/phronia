@@ -33,7 +33,7 @@
 </p>
 
 <p align="center">
-<img src="assets/trellis-demo.gif" alt="Trellis workflow demo" width="100%">
+<img src="assets/phronia-demo.gif" alt="Trellis workflow demo" width="100%">
 </p>
 
 ## Why Trellis?
@@ -73,16 +73,16 @@ The workflow is simple:
 1. **Describe what you want** in natural language.
 2. **Brainstorm** with the AI one question at a time until the PRD is clear, then implementation begins.
 3. **Let it run** — the AI calls Trellis Implement and auto-checks the result against specs, lint, type-check, and tests.
-4. **Type `/trellis:finish-work`** when the work is done or the session context fills up. Trellis archives the task and updates journals.
+4. **Type `/phronia:finish-work`** when the work is done or the session context fills up. Trellis archives the task and updates journals.
 
 ## How It Works
 
 Trellis runs a 4-phase loop with auto-invoked skills and sub-agents:
 
-1. **Plan** — `trellis-brainstorm` walks through requirements one question at a time and writes `prd.md`. Research-heavy items go to a `trellis-research` sub-agent. The result is curated specs + research files referenced from `implement.jsonl` / `check.jsonl`.
-2. **Implement** — a `trellis-implement` sub-agent writes code from the PRD with the curated context auto-injected, no git commit.
-3. **Verify** — a `trellis-check` sub-agent reviews the diff against specs and runs lint, type-check, and tests, self-fixing where it can.
-4. **Finish** — a final check runs, then `trellis-update-spec` promotes new learnings back into `.phronia/spec/` so the next session starts smarter.
+1. **Plan** — `phronia-brainstorm` walks through requirements one question at a time and writes `prd.md`. Research-heavy items go to a `phronia-research` sub-agent. The result is curated specs + research files referenced from `implement.jsonl` / `check.jsonl`.
+2. **Implement** — a `phronia-implement` sub-agent writes code from the PRD with the curated context auto-injected, no git commit.
+3. **Verify** — a `phronia-check` sub-agent reviews the diff against specs and runs lint, type-check, and tests, self-fixing where it can.
+4. **Finish** — a final check runs, then `phronia-update-spec` promotes new learnings back into `.phronia/spec/` so the next session starts smarter.
 
 ## Resources
 

@@ -26,7 +26,7 @@ const { listFiles, readTemplate, listJsonAgents } = createTemplateReader(
 export const getAllAgents = (): AgentTemplate[] => listJsonAgents();
 
 export interface IdeHookTemplate {
-  /** Filename (e.g. "trellis-workflow-state.kiro.hook") */
+  /** Filename (e.g. "phronia-workflow-state.kiro.hook") */
   name: string;
   /** Raw JSON content; contains {{PYTHON_CMD}} placeholder. */
   content: string;

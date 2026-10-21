@@ -19,7 +19,7 @@ import path from "node:path";
 
 const TEMPLATE_SCRIPTS = path.resolve(
   __dirname,
-  "../../src/templates/trellis/scripts",
+  "../../src/templates/workflow/scripts",
 );
 const SHARED_HOOKS = path.resolve(
   __dirname,
@@ -87,7 +87,7 @@ describeFn("Kiro hook output branch", () => {
   let tmp: string;
 
   beforeEach(() => {
-    tmp = fs.mkdtempSync(path.join(os.tmpdir(), "trellis-kiro-hook-"));
+    tmp = fs.mkdtempSync(path.join(os.tmpdir(), "phronia-kiro-hook-"));
     setupRepo(tmp);
   });
 

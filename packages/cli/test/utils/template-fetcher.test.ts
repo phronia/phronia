@@ -525,7 +525,7 @@ async function withGitRegistry<T>(
   subdir: string,
   callback: (fixture: GitRegistryFixture) => Promise<T>,
 ): Promise<T> {
-  const tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), "trellis-git-reg-"));
+  const tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), "phronia-git-reg-"));
   const repoDir = path.join(tmpDir, "repo");
   fs.mkdirSync(repoDir, { recursive: true });
 
@@ -583,7 +583,7 @@ async function withFakeGit<T>(
   stderr: string,
   callback: () => Promise<T>,
 ): Promise<T> {
-  const tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), "trellis-fake-git-"));
+  const tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), "phronia-fake-git-"));
   const gitPath = path.join(tmpDir, "git");
   const previousPath = process.env.PATH;
 

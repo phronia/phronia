@@ -2,8 +2,8 @@
  * Integration tests for `task.py create --meta` and `task.py set-meta`.
  *
  * The python code lives under
- * `src/templates/trellis/scripts/task.py` (subcommand wiring) and
- * `src/templates/trellis/scripts/common/task_store.py` (`cmd_create` /
+ * `src/templates/workflow/scripts/task.py` (subcommand wiring) and
+ * `src/templates/workflow/scripts/common/task_store.py` (`cmd_create` /
  * `cmd_set_meta`); this test stamps the real templates into a fresh
  * `.phronia/` tree and exercises the actual CLI paths.
  */
@@ -16,7 +16,7 @@ import path from "node:path";
 
 const TEMPLATE_SCRIPTS = path.resolve(
   __dirname,
-  "../../src/templates/trellis/scripts",
+  "../../src/templates/workflow/scripts",
 );
 
 const DEVELOPER = "tester";
@@ -76,7 +76,7 @@ describe.skipIf(!hasPython())("task.py meta (task.json.meta access)", () => {
   let tmp: string;
 
   beforeEach(() => {
-    tmp = fs.mkdtempSync(path.join(os.tmpdir(), "trellis-task-meta-test-"));
+    tmp = fs.mkdtempSync(path.join(os.tmpdir(), "phronia-task-meta-test-"));
     setupRepo(tmp);
   });
 

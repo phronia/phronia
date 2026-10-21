@@ -4,7 +4,7 @@
  * User-created task dirs follow the `MM-DD-slug` pattern produced by
  * `.phronia/scripts/common/task_store.py::cmd_create`:
  *
- *     <tasks-dir>/05-13-trellis-core-sdk-package/
+ *     <tasks-dir>/05-13-phronia-core-sdk-package/
  *
  * Trellis also creates system onboarding tasks during `trellis init` using a
  * `00-slug` prefix, such as `00-bootstrap-guidelines` and `00-join-new-developer`.

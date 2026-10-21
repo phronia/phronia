@@ -3,7 +3,7 @@ import { existsSync, readFileSync, readdirSync, statSync } from "fs"
 import { join } from "path"
 import { execFileSync } from "child_process"
 import { platform } from "os"
-import { debugLog } from "./trellis-context.js"
+import { debugLog } from "./phronia-context.js"
 
 const PYTHON_CMD = platform() === "win32" ? "python" : "python3"
 
@@ -71,7 +71,7 @@ function getTaskStatus(ctx, platformInput = null) {
   const taskStatus = taskData.status || "unknown"
 
   if (taskStatus === "completed") {
-    return `Status: COMPLETED\nTask: ${taskTitle}\nNext-Action: Run /trellis:finish-work. If the working tree is dirty, return to Phase 3.4 first.`
+    return `Status: COMPLETED\nTask: ${taskTitle}\nNext-Action: Run /phronia:finish-work. If the working tree is dirty, return to Phase 3.4 first.`
   }
 
   const hasPrd = existsSync(join(taskDir, "prd.md"))
@@ -88,7 +88,7 @@ function getTaskStatus(ctx, platformInput = null) {
     (!existsSync(checkJsonl) || hasCuratedJsonlEntry(checkJsonl))
 
   if (taskStatus === "planning" && !hasPrd) {
-    return `Status: PLANNING\nTask: ${taskTitle}\nPresent: ${presentLine}\nNext-Action: Load trellis-brainstorm and write prd.md. Stay in planning.`
+    return `Status: PLANNING\nTask: ${taskTitle}\nPresent: ${presentLine}\nNext-Action: Load phronia-brainstorm and write prd.md. Stay in planning.`
   }
 
   if (taskStatus === "planning") {
@@ -420,9 +420,9 @@ Trellis compact SessionStart context. Use it to orient the session; load details
       overviewLines.push(strippedStateBlocks.trimEnd())
     }
 
-    parts.push("<trellis-workflow>")
+    parts.push("<phronia-workflow>")
     parts.push(overviewLines.join("\n").trimEnd())
-    parts.push("</trellis-workflow>")
+    parts.push("</phronia-workflow>")
   }
 
   parts.push("<guidelines>")

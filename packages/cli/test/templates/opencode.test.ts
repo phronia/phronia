@@ -8,7 +8,7 @@ import {
   readContextInjectionLimits,
   TrellisContext,
   truncateUtf8,
-} from "../../src/templates/opencode/lib/trellis-context.js";
+} from "../../src/templates/opencode/lib/phronia-context.js";
 import {
   findUserTextPart,
   insertSyntheticTextPart,
@@ -42,7 +42,7 @@ async function createOpenCodeInjectHooks(
   env: NodeJS.ProcessEnv = {},
 ): Promise<OpenCodeInjectHooks> {
   return (await injectSubagentContextPlugin({
-    directory: "/tmp/trellis-opencode-test",
+    directory: "/tmp/phronia-opencode-test",
     platform,
     env,
   })) as OpenCodeInjectHooks;
@@ -139,7 +139,7 @@ describe("opencode session-start history detection", () => {
 
   it("builds compact startup context with an adaptive one-shot acknowledgment", () => {
     const context = buildSessionContext({
-      directory: "/tmp/trellis-opencode-test",
+      directory: "/tmp/phronia-opencode-test",
       getActiveTask: () => ({ taskPath: null, source: "none", stale: false }),
       getContextKey: () => null,
       getCurrentTask: () => null,
@@ -184,7 +184,7 @@ describe("opencode session-start history detection", () => {
 
   it("injects startup context onto the latest user message without mutating stored parts", async () => {
     const hooks = (await sessionStartPlugin({
-      directory: "/tmp/trellis-opencode-test",
+      directory: "/tmp/phronia-opencode-test",
     })) as TransformHooks;
 
     const firstUser = userTurn("First request", { sessionID: "session-a" });
@@ -725,7 +725,7 @@ describe("opencode persisted synthetic context parts", () => {
 });
 
 function setupTrellisProject(): string {
-  const dir = mkdtempSync(join(tmpdir(), "trellis-opencode-264-"));
+  const dir = mkdtempSync(join(tmpdir(), "phronia-opencode-264-"));
   const taskDir = join(dir, ".phronia", "tasks", "demo-task");
   mkdirSync(taskDir, { recursive: true });
   mkdirSync(join(dir, ".phronia", ".runtime", "sessions"), { recursive: true });
@@ -738,7 +738,7 @@ function setupTrellisProject(): string {
       "# Workflow",
       "",
       "[workflow-state:in_progress]",
-      "Active task: <task path>. Dispatch trellis-implement or trellis-check.",
+      "Active task: <task path>. Dispatch phronia-implement or phronia-check.",
       "[/workflow-state:in_progress]",
       "",
     ].join("\n"),
@@ -753,14 +753,14 @@ function writeSessionFile(dir: string, key: string, taskRef: string): void {
 
 describe("opencode subagent helper", () => {
   it("isTrellisSubagent matches the three trellis sub-agent names", () => {
-    expect(isTrellisSubagent({ agent: "trellis-implement" })).toBe(true);
-    expect(isTrellisSubagent({ agent: "trellis-check" })).toBe(true);
-    expect(isTrellisSubagent({ agent: "trellis-research" })).toBe(true);
+    expect(isTrellisSubagent({ agent: "phronia-implement" })).toBe(true);
+    expect(isTrellisSubagent({ agent: "phronia-check" })).toBe(true);
+    expect(isTrellisSubagent({ agent: "phronia-research" })).toBe(true);
   });
 
   it("isTrellisSubagent rejects unrelated agents", () => {
     expect(isTrellisSubagent({ agent: "build" })).toBe(false);
-    expect(isTrellisSubagent({ agent: "trellis-implement-extra" })).toBe(false);
+    expect(isTrellisSubagent({ agent: "phronia-implement-extra" })).toBe(false);
     expect(isTrellisSubagent({ agent: undefined })).toBe(false);
     expect(isTrellisSubagent({})).toBe(false);
     expect(isTrellisSubagent(null)).toBe(false);
@@ -842,7 +842,7 @@ describe("opencode inject-subagent-context (issue #264)", () => {
     writeSessionFile(dir, "opencode_sole", ".phronia/tasks/demo-task");
     const output: TaskToolOutput = {
       args: {
-        subagent_type: "trellis-implement",
+        subagent_type: "phronia-implement",
         prompt: "do the implementation",
       },
     };
@@ -852,13 +852,13 @@ describe("opencode inject-subagent-context (issue #264)", () => {
       output,
     );
 
-    expect(output.args.prompt).toContain("<!-- trellis-hook-injected -->");
+    expect(output.args.prompt).toContain("<!-- phronia-hook-injected -->");
     expect(output.args.prompt).toContain("# Implement Agent Task");
     expect(output.args.prompt).toContain("Demo PRD");
     expect(output.args.prompt).toContain("do the implementation");
     // Marker must be at the top so generated agent definitions can detect
     // successful injection via a prefix check.
-    expect(output.args.prompt.startsWith("<!-- trellis-hook-injected -->")).toBe(
+    expect(output.args.prompt.startsWith("<!-- phronia-hook-injected -->")).toBe(
       true,
     );
   });
@@ -877,7 +877,7 @@ describe("opencode inject-subagent-context (issue #264)", () => {
 
     const output: TaskToolOutput = {
       args: {
-        subagent_type: "trellis-implement",
+        subagent_type: "phronia-implement",
         prompt: "do the implementation",
       },
     };
@@ -887,7 +887,7 @@ describe("opencode inject-subagent-context (issue #264)", () => {
       output,
     );
 
-    expect(output.args.prompt).toContain("<!-- trellis-hook-injected -->");
+    expect(output.args.prompt).toContain("<!-- phronia-hook-injected -->");
     expect(output.args.prompt).toContain("=== .phronia/spec/demo.md ===");
     expect(output.args.prompt).toContain("UNIQUE_SPEC_MARKER_42");
     expect(output.args.prompt).toContain("Demo PRD");
@@ -898,7 +898,7 @@ describe("opencode inject-subagent-context (issue #264)", () => {
     // Hint is the only resolver.
     const output: TaskToolOutput = {
       args: {
-        subagent_type: "trellis-check",
+        subagent_type: "phronia-check",
         prompt: "Active task: .phronia/tasks/demo-task\n\nplease check",
       },
     };
@@ -908,7 +908,7 @@ describe("opencode inject-subagent-context (issue #264)", () => {
       output,
     );
 
-    expect(output.args.prompt).toContain("<!-- trellis-hook-injected -->");
+    expect(output.args.prompt).toContain("<!-- phronia-hook-injected -->");
     expect(output.args.prompt).toContain("# Check Agent Task");
     expect(output.args.prompt).toContain("Demo PRD");
   });
@@ -924,7 +924,7 @@ describe("opencode inject-subagent-context (issue #264)", () => {
 
     const output: TaskToolOutput = {
       args: {
-        subagent_type: "trellis-implement",
+        subagent_type: "phronia-implement",
         prompt: "Active task: .phronia/tasks/hint-task\n\ngo",
       },
     };
@@ -938,10 +938,10 @@ describe("opencode inject-subagent-context (issue #264)", () => {
     expect(output.args.prompt).not.toContain("Demo PRD");
   });
 
-  it("emits the trellis-hook-injected marker for research agent too", async () => {
+  it("emits the phronia-hook-injected marker for research agent too", async () => {
     const output: TaskToolOutput = {
       args: {
-        subagent_type: "trellis-research",
+        subagent_type: "phronia-research",
         prompt: "investigate something",
       },
     };
@@ -951,14 +951,14 @@ describe("opencode inject-subagent-context (issue #264)", () => {
       output,
     );
 
-    expect(output.args.prompt).toContain("<!-- trellis-hook-injected -->");
+    expect(output.args.prompt).toContain("<!-- phronia-hook-injected -->");
     expect(output.args.prompt).toContain("# Research Agent Task");
   });
 
   it("skips when no task can be resolved through any path", async () => {
     const output: TaskToolOutput = {
       args: {
-        subagent_type: "trellis-implement",
+        subagent_type: "phronia-implement",
         prompt: "implement without context",
       },
     };
@@ -1144,7 +1144,7 @@ describe("opencode messages.transform injection (issue #553)", () => {
 
   it("session-start.js early-returns when the latest user agent is a trellis sub-agent", async () => {
     const hooks = await loadSessionHooks();
-    const latest = userTurn("original", { agent: "trellis-implement" });
+    const latest = userTurn("original", { agent: "phronia-implement" });
     const original = latest.parts;
     const messages = [latest];
     await hooks[MESSAGES_TRANSFORM_HOOK]({}, { messages });
@@ -1152,9 +1152,9 @@ describe("opencode messages.transform injection (issue #553)", () => {
     expect(messages[0].parts).toBe(original);
   });
 
-  it("session-start.js skips trellis-check and trellis-research", async () => {
+  it("session-start.js skips phronia-check and phronia-research", async () => {
     const hooks = await loadSessionHooks();
-    for (const agent of ["trellis-check", "trellis-research"]) {
+    for (const agent of ["phronia-check", "phronia-research"]) {
       const latest = userTurn("untouched", { agent });
       const messages = [latest];
       await hooks[MESSAGES_TRANSFORM_HOOK]({}, { messages });
@@ -1164,7 +1164,7 @@ describe("opencode messages.transform injection (issue #553)", () => {
 
   it("inject-workflow-state.js early-returns when the latest user agent is a trellis sub-agent", async () => {
     const hooks = await loadWorkflowHooks();
-    const latest = userTurn("original", { agent: "trellis-implement" });
+    const latest = userTurn("original", { agent: "phronia-implement" });
     const original = latest.parts;
     const messages = [latest];
     await hooks[MESSAGES_TRANSFORM_HOOK]({}, { messages });
@@ -1293,7 +1293,7 @@ describe("opencode context injection limits (issue #441)", () => {
     })) as TaskToolHooks;
     const output: TaskToolOutput = {
       args: {
-        subagent_type: "trellis-implement",
+        subagent_type: "phronia-implement",
         prompt: "do the implementation",
       },
     };

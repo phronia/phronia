@@ -88,9 +88,9 @@ function trunc(s: string, w: number) {
 
 // ── Constants ─────────────────────────────────────────────────────────
 const PHRONIA_AGENT_JSONL: Record<string, string> = {
-  "trellis-implement": "implement.jsonl",
+  "phronia-implement": "implement.jsonl",
   implement: "implement.jsonl",
-  "trellis-check": "check.jsonl",
+  "phronia-check": "check.jsonl",
   check: "check.jsonl",
 };
 const MAX_STDOUT = 8 * 1024 * 1024;
@@ -154,7 +154,7 @@ interface RunState {
   errorMessage?: string;
 }
 interface ProgressDetails {
-  kind: "trellis-subagent-progress";
+  kind: "phronia-subagent-progress";
   agent: string;
   mode: "single" | "parallel" | "chain";
   startedAt: number;
@@ -1184,7 +1184,7 @@ function workflowOverview(root: string, key: string | null): string {
     "--platform",
     "pi",
   ]);
-  return stdout ? `<trellis-workflow>\n${stdout}\n</trellis-workflow>` : "";
+  return stdout ? `<phronia-workflow>\n${stdout}\n</phronia-workflow>` : "";
 }
 
 function buildStartupContext(
@@ -1266,8 +1266,8 @@ function buildContext(root: string, agent: string, key: string | null): string {
 }
 
 function normalizeAgent(agent: string | undefined): string {
-  const name = agent ?? "trellis-implement";
-  return name.startsWith("trellis-") ? name : `trellis-${name}`;
+  const name = agent ?? "phronia-implement";
+  return name.startsWith("phronia-") ? name : `phronia-${name}`;
 }
 
 function isTrellisAgent(root: string, agent: string): boolean {
@@ -1644,7 +1644,7 @@ async function runSubagent(
   const mode = input.mode ?? "single";
   const startedAt = Date.now();
   const details: ProgressDetails = {
-    kind: "trellis-subagent-progress",
+    kind: "phronia-subagent-progress",
     agent: agentName,
     mode,
     startedAt,
@@ -1841,7 +1841,7 @@ export default function trellisExtension(pi: {
   // Session-level "most recently persisted" project root. The root-scoped
   // lastSent* maps suppress re-emission for an unchanged root, but when a
   // session switches projects (A -> B -> A) the latest persisted update
-  // would otherwise stay B's — and its <trellis-task-context-update>
+  // would otherwise stay B's — and its <phronia-task-context-update>
   // explicitly supersedes the system-prompt context. Re-assert the current
   // root's task/runtime context on every root transition so the agent never
   // keeps following the previous project's instructions.
@@ -1880,7 +1880,7 @@ export default function trellisExtension(pi: {
         agent: {
           type: "string",
           description:
-            "Agent name, such as trellis-implement or trellis-check.",
+            "Agent name, such as phronia-implement or phronia-check.",
         },
         prompt: {
           type: "string",
@@ -2000,7 +2000,7 @@ export default function trellisExtension(pi: {
           : null;
       const isProgress =
         isObj(result.details) &&
-        result.details.kind === "trellis-subagent-progress";
+        result.details.kind === "phronia-subagent-progress";
       if (toolCallId && state && invalidate) {
         const updatedAt = isProgress
           ? (result.details as ProgressDetails).updatedAt
@@ -2028,7 +2028,7 @@ export default function trellisExtension(pi: {
   pi.on?.("session_start", (event, ctx) => {
     getKey(event, ctx);
     ctx?.ui?.notify?.(
-      "Trellis project context is available. Use /trellis-start to bootstrap or /trellis-continue to resume.",
+      "Trellis project context is available. Use /phronia-start to bootstrap or /phronia-continue to resume.",
       "info",
     );
   });
@@ -2054,7 +2054,7 @@ export default function trellisExtension(pi: {
     if (
       ev.toolName === "trellis_subagent" &&
       isObj(ev.details) &&
-      ev.details.kind === "trellis-subagent-progress" &&
+      ev.details.kind === "phronia-subagent-progress" &&
       Array.isArray(ev.details.runs) &&
       ev.details.runs.some(
         (r) => isObj(r) && (r.status === "failed" || r.status === "cancelled"),
@@ -2072,7 +2072,7 @@ export default function trellisExtension(pi: {
     const startup = getStartupCtx(k, turn, ctx);
     // Task context is snapshotted into systemPrompt once; later on-disk
     // changes are delivered as persisted messages so the prefix stays stable.
-    const freshTaskCtx = buildContext(root, "trellis-implement", k);
+    const freshTaskCtx = buildContext(root, "phronia-implement", k);
     let taskCtx = taskCtxSnapshot.get(key);
     if (taskCtx === undefined) {
       taskCtx = freshTaskCtx;
@@ -2100,9 +2100,9 @@ export default function trellisExtension(pi: {
     ) {
       lastSentTaskCtx.set(key, freshTaskCtx);
       updates.push(
-        "<trellis-task-context-update>\nTask context changed on disk. This supersedes the Trellis Task Context in the system prompt.\n\n" +
+        "<phronia-task-context-update>\nTask context changed on disk. This supersedes the Trellis Task Context in the system prompt.\n\n" +
           freshTaskCtx +
-          "\n</trellis-task-context-update>",
+          "\n</phronia-task-context-update>",
       );
     }
     if (updates.length > 0) lastPersistedRoot.set(k ?? "default", root);
@@ -2110,7 +2110,7 @@ export default function trellisExtension(pi: {
     return {
       message: content
         ? {
-            customType: "trellis-runtime-context",
+            customType: "phronia-runtime-context",
             content,
             display: false,
           }

@@ -17,7 +17,7 @@ import path from "node:path";
 
 const TEMPLATE_SCRIPTS = path.resolve(
   __dirname,
-  "../../src/templates/trellis/scripts",
+  "../../src/templates/workflow/scripts",
 );
 
 const DEVELOPER = "tester";
@@ -88,7 +88,7 @@ describe.skipIf(!hasPython())("add_session.py worktree warning", () => {
   let worktreeDir: string | null;
 
   beforeEach(() => {
-    tmp = fs.mkdtempSync(path.join(os.tmpdir(), "trellis-worktree-warn-"));
+    tmp = fs.mkdtempSync(path.join(os.tmpdir(), "phronia-worktree-warn-"));
     worktreeDir = null;
   });
 
@@ -114,7 +114,7 @@ describe.skipIf(!hasPython())("add_session.py worktree warning", () => {
     setupRepo(tmp, true);
 
     worktreeDir = fs.mkdtempSync(
-      path.join(os.tmpdir(), "trellis-worktree-warn-linked-"),
+      path.join(os.tmpdir(), "phronia-worktree-warn-linked-"),
     );
     fs.rmdirSync(worktreeDir);
     git(tmp, "worktree", "add", worktreeDir, "-b", "feature-x");
@@ -145,7 +145,7 @@ describe.skipIf(!hasPython())("add_session.py worktree warning", () => {
     setupRepo(tmp, false);
 
     worktreeDir = fs.mkdtempSync(
-      path.join(os.tmpdir(), "trellis-worktree-warn-off-"),
+      path.join(os.tmpdir(), "phronia-worktree-warn-off-"),
     );
     fs.rmdirSync(worktreeDir);
     git(tmp, "worktree", "add", worktreeDir, "-b", "feature-y");

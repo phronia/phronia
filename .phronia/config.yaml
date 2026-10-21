@@ -119,7 +119,7 @@ channel:
 # Codex (dispatch behavior)
 #-------------------------------------------------------------------------------
 # Codex-only knob; other platforms ignore it. Default ("auto") dispatches
-# trellis-implement / trellis-check / trellis-research sub-agents. This does
+# phronia-implement / phronia-check / phronia-research sub-agents. This does
 # not rely on inherited parent transcripts: `fork_turns` remains
 # caller-controlled, while Codex's native SubagentStart hook injects task
 # context when trusted and child-side loading remains the fallback when it is
@@ -130,7 +130,7 @@ channel:
 # In "auto" mode, dispatched sub-agents inherit the main session's model
 # unless you pin one. To use a cheaper/faster model for implement/check/
 # research sub-agent work, edit `model` / `model_reasoning_effort` directly
-# on the generated `.codex/agents/trellis-*.toml` files (see the commented
+# on the generated `.codex/agents/phronia-*.toml` files (see the commented
 # hint lines in those files) — there is no config.yaml knob for this,
 # `trellis update` preserves your edits across regeneration.
 #

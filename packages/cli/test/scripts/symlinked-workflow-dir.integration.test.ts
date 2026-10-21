@@ -23,7 +23,7 @@ import path from "node:path";
 
 const TEMPLATE_SCRIPTS = path.resolve(
   __dirname,
-  "../../src/templates/trellis/scripts",
+  "../../src/templates/workflow/scripts",
 );
 const HOOK_PATH = path.resolve(
   __dirname,
@@ -85,7 +85,7 @@ describe.skipIf(!hasPython() || process.platform === "win32")(
     let repo: string; // the git worktree; repo/.phronia -> store
 
     beforeEach(() => {
-      base = fs.mkdtempSync(path.join(os.tmpdir(), "trellis-567-"));
+      base = fs.mkdtempSync(path.join(os.tmpdir(), "phronia-567-"));
       store = path.join(base, "shared", ".phronia");
       repo = path.join(base, "repo");
 

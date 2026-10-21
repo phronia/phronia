@@ -175,7 +175,7 @@ export { buildPiArgs, resolveRunCfg, splitModelThinking };
 }
 
 function createMinimalTrellisRoot(): string {
-  const root = mkdtempSync(join(tmpdir(), "trellis-pi-355-"));
+  const root = mkdtempSync(join(tmpdir(), "phronia-pi-355-"));
   mkdirSync(join(root, ".pi"), { recursive: true });
   mkdirSync(join(root, ".phronia", "scripts"), { recursive: true });
   writeFileSync(
@@ -206,9 +206,9 @@ describe("pi templates", () => {
   it("provides the three Trellis sub-agent definitions", () => {
     const agents = getAllAgents();
     expect(agents.map((agent) => agent.name).sort()).toEqual([
-      "trellis-check",
-      "trellis-implement",
-      "trellis-research",
+      "phronia-check",
+      "phronia-implement",
+      "phronia-research",
     ]);
 
     for (const agent of agents) {
@@ -237,23 +237,23 @@ describe("pi templates", () => {
     const templates = collectPiTemplates();
 
     expect(
-      templates.get(".agents/skills/trellis-check/SKILL.md"),
+      templates.get(".agents/skills/phronia-check/SKILL.md"),
     ).toBeDefined();
     for (const key of templates.keys()) {
       expect(key.startsWith(".pi/skills/")).toBe(false);
     }
   });
 
-  it("collects a manual trellis-start prompt for Pi fallback bootstrap", () => {
+  it("collects a manual phronia-start prompt for Pi fallback bootstrap", () => {
     const templates = collectPiTemplates();
 
-    expect(templates.get(".pi/prompts/trellis-start.md")).toContain(
+    expect(templates.get(".pi/prompts/phronia-start.md")).toContain(
       "# Start Session",
     );
-    expect(templates.get(".pi/prompts/trellis-continue.md")).toContain(
+    expect(templates.get(".pi/prompts/phronia-continue.md")).toContain(
       "get_context.py --mode phase",
     );
-    expect(templates.get(".pi/prompts/trellis-finish-work.md")).toContain(
+    expect(templates.get(".pi/prompts/phronia-finish-work.md")).toContain(
       "finish-work",
     );
   });
@@ -360,7 +360,7 @@ describe("pi templates", () => {
     expect(first.systemPrompt).not.toContain(
       "Trellis SessionStart 已注入：workflow、当前任务状态、开发者身份、git 状态、active tasks、spec 索引已加载。",
     );
-    expect(first.systemPrompt).toContain("<trellis-workflow>");
+    expect(first.systemPrompt).toContain("<phronia-workflow>");
     expect(first.systemPrompt).toContain("Phase 1: Plan");
     expect(first.systemPrompt).toContain("No active Trellis task found");
     expect(first.systemPrompt).not.toContain("<workflow-state>");
@@ -368,7 +368,7 @@ describe("pi templates", () => {
     expect(first.systemPrompt).toContain("<session-overview>");
     expect(first.message).toEqual(
       expect.objectContaining({
-        customType: "trellis-runtime-context",
+        customType: "phronia-runtime-context",
         display: false,
       }),
     );
@@ -462,8 +462,8 @@ describe("pi templates", () => {
     // systemPrompt keeps the turn-one snapshot byte-for-byte...
     expect(second.systemPrompt).toBe(first.systemPrompt);
     // ...and the new task context arrives as a persisted hidden message.
-    expect(second.message?.customType).toBe("trellis-runtime-context");
-    expect(second.message?.content).toContain("<trellis-task-context-update>");
+    expect(second.message?.customType).toBe("phronia-runtime-context");
+    expect(second.message?.content).toContain("<phronia-task-context-update>");
     expect(second.message?.content).toContain("Stable prefix matters.");
 
     // No further changes -> nothing new to persist.
@@ -683,19 +683,19 @@ describe("pi templates", () => {
       // persisted history carries only the runtime context.
       const a1 = fire(root1);
       expect(a1.message?.content ?? "").not.toContain(
-        "<trellis-task-context-update>",
+        "<phronia-task-context-update>",
       );
 
       // A -> B: the switch re-asserts B's task context as a persisted
       // update (it supersedes the system-prompt context).
       const b = fire(root2);
-      expect(b.message?.content).toContain("<trellis-task-context-update>");
+      expect(b.message?.content).toContain("<phronia-task-context-update>");
       expect(b.message?.content).toContain("ROOT TWO PRD CONTENT");
 
       // B -> A with unchanged A on disk: A's task context must be re-emitted
       // so the most recent persisted update belongs to A, not B.
       const a2 = fire(root1);
-      expect(a2.message?.content).toContain("<trellis-task-context-update>");
+      expect(a2.message?.content).toContain("<phronia-task-context-update>");
       expect(a2.message?.content).toContain("ROOT ONE PRD CONTENT");
       expect(a2.message?.content).not.toContain("ROOT TWO PRD CONTENT");
     } finally {
@@ -713,28 +713,28 @@ describe("pi templates", () => {
     expect(extension).toContain("isError: true");
   });
 
-  it("normalizeAgent prefixes bare names with trellis- and leaves prefixed names alone", () => {
+  it("normalizeAgent prefixes bare names with phronia- and leaves prefixed names alone", () => {
     const { normalizeAgent } = loadExtensionInternals();
 
-    expect(normalizeAgent("implement")).toBe("trellis-implement");
-    expect(normalizeAgent("check")).toBe("trellis-check");
-    expect(normalizeAgent("trellis-research")).toBe("trellis-research");
-    expect(normalizeAgent(undefined)).toBe("trellis-implement");
-    expect(normalizeAgent("trellis-custom")).toBe("trellis-custom");
+    expect(normalizeAgent("implement")).toBe("phronia-implement");
+    expect(normalizeAgent("check")).toBe("phronia-check");
+    expect(normalizeAgent("phronia-research")).toBe("phronia-research");
+    expect(normalizeAgent(undefined)).toBe("phronia-implement");
+    expect(normalizeAgent("phronia-custom")).toBe("phronia-custom");
   });
 
   it("isTrellisAgent gates on a real .pi/agents/*.md definition file", () => {
     const { isTrellisAgent } = loadExtensionInternals();
 
-    const root = mkdtempSync(join(tmpdir(), "trellis-pi-test-"));
+    const root = mkdtempSync(join(tmpdir(), "phronia-pi-test-"));
     mkdirSync(join(root, ".pi", "agents"), { recursive: true });
     writeFileSync(
-      join(root, ".pi", "agents", "trellis-implement.md"),
-      "---\nname: trellis-implement\n---\n",
+      join(root, ".pi", "agents", "phronia-implement.md"),
+      "---\nname: phronia-implement\n---\n",
     );
 
-    expect(isTrellisAgent(root, "trellis-implement")).toBe(true);
-    expect(isTrellisAgent(root, "trellis-foo")).toBe(false);
+    expect(isTrellisAgent(root, "phronia-implement")).toBe(true);
+    expect(isTrellisAgent(root, "phronia-foo")).toBe(false);
     expect(existsSync(root)).toBe(true);
   });
 
@@ -931,8 +931,8 @@ fallbackModels:
     const capturedCwd = join(sessionRoot, "child-cwd.txt");
     mkdirSync(agentDir, { recursive: true });
     writeFileSync(
-      join(agentDir, "trellis-implement.md"),
-      "---\nname: trellis-implement\n---\nImplement the task.\n",
+      join(agentDir, "phronia-implement.md"),
+      "---\nname: phronia-implement\n---\nImplement the task.\n",
     );
     writeFileSync(
       fakeCli,
@@ -962,7 +962,7 @@ fallbackModels:
 
       const result = await registeredTool.execute(
         "model-inheritance-test",
-        { agent: "trellis-implement", prompt: "Implement the task" },
+        { agent: "phronia-implement", prompt: "Implement the task" },
         undefined,
         undefined,
         {
@@ -1016,7 +1016,7 @@ fallbackModels:
   }
 
   it("prefers the serving heartbeat id over a live ctx id and stale PI_SESSION_ID", () => {
-    const sessionDir = mkdtempSync(join(tmpdir(), "trellis-pi-610-serving-"));
+    const sessionDir = mkdtempSync(join(tmpdir(), "phronia-pi-610-serving-"));
     writeHeartbeat(sessionDir, "serving-session", process.pid, 200);
     writeHeartbeat(sessionDir, "older-serving", process.pid, 100, "older.json");
     writeHeartbeat(sessionDir, "other-process", process.pid + 1, 999);
@@ -1045,7 +1045,7 @@ fallbackModels:
   });
 
   it("falls back to ctx then env when no serving heartbeat exists", () => {
-    const sessionDir = mkdtempSync(join(tmpdir(), "trellis-pi-610-fallback-"));
+    const sessionDir = mkdtempSync(join(tmpdir(), "phronia-pi-610-fallback-"));
 
     try {
       const withCtx = loadExtensionInternals(process.cwd(), {
@@ -1092,14 +1092,14 @@ fallbackModels:
   it("injects serving parent env into the spawned headless pi process", async () => {
     const hostRoot = createMinimalTrellisRoot();
     const sessionRoot = createMinimalTrellisRoot();
-    const sessionDir = mkdtempSync(join(tmpdir(), "trellis-pi-610-spawn-"));
+    const sessionDir = mkdtempSync(join(tmpdir(), "phronia-pi-610-spawn-"));
     const agentDir = join(sessionRoot, ".pi", "agents");
     const fakeCli = join(sessionRoot, "fake-pi.cjs");
     const capturedEnv = join(sessionRoot, "child-env.json");
     mkdirSync(agentDir, { recursive: true });
     writeFileSync(
-      join(agentDir, "trellis-implement.md"),
-      "---\nname: trellis-implement\n---\nImplement the task.\n",
+      join(agentDir, "phronia-implement.md"),
+      "---\nname: phronia-implement\n---\nImplement the task.\n",
     );
     writeHeartbeat(sessionDir, "serving-heartbeat-id", process.pid, Date.now());
     writeFileSync(
@@ -1137,7 +1137,7 @@ fallbackModels:
 
       const result = await registeredTool.execute(
         "permission-forward-test",
-        { agent: "trellis-implement", prompt: "Implement the task" },
+        { agent: "phronia-implement", prompt: "Implement the task" },
         undefined,
         undefined,
         {
@@ -1211,11 +1211,11 @@ describe("pi extension: context injection limits (issue #441)", () => {
   const SESSION_KEY = "ctxlimit-session";
 
   function createRoot(): string {
-    const root = mkdtempSync(join(tmpdir(), "trellis-pi-ctxlimit-"));
+    const root = mkdtempSync(join(tmpdir(), "phronia-pi-ctxlimit-"));
     mkdirSync(join(root, ".pi", "agents"), { recursive: true });
     writeFileSync(
-      join(root, ".pi", "agents", "trellis-implement.md"),
-      "---\nname: trellis-implement\n---\n# Implement\n",
+      join(root, ".pi", "agents", "phronia-implement.md"),
+      "---\nname: phronia-implement\n---\n# Implement\n",
     );
     return root;
   }
@@ -1373,7 +1373,7 @@ describe("pi extension: context injection limits (issue #441)", () => {
       );
       writeFileSync(join(taskDir, "prd.md"), "prd body\n", "utf-8");
       const { buildContextForTest } = loadExtensionInternals();
-      const out = buildContextForTest(root, "trellis-implement", SESSION_KEY);
+      const out = buildContextForTest(root, "phronia-implement", SESSION_KEY);
       expect(out).toContain("=== small.md ===\nsmall spec content");
       expect(out).toContain("prd body");
       expect(out).not.toContain("[Trellis: truncated");
@@ -1406,7 +1406,7 @@ describe("pi extension: context injection limits (issue #441)", () => {
       );
 
       const { buildContextForTest } = loadExtensionInternals();
-      const out = buildContextForTest(root, "trellis-implement", SESSION_KEY);
+      const out = buildContextForTest(root, "phronia-implement", SESSION_KEY);
 
       expect(out).toContain(
         "[Trellis: not inlined (binary file) — design.png (10 bytes): visual baseline]",
@@ -1435,7 +1435,7 @@ describe("pi extension: context injection limits (issue #441)", () => {
       writeConfig(root, "");
 
       const { buildContextForTest } = loadExtensionInternals();
-      const out = buildContextForTest(root, "trellis-implement", SESSION_KEY);
+      const out = buildContextForTest(root, "phronia-implement", SESSION_KEY);
 
       expect(out).toContain(`=== multibyte.md ===\n${multiByteContent}`);
       expect(out).not.toContain("[Trellis: not inlined (binary file)");
@@ -1457,7 +1457,7 @@ describe("pi extension: context injection limits (issue #441)", () => {
       writeConfig(root, "");
 
       const { buildContextForTest } = loadExtensionInternals();
-      const out = buildContextForTest(root, "trellis-implement", SESSION_KEY);
+      const out = buildContextForTest(root, "phronia-implement", SESSION_KEY);
 
       expect(out).toContain(
         `[Trellis: not inlined (binary file) — mixed.dat (${mixed.length} bytes): mixed content]`,
@@ -1475,7 +1475,7 @@ describe("pi extension: context injection limits (issue #441)", () => {
         "utf-8",
       );
       const { buildContextForTest } = loadExtensionInternals();
-      const out = buildContextForTest(root, "trellis-implement", SESSION_KEY);
+      const out = buildContextForTest(root, "phronia-implement", SESSION_KEY);
       expect(Buffer.byteLength(out, "utf-8")).toBeLessThanOrEqual(
         128 * 1024 + 1024,
       );
@@ -1510,7 +1510,7 @@ describe("pi extension: context injection limits (issue #441)", () => {
         ].join("\n"),
       );
       const { buildContextForTest } = loadExtensionInternals();
-      const out = buildContextForTest(root, "trellis-implement", SESSION_KEY);
+      const out = buildContextForTest(root, "phronia-implement", SESSION_KEY);
       expect(out).toContain("=== f1.txt ===\n" + "1".repeat(50));
       expect(out).toContain(
         "[Trellis: not inlined (total context limit reached) — f2.txt (50 bytes): second]",
@@ -1542,7 +1542,7 @@ describe("pi extension: context injection limits (issue #441)", () => {
         ].join("\n"),
       );
       const { buildContextForTest } = loadExtensionInternals();
-      const out = buildContextForTest(root, "trellis-implement", SESSION_KEY);
+      const out = buildContextForTest(root, "phronia-implement", SESSION_KEY);
       expect(out).toContain("=== big.txt ===\n" + bigContent);
       expect(out).not.toContain("[Trellis: not inlined");
     });
@@ -1562,7 +1562,7 @@ describe("pi extension: context injection limits (issue #441)", () => {
         ].join("\n"),
       );
       const { buildContextForTest } = loadExtensionInternals();
-      const out = buildContextForTest(root, "trellis-implement", SESSION_KEY);
+      const out = buildContextForTest(root, "phronia-implement", SESSION_KEY);
       const relTaskDir = "tasks/task-artifact-cap".replace(
         "tasks/",
         ".phronia/tasks/",

@@ -5,7 +5,7 @@
       "hooks": [
         {
           "type": "command",
-          "command": "python -X utf8 .snow/hooks/write-trellis-context.py user",
+          "command": "python -X utf8 .snow/hooks/write-phronia-context.py user",
           "timeout": 15000,
           "enabled": true
         }

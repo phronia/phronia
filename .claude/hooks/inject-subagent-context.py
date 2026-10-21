@@ -67,14 +67,31 @@ FILE_TASK_JSON = "task.json"
 # Subagent Constants (change here to rename subagent types)
 # =============================================================================
 
-AGENT_IMPLEMENT = "trellis-implement"
-AGENT_CHECK = "trellis-check"
-AGENT_RESEARCH = "trellis-research"
+AGENT_IMPLEMENT = "phronia-implement"
+AGENT_CHECK = "phronia-check"
+AGENT_RESEARCH = "phronia-research"
+
+# One-major-version compatibility: sessions and user-defined agents may still
+# dispatch the pre-rename names.
+_LEGACY_AGENT_PREFIX = "trellis-"
+
+
+def _normalize_agent_type(agent_type: str) -> str:
+    if agent_type.startswith(_LEGACY_AGENT_PREFIX):
+        return "phronia-" + agent_type[len(_LEGACY_AGENT_PREFIX) :]
+    return agent_type
 
 # Agents that require a task directory
 AGENTS_REQUIRE_TASK = (AGENT_IMPLEMENT, AGENT_CHECK)
 # All supported agents
-AGENTS_ALL = (AGENT_IMPLEMENT, AGENT_CHECK, AGENT_RESEARCH)
+AGENTS_ALL = (
+    AGENT_IMPLEMENT,
+    AGENT_CHECK,
+    AGENT_RESEARCH,
+    "trellis-implement",
+    "trellis-check",
+    "trellis-research",
+)
 
 
 def find_repo_root(start_path: str) -> str | None:
@@ -653,7 +670,7 @@ def get_finish_context(repo_root: str, task_dir: str) -> str:
 
 def build_implement_prompt(original_prompt: str, context: str) -> str:
     """Build complete prompt for Implement"""
-    return f"""<!-- trellis-hook-injected -->
+    return f"""<!-- phronia-hook-injected -->
 # Implement Agent Task
 
 You are the Implement Agent in the Multi-Agent Pipeline.
@@ -688,7 +705,7 @@ All the information you need has been prepared for you:
 
 def build_check_prompt(original_prompt: str, context: str) -> str:
     """Build complete prompt for Check"""
-    return f"""<!-- trellis-hook-injected -->
+    return f"""<!-- phronia-hook-injected -->
 # Check Agent Task
 
 You are the Check Agent in the Multi-Agent Pipeline (code and cross-layer checker).
@@ -723,7 +740,7 @@ All check specs and dev specs you need:
 
 def build_finish_prompt(original_prompt: str, context: str) -> str:
     """Build complete prompt for Finish (final check before PR)"""
-    return f"""<!-- trellis-hook-injected -->
+    return f"""<!-- phronia-hook-injected -->
 # Finish Agent Task
 
 You are performing the final check before creating a PR.
@@ -900,8 +917,8 @@ def build_codex_subagent_context(
     context: str,
 ) -> str:
     """Build developer context for a native, already-dispatched Codex role."""
-    role = subagent_type.removeprefix("trellis-")
-    return f"""<!-- trellis-hook-injected -->
+    role = subagent_type.removeprefix("phronia-")
+    return f"""<!-- phronia-hook-injected -->
 # Trellis Native {role.title()} Subagent
 
 You are the dispatched `{subagent_type}` role for this task. Perform that role
@@ -922,7 +939,7 @@ def _handle_codex_subagent_start(input_data: dict) -> None:
     single-session fallback is essential here: native starts must never borrow
     a task from another Codex window when that parent id is absent or stale.
     """
-    subagent_type = _codex_subagent_type(input_data)
+    subagent_type = _normalize_agent_type(_codex_subagent_type(input_data))
     parent_session_id = _string_value(input_data.get("session_id"))
     if not subagent_type or not parent_session_id:
         return
@@ -1115,6 +1132,7 @@ def main():
         sys.exit(0)
 
     subagent_type, original_prompt, tool_input = _parse_hook_input(input_data)
+    subagent_type = _normalize_agent_type(subagent_type)
     cwd = input_data.get("cwd", os.getcwd())
 
     # Only handle subagent types we care about

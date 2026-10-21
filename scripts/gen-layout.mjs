@@ -15,7 +15,7 @@ const REPO_ROOT = path.resolve(fileURLToPath(new URL("..", import.meta.url)));
 const CORE_LAYOUT = path.join(REPO_ROOT, "packages/core/dist/layout/index.js");
 const TARGET = path.join(
   REPO_ROOT,
-  "packages/cli/src/templates/trellis/scripts/common/layout.json",
+  "packages/cli/src/templates/workflow/scripts/common/layout.json",
 );
 const CHECK = process.argv.includes("--check");
 

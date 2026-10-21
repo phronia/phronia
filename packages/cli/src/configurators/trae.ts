@@ -17,7 +17,7 @@ import { getAllAgents, getSettingsTemplate } from "../templates/trae/index.js";
  * pull-based prelude to load context themselves.
  *
  *   .trae/
- *   ├── commands/      # Slash commands (trellis-*.md with frontmatter)
+ *   ├── commands/      # Slash commands (phronia-*.md with frontmatter)
  *   ├── skills/        # Skill definitions
  *   ├── agents/        # Sub-agent definitions with pull-based prelude
  *   ├── hooks/         # Shared Python hook scripts
@@ -26,7 +26,7 @@ import { getAllAgents, getSettingsTemplate } from "../templates/trae/index.js";
 export function collectTraeTemplates(): Map<string, string> {
   const files = collectBothTemplates(
     AI_TOOLS.trae.templateContext,
-    (n) => `.trae/commands/trellis-${n}.md`,
+    (n) => `.trae/commands/phronia-${n}.md`,
     ".trae/skills",
     (filePath, content) => {
       const name = path.basename(filePath, ".md");

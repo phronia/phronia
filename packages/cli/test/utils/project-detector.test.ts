@@ -66,7 +66,7 @@ describe("detectProjectType", () => {
   let tmpDir: string;
 
   beforeEach(() => {
-    tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), "trellis-detect-"));
+    tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), "phronia-detect-"));
   });
 
   afterEach(() => {
@@ -186,7 +186,7 @@ describe("detectMonorepo", () => {
   let tmpDir: string;
 
   beforeEach(() => {
-    tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), "trellis-monorepo-"));
+    tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), "phronia-monorepo-"));
   });
 
   afterEach(() => {
@@ -473,7 +473,7 @@ describe("detectMonorepo polyrepo fallback", () => {
   let tmpDir: string;
 
   beforeEach(() => {
-    tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), "trellis-poly-"));
+    tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), "phronia-poly-"));
   });
 
   afterEach(() => {

@@ -2,7 +2,7 @@
  * Integration tests for `task.py list` tree rendering (#402).
  *
  * The python script lives under
- * `src/templates/trellis/scripts/task.py` (+ `common/task_store.py` for
+ * `src/templates/workflow/scripts/task.py` (+ `common/task_store.py` for
  * `set-meta`); this test stamps the real templates into a fresh git repo
  * and exercises the actual `python3 task.py list` / `list --json` /
  * `create --meta` / `set-meta` paths.
@@ -16,7 +16,7 @@ import path from "node:path";
 
 const TEMPLATE_SCRIPTS = path.resolve(
   __dirname,
-  "../../src/templates/trellis/scripts",
+  "../../src/templates/workflow/scripts",
 );
 
 function hasPython(): boolean {
@@ -76,7 +76,7 @@ describe.skipIf(!hasPython())("task.py list tree view (#402)", () => {
   let tmp: string;
 
   beforeEach(() => {
-    tmp = fs.mkdtempSync(path.join(os.tmpdir(), "trellis-task-list-test-"));
+    tmp = fs.mkdtempSync(path.join(os.tmpdir(), "phronia-task-list-test-"));
     setupRepo(tmp);
   });
 

@@ -33,7 +33,7 @@
 </p>
 
 <p align="center">
-<img src="assets/trellis-demo-zh.gif" alt="Trellis 工作流演示" width="100%">
+<img src="assets/phronia-demo-zh.gif" alt="Trellis 工作流演示" width="100%">
 </p>
 
 ## 为什么用 Trellis？
@@ -72,17 +72,17 @@ trellis init --cursor --opencode --codex -u your-name
 
 1. **用自然语言描述你的需求。**
 2. **与 AI 一起头脑风暴**，一次只回答一个问题，直到 PRD 足够清晰，然后开始实现。
-3. **交由 AI 自主推进** —— AI 会调用 `trellis-implement` 编写代码，并自动依据 Spec、lint、type-check 与测试进行校验。
-4. **当工作完成或会话上下文接近上限时，输入 `/trellis:finish-work`**。Trellis 会归档任务并更新工作日志。
+3. **交由 AI 自主推进** —— AI 会调用 `phronia-implement` 编写代码，并自动依据 Spec、lint、type-check 与测试进行校验。
+4. **当工作完成或会话上下文接近上限时，输入 `/phronia:finish-work`**。Trellis 会归档任务并更新工作日志。
 
 ## 工作原理
 
 Trellis 内部运行一个 4 阶段循环，skill 与子代理均由系统自动调用：
 
-1. **Plan（规划）** —— `trellis-brainstorm` 逐题梳理需求并写入 `prd.md`；涉及资料调研的部分派发给 `trellis-research` 子代理处理。阶段产出为一组精选的 Spec 与研究文件，由 `implement.jsonl` / `check.jsonl` 编排。
-2. **Implement（实现）** —— `trellis-implement` 子代理依据 PRD 编写代码，所需上下文已按 `implement.jsonl` 自动注入，不会执行 git commit。
-3. **Verify（验证）** —— `trellis-check` 子代理基于 diff 对照 Spec 逐项核查，并运行 lint、type-check 与测试，在能力范围内自动修复。
-4. **Finish（收尾）** —— 执行最终检查后，`trellis-update-spec` 将本轮新增的认知沉淀回 `.phronia/spec/`，为下一次会话积累上下文。
+1. **Plan（规划）** —— `phronia-brainstorm` 逐题梳理需求并写入 `prd.md`；涉及资料调研的部分派发给 `phronia-research` 子代理处理。阶段产出为一组精选的 Spec 与研究文件，由 `implement.jsonl` / `check.jsonl` 编排。
+2. **Implement（实现）** —— `phronia-implement` 子代理依据 PRD 编写代码，所需上下文已按 `implement.jsonl` 自动注入，不会执行 git commit。
+3. **Verify（验证）** —— `phronia-check` 子代理基于 diff 对照 Spec 逐项核查，并运行 lint、type-check 与测试，在能力范围内自动修复。
+4. **Finish（收尾）** —— 执行最终检查后，`phronia-update-spec` 将本轮新增的认知沉淀回 `.phronia/spec/`，为下一次会话积累上下文。
 
 ## 资源
 

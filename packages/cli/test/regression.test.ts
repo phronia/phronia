@@ -56,7 +56,7 @@ import {
   commonGitContext,
   commonSessionContext,
   getAllScripts,
-} from "../src/templates/trellis/index.js";
+} from "../src/templates/workflow/index.js";
 import {
   collectPlatformTemplates,
   configurePlatform,
@@ -69,7 +69,7 @@ import {
   workspaceIndexContent,
 } from "../src/templates/markdown/index.js";
 import * as markdownExports from "../src/templates/markdown/index.js";
-import { TrellisContext } from "../src/templates/opencode/lib/trellis-context.js";
+import { TrellisContext } from "../src/templates/opencode/lib/phronia-context.js";
 
 afterEach(() => {
   clearManifestCache();
@@ -223,7 +223,7 @@ describe("regression: add_session.py runtime branch context (issue-106)", () => 
   let tmpDir: string;
 
   beforeEach(() => {
-    tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), "trellis-session-"));
+    tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), "phronia-session-"));
   });
 
   afterEach(() => {
@@ -598,7 +598,7 @@ describe("regression: resolve_task_dir containment chokepoint", () => {
   }
 
   beforeEach(() => {
-    tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), "trellis-task-escape-"));
+    tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), "phronia-task-escape-"));
     const scriptsDir = path.join(tmpDir, ".phronia", "scripts");
     for (const [relativePath, content] of getAllScripts()) {
       const absPath = path.join(scriptsDir, relativePath);
@@ -815,7 +815,7 @@ describe("regression: task lifecycle overwrite and collision safety", () => {
   }
 
   beforeEach(() => {
-    tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), "trellis-task-collision-"));
+    tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), "phronia-task-collision-"));
     const scriptsDir = path.join(tmpDir, ".phronia", "scripts");
     for (const [relativePath, content] of getAllScripts()) {
       const absPath = path.join(scriptsDir, relativePath);
@@ -1176,7 +1176,7 @@ describe("regression: JSON read/write failure reporting", () => {
   }
 
   beforeEach(() => {
-    tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), "trellis-task-json-io-"));
+    tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), "phronia-task-json-io-"));
     const scriptsDir = path.join(tmpDir, ".phronia", "scripts");
     for (const [relativePath, content] of getAllScripts()) {
       const absPath = path.join(scriptsDir, relativePath);
@@ -1710,7 +1710,7 @@ describe("regression: is_within_tasks_dir archive boundary (issue #428)", () => 
 
   beforeEach(() => {
     tmpDir = fs.mkdtempSync(
-      path.join(os.tmpdir(), "trellis-within-tasks-dir-"),
+      path.join(os.tmpdir(), "phronia-within-tasks-dir-"),
     );
     const scriptsDir = path.join(tmpDir, ".phronia", "scripts");
     for (const [relativePath, content] of getAllScripts()) {
@@ -1773,7 +1773,7 @@ describe("regression: write_json fd ownership and cleanup (issue #429)", () => {
   const pythonCmd = process.platform === "win32" ? "python" : "python3";
 
   beforeEach(() => {
-    tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), "trellis-write-json-"));
+    tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), "phronia-write-json-"));
     const scriptsDir = path.join(tmpDir, ".phronia", "scripts");
     for (const [relativePath, content] of getAllScripts()) {
       const absPath = path.join(scriptsDir, relativePath);
@@ -1911,7 +1911,7 @@ describe("regression: task auto-activation failure diagnostics (issue #430)", ()
   const pythonCmd = process.platform === "win32" ? "python" : "python3";
 
   beforeEach(() => {
-    tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), "trellis-task-activate-"));
+    tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), "phronia-task-activate-"));
     const scriptsDir = path.join(tmpDir, ".phronia", "scripts");
     for (const [relativePath, content] of getAllScripts()) {
       const absPath = path.join(scriptsDir, relativePath);
@@ -2188,9 +2188,9 @@ describe("regression: update only configured platforms (beta.16)", () => {
     expect(result.has(".opencode/plugins/session-start.js")).toBe(true);
     expect(result.has(".opencode/plugins/inject-workflow-state.js")).toBe(true);
     // Plus agents, lib, package.json, at least one command, at least one skill
-    expect(result.has(".opencode/agents/trellis-implement.md")).toBe(true);
+    expect(result.has(".opencode/agents/phronia-implement.md")).toBe(true);
     expect(result.has(".opencode/lib/context-visibility.js")).toBe(true);
-    expect(result.has(".opencode/lib/trellis-context.js")).toBe(true);
+    expect(result.has(".opencode/lib/phronia-context.js")).toBe(true);
     expect(result.has(".opencode/package.json")).toBe(true);
   });
 
@@ -2245,13 +2245,13 @@ describe("regression: shell to Python migration (beta.0)", () => {
     }
   });
 
-  it("[beta.3] getAllScripts covers every .py file in templates/trellis/scripts/", () => {
+  it("[beta.3] getAllScripts covers every .py file in templates/workflow/scripts/", () => {
     // Bug: update.ts had a hand-maintained file list that missed 11 scripts.
     // Fix: update.ts now uses getAllScripts() directly. This test ensures
     // getAllScripts() itself stays in sync with the filesystem.
     const scriptsDir = path.resolve(
       path.dirname(fileURLToPath(import.meta.url)),
-      "../src/templates/trellis/scripts",
+      "../src/templates/workflow/scripts",
     );
     const fsFiles = new Set<string>();
     function walk(dir: string, prefix: string) {
@@ -2347,7 +2347,7 @@ describe("regression: agent-session Trellis update hint", () => {
   const pythonCmd = process.platform === "win32" ? "python" : "python3";
 
   beforeEach(() => {
-    tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), "trellis-update-hint-"));
+    tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), "phronia-update-hint-"));
     const scriptsDir = path.join(tmpDir, ".phronia", "scripts");
     for (const [relativePath, content] of getAllScripts()) {
       const absPath = path.join(scriptsDir, relativePath);
@@ -2413,63 +2413,63 @@ describe("regression: agent-session Trellis update hint", () => {
   it("shows a concise update hint when trellis --version reports a newer version", () => {
     const output = runContextWithTrellisOutput(
       "0.5.0",
-      "Trellis update available: 0.5.0 → 0.5.9\nRun: trellis update\n0.5.9",
+      "Phronia update available: 0.5.0 → 0.5.9\nRun: trellis update\n0.5.9",
     );
 
-    expect(output).toContain("Trellis update available: 0.5.0 -> 0.5.9");
-    expect(output).toContain("run trellis update");
+    expect(output).toContain("Phronia update available: 0.5.0 -> 0.5.9");
+    expect(output).toContain("run phronia update");
     expect(output).not.toContain("run trellis upgrade");
     expect(output).toContain("SESSION CONTEXT");
   });
 
   it("does not show a hint when installed version is equal or newer", () => {
     expect(runContextWithTrellisOutput("0.5.9", "0.5.9")).not.toContain(
-      "Trellis update available",
+      "Phronia update available",
     );
     fs.rmSync(path.join(tmpDir, ".phronia", ".runtime"), {
       recursive: true,
       force: true,
     });
     expect(runContextWithTrellisOutput("0.6.0", "0.5.9")).not.toContain(
-      "Trellis update available",
+      "Phronia update available",
     );
   });
 
   it("silently skips the hint when trellis --version fails or version parsing fails", () => {
     expect(runContextWithTrellisOutput("0.5.0", null)).not.toContain(
-      "Trellis update available",
+      "Phronia update available",
     );
     fs.rmSync(path.join(tmpDir, ".phronia", ".runtime"), {
       recursive: true,
       force: true,
     });
     expect(runContextWithTrellisOutput("not-a-version", "0.5.9")).not.toContain(
-      "Trellis update available",
+      "Phronia update available",
     );
   });
 
   it("does not burn the once-per-session marker when version lookup fails", () => {
     expect(runContextWithTrellisOutput("0.5.0", null)).not.toContain(
-      "Trellis update available",
+      "Phronia update available",
     );
 
     const output = runContextWithTrellisOutput("0.5.0", "0.5.9");
 
-    expect(output).toContain("Trellis update available: 0.5.0 -> 0.5.9");
+    expect(output).toContain("Phronia update available: 0.5.0 -> 0.5.9");
   });
 
   it("uses the final trellis --version token when no update line is present", () => {
     const output = runContextWithTrellisOutput("0.5.0", "0.5.9");
 
-    expect(output).toContain("Trellis update available: 0.5.0 -> 0.5.9");
+    expect(output).toContain("Phronia update available: 0.5.0 -> 0.5.9");
   });
 
   it("only attempts the default text update hint once per session", () => {
     const first = runContextWithTrellisOutput("0.5.0", "0.5.9");
     const second = runContextWithTrellisOutput("0.5.0", "0.5.9");
 
-    expect(first).toContain("Trellis update available: 0.5.0 -> 0.5.9");
-    expect(second).not.toContain("Trellis update available");
+    expect(first).toContain("Phronia update available: 0.5.0 -> 0.5.9");
+    expect(second).not.toContain("Phronia update available");
     expect(
       fs.existsSync(
         path.join(
@@ -2510,7 +2510,7 @@ describe("regression: issue #252 polyrepo Git context", () => {
   const pythonCmd = process.platform === "win32" ? "python" : "python3";
 
   beforeEach(() => {
-    tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), "trellis-polyrepo-git-"));
+    tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), "phronia-polyrepo-git-"));
     const scriptsDir = path.join(tmpDir, ".phronia", "scripts");
     for (const [relativePath, content] of getAllScripts()) {
       const absPath = path.join(scriptsDir, relativePath);
@@ -2781,7 +2781,7 @@ describe("regression: current-task path normalization", () => {
     "Trellis SessionStart 已注入：workflow、当前任务状态、开发者身份、git 状态、active tasks、spec 索引已加载。";
 
   beforeEach(() => {
-    tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), "trellis-current-task-"));
+    tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), "phronia-current-task-"));
   });
 
   afterEach(() => {
@@ -3770,7 +3770,7 @@ from common.cli_adapter import CLIAdapter, detect_platform
 adapter = CLIAdapter("grok")
 print(json.dumps({
     "config_dir_name": adapter.config_dir_name,
-    "commands_path": adapter.get_commands_path(root, "trellis", "start.md").relative_to(root).as_posix(),
+    "commands_path": adapter.get_commands_path(root, "phronia", "start.md").relative_to(root).as_posix(),
     "command_path": adapter.get_trellis_command_path("start"),
     "run": adapter.build_run_command("implement", "test prompt"),
     "resume": adapter.build_resume_command("ignored-session-id"),
@@ -3786,8 +3786,8 @@ print(json.dumps({
     expect(result.status, result.stderr).toBe(0);
     expect(JSON.parse(result.stdout)).toEqual({
       config_dir_name: ".grok",
-      commands_path: ".grok/commands/trellis-start.md",
-      command_path: ".grok/commands/trellis-start.md",
+      commands_path: ".grok/commands/phronia-start.md",
+      command_path: ".grok/commands/phronia-start.md",
       run: ["grok", "-p", "test prompt", "--yolo"],
       resume: ["grok", "-c"],
       detected: "grok",
@@ -3809,7 +3809,7 @@ from common.cli_adapter import CLIAdapter, detect_platform
 adapter = CLIAdapter("kimi")
 print(json.dumps({
     "config_dir_name": adapter.config_dir_name,
-    "commands_path": adapter.get_commands_path(root, "trellis", "start.md").relative_to(root).as_posix(),
+    "commands_path": adapter.get_commands_path(root, "phronia", "start.md").relative_to(root).as_posix(),
     "command_path": adapter.get_trellis_command_path("start"),
     "run": adapter.build_run_command("implement", "test prompt"),
     "resume": adapter.build_resume_command("session-abc"),
@@ -3825,8 +3825,8 @@ print(json.dumps({
     expect(result.status, result.stderr).toBe(0);
     expect(JSON.parse(result.stdout)).toEqual({
       config_dir_name: ".kimi-code",
-      commands_path: ".kimi-code/skills/trellis-start/SKILL.md",
-      command_path: ".kimi-code/skills/trellis-start/SKILL.md",
+      commands_path: ".kimi-code/skills/phronia-start/SKILL.md",
+      command_path: ".kimi-code/skills/phronia-start/SKILL.md",
       run: ["kimi", "-p", "test prompt", "--yolo"],
       resume: ["kimi", "--session", "session-abc"],
       detected: "kimi",
@@ -4679,7 +4679,7 @@ print(json.dumps({
 
   // ---------------------------------------------------------------------
   // SessionStart update reminder. `_get_update_hint` (now public as
-  // `get_update_hint`) computed "Trellis update available: X -> Y, run trellis
+  // `get_update_hint`) computed "Phronia update available: X -> Y, run trellis
   // update" for months, but its only caller was `output_text()` — the
   // get_context.py text path. The hook
   // built its own payload and never went through it, so on hook-driven
@@ -4691,7 +4691,7 @@ print(json.dumps({
   //
   // The fake `trellis` CLI below is a shell script on PATH. Windows
   // CreateProcess resolves a bare command name against .exe only, so
-  // subprocess.run(["trellis", ...]) would never find a .bat/.cmd shim —
+  // subprocess.run(["phronia", ...]) would never find a .bat/.cmd shim —
   // those cases skip there.
   // ---------------------------------------------------------------------
 
@@ -4700,17 +4700,17 @@ print(json.dumps({
   function writeFakeTrellisCli(body: string): NodeJS.ProcessEnv {
     const binDir = path.join(tmpDir, "fake-bin");
     fs.mkdirSync(binDir, { recursive: true });
-    const shimPath = path.join(binDir, "trellis");
+    const shimPath = path.join(binDir, "phronia");
     fs.writeFileSync(shimPath, `#!/bin/sh\n${body}`, "utf-8");
     fs.chmodSync(shimPath, 0o755);
     return {
       PATH: `${binDir}${path.delimiter}${process.env.PATH ?? ""}`,
-      PHRONIA_FAKE_CALL_LOG: path.join(tmpDir, "trellis-calls.log"),
+      PHRONIA_FAKE_CALL_LOG: path.join(tmpDir, "phronia-calls.log"),
     };
   }
 
   function trellisCliCallCount(): number {
-    const callLog = path.join(tmpDir, "trellis-calls.log");
+    const callLog = path.join(tmpDir, "phronia-calls.log");
     if (!fs.existsSync(callLog)) {
       return 0;
     }
@@ -4792,7 +4792,7 @@ print(json.dumps({
       // Inside the notice, not merely somewhere in the payload: a hint the
       // assistant is not told to say out loud never reaches the maintainer.
       expect(firstReplyNotice(context)).toContain(
-        "Trellis update available: 0.5.0 -> 0.5.9, run trellis update",
+        "Phronia update available: 0.5.0 -> 0.5.9, run phronia update",
       );
       expect(firstReplyNotice(context)).toContain(
         "on its own line in that same reply",
@@ -4815,7 +4815,7 @@ print(json.dumps({
       writeProjectFile(path.join(".phronia", ".version"), "0.6.0\n");
       const upToDate = sessionStartContext("update-current", fakeCli);
 
-      expect(baseline).not.toContain("Trellis update available");
+      expect(baseline).not.toContain("Phronia update available");
       expect(firstReplyNotice(upToDate)).toBe(NOTICE_WITHOUT_UPDATE_HINT);
       expect(upToDate).toBe(baseline);
     },
@@ -4833,8 +4833,8 @@ print(json.dumps({
       // SessionStart also fires on clear/compact within the same session.
       const second = sessionStartContext("update-marker", fakeCli);
 
-      expect(first).toContain("Trellis update available: 0.5.0 -> 0.5.9");
-      expect(second).not.toContain("Trellis update available");
+      expect(first).toContain("Phronia update available: 0.5.0 -> 0.5.9");
+      expect(second).not.toContain("Phronia update available");
       expect(trellisCliCallCount()).toBe(1);
       // The marker is keyed by the identity the hook resolved from stdin, not
       // by session_context's TERM_SESSION_ID / ppid fallback — the latter is a
@@ -4863,7 +4863,7 @@ print(json.dumps({
       const afterTimeout = sessionStartContext("update-hang", hanging);
 
       for (const context of [afterFailure, afterTimeout]) {
-        expect(context).not.toContain("Trellis update available");
+        expect(context).not.toContain("Phronia update available");
         expect(context).toContain("<first-reply-notice>");
         expect(context).toContain("<task-status>");
       }
@@ -4883,7 +4883,7 @@ print(json.dumps({
 
     const context = sessionStartContext("update-unreadable");
 
-    expect(context).not.toContain("Trellis update available");
+    expect(context).not.toContain("Phronia update available");
     expect(context).toContain("<first-reply-notice>");
     expect(context).toContain("<task-status>");
   });
@@ -5311,7 +5311,7 @@ print(json.dumps({
           prompt: unicodePrompt,
           subagent_type: {
             custom: {
-              name: "trellis-implement",
+              name: "phronia-implement",
             },
           },
         },
@@ -5393,7 +5393,7 @@ print(json.dumps({
         tool_name: "task",
         tool_input: {
           prompt: unicodePrompt,
-          subagent_name: "trellis-implement",
+          subagent_name: "phronia-implement",
         },
         session_id: "parent-a",
         cwd: tmpDir,
@@ -5498,7 +5498,7 @@ print(json.dumps({
       hookPath,
       JSON.stringify({
         hook_event_name: "SubagentStart",
-        agent_type: "trellis-implement",
+        agent_type: "phronia-implement",
         session_id: "parent-a",
         cwd: tmpDir,
       }),
@@ -5512,9 +5512,9 @@ print(json.dumps({
     const context = parsed.hookSpecificOutput?.additionalContext ?? "";
 
     expect(parsed.hookSpecificOutput?.hookEventName).toBe("SubagentStart");
-    expect(context).toContain("<!-- trellis-hook-injected -->");
+    expect(context).toContain("<!-- phronia-hook-injected -->");
     expect(context).toContain("Trellis Native Implement Subagent");
-    expect(context).toContain("`trellis-implement` role");
+    expect(context).toContain("`phronia-implement` role");
     expect(context).toContain("Active task: .phronia/tasks/issue-106");
     expect(context).toContain("TOKEN_CODEX_IMPLEMENT");
     expect(context).toContain("TOKEN_CODEX_DESIGN");
@@ -5560,8 +5560,8 @@ print(json.dumps({
     );
 
     for (const [agentType, curatedToken] of [
-      ["trellis-implement", "TOKEN_IMPLEMENT_ORDER"],
-      ["trellis-check", "TOKEN_CHECK_ORDER"],
+      ["phronia-implement", "TOKEN_IMPLEMENT_ORDER"],
+      ["phronia-check", "TOKEN_CHECK_ORDER"],
     ] as const) {
       const output = runPython(
         hookPath,
@@ -5620,7 +5620,7 @@ print(json.dumps({
       hookPath,
       JSON.stringify({
         hook_event_name: "SubagentStart",
-        agent_type: "trellis-research",
+        agent_type: "phronia-research",
         session_id: "research-parent",
         cwd: tmpDir,
       }),
@@ -5659,7 +5659,7 @@ print(json.dumps({
         hookPath,
         JSON.stringify({
           hook_event_name: "SubagentStart",
-          agent_type: "trellis-implement",
+          agent_type: "phronia-implement",
           session_id: sessionId,
           cwd: tmpDir,
         }),
@@ -5708,7 +5708,7 @@ print(json.dumps({
         hookPath,
         JSON.stringify({
           hook_event_name: "SubagentStart",
-          agent_type: "trellis-implement",
+          agent_type: "phronia-implement",
           session_id: sessionId,
           cwd: tmpDir,
         }),
@@ -6000,7 +6000,7 @@ print(json.dumps({
         ctx.indexOf("<current-state>"),
       );
       expect(ctx).toContain("<current-state>");
-      expect(ctx).toContain("<trellis-workflow>");
+      expect(ctx).toContain("<phronia-workflow>");
       expect(ctx).toContain("<guidelines>");
       expect(ctx).toContain("<task-status>");
       expect(ctx).not.toContain("say once in Chinese");
@@ -6116,7 +6116,7 @@ print(json.dumps({
     expect(rawOutput).toContain("load details on demand");
   });
 
-  it("[trellis-hooks-env] runtime: shared hooks emit no additionalContext when PHRONIA_HOOKS=0", () => {
+  it("[phronia-hooks-env] runtime: shared hooks emit no additionalContext when PHRONIA_HOOKS=0", () => {
     setupTaskRepo();
     writeSessionContext("claude_session-a", ".phronia/tasks/issue-106");
 
@@ -6474,7 +6474,7 @@ print(json.dumps({
     );
     // Hardcoded fallback wording must NOT appear post-R5
     expect(parsed.hookSpecificOutput.additionalContext).not.toContain(
-      "trellis-implement → trellis-check",
+      "phronia-implement → phronia-check",
     );
   });
 
@@ -6487,7 +6487,7 @@ print(json.dumps({
     // regressions that omit Phase 3.4 from the per-turn breadcrumb.
     writeWorkflowMd(
       "[workflow-state:in_progress]\n" +
-        "Flow: trellis-implement → trellis-check → trellis-update-spec → commit (Phase 3.4) → /trellis:finish-work\n" +
+        "Flow: phronia-implement → phronia-check → phronia-update-spec → commit (Phase 3.4) → /phronia:finish-work\n" +
         "[/workflow-state:in_progress]\n",
     );
 
@@ -6514,7 +6514,7 @@ print(json.dumps({
       "CUSTOM BODY from workflow.md",
     );
     expect(parsed.hookSpecificOutput.additionalContext).not.toContain(
-      "trellis-implement → trellis-check",
+      "phronia-implement → phronia-check",
     );
   });
 
@@ -6608,11 +6608,11 @@ print(json.dumps({
     writeProjectFile(path.join(".phronia", ".developer"), "name=test\n");
     // Post-R5: breadcrumb body is read exclusively from workflow.md tag
     // blocks. Provide a minimal no_task tag so the test can assert the
-    // routing to trellis-brainstorm content surfaces.
+    // routing to phronia-brainstorm content surfaces.
     writeProjectFile(
       path.join(".phronia", "workflow.md"),
       "[workflow-state:no_task]\n" +
-        "No active task. Load `trellis-brainstorm` skill to start.\n" +
+        "No active task. Load `phronia-brainstorm` skill to start.\n" +
         "[/workflow-state:no_task]\n",
     );
     writeLegacyCurrentTask(".phronia/tasks/issue-106");
@@ -6627,7 +6627,7 @@ print(json.dumps({
       "Status: no_task",
     );
     expect(parsed.hookSpecificOutput.additionalContext).toContain(
-      "trellis-brainstorm",
+      "phronia-brainstorm",
     );
   });
 
@@ -6746,7 +6746,7 @@ print(json.dumps({
     // Now .phronia/ exists only as a parent for the hook script — need to move
     // the hook out of .phronia/ so root-finding fails. Use a fully separate dir.
     const nonTrellisDir = fs.mkdtempSync(
-      path.join(os.tmpdir(), "non-trellis-"),
+      path.join(os.tmpdir(), "non-phronia-"),
     );
     try {
       const hookPath = path.join(nonTrellisDir, "hook.py");
@@ -6995,7 +6995,7 @@ print(json.dumps({
     fs.mkdirSync(path.join(tmpDir, ".codex"), { recursive: true });
     writeProjectFile(
       path.join(".phronia", "config.yaml"),
-      "codex:\n  dispatch_mode: sub-agent  # opt into trellis-* sub-agents\n",
+      "codex:\n  dispatch_mode: sub-agent  # opt into phronia-* sub-agents\n",
     );
     const taskScriptPath = path.join(tmpDir, ".phronia", "scripts", "task.py");
     execSync(
@@ -7385,7 +7385,7 @@ print(len(entries))
       "..",
       "src",
       "templates",
-      "trellis",
+      "workflow",
       "workflow.md",
     );
     return readFileSync(templatePath, "utf-8");
@@ -7409,26 +7409,26 @@ print(len(entries))
       "templates",
     );
     const agentFiles = [
-      "claude/agents/trellis-implement.md",
-      "claude/agents/trellis-check.md",
-      "codebuddy/agents/trellis-implement.md",
-      "codebuddy/agents/trellis-check.md",
-      "codex/agents/trellis-implement.toml",
-      "codex/agents/trellis-check.toml",
-      "cursor/agents/trellis-implement.md",
-      "cursor/agents/trellis-check.md",
-      "gemini/agents/trellis-implement.md",
-      "gemini/agents/trellis-check.md",
-      "kiro/agents/trellis-implement.json",
-      "kiro/agents/trellis-check.json",
-      "opencode/agents/trellis-implement.md",
-      "opencode/agents/trellis-check.md",
-      "pi/agents/trellis-implement.md",
-      "pi/agents/trellis-check.md",
-      "qoder/agents/trellis-implement.md",
-      "qoder/agents/trellis-check.md",
-      "kimi/agents/trellis-implement.md",
-      "kimi/agents/trellis-check.md",
+      "claude/agents/phronia-implement.md",
+      "claude/agents/phronia-check.md",
+      "codebuddy/agents/phronia-implement.md",
+      "codebuddy/agents/phronia-check.md",
+      "codex/agents/phronia-implement.toml",
+      "codex/agents/phronia-check.toml",
+      "cursor/agents/phronia-implement.md",
+      "cursor/agents/phronia-check.md",
+      "gemini/agents/phronia-implement.md",
+      "gemini/agents/phronia-check.md",
+      "kiro/agents/phronia-implement.json",
+      "kiro/agents/phronia-check.json",
+      "opencode/agents/phronia-implement.md",
+      "opencode/agents/phronia-check.md",
+      "pi/agents/phronia-implement.md",
+      "pi/agents/phronia-check.md",
+      "qoder/agents/phronia-implement.md",
+      "qoder/agents/phronia-check.md",
+      "kimi/agents/phronia-implement.md",
+      "kimi/agents/phronia-check.md",
     ];
 
     for (const relativePath of agentFiles) {
@@ -7452,18 +7452,18 @@ print(len(entries))
         expect(
           content,
           `${relativePath} should forbid nested implement`,
-        ).toContain("spawn another `trellis-implement`");
+        ).toContain("spawn another `phronia-implement`");
         expect(content, `${relativePath} should forbid nested check`).toContain(
-          "`trellis-check`",
+          "`phronia-check`",
         );
       } else {
         expect(content, `${relativePath} should forbid nested check`).toContain(
-          "spawn another `trellis-check`",
+          "spawn another `phronia-check`",
         );
         expect(
           content,
           `${relativePath} should forbid nested implement`,
-        ).toContain("`trellis-implement`");
+        ).toContain("`phronia-implement`");
       }
     }
   });
@@ -7480,9 +7480,9 @@ print(len(entries))
       "templates",
     );
     const codexAgentFiles = [
-      "codex/agents/trellis-implement.toml",
-      "codex/agents/trellis-check.toml",
-      "codex/agents/trellis-research.toml",
+      "codex/agents/phronia-implement.toml",
+      "codex/agents/phronia-check.toml",
+      "codex/agents/phronia-research.toml",
     ];
 
     for (const relativePath of codexAgentFiles) {
@@ -7490,7 +7490,7 @@ print(len(entries))
         path.join(templateRoot, relativePath),
         "utf-8",
       );
-      const roleGuard = relativePath.endsWith("trellis-research.toml")
+      const roleGuard = relativePath.endsWith("phronia-research.toml")
         ? "research is role-isolated"
         : "MUST NOT spawn another";
       expect(content, `${relativePath} should retain a role guard`).toContain(
@@ -7690,7 +7690,7 @@ print(len(entries))
       templateWorkflowMd(),
     );
     // Codex defaults to inline since 0.5.9; opt into sub-agent dispatch
-    // explicitly so the legacy spawn-trellis-implement block surfaces.
+    // explicitly so the legacy spawn-phronia-implement block surfaces.
     writeConfigYaml("codex:\n  dispatch_mode: sub-agent\n");
 
     const contextScript = path.join(
@@ -7704,9 +7704,9 @@ print(len(entries))
       { cwd: tmpDir, encoding: "utf-8" },
     );
 
-    expect(output).toContain("trellis-implement");
+    expect(output).toContain("phronia-implement");
     expect(output).not.toContain(
-      "| About to write code / start implementing | trellis-before-dev |",
+      "| About to write code / start implementing | phronia-before-dev |",
     );
     expect(output).not.toContain("before-dev takes under a minute");
   });
@@ -7730,10 +7730,10 @@ print(len(entries))
       { cwd: tmpDir, encoding: "utf-8" },
     );
 
-    expect(output).toContain("trellis-implement");
+    expect(output).toContain("phronia-implement");
     expect(output).toContain("implement.jsonl");
     expect(output).not.toContain(
-      "| About to write code / start implementing | trellis-before-dev |",
+      "| About to write code / start implementing | phronia-before-dev |",
     );
     expect(output).not.toContain("before-dev takes under a minute");
   });
@@ -7763,7 +7763,7 @@ print(len(entries))
     expect(output).not.toContain(
       "The pull-based sub-agent definition auto-handles",
     );
-    expect(output).not.toContain("Load the `trellis-before-dev` skill");
+    expect(output).not.toContain("Load the `phronia-before-dev` skill");
   });
 
   it("[pi] step 2.1 describes extension-backed sub-agent context path", () => {
@@ -7788,12 +7788,12 @@ print(len(entries))
     expect(output).toContain("The platform hook/plugin auto-handles");
     expect(output).toContain("Reads `implement.jsonl`");
     expect(output).not.toContain("The Codex sub-agent definition auto-handles");
-    expect(output).not.toContain("Load the `trellis-before-dev` skill");
+    expect(output).not.toContain("Load the `phronia-before-dev` skill");
   });
 
-  it("[workflow-v2] --mode phase --platform kilo keeps trellis-before-dev routing (agent-less path)", () => {
+  it("[workflow-v2] --mode phase --platform kilo keeps phronia-before-dev routing (agent-less path)", () => {
     // Symmetric to the codex filter test: agent-less platforms MUST still
-    // see `trellis-before-dev` because they write code in the main session.
+    // see `phronia-before-dev` because they write code in the main session.
     writeTrellisScripts();
     writeProjectFile(path.join(".phronia", ".developer"), "name=test\n");
     writeProjectFile(
@@ -7812,15 +7812,15 @@ print(len(entries))
       { cwd: tmpDir, encoding: "utf-8" },
     );
 
-    expect(output).toContain("`trellis-before-dev`");
-    expect(output).not.toContain("Dispatch the `trellis-implement` sub-agent");
+    expect(output).toContain("`phronia-before-dev`");
+    expect(output).not.toContain("Dispatch the `phronia-implement` sub-agent");
   });
 
   // ------------------------------------------------------------
-  // session-start.py <trellis-workflow> + <guidelines> compact context
+  // session-start.py <phronia-workflow> + <guidelines> compact context
   // ------------------------------------------------------------
 
-  it("[workflow-v2] session-start.py <trellis-workflow> block contains compact Phase Index", () => {
+  it("[workflow-v2] session-start.py <phronia-workflow> block contains compact Phase Index", () => {
     writeTrellisScripts();
     writeProjectFile(path.join(".phronia", ".developer"), "name=test\n");
     writeProjectFile(
@@ -7841,7 +7841,7 @@ print(len(entries))
     const ctx = payload.hookSpecificOutput.additionalContext;
 
     const workflowMatch =
-      /<trellis-workflow>([\s\S]*?)<\/trellis-workflow>/.exec(ctx);
+      /<phronia-workflow>([\s\S]*?)<\/phronia-workflow>/.exec(ctx);
     if (!workflowMatch) throw new Error("workflow block not found in payload");
     const workflowBlock = workflowMatch[1];
 
@@ -7959,7 +7959,7 @@ print(len(entries))
     const input = JSON.stringify({
       tool_name: "Task",
       tool_input: {
-        subagent_type: "trellis-implement",
+        subagent_type: "phronia-implement",
         prompt: "do work",
       },
       cwd: tmpDir,
@@ -8018,10 +8018,10 @@ print(len(entries))
     writeProjectFile(
       path.join(".phronia", "workflow.md"),
       "[workflow-state:in_progress]\n" +
-        "DISPATCH the trellis-implement / trellis-check sub-agents.\n" +
+        "DISPATCH the phronia-implement / phronia-check sub-agents.\n" +
         "[/workflow-state:in_progress]\n" +
         "[workflow-state:in_progress-inline]\n" +
-        "MAIN SESSION edits code via trellis-before-dev directly.\n" +
+        "MAIN SESSION edits code via phronia-before-dev directly.\n" +
         "[/workflow-state:in_progress-inline]\n",
     );
 
@@ -8032,7 +8032,7 @@ print(len(entries))
       ),
     ) as { hookSpecificOutput: { additionalContext: string } };
     const ctx = parsed.hookSpecificOutput.additionalContext;
-    expect(ctx).toContain("DISPATCH the trellis-implement");
+    expect(ctx).toContain("DISPATCH the phronia-implement");
     expect(ctx).not.toContain("MAIN SESSION edits code");
   });
 
@@ -8043,10 +8043,10 @@ print(len(entries))
     writeProjectFile(
       path.join(".phronia", "workflow.md"),
       "[workflow-state:in_progress]\n" +
-        "DISPATCH the trellis-implement / trellis-check sub-agents.\n" +
+        "DISPATCH the phronia-implement / phronia-check sub-agents.\n" +
         "[/workflow-state:in_progress]\n" +
         "[workflow-state:in_progress-inline]\n" +
-        "MAIN SESSION edits code via trellis-before-dev directly.\n" +
+        "MAIN SESSION edits code via phronia-before-dev directly.\n" +
         "[/workflow-state:in_progress-inline]\n",
     );
     writeConfigYaml("codex:\n  dispatch_mode: sub-agent\n");
@@ -8058,7 +8058,7 @@ print(len(entries))
       ),
     ) as { hookSpecificOutput: { additionalContext: string } };
     const ctx = parsed.hookSpecificOutput.additionalContext;
-    expect(ctx).toContain("DISPATCH the trellis-implement");
+    expect(ctx).toContain("DISPATCH the phronia-implement");
     expect(ctx).not.toContain("MAIN SESSION edits code");
   });
 
@@ -8069,10 +8069,10 @@ print(len(entries))
     writeProjectFile(
       path.join(".phronia", "workflow.md"),
       "[workflow-state:in_progress]\n" +
-        "DISPATCH the trellis-implement / trellis-check sub-agents.\n" +
+        "DISPATCH the phronia-implement / phronia-check sub-agents.\n" +
         "[/workflow-state:in_progress]\n" +
         "[workflow-state:in_progress-inline]\n" +
-        "MAIN SESSION edits code via trellis-before-dev directly.\n" +
+        "MAIN SESSION edits code via phronia-before-dev directly.\n" +
         "[/workflow-state:in_progress-inline]\n",
     );
     writeConfigYaml("codex:\n  dispatch_mode: inline\n");
@@ -8085,8 +8085,8 @@ print(len(entries))
     ) as { hookSpecificOutput: { additionalContext: string } };
     const ctx = parsed.hookSpecificOutput.additionalContext;
     expect(ctx).toContain("MAIN SESSION edits code");
-    expect(ctx).toContain("trellis-before-dev");
-    expect(ctx).not.toContain("DISPATCH the trellis-implement");
+    expect(ctx).toContain("phronia-before-dev");
+    expect(ctx).not.toContain("DISPATCH the phronia-implement");
   });
 
   it("[issue-codex-dispatch-mode] non-codex platform ignores codex.dispatch_mode=inline", () => {
@@ -8105,10 +8105,10 @@ print(len(entries))
     writeProjectFile(
       path.join(".phronia", "workflow.md"),
       "[workflow-state:in_progress]\n" +
-        "DISPATCH the trellis-implement / trellis-check sub-agents.\n" +
+        "DISPATCH the phronia-implement / phronia-check sub-agents.\n" +
         "[/workflow-state:in_progress]\n" +
         "[workflow-state:in_progress-inline]\n" +
-        "MAIN SESSION edits code via trellis-before-dev directly.\n" +
+        "MAIN SESSION edits code via phronia-before-dev directly.\n" +
         "[/workflow-state:in_progress-inline]\n",
     );
     writeConfigYaml("codex:\n  dispatch_mode: inline\n");
@@ -8120,7 +8120,7 @@ print(len(entries))
       ),
     ) as { hookSpecificOutput: { additionalContext: string } };
     const ctx = parsed.hookSpecificOutput.additionalContext;
-    expect(ctx).toContain("DISPATCH the trellis-implement");
+    expect(ctx).toContain("DISPATCH the phronia-implement");
     expect(ctx).not.toContain("MAIN SESSION edits code");
   });
 
@@ -8145,8 +8145,8 @@ print(len(entries))
     );
 
     // The [Kilo, Antigravity, Devin] inline block content surfaces:
-    // it tells the main session to load trellis-before-dev directly.
-    expect(output).toContain("trellis-before-dev");
+    // it tells the main session to load phronia-before-dev directly.
+    expect(output).toContain("phronia-before-dev");
     expect(output).toContain("Read `{TASK_DIR}/prd.md`");
     // The Codex sub-agent dispatch text must NOT surface in inline mode.
     expect(output).not.toMatch(/Active task: <task path>/);
@@ -8312,7 +8312,7 @@ print(len(entries))
     );
     writeProjectFile(
       path.join(".phronia", "workflow.md"),
-      "[workflow-state:in_progress]\nDISPATCH the trellis-implement.\n[/workflow-state:in_progress]\n[workflow-state:in_progress-inline]\nMAIN SESSION inline edit.\n[/workflow-state:in_progress-inline]\n",
+      "[workflow-state:in_progress]\nDISPATCH the phronia-implement.\n[/workflow-state:in_progress]\n[workflow-state:in_progress-inline]\nMAIN SESSION inline edit.\n[/workflow-state:in_progress-inline]\n",
     );
 
     // Default (no config.yaml) → native auto-dispatch banner.
@@ -8354,7 +8354,7 @@ print(len(entries))
     );
     writeProjectFile(
       path.join(".phronia", "workflow.md"),
-      "[workflow-state:in_progress]\nDISPATCH the trellis-implement.\n[/workflow-state:in_progress]\n",
+      "[workflow-state:in_progress]\nDISPATCH the phronia-implement.\n[/workflow-state:in_progress]\n",
     );
     writeConfigYaml("codex:\n  dispatch_mode: inline\n");
 
@@ -8984,7 +8984,7 @@ describe("regression: platform additions (beta.9, beta.13, beta.16)", () => {
     expect(AI_TOOLS.grok.hasPythonHooks).toBe(false);
     expect(AI_TOOLS.grok.templateContext.agentCapable).toBe(true);
     expect(AI_TOOLS.grok.templateContext.hasHooks).toBe(false);
-    expect(AI_TOOLS.grok.templateContext.cmdRefPrefix).toBe("/trellis-");
+    expect(AI_TOOLS.grok.templateContext.cmdRefPrefix).toBe("/phronia-");
   });
 
   it("[kimi] Kimi Code platform is registered as pull-based class-2", () => {
@@ -8996,7 +8996,7 @@ describe("regression: platform additions (beta.9, beta.13, beta.16)", () => {
     expect(AI_TOOLS.kimi.hasPythonHooks).toBe(false);
     expect(AI_TOOLS.kimi.templateContext.agentCapable).toBe(true);
     expect(AI_TOOLS.kimi.templateContext.hasHooks).toBe(false);
-    expect(AI_TOOLS.kimi.templateContext.cmdRefPrefix).toBe("/skill:trellis-");
+    expect(AI_TOOLS.kimi.templateContext.cmdRefPrefix).toBe("/skill:phronia-");
   });
 
   it("[beta.9] all platforms have consistent required fields", () => {
@@ -9078,7 +9078,7 @@ describe("regression: cli_adapter platform support (beta.9, beta.13, beta.16)", 
     expect(commonCliAdapter).toContain('cmd = ["pi", "-p", prompt]');
     expect(commonCliAdapter).toContain('return ["pi", "-c", session_id]');
     expect(commonCliAdapter).toContain(
-      'return f".pi/prompts/trellis-{name}.md"',
+      'return f".pi/prompts/phronia-{name}.md"',
     );
   });
 
@@ -9090,7 +9090,7 @@ describe("regression: cli_adapter platform support (beta.9, beta.13, beta.16)", 
   it("[grok] cli_adapter.py supports grok platform", () => {
     expect(commonCliAdapter).toContain('"grok"');
     expect(commonCliAdapter).toContain(".grok");
-    // omp and grok share one branch for the trellis-command path (see the
+    // omp and grok share one branch for the phronia-command path (see the
     // Python-execution test above for the resolved ".grok/commands/..." path).
     expect(commonCliAdapter).toContain(
       'elif self.platform in ("omp", "grok"):',
@@ -9110,7 +9110,7 @@ describe("regression: cli_adapter platform support (beta.9, beta.13, beta.16)", 
       'return ["kimi", "--session", session_id]',
     );
     expect(commonCliAdapter).toContain(
-      'return f".kimi-code/skills/trellis-{name}/SKILL.md"',
+      'return f".kimi-code/skills/phronia-{name}/SKILL.md"',
     );
   });
 
@@ -9124,13 +9124,13 @@ describe("regression: cli_adapter platform support (beta.9, beta.13, beta.16)", 
     expect(commonCliAdapter).toContain('elif self.platform == "droid":');
     expect(commonCliAdapter).toContain('return "droid"');
     expect(commonCliAdapter).toContain(
-      'return f".factory/commands/trellis/{name}.md"',
+      'return f".factory/commands/phronia/{name}.md"',
     );
   });
 
   it("[droid] cli_adapter.py has explicit droid branches in all key methods", () => {
     expect(commonCliAdapter).toMatch(
-      /def get_trellis_command_path[\s\S]*?elif self\.platform == "droid":[\s\S]*?\.factory\/commands\/trellis\//,
+      /def get_trellis_command_path[\s\S]*?elif self\.platform == "droid":[\s\S]*?\.factory\/commands\/phronia\//,
     );
     expect(commonCliAdapter).toMatch(
       /def get_non_interactive_env[\s\S]*?elif self\.platform == "droid":[\s\S]*?return \{\}/,
@@ -9158,23 +9158,23 @@ describe("regression: cli_adapter platform support (beta.9, beta.13, beta.16)", 
   });
 
   // Regression for 04-22-migrate-flow-bugs Bug A: codex/kiro branches of
-  // get_trellis_command_path were missing the `trellis-` prefix that
+  // get_trellis_command_path were missing the `phronia-` prefix that
   // 0.5.0-beta.0 introduced via 60+ rename manifest entries. Without the
   // prefix, any caller that built skill paths via get_trellis_command_path
   // (add-context, check agent prelude, etc.) would produce paths that don't
   // resolve to any real skill file.
-  it("[migrate-flow-bugs] get_trellis_command_path codex branch uses trellis- prefix", () => {
+  it("[migrate-flow-bugs] get_trellis_command_path codex branch uses phronia- prefix", () => {
     expect(commonCliAdapter).toMatch(
-      /def get_trellis_command_path[\s\S]*?elif self\.platform == "codex":[\s\S]*?return f"\.agents\/skills\/trellis-\{name\}\/SKILL\.md"/,
+      /def get_trellis_command_path[\s\S]*?elif self\.platform == "codex":[\s\S]*?return f"\.agents\/skills\/phronia-\{name\}\/SKILL\.md"/,
     );
     expect(commonCliAdapter).not.toMatch(
       /def get_trellis_command_path[\s\S]*?elif self\.platform == "codex":[\s\S]*?return f"\.agents\/skills\/\{name\}\/SKILL\.md"/,
     );
   });
 
-  it("[migrate-flow-bugs] get_trellis_command_path kiro branch uses trellis- prefix", () => {
+  it("[migrate-flow-bugs] get_trellis_command_path kiro branch uses phronia- prefix", () => {
     expect(commonCliAdapter).toMatch(
-      /def get_trellis_command_path[\s\S]*?elif self\.platform == "kiro":[\s\S]*?return f"\.kiro\/skills\/trellis-\{name\}\/SKILL\.md"/,
+      /def get_trellis_command_path[\s\S]*?elif self\.platform == "kiro":[\s\S]*?return f"\.kiro\/skills\/phronia-\{name\}\/SKILL\.md"/,
     );
     expect(commonCliAdapter).not.toMatch(
       /def get_trellis_command_path[\s\S]*?elif self\.platform == "kiro":[\s\S]*?return f"\.kiro\/skills\/\{name\}\/SKILL\.md"/,
@@ -9202,7 +9202,7 @@ describe("regression: cli_adapter platform support (beta.9, beta.13, beta.16)", 
   });
 
   it("[migrate-flow-bugs] detect_platform has codex shared-skills fallback guarded by no-other-platform-dir check", () => {
-    // Fallback fires when .agents/skills/trellis-* exists AND no other
+    // Fallback fires when .agents/skills/phronia-* exists AND no other
     // platform dir is present. Guard is essential — .agents/skills/ can
     // legitimately coexist with .claude (claude user + shared layer for
     // other agents) and must not trigger codex in that case.
@@ -9212,7 +9212,7 @@ describe("regression: cli_adapter platform support (beta.9, beta.13, beta.16)", 
     expect(commonCliAdapter).toMatch(
       /if agents_skills\.is_dir\(\) and not _has_other_platform_dir\(\s*project_root,\s*set\(\)/,
     );
-    expect(commonCliAdapter).toMatch(/entry\.name\.startswith\("trellis-"\)/);
+    expect(commonCliAdapter).toMatch(/entry\.name\.startswith\("phronia-"\)/);
   });
 
   // v0.5.0-beta.12 removed `task.py init-context`; jsonl manifests are now
@@ -9309,7 +9309,7 @@ describe("regression: cli_adapter platform support (beta.9, beta.13, beta.16)", 
     expect(typeof manifest.aiInstructions).toBe("string");
     expect(manifest.aiInstructions.length).toBeGreaterThan(200);
     // Sanity: guide references the actual 0.5 breaking themes
-    expect(manifest.migrationGuide).toMatch(/trellis-/); // skill renames
+    expect(manifest.migrationGuide).toMatch(/trellis-/); // historical skill renames
     expect(manifest.migrationGuide).toMatch(/record-session|finish-work/);
   });
 
@@ -9620,7 +9620,7 @@ describe("regression: migration manifest consistency", () => {
       const migrations = getMigrationsForVersion("0.4.0", "0.5.0-beta.0");
       const renames = migrations.filter((m) => m.type === "rename");
       // >= because additional non-command→skill renames may exist (e.g. finish-work
-      // relocation under trellis- namespace on skill-only platforms).
+      // relocation under phronia- namespace on skill-only platforms).
       expect(renames.length).toBeGreaterThanOrEqual(
         PLATFORMS.length * COMMANDS.length,
       );
@@ -9679,7 +9679,7 @@ describe("regression: collectTemplates paths match init directory structure (0.3
         expect(
           key,
           `${id} command path should include trellis/ subdirectory: ${key}`,
-        ).toContain("/commands/trellis/");
+        ).toContain("/commands/phronia/");
       }
     }
   });
@@ -9698,7 +9698,7 @@ describe("regression: collectTemplates paths match init directory structure (0.3
     }
   });
 
-  it("[devin] devin uses workflows/ instead of commands/trellis/", () => {
+  it("[devin] devin uses workflows/ instead of commands/phronia/", () => {
     const templates = collectPlatformTemplates("devin");
     expect(templates).toBeInstanceOf(Map);
     if (!templates) return;
@@ -9756,9 +9756,9 @@ describe("regression: collectTemplates paths match init directory structure (0.3
     // Workspace hook registration
     expect(keys).toContain(".zcode/config.json");
     // agentCapable && hasHooks → start command is filtered out.
-    expect(keys).not.toContain(".zcode/commands/trellis/start.md");
-    expect(keys).toContain(".zcode/commands/trellis/finish-work.md");
-    expect(keys).toContain(".zcode/commands/trellis/continue.md");
+    expect(keys).not.toContain(".zcode/commands/phronia/start.md");
+    expect(keys).toContain(".zcode/commands/phronia/finish-work.md");
+    expect(keys).toContain(".zcode/commands/phronia/continue.md");
   });
 });
 
@@ -9808,7 +9808,7 @@ describe("regression: parse_simple_yaml Python execution (0.3.8)", () => {
 
   beforeEach(() => {
     expect(commonTrellisConfig).toContain("def parse_simple_yaml(");
-    tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), "trellis-yaml-py-"));
+    tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), "phronia-yaml-py-"));
     fs.writeFileSync(path.join(tmpDir, "yaml_parser.py"), commonTrellisConfig);
   });
 
@@ -9988,28 +9988,28 @@ describe("regression: class-2 platforms use pull-based sub-agent context", () =>
       id: "qoder" as const,
       hooksDir: ".qoder/hooks",
       preludeAgents: [
-        ".qoder/agents/trellis-implement.md",
-        ".qoder/agents/trellis-check.md",
+        ".qoder/agents/phronia-implement.md",
+        ".qoder/agents/phronia-check.md",
       ],
-      nonPreludeAgents: [".qoder/agents/trellis-research.md"],
+      nonPreludeAgents: [".qoder/agents/phronia-research.md"],
     },
     {
       id: "gemini" as const,
       hooksDir: ".gemini/hooks",
       preludeAgents: [
-        ".gemini/agents/trellis-implement.md",
-        ".gemini/agents/trellis-check.md",
+        ".gemini/agents/phronia-implement.md",
+        ".gemini/agents/phronia-check.md",
       ],
-      nonPreludeAgents: [".gemini/agents/trellis-research.md"],
+      nonPreludeAgents: [".gemini/agents/phronia-research.md"],
     },
     {
       id: "copilot" as const,
       hooksDir: ".github/copilot/hooks",
       preludeAgents: [
-        ".github/agents/trellis-implement.agent.md",
-        ".github/agents/trellis-check.agent.md",
+        ".github/agents/phronia-implement.agent.md",
+        ".github/agents/phronia-check.agent.md",
       ],
-      nonPreludeAgents: [".github/agents/trellis-research.agent.md"],
+      nonPreludeAgents: [".github/agents/phronia-research.agent.md"],
     },
   ];
 
@@ -10018,7 +10018,7 @@ describe("regression: class-2 platforms use pull-based sub-agent context", () =>
       let tmpDir: string;
 
       beforeEach(async () => {
-        tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), `trellis-c2-${id}-`));
+        tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), `phronia-c2-${id}-`));
         setWriteMode("force");
         await configurePlatform(id, tmpDir);
       });
@@ -10100,7 +10100,7 @@ describe("regression: Codex uses native SubagentStart context delivery", () => {
   let tmpDir: string;
 
   beforeEach(async () => {
-    tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), "trellis-codex-native-"));
+    tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), "phronia-codex-native-"));
     setWriteMode("force");
     await configurePlatform("codex", tmpDir);
   });
@@ -10129,7 +10129,7 @@ describe("regression: Codex uses native SubagentStart context delivery", () => {
 
     expect(config.hooks.UserPromptSubmit).toBeDefined();
     expect(subagentStart?.matcher).toBe(
-      "^(?:trellis-implement|trellis-check|trellis-research)$",
+      "^(?:phronia-implement|phronia-check|phronia-research)$",
     );
     expect(subagentStart?.hooks?.[0]?.command).toContain(
       ".codex/hooks/inject-subagent-context.py",
@@ -10139,10 +10139,10 @@ describe("regression: Codex uses native SubagentStart context delivery", () => {
   it("uses marker-gated role profiles rather than the old unconditional pull prelude", () => {
     for (const role of ["implement", "check", "research"] as const) {
       const content = fs.readFileSync(
-        path.join(tmpDir, ".codex", "agents", `trellis-${role}.toml`),
+        path.join(tmpDir, ".codex", "agents", `phronia-${role}.toml`),
         "utf-8",
       );
-      expect(content).toContain("<!-- trellis-hook-injected -->");
+      expect(content).toContain("<!-- phronia-hook-injected -->");
       expect(content).toContain("Active task:");
       expect(content).not.toContain("Required: Load Trellis Context First");
     }
@@ -10153,7 +10153,7 @@ describe("regression: copilot agents use YAML tools frontmatter", () => {
   let tmpDir: string;
 
   beforeEach(async () => {
-    tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), "trellis-copilot-tools-"));
+    tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), "phronia-copilot-tools-"));
     setWriteMode("force");
     await configurePlatform("copilot", tmpDir);
   });
@@ -10169,7 +10169,7 @@ describe("regression: copilot agents use YAML tools frontmatter", () => {
     // (#302). Copilot's transformer therefore emits only the local-tool
     // equivalents.
     const content = fs.readFileSync(
-      path.join(tmpDir, ".github/agents/trellis-implement.agent.md"),
+      path.join(tmpDir, ".github/agents/phronia-implement.agent.md"),
       "utf-8",
     );
     const frontmatter = content.split("---\n")[1] ?? "";
@@ -10191,7 +10191,7 @@ describe("regression: copilot agents use YAML tools frontmatter", () => {
     // Copilot transformer maps that wildcard to the full set of supported
     // Copilot MCP tool equivalents.
     const content = fs.readFileSync(
-      path.join(tmpDir, ".github/agents/trellis-research.agent.md"),
+      path.join(tmpDir, ".github/agents/phronia-research.agent.md"),
       "utf-8",
     );
     const frontmatter = content.split("---\n")[1] ?? "";
@@ -10214,10 +10214,10 @@ describe("regression: copilot agents use YAML tools frontmatter", () => {
     expect(templates).toBeInstanceOf(Map);
 
     const generated = fs.readFileSync(
-      path.join(tmpDir, ".github/agents/trellis-check.agent.md"),
+      path.join(tmpDir, ".github/agents/phronia-check.agent.md"),
       "utf-8",
     );
-    expect(templates?.get(".github/agents/trellis-check.agent.md")).toBe(
+    expect(templates?.get(".github/agents/phronia-check.agent.md")).toBe(
       generated,
     );
   });
@@ -10227,7 +10227,7 @@ describe("regression: pi uses TypeScript extension assets instead of Python hook
   let tmpDir: string;
 
   beforeEach(async () => {
-    tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), "trellis-pi-"));
+    tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), "phronia-pi-"));
     setWriteMode("force");
     await configurePlatform("pi", tmpDir);
   });
@@ -10253,7 +10253,7 @@ describe("regression: pi uses TypeScript extension assets instead of Python hook
     expect(extension).toContain('pi.on?.("before_agent_start"');
     expect(extension).toContain('pi.on?.("tool_call"');
 
-    for (const agent of ["trellis-implement.md", "trellis-check.md"]) {
+    for (const agent of ["phronia-implement.md", "phronia-check.md"]) {
       const content = fs.readFileSync(
         path.join(tmpDir, ".pi", "agents", agent),
         "utf-8",
@@ -10279,11 +10279,11 @@ describe("regression: research agent persists findings to task dir", () => {
   // Before 0.5, research agents were read-only and only emitted chat
   // replies, which got compacted away.
   const markdownPlatforms = [
-    "packages/cli/src/templates/claude/agents/trellis-research.md",
-    "packages/cli/src/templates/cursor/agents/trellis-research.md",
-    "packages/cli/src/templates/qoder/agents/trellis-research.md",
-    "packages/cli/src/templates/codebuddy/agents/trellis-research.md",
-    "packages/cli/src/templates/droid/droids/trellis-research.md",
+    "packages/cli/src/templates/claude/agents/phronia-research.md",
+    "packages/cli/src/templates/cursor/agents/phronia-research.md",
+    "packages/cli/src/templates/qoder/agents/phronia-research.md",
+    "packages/cli/src/templates/codebuddy/agents/phronia-research.md",
+    "packages/cli/src/templates/droid/droids/phronia-research.md",
   ];
 
   const __dirname2 = path.dirname(fileURLToPath(import.meta.url));
@@ -10308,8 +10308,8 @@ describe("regression: research agent persists findings to task dir", () => {
   // line entirely so the sub-agent inherits parent tools — see issue #224
   // and research/agent-tools-frontmatter.md. The persist contract still
   // applies (body references {TASK_DIR}/research/ and the PERSIST keyword).
-  it("[packages/cli/src/templates/gemini/agents/trellis-research.md] omits tools line + has persist instruction", () => {
-    const rel = "packages/cli/src/templates/gemini/agents/trellis-research.md";
+  it("[packages/cli/src/templates/gemini/agents/phronia-research.md] omits tools line + has persist instruction", () => {
+    const rel = "packages/cli/src/templates/gemini/agents/phronia-research.md";
     const content = fs.readFileSync(path.join(repoRoot, rel), "utf-8");
     const fm = content.split("---\n")[1] ?? "";
     expect(fm).not.toMatch(/^tools:/m);
@@ -10322,7 +10322,7 @@ describe("regression: research agent persists findings to task dir", () => {
     const content = fs.readFileSync(
       path.join(
         repoRoot,
-        "packages/cli/src/templates/codex/agents/trellis-research.toml",
+        "packages/cli/src/templates/codex/agents/phronia-research.toml",
       ),
       "utf-8",
     );
@@ -10335,7 +10335,7 @@ describe("regression: research agent persists findings to task dir", () => {
     const content = fs.readFileSync(
       path.join(
         repoRoot,
-        "packages/cli/src/templates/kiro/agents/trellis-research.json",
+        "packages/cli/src/templates/kiro/agents/phronia-research.json",
       ),
       "utf-8",
     );
@@ -10352,7 +10352,7 @@ describe("regression: research agent persists findings to task dir", () => {
     const content = fs.readFileSync(
       path.join(
         repoRoot,
-        "packages/cli/src/templates/opencode/agents/trellis-research.md",
+        "packages/cli/src/templates/opencode/agents/phronia-research.md",
       ),
       "utf-8",
     );
@@ -10494,7 +10494,7 @@ describe("regression: Gemini CLI 0.40.x template compatibility (#224)", () => {
 
   it("[#224] configurePlatform('gemini') writes shared skills to .agents/skills, NOT .gemini/skills", async () => {
     const tmpDir = fs.mkdtempSync(
-      path.join(os.tmpdir(), "trellis-gemini-issue224-"),
+      path.join(os.tmpdir(), "phronia-gemini-issue224-"),
     );
     try {
       setWriteMode("force");
@@ -10525,12 +10525,12 @@ describe("regression: Gemini CLI 0.40.x template compatibility (#224)", () => {
         `Codex and Gemini disagree on ${filePath} — last-writer-wins would corrupt the shared skill`,
       ).toBe(codexContent);
     }
-    // At least the shared common skills + bundled trellis-meta files must
+    // At least the shared common skills + bundled phronia-meta files must
     // overlap. If this drops to 0 the assertion above is silently passing.
     expect(overlapCount).toBeGreaterThan(0);
   });
 
-  it("[trellis-hooks-env] all hook templates honor PHRONIA_HOOKS=0 / PHRONIA_DISABLE_HOOKS=1", () => {
+  it("[phronia-hooks-env] all hook templates honor PHRONIA_HOOKS=0 / PHRONIA_DISABLE_HOOKS=1", () => {
     // All shipped hook scripts must early-return when the operator sets
     // PHRONIA_HOOKS=0 (or PHRONIA_DISABLE_HOOKS=1), so subprocess wrappers
     // and casual-chat scenarios can disable Trellis injection without
@@ -10592,7 +10592,7 @@ describe("regression: Gemini CLI 0.40.x template compatibility (#224)", () => {
     // skills only), the legacy-Codex detector previously triggered
     // a false-positive `.codex/` install on every fresh `init --gemini` +
     // `update` cycle. The fix narrows detection to command-as-skill files
-    // (`trellis-continue/SKILL.md`, `trellis-finish-work/SKILL.md`) and the
+    // (`phronia-continue/SKILL.md`, `phronia-finish-work/SKILL.md`) and the
     // update integration suite covers platforms such as ZCode that share
     // `.agents/skills/` but must not trigger the legacy Codex backfill.
     const updateSrc = fs.readFileSync(
@@ -10601,9 +10601,9 @@ describe("regression: Gemini CLI 0.40.x template compatibility (#224)", () => {
     );
     // Must check for command-as-skill markers, not the bare
     // `.agents/skills/` prefix.
-    expect(updateSrc).toMatch(/\.agents\/skills\/trellis-continue\/SKILL\.md/);
+    expect(updateSrc).toMatch(/\.agents\/skills\/phronia-continue\/SKILL\.md/);
     expect(updateSrc).toMatch(
-      /\.agents\/skills\/trellis-finish-work\/SKILL\.md/,
+      /\.agents\/skills\/phronia-finish-work\/SKILL\.md/,
     );
     // Must NOT use the broad `startsWith(".agents/skills/")` heuristic
     // inside needsCodexUpgrade — that would re-introduce the false positive.
@@ -10686,11 +10686,11 @@ describe("regression: sub-agent context injection fallback (0.5.3)", () => {
   // distributions, hooks disabled) sub-agents received the dispatch prompt
   // without prd / spec / jsonl context, with no recovery path.
   //
-  // The fix: hook output now begins with a `<!-- trellis-hook-injected -->`
-  // marker, and every class-1 trellis-implement / trellis-check definition
+  // The fix: hook output now begins with a `<!-- phronia-hook-injected -->`
+  // marker, and every class-1 phronia-implement / phronia-check definition
   // file carries a Trellis Context Loading Protocol section telling the
   // sub-agent to load context itself when the marker is absent.
-  const HOOK_INJECTED_MARKER = "<!-- trellis-hook-injected -->";
+  const HOOK_INJECTED_MARKER = "<!-- phronia-hook-injected -->";
 
   it("inject-subagent-context.py emits the marker for implement / check / finish", () => {
     const hook = getSharedHookScripts().find(
@@ -10703,7 +10703,7 @@ describe("regression: sub-agent context injection fallback (0.5.3)", () => {
     // task binding).
     expect(src).toContain(HOOK_INJECTED_MARKER);
     // Must appear at least three times (one per implement / check / finish).
-    const matches = src.match(/<!--\s*trellis-hook-injected\s*-->/g) ?? [];
+    const matches = src.match(/<!--\s*phronia-hook-injected\s*-->/g) ?? [];
     expect(matches.length).toBeGreaterThanOrEqual(3);
   });
 
@@ -10716,62 +10716,62 @@ describe("regression: sub-agent context injection fallback (0.5.3)", () => {
   }[] = [
     {
       platform: "claude",
-      rel: "packages/cli/src/templates/claude/agents/trellis-implement.md",
+      rel: "packages/cli/src/templates/claude/agents/phronia-implement.md",
       agent: "implement",
     },
     {
       platform: "claude",
-      rel: "packages/cli/src/templates/claude/agents/trellis-check.md",
+      rel: "packages/cli/src/templates/claude/agents/phronia-check.md",
       agent: "check",
     },
     {
       platform: "cursor",
-      rel: "packages/cli/src/templates/cursor/agents/trellis-implement.md",
+      rel: "packages/cli/src/templates/cursor/agents/phronia-implement.md",
       agent: "implement",
     },
     {
       platform: "cursor",
-      rel: "packages/cli/src/templates/cursor/agents/trellis-check.md",
+      rel: "packages/cli/src/templates/cursor/agents/phronia-check.md",
       agent: "check",
     },
     {
       platform: "codebuddy",
-      rel: "packages/cli/src/templates/codebuddy/agents/trellis-implement.md",
+      rel: "packages/cli/src/templates/codebuddy/agents/phronia-implement.md",
       agent: "implement",
     },
     {
       platform: "codebuddy",
-      rel: "packages/cli/src/templates/codebuddy/agents/trellis-check.md",
+      rel: "packages/cli/src/templates/codebuddy/agents/phronia-check.md",
       agent: "check",
     },
     {
       platform: "opencode",
-      rel: "packages/cli/src/templates/opencode/agents/trellis-implement.md",
+      rel: "packages/cli/src/templates/opencode/agents/phronia-implement.md",
       agent: "implement",
     },
     {
       platform: "opencode",
-      rel: "packages/cli/src/templates/opencode/agents/trellis-check.md",
+      rel: "packages/cli/src/templates/opencode/agents/phronia-check.md",
       agent: "check",
     },
     {
       platform: "droid",
-      rel: "packages/cli/src/templates/droid/droids/trellis-implement.md",
+      rel: "packages/cli/src/templates/droid/droids/phronia-implement.md",
       agent: "implement",
     },
     {
       platform: "droid",
-      rel: "packages/cli/src/templates/droid/droids/trellis-check.md",
+      rel: "packages/cli/src/templates/droid/droids/phronia-check.md",
       agent: "check",
     },
     {
       platform: "zcode",
-      rel: "packages/cli/src/templates/zcode/agents/trellis-implement.md",
+      rel: "packages/cli/src/templates/zcode/agents/phronia-implement.md",
       agent: "implement",
     },
     {
       platform: "zcode",
-      rel: "packages/cli/src/templates/zcode/agents/trellis-check.md",
+      rel: "packages/cli/src/templates/zcode/agents/phronia-check.md",
       agent: "check",
     },
   ];
@@ -10810,7 +10810,7 @@ describe("regression: sub-agent context injection fallback (0.5.3)", () => {
       // 0.5.7 (#247): Kiro CLI renamed `instructions` → `prompt` in agent JSON.
       const filePath = path.join(
         repoRootFb,
-        `packages/cli/src/templates/kiro/agents/trellis-${agent}.json`,
+        `packages/cli/src/templates/kiro/agents/phronia-${agent}.json`,
       );
       const json = JSON.parse(fs.readFileSync(filePath, "utf-8"));
       const prompt: string = json.prompt ?? "";
@@ -10825,10 +10825,10 @@ describe("regression: sub-agent context injection fallback (0.5.3)", () => {
   }
 
   const GEMINI_QODER_AGENT_FILES = [
-    "packages/cli/src/templates/gemini/agents/trellis-implement.md",
-    "packages/cli/src/templates/gemini/agents/trellis-check.md",
-    "packages/cli/src/templates/qoder/agents/trellis-implement.md",
-    "packages/cli/src/templates/qoder/agents/trellis-check.md",
+    "packages/cli/src/templates/gemini/agents/phronia-implement.md",
+    "packages/cli/src/templates/gemini/agents/phronia-check.md",
+    "packages/cli/src/templates/qoder/agents/phronia-implement.md",
+    "packages/cli/src/templates/qoder/agents/phronia-check.md",
   ];
 
   for (const rel of GEMINI_QODER_AGENT_FILES) {
@@ -10843,7 +10843,7 @@ describe("regression: sub-agent context injection fallback (0.5.3)", () => {
       const content = fs.readFileSync(
         path.join(
           repoRootFb,
-          `packages/cli/src/templates/pi/agents/trellis-${agent}.md`,
+          `packages/cli/src/templates/pi/agents/phronia-${agent}.md`,
         ),
         "utf-8",
       );
@@ -10860,7 +10860,7 @@ describe("regression: sub-agent context injection fallback (0.5.3)", () => {
     for (const agent of ["implement", "check", "research"] as const) {
       const filePath = path.join(
         repoRootFb,
-        `packages/cli/src/templates/kiro/agents/trellis-${agent}.json`,
+        `packages/cli/src/templates/kiro/agents/phronia-${agent}.json`,
       );
       const data = JSON.parse(fs.readFileSync(filePath, "utf-8")) as {
         prompt?: unknown;
@@ -10896,17 +10896,17 @@ describe("regression: sub-agent context injection fallback (0.5.3)", () => {
   it("workflow.md dispatch protocol covers all platforms (not class-2 only)", () => {
     const workflowPath = path.join(
       repoRootFb,
-      "packages/cli/src/templates/trellis/workflow.md",
+      "packages/cli/src/templates/workflow/workflow.md",
     );
     const wf = fs.readFileSync(workflowPath, "utf-8");
     // The protocol enforces `Active task: <path>` for ALL sub-agents (no
-    // trellis-research carve-out as of 0.5.8 — research sub-agents need the
+    // phronia-research carve-out as of 0.5.8 — research sub-agents need the
     // task path to know which `{task_dir}/research/` to write into).
     expect(wf).toContain("Sub-agent dispatch protocol");
     expect(wf).toContain("all platforms");
     expect(wf).toContain("all sub-agents");
-    expect(wf).not.toContain("EXCEPT trellis-research");
-    expect(wf).toContain("trellis-research");
+    expect(wf).not.toContain("EXCEPT phronia-research");
+    expect(wf).toContain("phronia-research");
     expect(wf).toContain("Active task:");
     // Must NOT scope the rule to class-2 only — that was the pre-0.5.3 limit.
     expect(wf).not.toMatch(
@@ -10919,7 +10919,7 @@ describe("regression: configSectionsAdded (issue-codex-dispatch-mode)", () => {
   let tmpDir: string;
 
   beforeEach(() => {
-    tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), "trellis-config-section-"));
+    tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), "phronia-config-section-"));
   });
 
   afterEach(() => {
@@ -11072,7 +11072,7 @@ describe("regression: configSectionsAdded (issue-codex-dispatch-mode)", () => {
       "..",
       "src",
       "templates",
-      "trellis",
+      "workflow",
       "config.yaml",
     );
     const tmpl = fs.readFileSync(tmplPath, "utf-8");
@@ -11122,7 +11122,7 @@ describe("regression: safe auto-commit when .phronia/ is gitignored (0.5.10 → 
   const pyCmd = process.platform === "win32" ? "python" : "python3";
 
   beforeEach(() => {
-    tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), "trellis-safe-commit-"));
+    tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), "phronia-safe-commit-"));
     execSync("git init -q -b main", { cwd: tmpDir });
     // Configure user so git commit succeeds in CI sandboxes.
     execSync('git config user.email "test@trellis.local"', { cwd: tmpDir });
@@ -11483,7 +11483,7 @@ describe("regression: safe auto-commit when .phronia/ is gitignored (0.5.10 → 
 
       // Reset for next iteration.
       fs.rmSync(tmpDir, { recursive: true, force: true });
-      tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), "trellis-safe-commit-"));
+      tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), "phronia-safe-commit-"));
       execSync("git init -q -b main", { cwd: tmpDir });
       execSync('git config user.email "test@trellis.local"', { cwd: tmpDir });
       execSync('git config user.name "Trellis Test"', { cwd: tmpDir });
@@ -11527,7 +11527,7 @@ describe("regression: bounded index.lock retry on archive auto-commit", () => {
   const taskName = "issue-lock";
 
   beforeEach(() => {
-    tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), "trellis-index-lock-"));
+    tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), "phronia-index-lock-"));
     execSync("git init -q -b main", { cwd: tmpDir });
     execSync('git config user.email "test@trellis.local"', { cwd: tmpDir });
     execSync('git config user.name "Trellis Test"', { cwd: tmpDir });
@@ -11761,9 +11761,9 @@ print(json.dumps({
 // regression: dogfood ↔ shipped Python script parity
 // =============================================================================
 
-describe("regression: .phronia/scripts stays byte-identical to templates/trellis/scripts", () => {
+describe("regression: .phronia/scripts stays byte-identical to templates/workflow/scripts", () => {
   // `.phronia/scripts/` is Trellis's own dogfood copy;
-  // `packages/cli/src/templates/trellis/scripts/` is what ships to users.
+  // `packages/cli/src/templates/workflow/scripts/` is what ships to users.
   // They are two physical copies of the same 28 files and nothing enforced
   // parity, so one-sided edits landed silently — PR #390 changed the template's
   // `common/session_context.py` upgrade hint and left the dogfood copy on the
@@ -11774,7 +11774,7 @@ describe("regression: .phronia/scripts stays byte-identical to templates/trellis
   const dogfoodScriptsRoot = path.join(parityRepoRoot, ".phronia", "scripts");
   const templateScriptsRoot = path.join(
     parityRepoRoot,
-    "packages/cli/src/templates/trellis/scripts",
+    "packages/cli/src/templates/workflow/scripts",
   );
 
   function listPyFiles(root: string): string[] {
@@ -11799,7 +11799,7 @@ describe("regression: .phronia/scripts stays byte-identical to templates/trellis
     const dogfoodFiles = listPyFiles(dogfoodScriptsRoot);
     expect(
       dogfoodFiles,
-      "`.phronia/scripts/` and `packages/cli/src/templates/trellis/scripts/` " +
+      "`.phronia/scripts/` and `packages/cli/src/templates/workflow/scripts/` " +
         "must hold the same .py files — a script added to (or deleted from) " +
         "one tree must be mirrored in the other.",
     ).toEqual(templateFiles);
@@ -11819,7 +11819,7 @@ describe("regression: .phronia/scripts stays byte-identical to templates/trellis
       expect(
         dogfoodBytes.equals(templateBytes),
         `.phronia/scripts/${relativePath} has drifted from ` +
-          `packages/cli/src/templates/trellis/scripts/${relativePath}. ` +
+          `packages/cli/src/templates/workflow/scripts/${relativePath}. ` +
           `Edit both copies, never one.`,
       ).toBe(true);
     });
@@ -11879,7 +11879,7 @@ describe("regression: task.py rename rewrites every reference in one pass", () =
   let tmpDir: string;
 
   beforeEach(() => {
-    tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), "trellis-task-rename-"));
+    tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), "phronia-task-rename-"));
     for (const [rel, content] of getAllScripts()) {
       const abs = path.join(tmpDir, ".phronia", "scripts", rel);
       fs.mkdirSync(path.dirname(abs), { recursive: true });
@@ -12281,7 +12281,7 @@ describe("regression: a linked worktree inherits developer identity", () => {
   }
 
   beforeEach(() => {
-    tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), "trellis-wt-identity-"));
+    tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), "phronia-wt-identity-"));
     mainDir = path.join(tmpDir, "main");
     worktreeDir = path.join(tmpDir, "linked");
     fs.mkdirSync(mainDir, { recursive: true });

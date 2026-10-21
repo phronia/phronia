@@ -79,7 +79,7 @@ describe("loadHashes / saveHashes", () => {
   let tmpDir: string;
 
   beforeEach(() => {
-    tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), "trellis-test-"));
+    tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), "phronia-test-"));
     // Create .phronia directory for hashes file
     fs.mkdirSync(path.join(tmpDir, ".phronia"), { recursive: true });
   });
@@ -127,7 +127,7 @@ describe("updateHashes", () => {
   let tmpDir: string;
 
   beforeEach(() => {
-    tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), "trellis-test-"));
+    tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), "phronia-test-"));
     fs.mkdirSync(path.join(tmpDir, ".phronia"), { recursive: true });
   });
 
@@ -169,7 +169,7 @@ describe("updateHashFromFile", () => {
   let tmpDir: string;
 
   beforeEach(() => {
-    tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), "trellis-test-"));
+    tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), "phronia-test-"));
     fs.mkdirSync(path.join(tmpDir, ".phronia"), { recursive: true });
   });
 
@@ -205,7 +205,7 @@ describe("removeHash", () => {
   let tmpDir: string;
 
   beforeEach(() => {
-    tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), "trellis-test-"));
+    tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), "phronia-test-"));
     fs.mkdirSync(path.join(tmpDir, ".phronia"), { recursive: true });
   });
 
@@ -239,7 +239,7 @@ describe("renameHash", () => {
   let tmpDir: string;
 
   beforeEach(() => {
-    tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), "trellis-test-"));
+    tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), "phronia-test-"));
     fs.mkdirSync(path.join(tmpDir, ".phronia"), { recursive: true });
   });
 
@@ -274,7 +274,7 @@ describe("isTemplateModified", () => {
   let tmpDir: string;
 
   beforeEach(() => {
-    tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), "trellis-test-"));
+    tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), "phronia-test-"));
     fs.mkdirSync(path.join(tmpDir, ".phronia"), { recursive: true });
   });
 
@@ -319,7 +319,7 @@ describe("matchesOriginalTemplate", () => {
   let tmpDir: string;
 
   beforeEach(() => {
-    tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), "trellis-test-"));
+    tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), "phronia-test-"));
   });
 
   afterEach(() => {
@@ -350,7 +350,7 @@ describe("getModificationStatus", () => {
   let tmpDir: string;
 
   beforeEach(() => {
-    tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), "trellis-test-"));
+    tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), "phronia-test-"));
     fs.mkdirSync(path.join(tmpDir, ".phronia"), { recursive: true });
   });
 
@@ -388,7 +388,7 @@ describe("initializeHashes", () => {
   let tmpDir: string;
 
   beforeEach(() => {
-    tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), "trellis-test-"));
+    tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), "phronia-test-"));
   });
 
   afterEach(() => {
@@ -517,24 +517,24 @@ describe("initializeHashes", () => {
       tmpDir,
       ".pi",
       "skills",
-      "trellis-update-spec",
+      "phronia-update-spec",
       "SKILL.md",
     );
     fs.mkdirSync(path.dirname(skillPath), { recursive: true });
     fs.writeFileSync(skillPath, "# Update Spec");
 
     // Old EXCLUDE_FROM_HASH had a "spec/" pattern that incorrectly matched
-    // `.pi/skills/trellis-update-spec/`. The new model doesn't use that
+    // `.pi/skills/phronia-update-spec/`. The new model doesn't use that
     // exclusion at all for platform dirs (they're driven by trackedPaths),
     // so as long as the path is tracked it lands in the manifest regardless
     // of whether its name contains "spec".
     const count = initializeHashes(tmpDir, {
-      trackedPaths: new Set([".pi/skills/trellis-update-spec/SKILL.md"]),
+      trackedPaths: new Set([".pi/skills/phronia-update-spec/SKILL.md"]),
     });
     const hashes = loadHashes(tmpDir);
 
     expect(hashes).toHaveProperty(
-      ".pi/skills/trellis-update-spec/SKILL.md",
+      ".pi/skills/phronia-update-spec/SKILL.md",
     );
     expect(count).toBe(1);
   });
@@ -549,7 +549,7 @@ describe("cross-platform hash storage (POSIX keys + v2 schema)", () => {
   const HASHES_REL = path.join(".phronia", ".template-hashes.json");
 
   beforeEach(() => {
-    tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), "trellis-test-"));
+    tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), "phronia-test-"));
     fs.mkdirSync(path.join(tmpDir, ".phronia"), { recursive: true });
   });
 

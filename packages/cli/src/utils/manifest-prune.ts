@@ -39,7 +39,12 @@ import { DIR_NAMES, FILE_NAMES } from "../constants/paths.js";
 import { getAllMigrations } from "../migrations/index.js";
 import { saveHashes } from "./template-hash.js";
 import { toPosix } from "./posix.js";
-import { PHRONIA_BLOCK_END, PHRONIA_BLOCK_START } from "./managed-paths.js";
+import {
+  LEGACY_BLOCK_END,
+  LEGACY_BLOCK_START,
+  PHRONIA_BLOCK_END,
+  PHRONIA_BLOCK_START,
+} from "./managed-paths.js";
 import type { AITool } from "../types/ai-tools.js";
 import type { TemplateHashes } from "../types/migration.js";
 
@@ -91,10 +96,12 @@ function shouldKeepAgentsMd(cwd: string): boolean {
   }
   try {
     const content = fs.readFileSync(fullPath, "utf-8");
-    return (
+    const current =
       content.includes(PHRONIA_BLOCK_START) &&
-      content.includes(PHRONIA_BLOCK_END)
-    );
+      content.includes(PHRONIA_BLOCK_END);
+    const legacy =
+      content.includes(LEGACY_BLOCK_START) && content.includes(LEGACY_BLOCK_END);
+    return current || legacy;
   } catch {
     return true;
   }

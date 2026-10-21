@@ -2,9 +2,9 @@ import { describe, expect, it } from "vitest";
 import { getAllAgents, getHooksConfig } from "../../src/templates/zcode/index.js";
 
 const EXPECTED_AGENT_NAMES = [
-  "trellis-check",
-  "trellis-implement",
-  "trellis-research",
+  "phronia-check",
+  "phronia-implement",
+  "phronia-research",
 ];
 
 describe("zcode getAllAgents", () => {
@@ -82,12 +82,12 @@ describe("zcode class-1 agent fallback protocol", () => {
     const agents = getAllAgents();
     for (const agent of agents) {
       if (
-        agent.name === "trellis-implement" ||
-        agent.name === "trellis-check"
+        agent.name === "phronia-implement" ||
+        agent.name === "phronia-check"
       ) {
         expect(agent.content).not.toContain("Load Trellis Context First");
         expect(agent.content).toContain("Trellis Context Loading Protocol");
-        expect(agent.content).toContain("<!-- trellis-hook-injected -->");
+        expect(agent.content).toContain("<!-- phronia-hook-injected -->");
         expect(agent.content).toContain("Active task:");
       }
     }
@@ -95,7 +95,7 @@ describe("zcode class-1 agent fallback protocol", () => {
 
   it("does not add context fallback instructions to research", () => {
     const agents = getAllAgents();
-    const research = agents.find((agent) => agent.name === "trellis-research");
+    const research = agents.find((agent) => agent.name === "phronia-research");
     expect(research).toBeDefined();
     if (!research) return;
     expect(research.content).not.toContain("Trellis Context Loading Protocol");

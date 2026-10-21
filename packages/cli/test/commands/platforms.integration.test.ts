@@ -46,7 +46,7 @@ describe("trellis platforms (#396)", () => {
   let tmpDir: string;
 
   beforeEach(() => {
-    tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), "trellis-platforms-"));
+    tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), "phronia-platforms-"));
   });
 
   afterEach(() => {
@@ -57,8 +57,8 @@ describe("trellis platforms (#396)", () => {
     fs.mkdirSync(path.join(tmpDir, ".claude"), { recursive: true });
     fs.mkdirSync(path.join(tmpDir, ".cursor"), { recursive: true });
     writeTrackedPlatforms(tmpDir, [
-      ".claude/commands/trellis/continue.md",
-      ".cursor/commands/trellis-continue.md",
+      ".claude/commands/phronia/continue.md",
+      ".cursor/commands/phronia-continue.md",
     ]);
 
     const result = runCli(tmpDir, ["platforms", "--json"]);
@@ -89,7 +89,7 @@ describe("trellis platforms (#396)", () => {
   it("human output lists configured platforms without --json", () => {
     fs.mkdirSync(path.join(tmpDir, ".claude"), { recursive: true });
     writeTrackedPlatforms(tmpDir, [
-      ".claude/commands/trellis/continue.md",
+      ".claude/commands/phronia/continue.md",
     ]);
 
     const result = runCli(tmpDir, ["platforms"]);

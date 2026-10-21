@@ -28,7 +28,7 @@ import {
   implementAgentTemplate,
   checkAgentTemplate,
   configYamlTemplate,
-} from "../../src/templates/trellis/index.js";
+} from "../../src/templates/workflow/index.js";
 
 // =============================================================================
 // Template Constants — module-level string exports
@@ -216,7 +216,7 @@ describe("trellis template constants", () => {
         templates !== undefined &&
         [...templates.entries()].some(
           ([filePath, content]) =>
-            /trellis-(implement|check)/.test(filePath) &&
+            /phronia-(implement|check)/.test(filePath) &&
             content.includes("Required: Load Trellis Context First"),
         );
       if (!hasPullBasedPrelude) {
@@ -269,26 +269,26 @@ describe("trellis template constants", () => {
     const block = inProgressBreadcrumb();
     expect(block).toContain("Main-session default");
     expect(block).toContain("Sub-agent self-exemption");
-    expect(block).toContain("already running as `trellis-implement`");
-    expect(block).toContain("do NOT spawn another `trellis-implement`");
-    expect(block).toContain("already running as `trellis-check`");
-    expect(block).toContain("do NOT spawn another `trellis-check`");
+    expect(block).toContain("already running as `phronia-implement`");
+    expect(block).toContain("do NOT spawn another `phronia-implement`");
+    expect(block).toContain("already running as `phronia-check`");
+    expect(block).toContain("do NOT spawn another `phronia-check`");
     expect(block).toContain("main session only");
   });
 
   it("[issue-237] workflow.md Phase 2 dispatch steps require prompt recursion guards", () => {
     expect(workflowMdTemplate).toContain("**Dispatch prompt guard**");
     expect(workflowMdTemplate).toContain(
-      "already the `trellis-implement` sub-agent",
+      "already the `phronia-implement` sub-agent",
     );
     expect(workflowMdTemplate).toContain(
-      "not spawn another `trellis-implement` / `trellis-check`",
+      "not spawn another `phronia-implement` / `phronia-check`",
     );
     expect(workflowMdTemplate).toContain(
-      "already the `trellis-check` sub-agent",
+      "already the `phronia-check` sub-agent",
     );
     expect(workflowMdTemplate).toContain(
-      "not spawn another `trellis-check` / `trellis-implement`",
+      "not spawn another `phronia-check` / `phronia-implement`",
     );
   });
 

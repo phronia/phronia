@@ -16,7 +16,7 @@ import type { TemplateContext } from "../../src/types/ai-tools.js";
 // ---------------------------------------------------------------------------
 
 const claudeCtx: TemplateContext = {
-  cmdRefPrefix: "/trellis:",
+  cmdRefPrefix: "/phronia:",
   executorAI: "Bash scripts or Task calls",
   userActionLabel: "Slash commands",
   agentCapable: true,
@@ -34,7 +34,7 @@ const codexCtx: TemplateContext = {
 };
 
 const cursorCtx: TemplateContext = {
-  cmdRefPrefix: "/trellis-",
+  cmdRefPrefix: "/phronia-",
   executorAI: "Bash scripts or file reads",
   userActionLabel: "Slash commands",
   agentCapable: false,
@@ -175,12 +175,12 @@ describe("resolvePlaceholders", () => {
   // -----------------------------------------------------------------------
 
   describe("{{CMD_REF:name}}", () => {
-    it("resolves with /trellis: prefix (Claude)", () => {
+    it("resolves with /phronia: prefix (Claude)", () => {
       const result = resolvePlaceholders(
         "See {{CMD_REF:brainstorm}} for details",
         claudeCtx,
       );
-      expect(result).toBe("See /trellis:brainstorm for details");
+      expect(result).toBe("See /phronia:brainstorm for details");
     });
 
     it("resolves with $ prefix (Codex)", () => {
@@ -191,25 +191,25 @@ describe("resolvePlaceholders", () => {
       expect(result).toBe("Run $check after coding");
     });
 
-    it("resolves with /trellis- prefix (Cursor)", () => {
+    it("resolves with /phronia- prefix (Cursor)", () => {
       const result = resolvePlaceholders(
         "Use {{CMD_REF:finish-work}} when done",
         cursorCtx,
       );
-      expect(result).toBe("Use /trellis-finish-work when done");
+      expect(result).toBe("Use /phronia-finish-work when done");
     });
 
     it("handles multiple CMD_REF in one template", () => {
       const input =
         "{{CMD_REF:start}} then {{CMD_REF:brainstorm}} then {{CMD_REF:check}}";
       expect(resolvePlaceholders(input, claudeCtx)).toBe(
-        "/trellis:start then /trellis:brainstorm then /trellis:check",
+        "/phronia:start then /phronia:brainstorm then /phronia:check",
       );
     });
 
     it("handles hyphenated command names", () => {
       expect(resolvePlaceholders("{{CMD_REF:finish-work}}", claudeCtx)).toBe(
-        "/trellis:finish-work",
+        "/phronia:finish-work",
       );
       expect(
         resolvePlaceholders("{{CMD_REF:check-cross-layer}}", codexCtx),
@@ -247,7 +247,7 @@ describe("resolvePlaceholders", () => {
       );
       const py = process.platform === "win32" ? "python" : "python3";
       expect(result).toBe(
-        `${py} ./.phronia/scripts/task.py and /trellis:start`,
+        `${py} ./.phronia/scripts/task.py and /phronia:start`,
       );
     });
   });
@@ -531,7 +531,7 @@ describe("resolveSkillsNeutral / resolveAllAsSkillsNeutral", () => {
   it("resolveSkillsNeutral renders CMD_REF without platform-specific prefix", () => {
     // The neutral output must not contain platform-prefixed tokens for any
     // command that CMD_REF references in the shared skills (Codex `$name`,
-    // Claude `/trellis:name`, Cursor `/trellis-name`).
+    // Claude `/phronia:name`, Cursor `/phronia-name`).
     const neutral = resolveSkillsNeutral(AI_TOOLS.codex.templateContext);
     const cmdRefNames = [
       "start",
@@ -550,11 +550,11 @@ describe("resolveSkillsNeutral / resolveAllAsSkillsNeutral", () => {
         expect(
           skill.content,
           `${skill.name} leaks Claude prefix for ${name}`,
-        ).not.toContain(`/trellis:${name}`);
+        ).not.toContain(`/phronia:${name}`);
         expect(
           skill.content,
           `${skill.name} leaks Cursor prefix for ${name}`,
-        ).not.toContain(`/trellis-${name}`);
+        ).not.toContain(`/phronia-${name}`);
       }
     }
   });
@@ -597,9 +597,9 @@ describe("wrapWithOmpFrontmatter", () => {
     expect(result).toContain("Wrap up the current session.");
   });
 
-  it("strips trellis- prefix before looking up description", () => {
+  it("strips phronia- prefix before looking up description", () => {
     const content = "# Continue Current Task\n\nBody text.";
-    const result = wrapWithOmpFrontmatter("trellis-continue", content);
+    const result = wrapWithOmpFrontmatter("phronia-continue", content);
     expect(result).toMatch(/^---\ndescription: /);
     expect(result).toContain("Body text.");
   });

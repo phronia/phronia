@@ -20,7 +20,7 @@ import {
 
 /**
  * User-set `model` / `model_reasoning_effort` top-level keys on a generated
- * `trellis-*.toml` agent profile. Users configure sub-agent models by
+ * `phronia-*.toml` agent profile. Users configure sub-agent models by
  * editing these files directly (matches Codex's own docs) — there is no
  * `.phronia/config.yaml` indirection.
  */
@@ -31,7 +31,7 @@ export interface CodexAgentModelKeys {
 
 /**
  * Extract user-set `model` / `model_reasoning_effort` top-level keys from an
- * existing `trellis-*.toml` agent profile. Only matches uncommented
+ * existing `phronia-*.toml` agent profile. Only matches uncommented
  * `key = "value"` lines (the static template's `# model = "..."` hint lines
  * never match). Not a general TOML parser — these files are known-flat with
  * no `[section]` headers.
@@ -82,7 +82,7 @@ function tomlUnescape(value: string): string {
 
 /**
  * Re-insert preserved `model` / `model_reasoning_effort` keys right after
- * `sandbox_mode = "..."` in a freshly rendered `trellis-*.toml` agent
+ * `sandbox_mode = "..."` in a freshly rendered `phronia-*.toml` agent
  * profile. Unset keys omit the corresponding line entirely (Codex falls
  * back through spawn value -> `[agents]` default -> parent). The fresh
  * template content never contains these keys itself (only commented
@@ -113,13 +113,13 @@ export function applyCodexAgentModelKeys(
 
 function isCodexAgentTomlPath(filePath: string): boolean {
   return (
-    filePath.startsWith(".codex/agents/trellis-") && filePath.endsWith(".toml")
+    filePath.startsWith(".codex/agents/phronia-") && filePath.endsWith(".toml")
   );
 }
 
 /**
  * Preserve any user-set `model` / `model_reasoning_effort` keys from the
- * on-disk `.codex/agents/trellis-*.toml` files (at `cwd`) into every
+ * on-disk `.codex/agents/phronia-*.toml` files (at `cwd`) into every
  * matching entry of `files` (the freshly rendered desired content). Mutates
  * `files` in place. Must run before hash comparison / write so that a
  * project whose only local edit is these two keys is not flagged as a
@@ -211,7 +211,7 @@ export async function configureCodex(cwd: string): Promise<void> {
   // accepts `codex_hooks`. Without this flag the hooks.json is ignored and
   // inject-workflow-state.py will never fire. Codex 0.129+ also gates each
   // installed hook behind a one-time `/hooks` review — until the user approves
-  // it the workflow breadcrumb won't auto-inject (the trellis-bootstrap
+  // it the workflow breadcrumb won't auto-inject (the phronia-bootstrap
   // fallback in inject-workflow-state.py covers this case). Documented in
   // spec/cli/backend/platform-integration.md.
   if (!process.env.VITEST && !process.env.PHRONIA_QUIET) {
