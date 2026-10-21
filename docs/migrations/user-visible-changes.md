@@ -132,5 +132,14 @@ Batches that must update this file:
     `sessions/<worktreeId>/` namespace first, then the legacy flat path.
   - Session writes now use an exclusive lock and a revision CAS; a lost
     update retries instead of silently overwriting another window.
-- **B12**: `phronia init` no longer creates `00-bootstrap-guidelines` or
-  `00-join-*` tasks; `docs/` is generated on demand.
+- **B12**: spec status and the visible knowledge layer.
+  - Spec files may carry `phronia.status: draft|verified|deprecated`; files
+    without frontmatter stay `verified`. `phronia spec status|verify|
+    deprecate` manages the states, and `phronia spec bootstrap` reports
+    missing `index.md` files and can create draft skeletons.
+  - `phronia docs generate` writes `docs/requirements.md` as a deterministic
+    projection of active and archived tasks (`--check` fails when stale).
+  - `phronia onboard [--write]` prints or writes a contributor brief; it does
+    not create `00-bootstrap-guidelines` or `00-join-*` tasks.
+  - Narrative `docs/architecture.md` and `docs/product.md` remain optional
+    and manually curated.

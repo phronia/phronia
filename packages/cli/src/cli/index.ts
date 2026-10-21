@@ -17,6 +17,13 @@ import {
   listWorktrees,
   removeWorktree,
 } from "../commands/worktree.js";
+import {
+  runSpecBootstrap,
+  runSpecSetStatus,
+  runSpecStatus,
+} from "../commands/spec.js";
+import { runDocsGenerate } from "../commands/docs.js";
+import { runOnboard } from "../commands/onboard.js";
 import { SessionStore } from "@phronia/core";
 import { ablate, restore } from "../commands/ablate.js";
 import { runMem } from "../commands/mem.js";
@@ -457,6 +464,80 @@ program
       check: Boolean(options.check),
     });
     if (exitCode !== 0) process.exit(exitCode);
+  });
+
+const specCommand = program
+  .command("spec")
+  .description("Inspect and manage spec status");
+
+specCommand
+  .command("status")
+  .option("--json", "Output machine-readable JSON")
+  .action((options: Record<string, unknown>) => {
+    process.exitCode = runSpecStatus({ cwd, json: Boolean(options.json) });
+  });
+
+specCommand
+  .command("verify <paths...>")
+  .option("--by <name>", "Who verified the spec")
+  .option("--json", "Output machine-readable JSON")
+  .action((paths: string[], options: Record<string, unknown>) => {
+    process.exitCode = runSpecSetStatus("verified", paths, {
+      cwd,
+      by: options.by as string | undefined,
+      json: Boolean(options.json),
+    });
+  });
+
+specCommand
+  .command("deprecate <paths...>")
+  .option("--json", "Output machine-readable JSON")
+  .action((paths: string[], options: Record<string, unknown>) => {
+    process.exitCode = runSpecSetStatus("deprecated", paths, {
+      cwd,
+      json: Boolean(options.json),
+    });
+  });
+
+specCommand
+  .command("bootstrap")
+  .option("--dry-run", "Only report missing index files")
+  .option("--write", "Create draft index files for missing layers")
+  .option("--json", "Output machine-readable JSON")
+  .action((options: Record<string, unknown>) => {
+    process.exitCode = runSpecBootstrap({
+      cwd,
+      dryRun: Boolean(options.dryRun),
+      write: Boolean(options.write),
+      json: Boolean(options.json),
+    });
+  });
+
+program
+  .command("docs")
+  .description("Knowledge-layer operations")
+  .command("generate")
+  .option("--check", "Exit non-zero when docs/requirements.md is stale")
+  .option("--json", "Output machine-readable JSON")
+  .action((options: Record<string, unknown>) => {
+    process.exitCode = runDocsGenerate({
+      cwd,
+      check: Boolean(options.check),
+      json: Boolean(options.json),
+    });
+  });
+
+program
+  .command("onboard")
+  .description("Print or write a project onboarding brief")
+  .option("--write", "Write docs/onboarding.md")
+  .option("--json", "Output machine-readable JSON")
+  .action((options: Record<string, unknown>) => {
+    process.exitCode = runOnboard({
+      cwd,
+      write: Boolean(options.write),
+      json: Boolean(options.json),
+    });
   });
 
 const sessionCommand = program
