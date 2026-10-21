@@ -17,6 +17,9 @@
  * — distinct from plugin `hooks.json` files (no `enabled`/`events` wrapper).
  */
 
+import { readFileSync } from "node:fs";
+import { dirname, join } from "node:path";
+import { fileURLToPath } from "node:url";
 import {
   createTemplateReader,
   type AgentTemplate,
@@ -35,4 +38,14 @@ export function getAllAgents(): AgentTemplate[] {
 /** Hook configuration written to `.zcode/config.json` (workspace config form). */
 export function getHooksConfig(): HookTemplate {
   return getSettings("config.json");
+}
+
+/**
+ * Self-owned bridge for builds where project hooks are disabled. The file is
+ * copied into the project so users can point their global ZCode plugin at it
+ * without depending on a third-party repository.
+ */
+export function getBridgeTemplate(): string {
+  const here = dirname(fileURLToPath(import.meta.url));
+  return readFileSync(join(here, "bridge", "phronia-zcode-bridge.mjs"), "utf-8");
 }

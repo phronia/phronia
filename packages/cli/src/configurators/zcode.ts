@@ -13,7 +13,11 @@
  */
 
 import { AI_TOOLS } from "../types/ai-tools.js";
-import { getAllAgents, getHooksConfig } from "../templates/zcode/index.js";
+import {
+  getAllAgents,
+  getBridgeTemplate,
+  getHooksConfig,
+} from "../templates/zcode/index.js";
 import { getSharedHookScriptsForPlatform } from "../templates/shared-hooks/index.js";
 import {
   collectSkillTemplates,
@@ -65,6 +69,10 @@ export function collectZcodeTemplates(): Map<string, string> {
     ".zcode/config.json",
     resolvePlaceholders(getHooksConfig().content),
   );
+
+  // 6. Self-owned bridge for builds that disable project hooks. Users point
+  //    their global ZCode plugin at this file; init never installs it globally.
+  files.set(".zcode/bridge/phronia-zcode-bridge.mjs", getBridgeTemplate());
 
   return files;
 }

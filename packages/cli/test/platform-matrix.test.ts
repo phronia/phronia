@@ -93,6 +93,24 @@ describe("doctor report", () => {
     }
   });
 
+  it("reports the ZCode integration path and honors a config pin", () => {
+    const root = fs.mkdtempSync(path.join(os.tmpdir(), "phronia-doctor-zcode-"));
+    try {
+      fs.mkdirSync(path.join(root, ".phronia"), { recursive: true });
+      fs.writeFileSync(
+        path.join(root, ".phronia", "config.yaml"),
+        "platforms:\n  zcode:\n    path: prelude\n",
+      );
+      const report = collectDoctorReport({ cwd: root, platform: "zcode", probe: false });
+      expect(report.platforms[0]?.zcode).toMatchObject({
+        path: "prelude",
+        trust: "unknown",
+      });
+    } finally {
+      fs.rmSync(root, { recursive: true, force: true });
+    }
+  });
+
   it("writes a degraded adapter record when probing is disabled", () => {
     const root = fs.mkdtempSync(path.join(os.tmpdir(), "phronia-doctor-manifest-"));
     try {

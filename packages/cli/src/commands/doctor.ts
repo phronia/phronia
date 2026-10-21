@@ -13,8 +13,12 @@ import {
   featureStatus,
   handshakeAgeMs,
   PLATFORM_IDS,
+  nodeFs,
   probeHarnessVersion,
+  readConfig,
   readHandshake,
+  selectZcodePath,
+  type ZcodePathState,
   selectAdapter,
   type AdapterSelection,
   type AdapterStatus,
@@ -51,6 +55,13 @@ export interface DoctorPlatformReport {
   id: PlatformId;
   name: string;
   adapter: DoctorAdapterReport;
+  /** Present only for ZCode: which of the three integration paths is active. */
+  zcode?: {
+    path: ZcodePathState["selected"]["kind"];
+    buildClass: string;
+    trust: ZcodePathState["trust"];
+    reason: string;
+  };
   features: DoctorFeature[];
 }
 
@@ -106,6 +117,9 @@ export function collectDoctorReport(options: DoctorOptions): DoctorReport {
         id,
         name: AI_TOOLS[id].name,
         adapter: adapterReport(selection, handshake, age),
+        ...(id === "zcode"
+          ? { zcode: zcodeReport(projectRoot, selection, handshake) }
+          : {}),
         features: FEATURES.map((feature) => doctorFeature(id, feature, environment)),
       };
     }),
@@ -141,6 +155,11 @@ export function runDoctorCommand(options: DoctorOptions): number {
       `  adapter ${adapter.adapterId ?? "(none)"}  harness ${adapter.harnessVersion ?? "unknown"} (${adapter.source})  ${adapter.status}${adapter.reason ? `: ${adapter.reason}` : ""}`,
       `  last handshake ${formatAge(adapter.lastHandshakeAgeMs)}`,
     );
+    if (platform.zcode) {
+      lines.push(
+        `  zcode path ${platform.zcode.path} (${platform.zcode.buildClass}, trust ${platform.zcode.trust}): ${platform.zcode.reason}`,
+      );
+    }
     for (const feature of platform.features) {
       lines.push(
         `  ${feature.id.padEnd(24)} ${feature.available ? "ok" : `unavailable: ${feature.reason ?? "unknown"}`}`,
@@ -256,4 +275,72 @@ function formatAge(ageMs: number | null): string {
   const hours = Math.floor(minutes / 60);
   if (hours < 48) return `${hours}h ago`;
   return `${Math.floor(hours / 24)}d ago`;
+}
+
+function zcodeReport(
+  projectRoot: string,
+  selection: AdapterSelection,
+  handshake: ReturnType<typeof readHandshake>,
+): NonNullable<DoctorPlatformReport["zcode"]> {
+  let pin: "project-hooks" | "bridge" | "prelude" | null = null;
+  try {
+    const envPin = process.env.PHRONIA_ZCODE_PATH;
+    const validEnvPin =
+      envPin === "project-hooks" || envPin === "bridge" || envPin === "prelude"
+        ? envPin
+        : null;
+    pin = readConfig(projectRoot, nodeFs).value.zcodePath ?? validEnvPin;
+  } catch {
+    pin = null;
+  }
+  const bridgePath = process.env.PHRONIA_ZCODE_BRIDGE ?? "";
+  const state = selectZcodePath({
+    version: selection.detection.harnessVersion,
+    versionSource:
+      selection.detection.source === "cli" ? "cli-probe" : "none",
+    pin,
+    handshake,
+    bridgeInstalled: Boolean(bridgePath),
+    bridgePath,
+  });
+  return {
+    path: state.selected.kind,
+    buildClass: state.build.class,
+    trust: state.trust,
+    reason: state.reason,
+  };
+}
+
+export function runZcodeDetectCommand(options: {
+  cwd: string;
+  json?: boolean;
+}): number {
+  const report = collectDoctorReport({ cwd: options.cwd, platform: "zcode" });
+  const platform = report.platforms[0];
+  if (!platform) {
+    process.stderr.write("ZCode adapter is not registered\n");
+    return 2;
+  }
+  if (options.json) {
+    process.stdout.write(
+      `${JSON.stringify({ adapter: platform.adapter, zcode: platform.zcode }, null, 2)}\n`,
+    );
+    return 0;
+  }
+  const zcode = platform.zcode;
+  if (!zcode) {
+    process.stderr.write("ZCode path state is unavailable\n");
+    return 2;
+  }
+  process.stdout.write(
+    [
+      `ZCode adapter: ${platform.adapter.adapterId ?? "(none)"}`,
+      `Harness: ${platform.adapter.harnessVersion ?? "unknown"} (${platform.adapter.source})`,
+      `Path: ${zcode.path}`,
+      `Build class: ${zcode.buildClass}`,
+      `Trust: ${zcode.trust}`,
+      `Reason: ${zcode.reason}`,
+    ].join("\n") + "\n",
+  );
+  return 0;
 }

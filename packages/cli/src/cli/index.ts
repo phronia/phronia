@@ -10,7 +10,7 @@ import { upgrade } from "../commands/upgrade.js";
 import { uninstall } from "../commands/uninstall.js";
 import { adopt, printAdoptReport } from "../commands/adopt.js";
 import { runContextCommand } from "../commands/context.js";
-import { runDoctorCommand } from "../commands/doctor.js";
+import { runDoctorCommand, runZcodeDetectCommand } from "../commands/doctor.js";
 import { ablate, restore } from "../commands/ablate.js";
 import { runMem } from "../commands/mem.js";
 import {
@@ -448,6 +448,19 @@ program
       probe: options.probe !== false,
       refreshManifest: Boolean(options.refreshManifest),
       check: Boolean(options.check),
+    });
+    if (exitCode !== 0) process.exit(exitCode);
+  });
+
+program
+  .command("zcode")
+  .description("Inspect the ZCode integration path selected for this machine")
+  .command("detect")
+  .option("--json", "Output machine-readable JSON")
+  .action((options: Record<string, unknown>) => {
+    const exitCode = runZcodeDetectCommand({
+      cwd,
+      json: Boolean(options.json),
     });
     if (exitCode !== 0) process.exit(exitCode);
   });

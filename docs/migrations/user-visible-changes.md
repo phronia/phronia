@@ -83,6 +83,16 @@ Batches that must update this file:
     shard and reports `unsupported` rather than reusing the v1 plugin.
 - **B7**: ZCode may select `bridge` or `prelude` instead of project hooks; the
   doctor reports the reason.
+  - **B7 now**: `phronia zcode detect` reports the selected path, build class,
+    trust state, and reason. Pin the path with `platforms.zcode.path:
+    project-hooks|bridge|prelude` in `config.yaml` or `PHRONIA_ZCODE_PATH`.
+    A build in the 3.7.x range is treated as hooks-disabled: the bridge is
+    used when `PHRONIA_ZCODE_BRIDGE` points at one, otherwise pull-based
+    skills. Unknown builds keep project hooks but stay `trust: unknown` until
+    a handshake proves they run. A self-owned ≤30-line bridge is generated at
+    `.zcode/bridge/phronia-zcode-bridge.mjs`; point the global ZCode plugin
+    at it when project hooks are unavailable. The bridge refuses to run when
+    ZCode does not supply a project root instead of searching the cwd.
 - **B9**: check output gains a machine-readable verdict file.
 - **B10**: hooks stop invoking Python; a platform package is used when
   available.

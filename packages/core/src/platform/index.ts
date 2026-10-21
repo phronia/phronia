@@ -6,3 +6,4 @@ export * from "./registry.js";
 export * from "./manifest.js";
 export * from "./probe.js";
 export * from "./semver.js";
+export * from "./zcode.js";

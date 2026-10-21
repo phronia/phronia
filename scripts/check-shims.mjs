@@ -48,6 +48,12 @@ const RULES = [
     forbidden: [/readContextInjectionLimits/, /buildContext\(/, /parseWorkflowStateBlocks/],
   },
   {
+    glob: "zcode/bridge",
+    adapter: "zcode@v1",
+    maxLines: 40,
+    forbidden: [/readJsonl/i, /materialize/i, /current_task/],
+  },
+  {
     glob: "snow/hooks/write-phronia-context.py",
     adapter: "snow@v1",
     maxLines: 330,

@@ -107,6 +107,23 @@ describe("config readers", () => {
     expect(result.diagnostics).toEqual([]);
   });
 
+  it("reads platform adapter pins and the zcode path", () => {
+    const result = readConfig(
+      "/repo",
+      memFs({
+        ".phronia/config.yaml": [
+          "platforms:",
+          "  opencode:",
+          "    adapter: opencode@v1",
+          "  zcode:",
+          "    path: bridge",
+        ].join("\n"),
+      }),
+    );
+    expect(result.value.adapterPins).toEqual({ opencode: "opencode@v1" });
+    expect(result.value.zcodePath).toBe("bridge");
+  });
+
   it("parses valid values", () => {
     const result = readConfig(
       "/repo",

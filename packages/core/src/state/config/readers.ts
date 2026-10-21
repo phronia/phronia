@@ -48,6 +48,10 @@ export interface ConfigView {
   defaultPackage: string | null;
   /** "active_task", an explicit package list, or null for a full scan. */
   specScope: string | string[] | null;
+  /** Explicit adapter ids: `platforms.<id>.adapter`. */
+  adapterPins: Record<string, string>;
+  /** ZCode path override: `platforms.zcode.path`. */
+  zcodePath: "project-hooks" | "bridge" | "prelude" | null;
 }
 
 export interface ConfigReadResult {
@@ -109,6 +113,8 @@ export function readConfig(
       packages: readPackages(raw.packages),
       defaultPackage: stringOrNull(raw.default_package),
       specScope: readSpecScope(raw.session),
+      adapterPins: readAdapterPins(raw.platforms),
+      zcodePath: readZcodePath(raw.platforms),
     },
     diagnostics,
     raw,
@@ -293,4 +299,33 @@ function isObject(value: YamlValue | undefined): value is YamlObject {
   return (
     typeof value === "object" && value !== null && !Array.isArray(value)
   );
+}
+
+function readAdapterPins(raw: YamlValue | undefined): Record<string, string> {
+  const platforms = asMap(raw);
+  if (!platforms) return {};
+  const pins: Record<string, string> = {};
+  for (const [id, value] of Object.entries(platforms)) {
+    const entry = asMap(value);
+    const adapter = entry ? stringOrNull(entry.adapter) : null;
+    if (adapter) pins[id] = adapter;
+  }
+  return pins;
+}
+
+function readZcodePath(
+  raw: YamlValue | undefined,
+): "project-hooks" | "bridge" | "prelude" | null {
+  const platforms = asMap(raw);
+  const zcode = platforms ? asMap(platforms.zcode) : null;
+  const value = zcode ? stringOrNull(zcode.path) : null;
+  return value === "project-hooks" || value === "bridge" || value === "prelude"
+    ? value
+    : null;
+}
+
+function asMap(value: YamlValue | undefined): YamlObject | null {
+  return value !== null && typeof value === "object" && !Array.isArray(value)
+    ? (value as YamlObject)
+    : null;
 }
