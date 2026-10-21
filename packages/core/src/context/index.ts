@@ -12,6 +12,7 @@ import { CONTEXT_SCHEMA_VERSION } from "./types.js";
 import { buildSessionStart } from "./session-start.js";
 import { buildUserPrompt } from "./user-prompt.js";
 import { buildPreShell } from "./pre-shell.js";
+import { buildSubagentSpawn } from "./subagent/index.js";
 import { CORE_VERSION } from "../version.js";
 import { diagnostic, type Diagnostic } from "../state/diagnostics.js";
 
@@ -20,6 +21,9 @@ export * from "./constants.js";
 export * from "./session-start.js";
 export * from "./user-prompt.js";
 export * from "./pre-shell.js";
+export * from "./subagent/index.js";
+export * from "./subagent/materialize.js";
+export * from "./subagent/prompts.js";
 export { contextJsonSchema } from "./contract.js";
 
 export class ContextContractError extends Error {}
@@ -40,10 +44,20 @@ export function handleContext(request: ContextRequest): ContextResponse {
       return buildUserPrompt(request);
     case "pre-shell":
       return buildPreShell(request);
+    case "subagent-spawn":
+      return buildSubagentSpawn(request);
     case "pre-tool-use": {
       const toolName = readToolName(request.input);
       if (toolName === "bash" || toolName === "shell") {
         return buildPreShell(request);
+      }
+      if (
+        toolName === "task" ||
+        toolName === "agent" ||
+        toolName === "subagent" ||
+        toolName === null
+      ) {
+        return buildSubagentSpawn(request);
       }
       return notImplemented(request);
     }
@@ -98,6 +112,8 @@ export function renderContext(
       return text.length > 0 ? `${text}\n` : "";
     case "shell-allow":
       return JSON.stringify({ permission: "allow" });
+    case "mutation-plan":
+      return JSON.stringify({ mutations: response.mutations });
     case "zcode-hook-v1":
       return JSON.stringify({
         hookSpecificOutput: {
