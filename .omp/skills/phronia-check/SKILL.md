@@ -40,6 +40,20 @@ Read the specific guideline files referenced — the index is a pointer, not the
 
 Run the project's lint, type-check, and test commands. Fix any failures before proceeding.
 
+## Step 3.5: Record Machine-Readable Verdicts
+
+Refresh the rule ledger and record one verdict per verified rule you evaluated:
+
+```bash
+phronia rules compile
+phronia rules verdict --task .phronia/tasks/<task> --input verdicts.json --check
+```
+
+`verdicts.json` is an array of `{ "id": "CLI-BE-001", "status": "pass" }`
+entries (`fail` requires `evidence`). The command writes
+`check-results.json` inside the task and reports any verified rules you did not
+evaluate as `missing`. Draft rules are advisory and need no verdict.
+
 ## Step 4: Review Against Checklist
 
 ### Code Quality

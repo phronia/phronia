@@ -55,6 +55,16 @@ At minimum: the current active task (if any). Plus any extra tasks the user conf
 
 If there is no active task and the user did not confirm any cleanup archives, skip this step.
 
+After archiving, refresh the mechanical knowledge layer:
+
+```bash
+phronia docs generate
+```
+
+If the change introduced a new module, data flow, or architectural decision,
+also update `docs/architecture.md`; if it changed capabilities or user-facing
+behavior, update `docs/product.md`. Both are narrative and reviewed like code.
+
 ## Step 4: Record session journal
 
 ```bash

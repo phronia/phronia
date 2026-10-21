@@ -145,4 +145,6 @@ Batches that must update this file:
   - `phronia onboard [--write]` prints or writes a contributor brief; it does
     not create `00-bootstrap-guidelines` or `00-join-*` tasks.
   - Narrative `docs/architecture.md` and `docs/product.md` remain optional
-    and manually curated.
+    and manually curated. `finish-work` now runs `phronia docs generate`
+    after archiving and prompts for narrative updates; `check` now requires
+    `phronia rules verdict` output for evaluated verified rules.
