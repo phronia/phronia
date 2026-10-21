@@ -10,12 +10,16 @@
 import type { ContextEvent, ContextRequest, ContextResponse } from "./types.js";
 import { CONTEXT_SCHEMA_VERSION } from "./types.js";
 import { buildSessionStart } from "./session-start.js";
+import { buildUserPrompt } from "./user-prompt.js";
+import { buildPreShell } from "./pre-shell.js";
 import { CORE_VERSION } from "../version.js";
 import { diagnostic, type Diagnostic } from "../state/diagnostics.js";
 
 export * from "./types.js";
 export * from "./constants.js";
 export * from "./session-start.js";
+export * from "./user-prompt.js";
+export * from "./pre-shell.js";
 export { contextJsonSchema } from "./contract.js";
 
 export class ContextContractError extends Error {}
@@ -32,6 +36,17 @@ export function handleContext(request: ContextRequest): ContextResponse {
   switch (request.event) {
     case "session-start":
       return buildSessionStart(request);
+    case "user-prompt":
+      return buildUserPrompt(request);
+    case "pre-shell":
+      return buildPreShell(request);
+    case "pre-tool-use": {
+      const toolName = readToolName(request.input);
+      if (toolName === "bash" || toolName === "shell") {
+        return buildPreShell(request);
+      }
+      return notImplemented(request);
+    }
     default:
       return notImplemented(request);
   }
@@ -80,7 +95,9 @@ export function renderContext(
   const envelope = options.envelope ?? response.envelope;
   switch (envelope) {
     case "kiro-plain":
-      return text;
+      return text.length > 0 ? `${text}\n` : "";
+    case "shell-allow":
+      return JSON.stringify({ permission: "allow" });
     case "zcode-hook-v1":
       return JSON.stringify({
         hookSpecificOutput: {
@@ -88,22 +105,50 @@ export function renderContext(
           additionalContext: text,
         },
       });
-    case "claude-hook-v2":
     case "gemini-before-agent":
       if (text.length === 0) {
         return "";
       }
       return JSON.stringify({
         hookSpecificOutput: {
+          hookEventName: "BeforeAgent",
+          additionalContext: text,
+        },
+      });
+    case "claude-hook-v2":
+      if (text.length === 0) {
+        return "";
+      }
+      // SessionStart accepts the dual-key shape; per-turn hooks must not emit
+      // the top-level alias or hosts would see the breadcrumb twice.
+      if (response.event === "session-start") {
+        return JSON.stringify({
+          hookSpecificOutput: {
+            hookEventName: "SessionStart",
+            additionalContext: text,
+          },
+          additional_context: text,
+        });
+      }
+      return JSON.stringify({
+        hookSpecificOutput: {
           hookEventName: eventName(response.event),
           additionalContext: text,
         },
-        additional_context: text,
       });
     case "none":
     default:
       return text;
   }
+}
+
+function readToolName(input: unknown): string | null {
+  if (typeof input !== "object" || input === null) {
+    return null;
+  }
+  const data = input as Record<string, unknown>;
+  const name = data.tool_name ?? data.toolName;
+  return typeof name === "string" ? name.toLowerCase() : null;
 }
 
 function eventName(event: ContextEvent): string {

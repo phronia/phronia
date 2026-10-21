@@ -24,7 +24,7 @@ describe("context contract", () => {
   });
 
   it("returns an explicit diagnostic for unimplemented events", () => {
-    const response = handleContext({ ...BASE, event: "user-prompt" });
+    const response = handleContext({ ...BASE, event: "subagent-spawn" });
     expect(response.degraded).toBe(true);
     expect(response.diagnostics.map((item) => item.code)).toContain(
       "context.event_not_implemented",
