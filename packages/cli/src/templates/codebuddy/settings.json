@@ -6,7 +6,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "{{PYTHON_CMD}} .codebuddy/hooks/session-start.py",
+            "command": "{{PYTHON_CMD}} .codebuddy/hooks/phronia-hook.py --event session-start --platform codebuddy",
             "timeout": 30
           }
         ]
@@ -16,7 +16,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "{{PYTHON_CMD}} .codebuddy/hooks/session-start.py",
+            "command": "{{PYTHON_CMD}} .codebuddy/hooks/phronia-hook.py --event session-start --platform codebuddy",
             "timeout": 30
           }
         ]
@@ -26,7 +26,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "{{PYTHON_CMD}} .codebuddy/hooks/session-start.py",
+            "command": "{{PYTHON_CMD}} .codebuddy/hooks/phronia-hook.py --event session-start --platform codebuddy",
             "timeout": 30
           }
         ]
@@ -38,7 +38,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "{{PYTHON_CMD}} .codebuddy/hooks/inject-subagent-context.py",
+            "command": "{{PYTHON_CMD}} .codebuddy/hooks/phronia-hook.py --event subagent-spawn --platform codebuddy",
             "timeout": 30
           }
         ]
@@ -48,7 +48,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "{{PYTHON_CMD}} .codebuddy/hooks/inject-shell-session-context.py",
+            "command": "{{PYTHON_CMD}} .codebuddy/hooks/phronia-hook.py --event pre-shell --platform codebuddy",
             "timeout": 5
           }
         ]
@@ -59,7 +59,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "{{PYTHON_CMD}} .codebuddy/hooks/inject-workflow-state.py",
+            "command": "{{PYTHON_CMD}} .codebuddy/hooks/phronia-hook.py --event user-prompt --platform codebuddy",
             "timeout": 15
           }
         ]

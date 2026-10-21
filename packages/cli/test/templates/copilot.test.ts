@@ -58,7 +58,7 @@ describe("copilot getHooksConfig", () => {
 		expect(raw.length).toBeGreaterThan(0);
 		expect(parsed.hooks?.SessionStart?.length).toBe(1);
 		expect(parsed.hooks?.SessionStart?.[0]?.command).toContain(
-			"{{PYTHON_CMD}} .github/copilot/hooks/session-start.py",
+			"{{PYTHON_CMD}} .github/copilot/hooks/phronia-hook.py --event session-start --platform copilot",
 		);
 	});
 

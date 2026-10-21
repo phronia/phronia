@@ -71,7 +71,7 @@ describe("codex native sub-agent hooks", () => {
 
     expect(config.hooks.UserPromptSubmit).toHaveLength(1);
     expect(config.hooks.UserPromptSubmit[0]?.hooks[0]?.command).toContain(
-      ".codex/hooks/inject-workflow-state.py",
+      ".codex/hooks/phronia-hook.py --event user-prompt",
     );
 
     expect(config.hooks.SubagentStart).toHaveLength(1);
@@ -85,7 +85,7 @@ describe("codex native sub-agent hooks", () => {
     expect(matcher.test("phronia-research")).toBe(true);
     expect(matcher.test("phronia-implement-extra")).toBe(false);
     expect(subagentStart?.hooks[0]?.command).toContain(
-      ".codex/hooks/inject-subagent-context.py",
+      ".codex/hooks/phronia-hook.py --event subagent-spawn",
     );
   });
 });

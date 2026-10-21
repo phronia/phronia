@@ -8,7 +8,7 @@
   },
   "then": {
     "type": "runCommand",
-    "command": "{{PYTHON_CMD}} .kiro/hooks/inject-workflow-state.py",
+    "command": "{{PYTHON_CMD}} .kiro/hooks/phronia-hook.py --event user-prompt --platform kiro",
     "timeout": 30
   }
 }

@@ -22,12 +22,12 @@
   "hooks": {
     "agentSpawn": [
       {
-        "command": "{{PYTHON_CMD}} .kiro/hooks/session-start.py"
+        "command": "{{PYTHON_CMD}} .kiro/hooks/phronia-hook.py --event session-start --platform kiro"
       }
     ],
     "userPromptSubmit": [
       {
-        "command": "{{PYTHON_CMD}} .kiro/hooks/inject-workflow-state.py"
+        "command": "{{PYTHON_CMD}} .kiro/hooks/phronia-hook.py --event user-prompt --platform kiro"
       }
     ]
   }

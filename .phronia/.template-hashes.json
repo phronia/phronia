@@ -338,7 +338,7 @@
     ".cursor/hooks/inject-shell-session-context.py": "fd66b0a1d5cc0797432d2a1650f804ba3680d8a7d6d49f0b7e3ac16529777ade",
     ".cursor/hooks/inject-subagent-context.py": "c0a8f84b1110cfc113d74cc611f9ba6850e187e79fd6caea9d840177ab17eaa6",
     ".cursor/hooks/session-start.py": "df307bc62d68828b9d7d7cf4ffe6e678f01ae9e8eedf3187cd4b80e25613f617",
-    ".cursor/hooks.json": "c7a830671610c1d433c97b3cb880e317730862631fbe3fd76d052553c83f49b3",
+    ".cursor/hooks.json": "92d3209db9404a88a1ac88164b03e01033fa43842245c14ef05c448f5eb463ca",
     ".opencode/lib/context-visibility.js": "b33d76e2fcad043d5427afc78e81a064365b4a5522b95f085de5bd80fc544f25",
     ".opencode/lib/session-utils.js": "e1799582227e9d5fc44f8cfc336f77aca1637cf43579bff23adc0ab7c13bcaf9",
     ".opencode/plugins/inject-subagent-context.js": "31aedeb87fe49e97284e59419535dc5eddc513cb13fe3af3294c212e690d034f",
@@ -347,11 +347,13 @@
     ".codex/hooks/session-start.py": "a920f1fd186df0835c210690c1f176476afd25c778a1e31f25b035bf0feec958",
     ".codex/hooks/inject-subagent-context.py": "c0a8f84b1110cfc113d74cc611f9ba6850e187e79fd6caea9d840177ab17eaa6",
     ".codex/hooks/inject-workflow-state.py": "6e61c1bb357b49915d550d5b9e61ac82f9f414f66da9b8eff61cd1d60c91c379",
-    ".codex/hooks.json": "a3d3395d377777f6a2cf166f0523886e1347c221621a35cfe27fbcb550f8d1a5",
+    ".codex/hooks.json": "54cc7d86c32f52adeb644925459b316c9ebaa0798c54631a451863d5e09af13c",
     ".codex/config.toml": "7705ed51c4e5ef103b405492fe27b58166909a3214ecca944f4e2629279059a8",
     ".pi/settings.json": "edf17ecb293eb1adab9873f77e698d8ec5a61943cd8f1651f51d7a899e533ff8",
     ".pi/extensions/phronia/index.ts": "2512f751ca589cac414e2f34a6c0076623ca178c75dbe7ad720facec63ad9388",
     ".omp/extensions/phronia/index.ts": "3ddc738c98cc1be7bf2da3b0ec85d3412bd99131627a8ac769b9850673a7780e",
-    ".claude/hooks/phronia-hook.py": "a513a353aecb2a31703b26d3fba887981ea86f3919e5c0f36e22eb3e4d70c265"
+    ".claude/hooks/phronia-hook.py": "a513a353aecb2a31703b26d3fba887981ea86f3919e5c0f36e22eb3e4d70c265",
+    ".cursor/hooks/phronia-hook.py": "a513a353aecb2a31703b26d3fba887981ea86f3919e5c0f36e22eb3e4d70c265",
+    ".codex/hooks/phronia-hook.py": "a513a353aecb2a31703b26d3fba887981ea86f3919e5c0f36e22eb3e4d70c265"
   }
 }

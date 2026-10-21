@@ -96,6 +96,13 @@ describe("shared-hooks capability table", () => {
   // instead of silently shipping a script nothing calls. Never hard-code the
   // platform list here; that is the failure mode this test exists to prevent.
   describe("shared hooks are registered in each platform's own hook config", () => {
+    const HOOK_EVENTS: Partial<Record<SharedHookName, string>> = {
+      "session-start.py": "session-start",
+      "inject-workflow-state.py": "user-prompt",
+      "inject-subagent-context.py": "subagent-spawn",
+      "inject-shell-session-context.py": "pre-shell",
+    };
+
     function registrationsOf(
       platform: string,
       hook: SharedHookName,
@@ -121,7 +128,10 @@ describe("shared-hooks capability table", () => {
           ([filePath, content]) =>
             !filePath.endsWith(hook) &&
             !filePath.endsWith(".md") &&
-            content.includes(`hooks/${hook}`),
+            (content.includes(`hooks/${hook}`) ||
+              content.includes(
+                `phronia-hook.py --event ${HOOK_EVENTS[hook] ?? ""}`,
+              )),
         )
         .map(([filePath]) => filePath);
     }
@@ -163,6 +173,7 @@ describe("shared-hooks capability table", () => {
     // the same trio as other agent-capable push-based platforms.
     expect([...SHARED_HOOKS_BY_PLATFORM.kiro].sort()).toEqual(
       [
+        "phronia-hook.py",
         "inject-subagent-context.py",
         "inject-workflow-state.py",
         "session-start.py",
@@ -177,6 +188,7 @@ describe("shared-hooks capability table", () => {
     // so the PreToolUse Bash ticket is its only route to session identity.
     expect([...SHARED_HOOKS_BY_PLATFORM.zcode].sort()).toEqual(
       [
+        "phronia-hook.py",
         "inject-shell-session-context.py",
         "inject-subagent-context.py",
         "inject-workflow-state.py",

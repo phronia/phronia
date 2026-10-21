@@ -25,8 +25,9 @@ const CLAUDE_DELETE_PATHS = [
 ];
 
 const CURSOR_DELETE_PATHS = [
-  ".cursor/hooks/inject-subagent-context.py",
+  ".cursor/hooks/phronia-hook.py",
   ".cursor/hooks/session-start.py",
+  ".cursor/hooks/inject-subagent-context.py",
   ".cursor/hooks/inject-workflow-state.py",
   ".cursor/hooks/inject-shell-session-context.py",
 ];
@@ -265,13 +266,13 @@ describe("scrubHooksJson — flat schema", () => {
       hooks: {
         preToolUse: [
           {
-            command: "python3 .cursor/hooks/inject-subagent-context.py",
+            command: "python3 .cursor/hooks/phronia-hook.py --event subagent-spawn",
             matcher: "Task|Subagent",
             timeout: 30,
           },
         ],
         sessionStart: [
-          { command: "python3 .cursor/hooks/session-start.py", timeout: 10 },
+          { command: "python3 .cursor/hooks/phronia-hook.py --event session-start", timeout: 10 },
         ],
       },
     };
@@ -291,7 +292,7 @@ describe("scrubHooksJson — flat schema", () => {
     const input = {
       hooks: {
         preToolUse: [
-          { command: "python3 .cursor/hooks/inject-subagent-context.py" },
+          { command: "python3 .cursor/hooks/phronia-hook.py --event subagent-spawn" },
           { command: "python3 .cursor/hooks/my-rule.py" },
         ],
       },
@@ -347,7 +348,7 @@ describe("scrubHooksJson — flat schema", () => {
     const input = {
       hooks: {
         sessionStart: [
-          { command: "python3 .cursor/hooks/session-start.py", timeout: 10 },
+          { command: "python3 .cursor/hooks/phronia-hook.py --event session-start", timeout: 10 },
         ],
       },
     };

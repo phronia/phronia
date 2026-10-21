@@ -478,7 +478,7 @@ describe("configurePlatform", () => {
     const expectedPythonCmd =
       process.platform === "win32" ? "python" : "python3";
     expect(content).toContain(
-      `"command": "${expectedPythonCmd} -X utf8 .codex/hooks/inject-workflow-state.py"`,
+      `"command": "${expectedPythonCmd} -X utf8 .codex/hooks/phronia-hook.py --event user-prompt --platform codex"`,
     );
     expect(content).not.toContain("{{PYTHON_CMD}}");
   });
@@ -538,10 +538,10 @@ describe("configurePlatform", () => {
       hooks?: Record<string, { command: string }[]>;
     };
     expect(trellis.hooks?.userPromptSubmit?.[0].command).toBe(
-      `${expectedPythonCmd} .kiro/hooks/inject-workflow-state.py`,
+      `${expectedPythonCmd} .kiro/hooks/phronia-hook.py --event user-prompt --platform kiro`,
     );
     expect(trellis.hooks?.agentSpawn?.[0].command).toBe(
-      `${expectedPythonCmd} .kiro/hooks/session-start.py`,
+      `${expectedPythonCmd} .kiro/hooks/phronia-hook.py --event session-start --platform kiro`,
     );
     expect(trellis.resources).toContain("file://.phronia/workflow.md");
 
@@ -558,7 +558,7 @@ describe("configurePlatform", () => {
         ),
       ) as { hooks?: Record<string, { command: string }[]> };
       expect(sub.hooks?.agentSpawn?.[0].command).toBe(
-        `${expectedPythonCmd} .kiro/hooks/inject-subagent-context.py`,
+        `${expectedPythonCmd} .kiro/hooks/phronia-hook.py --event subagent-spawn --platform kiro`,
       );
     }
 
@@ -574,7 +574,7 @@ describe("configurePlatform", () => {
     expect(ideHook.when.type).toBe("promptSubmit");
     expect(ideHook.then.type).toBe("runCommand");
     expect(ideHook.then.command).toBe(
-      `${expectedPythonCmd} .kiro/hooks/inject-workflow-state.py`,
+      `${expectedPythonCmd} .kiro/hooks/phronia-hook.py --event user-prompt --platform kiro`,
     );
   });
 
@@ -1172,13 +1172,13 @@ describe("configurePlatform", () => {
 
     const generatedConfig = readConfiguredFile(tmpDir, ".zcode/config.json");
     expect(generatedConfig).toContain(
-      "${ZCODE_PROJECT_DIR}/.zcode/hooks/session-start.py",
+      "${ZCODE_PROJECT_DIR}/.zcode/hooks/phronia-hook.py --event session-start --platform zcode",
     );
     expect(generatedConfig).toContain(
-      "${ZCODE_PROJECT_DIR}/.zcode/hooks/inject-workflow-state.py",
+      "${ZCODE_PROJECT_DIR}/.zcode/hooks/phronia-hook.py --event user-prompt --platform zcode",
     );
     expect(generatedConfig).toContain(
-      "${ZCODE_PROJECT_DIR}/.zcode/hooks/inject-subagent-context.py",
+      "${ZCODE_PROJECT_DIR}/.zcode/hooks/phronia-hook.py --event subagent-spawn --platform zcode",
     );
 
     const templates = collectPlatformTemplates("zcode");
@@ -1672,7 +1672,7 @@ describe("configurePlatform", () => {
   it("codex hooks.json template keeps PYTHON_CMD placeholder", () => {
     const rawTemplate = getCodexHooksConfig();
     expect(rawTemplate).toContain(
-      "{{PYTHON_CMD}} -X utf8 .codex/hooks/inject-workflow-state.py",
+      "{{PYTHON_CMD}} -X utf8 .codex/hooks/phronia-hook.py --event user-prompt --platform codex",
     );
   });
 
@@ -1704,7 +1704,7 @@ describe("configurePlatform", () => {
   it("copilot hooks.json template keeps PYTHON_CMD placeholder", () => {
     const rawTemplate = getCopilotHooksConfig();
     expect(rawTemplate).toContain(
-      "{{PYTHON_CMD}} .github/copilot/hooks/session-start.py",
+      "{{PYTHON_CMD}} .github/copilot/hooks/phronia-hook.py --event session-start --platform copilot",
     );
   });
 });

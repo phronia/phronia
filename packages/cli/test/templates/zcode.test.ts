@@ -43,9 +43,9 @@ describe("zcode getHooksConfig", () => {
     expect(cfg.content).toContain('"UserPromptSubmit"');
     expect(cfg.content).toContain('"PreToolUse"');
     expect(cfg.content).toContain('"matcher": "Agent|Task"');
-    expect(cfg.content).toContain("session-start.py");
-    expect(cfg.content).toContain("inject-workflow-state.py");
-    expect(cfg.content).toContain("inject-subagent-context.py");
+    expect(cfg.content).toContain("phronia-hook.py --event session-start --platform zcode");
+    expect(cfg.content).toContain("phronia-hook.py --event user-prompt");
+    expect(cfg.content).toContain("phronia-hook.py --event subagent-spawn");
     // Uses {{PYTHON_CMD}} placeholder so init resolves host python.
     expect(cfg.content).toContain("{{PYTHON_CMD}}");
   });
@@ -66,9 +66,9 @@ describe("zcode getHooksConfig", () => {
 
     expect(commands).toEqual(
       expect.arrayContaining([
-        '{{PYTHON_CMD}} "${ZCODE_PROJECT_DIR}/.zcode/hooks/session-start.py"',
-        '{{PYTHON_CMD}} "${ZCODE_PROJECT_DIR}/.zcode/hooks/inject-workflow-state.py"',
-        '{{PYTHON_CMD}} "${ZCODE_PROJECT_DIR}/.zcode/hooks/inject-subagent-context.py"',
+        '{{PYTHON_CMD}} "${ZCODE_PROJECT_DIR}/.zcode/hooks/phronia-hook.py --event session-start --platform zcode"',
+        '{{PYTHON_CMD}} "${ZCODE_PROJECT_DIR}/.zcode/hooks/phronia-hook.py --event user-prompt --platform zcode"',
+        '{{PYTHON_CMD}} "${ZCODE_PROJECT_DIR}/.zcode/hooks/phronia-hook.py --event subagent-spawn --platform zcode"',
       ]),
     );
     for (const command of commands) {

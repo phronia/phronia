@@ -9750,9 +9750,9 @@ describe("regression: collectTemplates paths match init directory structure (0.3
 
     const keys = [...templates.keys()];
     // Shared hooks written to .zcode/hooks/
-    expect(keys).toContain(".zcode/hooks/session-start.py");
-    expect(keys).toContain(".zcode/hooks/inject-workflow-state.py");
-    expect(keys).toContain(".zcode/hooks/inject-subagent-context.py");
+    expect(keys).toContain(".zcode/hooks/phronia-hook.py");
+    expect(keys).toContain(".zcode/config.json");
+    
     // Workspace hook registration
     expect(keys).toContain(".zcode/config.json");
     // agentCapable && hasHooks → start command is filtered out.
@@ -10132,7 +10132,7 @@ describe("regression: Codex uses native SubagentStart context delivery", () => {
       "^(?:phronia-implement|phronia-check|phronia-research)$",
     );
     expect(subagentStart?.hooks?.[0]?.command).toContain(
-      ".codex/hooks/inject-subagent-context.py",
+      ".codex/hooks/phronia-hook.py --event subagent-spawn",
     );
   });
 

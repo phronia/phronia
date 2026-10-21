@@ -23,7 +23,7 @@
   "hooks": {
     "agentSpawn": [
       {
-        "command": "{{PYTHON_CMD}} .kiro/hooks/inject-subagent-context.py"
+        "command": "{{PYTHON_CMD}} .kiro/hooks/phronia-hook.py --event subagent-spawn --platform kiro"
       }
     ]
   }

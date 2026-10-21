@@ -40,10 +40,10 @@ describe("kiro templates", () => {
     const trellis = parseAgent("phronia");
 
     expect(trellis.hooks?.userPromptSubmit?.[0].command).toContain(
-      ".kiro/hooks/inject-workflow-state.py",
+      ".kiro/hooks/phronia-hook.py --event user-prompt",
     );
     expect(trellis.hooks?.agentSpawn?.[0].command).toContain(
-      ".kiro/hooks/session-start.py",
+      ".kiro/hooks/phronia-hook.py --event session-start",
     );
     expect(trellis.resources).toContain("file://.phronia/workflow.md");
     // The main agent must NOT inject sub-agent context (that's the sub-agents' job).
@@ -60,7 +60,7 @@ describe("kiro templates", () => {
     ]) {
       const agent = parseAgent(name);
       expect(agent.hooks?.agentSpawn?.[0].command).toContain(
-        ".kiro/hooks/inject-subagent-context.py",
+        ".kiro/hooks/phronia-hook.py --event subagent-spawn",
       );
       // Sub-agents must not carry the main-session per-turn hook.
       expect(agent.hooks?.userPromptSubmit).toBeUndefined();
@@ -90,7 +90,7 @@ describe("kiro templates", () => {
     expect(parsed.when.type).toBe("promptSubmit");
     expect(parsed.then.type).toBe("runCommand");
     expect(parsed.then.command).toContain(
-      ".kiro/hooks/inject-workflow-state.py",
+      ".kiro/hooks/phronia-hook.py --event user-prompt",
     );
   });
 });

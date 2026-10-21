@@ -125,7 +125,7 @@ describe("trae hooks.json registers SessionStart + UserPromptSubmit", () => {
     expect(parsed.version).toBe(1);
     expect(parsed.hooks).toBeDefined();
     expect(Object.keys(parsed.hooks ?? {})).toContain("SessionStart");
-    expect(raw).toContain(".trae/hooks/session-start.py");
+    expect(raw).toContain(".trae/hooks/phronia-hook.py --event session-start");
     // Trae docs: matcher is only for PreToolUse/PostToolUse/Notification.
     // SessionStart fires once per new session (source: "startup" only).
     // Having matchers on SessionStart would cause 3x execution or be ignored.
@@ -139,7 +139,7 @@ describe("trae hooks.json registers SessionStart + UserPromptSubmit", () => {
     const parsed = JSON.parse(raw) as { hooks?: Record<string, unknown> };
     expect(parsed.hooks).toBeDefined();
     expect(Object.keys(parsed.hooks ?? {})).toContain("UserPromptSubmit");
-    expect(raw).toContain(".trae/hooks/inject-workflow-state.py");
+    expect(raw).toContain(".trae/hooks/phronia-hook.py --event user-prompt");
   });
 
   it("wires inject-shell-session-context.py under PreToolUse with a Bash matcher", () => {
@@ -157,7 +157,7 @@ describe("trae hooks.json registers SessionStart + UserPromptSubmit", () => {
     // matcher never fired. `Bash` is kept in the alternation because matcher is
     // a regex on every surface and dropping it would be an untested narrowing.
     expect(preToolUseGroups[0].matcher).toBe("RunCommand|Bash");
-    expect(raw).toContain(".trae/hooks/inject-shell-session-context.py");
+    expect(raw).toContain(".trae/hooks/phronia-hook.py --event pre-shell");
   });
 
   it("does not register any other hook events", () => {

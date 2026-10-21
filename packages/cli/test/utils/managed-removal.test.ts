@@ -37,7 +37,7 @@ describe("managed-removal strict planning", () => {
 
   it("accepts a relative POSIX manifest path", () => {
     expect(() =>
-      validateManagedRelativePath(".codex/hooks/session-start.py"),
+      validateManagedRelativePath(".codex/hooks/phronia-hook.py --event session-start"),
     ).not.toThrow();
   });
 

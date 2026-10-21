@@ -104,45 +104,55 @@ export const SHARED_HOOKS_BY_PLATFORM: Record<
     "inject-subagent-context.py",
   ],
   cursor: [
+    "phronia-hook.py",
     "session-start.py",
     "inject-shell-session-context.py",
     "inject-subagent-context.py",
   ],
-  codex: ["inject-workflow-state.py", "inject-subagent-context.py"],
+  codex: [
+    "phronia-hook.py","inject-workflow-state.py", "inject-subagent-context.py"],
   gemini: [
+    "phronia-hook.py",
     "session-start.py",
     "inject-shell-session-context.py",
     "inject-workflow-state.py",
   ],
   qoder: [
+    "phronia-hook.py",
     "session-start.py",
     "inject-shell-session-context.py",
     "inject-workflow-state.py",
   ],
-  copilot: ["inject-workflow-state.py"],
+  copilot: [
+    "phronia-hook.py","inject-workflow-state.py"],
   codebuddy: [
+    "phronia-hook.py",
     "session-start.py",
     "inject-shell-session-context.py",
     "inject-workflow-state.py",
     "inject-subagent-context.py",
   ],
   droid: [
+    "phronia-hook.py",
     "session-start.py",
     "inject-shell-session-context.py",
     "inject-workflow-state.py",
     "inject-subagent-context.py",
   ],
   kiro: [
+    "phronia-hook.py",
     "session-start.py",
     "inject-workflow-state.py",
     "inject-subagent-context.py",
   ],
   trae: [
+    "phronia-hook.py",
     "session-start.py",
     "inject-shell-session-context.py",
     "inject-workflow-state.py",
   ],
   zcode: [
+    "phronia-hook.py",
     "session-start.py",
     "inject-shell-session-context.py",
     "inject-workflow-state.py",

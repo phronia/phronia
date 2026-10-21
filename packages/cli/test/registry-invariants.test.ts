@@ -186,7 +186,7 @@ describe("UserPromptSubmit hook wiring", () => {
       };
       if (entry === "phronia.json") {
         expect(Object.keys(parsed.hooks ?? {})).toContain("userPromptSubmit");
-        expect(content).toContain("inject-workflow-state.py");
+        expect(content).toContain("phronia-hook.py --event user-prompt");
       } else {
         expect(
           content,
