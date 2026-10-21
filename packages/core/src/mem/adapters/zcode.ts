@@ -122,6 +122,9 @@ interface ZcodeSessionStore {
 const SQLITE_WARNINGS: SqliteWarningCopy = {
   unreadableCode: "zcode-db-unreadable",
   snapshotUnstableCode: "zcode-db-snapshot-unstable",
+  schemaUnsupportedCode: "zcode-db-schema-unsupported",
+  unsupportedMessage: (dbPath, error) =>
+    `ZCode session database schema is not supported (${dbPath}): ${error.message}`,
   writingMessage: (dbPath) => `ZCode 正在写入，请重试。 (${dbPath})`,
   unreadableMessage: (dbPath, error) =>
     `cannot read ZCode session database (${dbPath}): ${error.message}`,

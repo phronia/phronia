@@ -224,9 +224,10 @@ describe("runMem subcommand integration", () => {
   it("list --json: emits a parseable JSON array", () => {
     runMem(["list", "--cwd", projectCwd, "--json"]);
     expect(logs.length).toBeGreaterThan(0);
-    const parsed = JSON.parse(logs[0] ?? "[]") as unknown;
-    expect(Array.isArray(parsed)).toBe(true);
-    expect(parsed).toEqual(
+    const parsed = JSON.parse(logs[0] ?? "{}") as {
+      sessions: unknown[];
+    };
+    expect(parsed.sessions).toEqual(
       expect.arrayContaining([
         expect.objectContaining({ id: sessionId, platform: "claude" }),
       ]),
@@ -236,11 +237,10 @@ describe("runMem subcommand integration", () => {
   it("list --platform pi --json: emits Pi session metadata", () => {
     const piId = seedPiPhaseSession();
     runMem(["list", "--platform", "pi", "--cwd", projectCwd, "--json"]);
-    const parsed = JSON.parse(logs[0] ?? "[]") as {
-      id: string;
-      platform: string;
-    }[];
-    expect(parsed).toEqual(
+    const parsed = JSON.parse(logs[0] ?? "{}") as {
+      sessions: { id: string; platform: string }[];
+    };
+    expect(parsed.sessions).toEqual(
       expect.arrayContaining([
         expect.objectContaining({ id: piId, platform: "pi" }),
       ]),
@@ -251,7 +251,7 @@ describe("runMem subcommand integration", () => {
     nodeFs.mkdirSync(nodePath.dirname(ZCODE_DB), { recursive: true });
     nodeFs.writeFileSync(ZCODE_DB, "not sqlite");
     runMem(["list", "--platform", "zcode", "--global", "--json"]);
-    expect(JSON.parse(logs[0] ?? "null")).toEqual([]);
+    expect(JSON.parse(logs[0] ?? "{}")).toMatchObject({ sessions: [] });
     expect(errs.join("\n")).toContain("cannot read ZCode session database");
   });
 
@@ -268,9 +268,8 @@ describe("runMem subcommand integration", () => {
 
   it("search --json: returns an array of matches with score + excerpts", () => {
     runMem(["search", "memory", "--cwd", projectCwd, "--json"]);
-    const parsed = JSON.parse(logs[0] ?? "[]") as unknown;
-    expect(Array.isArray(parsed)).toBe(true);
-    const arr = parsed as {
+    const parsed = JSON.parse(logs[0] ?? "{}") as unknown;
+    const arr = (parsed as { matches: unknown[] }).matches as {
       session: { id: string };
       score: number;
       hit_count: number;
@@ -292,8 +291,10 @@ describe("runMem subcommand integration", () => {
       projectCwd,
       "--json",
     ]);
-    const parsed = JSON.parse(logs[0] ?? "[]") as { session: { id: string } }[];
-    expect(parsed[0]?.session.id).toBe(piId);
+    const parsed = JSON.parse(logs[0] ?? "{}") as {
+      matches: { session: { id: string } }[];
+    };
+    expect(parsed.matches[0]?.session.id).toBe(piId);
   });
 
   it("search: missing keyword exits non-zero via die()", () => {
@@ -650,13 +651,14 @@ describe("runMem subcommand integration", () => {
 
   it("projects --json: emits an array of {cwd, sessions, by_platform, ...}", () => {
     runMem(["projects", "--json"]);
-    const parsed = JSON.parse(logs[0] ?? "[]") as {
-      cwd: string;
-      sessions: number;
-      by_platform: Record<string, number>;
-    }[];
-    expect(Array.isArray(parsed)).toBe(true);
-    const ours = parsed.find((p) => p.cwd === projectCwd);
+    const parsed = JSON.parse(logs[0] ?? "{}") as {
+      projects: {
+        cwd: string;
+        sessions: number;
+        by_platform: Record<string, number>;
+      }[];
+    };
+    const ours = parsed.projects.find((p) => p.cwd === projectCwd);
     expect(ours).toBeDefined();
     expect(ours?.sessions).toBeGreaterThan(0);
     expect(ours?.by_platform.claude).toBe(1);

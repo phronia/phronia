@@ -575,3 +575,26 @@ describe("listMemProjects", () => {
     expect(ours?.by_platform.devin).toBe(0);
   });
 });
+
+describe("adapter failure isolation", () => {
+  it("keeps other sources when one adapter throws", async () => {
+    const { MEM_PLATFORMS } = await import("../../src/mem/platforms.js");
+    const spy = vi
+      .spyOn(MEM_PLATFORMS.claude, "list")
+      .mockImplementation(() => {
+        throw new Error("boom");
+      });
+    try {
+      const warnings: { code: string }[] = [];
+      listMemSessions({
+        filter: { platform: "all" },
+        onWarning: (warning) => warnings.push(warning),
+      });
+      expect(
+        warnings.some((warning) => warning.code === "mem.claude.list_failed"),
+      ).toBe(true);
+    } finally {
+      spy.mockRestore();
+    }
+  });
+});

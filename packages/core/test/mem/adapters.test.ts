@@ -2551,7 +2551,7 @@ describe.skipIf(!ZCODE_PY)("zcodeListSessions / zcodeExtractDialogue", () => {
     expect(zcodeListSessions(mkFilter({ cwd: undefined }), warnings)).toEqual(
       [],
     );
-    expect(warnings[0]?.code).toBe("zcode-db-unreadable");
+    expect(warnings[0]?.code).toBe("zcode-db-schema-unsupported");
     expect(warnings[0]?.message).toContain("directory");
   });
 

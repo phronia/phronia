@@ -93,6 +93,21 @@ Batches that must update this file:
     `.zcode/bridge/phronia-zcode-bridge.mjs`; point the global ZCode plugin
     at it when project hooks are unavailable. The bridge refuses to run when
     ZCode does not supply a project root instead of searching the cwd.
+- **B8**: the memory floor is now the first recall source.
+  - `phronia mem floor [query]` searches session journals, task summaries,
+    and spec sections written under `.phronia/`. It works with no harness
+    database at all; `--kind` and `--cwd` filter it.
+  - `phronia mem doctor` lists every source path, readability, and SQLite
+    schema (table names).
+  - `phronia mem search --scope enhancers|floor|all` selects the partition;
+    the default remains `enhancers` for one version. JSON output for
+    `mem list`, `mem search`, and `mem projects` is now an object carrying
+    `warnings` instead of a bare array.
+  - One failing session adapter is isolated: other sources still return and
+    the failure appears as a `mem.<platform>.<op>_failed` warning.
+  - ZCode schema mismatch is now `zcode-db-schema-unsupported`, distinct
+    from an unreadable database. `--limit` rejects values below 1, `-h`
+    works, and `--until` keeps an explicit time instead of forcing end-of-day.
 - **B9**: check output gains a machine-readable verdict file.
 - **B10**: hooks stop invoking Python; a platform package is used when
   available.

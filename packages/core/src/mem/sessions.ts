@@ -66,7 +66,9 @@ export function listAll(
   const all: MemSessionInfo[] = [];
   for (const kind of MEM_SOURCE_KINDS) {
     if (!inPlatformScope(f, kind)) continue;
-    all.push(...MEM_PLATFORMS[kind].list(f, warnings));
+    all.push(
+      ...callPlatform(kind, "list", warnings, () => MEM_PLATFORMS[kind].list(f, warnings), []),
+    );
   }
   all.sort((a, b) =>
     (b.updated ?? b.created ?? "").localeCompare(a.updated ?? a.created ?? ""),
@@ -78,7 +80,13 @@ function extractDialogue(
   s: MemSessionInfo,
   warnings: MemWarning[] = [],
 ): DialogueTurn[] {
-  return MEM_PLATFORMS[s.platform].extract(s, warnings);
+  return callPlatform(
+    s.platform,
+    "extract",
+    warnings,
+    () => MEM_PLATFORMS[s.platform].extract(s, warnings),
+    [],
+  );
 }
 
 function searchSession(
@@ -86,7 +94,37 @@ function searchSession(
   kw: string,
   warnings: MemWarning[] = [],
 ): SearchHit {
-  return MEM_PLATFORMS[s.platform].search(s, kw, warnings);
+  return callPlatform(
+    s.platform,
+    "search",
+    warnings,
+    () => MEM_PLATFORMS[s.platform].search(s, kw, warnings),
+    { count: 0, userCount: 0, asstCount: 0, totalTurns: 0, excerpts: [] },
+  );
+}
+
+/**
+ * One broken adapter must never empty every source. The failure is reported
+ * per platform and the caller keeps whatever the other readers produced.
+ */
+function callPlatform<T>(
+  kind: MemSourceKind,
+  operation: string,
+  warnings: MemWarning[],
+  run: () => T,
+  fallback: T,
+): T {
+  try {
+    return run();
+  } catch (error) {
+    warnings.push({
+      code: `mem.${kind}.${operation}_failed`,
+      message: `${kind} ${operation} failed: ${
+        error instanceof Error ? error.message : String(error)
+      }`,
+    });
+    return fallback;
+  }
 }
 
 function collectTurnsAndEvents(
@@ -129,9 +167,13 @@ function buildChildIndex(
   for (const [pid] of directChildren) {
     const stack = [...(directChildren.get(pid) ?? [])];
     const flat: MemSessionInfo[] = [];
-    while (stack.length) {
+    // A corrupt parent_id chain can form a cycle; never loop forever.
+    const visited = new Set<string>([pid]);
+    while (stack.length && flat.length < 10_000) {
       const cur = stack.pop();
       if (cur === undefined) break;
+      if (visited.has(cur.id)) continue;
+      visited.add(cur.id);
       flat.push(cur);
       for (const c of directChildren.get(cur.id) ?? []) stack.push(c);
     }

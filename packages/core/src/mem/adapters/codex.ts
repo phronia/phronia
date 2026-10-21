@@ -149,7 +149,12 @@ export function codexListSessions(f: MemFilter): MemSessionInfo[] {
     const created = first?.timestamp ?? tsFromName ?? "";
 
     if (f.cwd && !sameProject(cwd, f.cwd)) continue;
-    const updated = fs.statSync(file).mtime.toISOString();
+    let updated: string;
+    try {
+      updated = fs.statSync(file).mtime.toISOString();
+    } catch {
+      continue;
+    }
     if (!inRangeOverlap(created, updated, f)) continue;
 
     out.push({
