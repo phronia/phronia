@@ -32,6 +32,11 @@
       "import": "./dist/state/index.js",
       "default": "./dist/state/index.js"
     },
+    "./platform": {
+      "types": "./dist/platform/index.d.ts",
+      "import": "./dist/platform/index.js",
+      "default": "./dist/platform/index.js"
+    },
     "./task": {
       "types": "./dist/task/index.d.ts",
       "import": "./dist/task/index.js",

@@ -20,6 +20,12 @@ import { PACKAGE_NAME, VERSION } from "../constants/version.js";
 import { compareVersions } from "../utils/compare-versions.js";
 import { getConfiguredPlatforms } from "../configurators/index.js";
 import { AI_TOOLS } from "../types/ai-tools.js";
+import {
+  CAPABILITIES,
+  PLATFORM_IDS,
+  validateCapabilities,
+  type Mechanism,
+} from "@phronia/core";
 
 // Re-export for backwards compatibility (consumers should prefer constants/version.js)
 export { VERSION, PACKAGE_NAME };
@@ -402,8 +408,62 @@ program
     "Show which AI platforms are configured (active) in the current project",
   )
   .option("--json", "Output machine-readable JSON")
+  .option("--matrix", "Print the full capability matrix")
+  .option("--check", "Validate capability coverage and exit non-zero on failure")
   .action((options: Record<string, unknown>) => {
     try {
+      if (options.check) {
+        const problems: string[] = [];
+        for (const id of PLATFORM_IDS) {
+          if (!AI_TOOLS[id]) problems.push(`${id}: missing AI_TOOLS entry`);
+          if (!CAPABILITIES[id]) problems.push(`${id}: missing capability entry`);
+        }
+        for (const violation of validateCapabilities()) {
+          problems.push(`${violation.platform}: ${violation.message}`);
+        }
+        if (problems.length > 0) {
+          for (const problem of problems) console.error(chalk.red(`  ${problem}`));
+          process.exit(1);
+        }
+        console.log(chalk.green(`Capability matrix covers ${PLATFORM_IDS.length} platforms.`));
+        return;
+      }
+
+      if (options.matrix) {
+        const matrix = PLATFORM_IDS.map((id) => ({
+          id,
+          displayName: AI_TOOLS[id].name,
+          ...CAPABILITIES[id],
+        }));
+        if (options.json) {
+          console.log(JSON.stringify({ platforms: matrix }, null, 2));
+          return;
+        }
+        console.log(
+          [
+            "Platform".padEnd(16),
+            "SessionStart".padEnd(34),
+            "Subagent".padEnd(34),
+            "WorkflowState".padEnd(34),
+            "Shell".padEnd(24),
+            "Loop",
+          ].join(" "),
+        );
+        for (const entry of matrix) {
+          console.log(
+            [
+              entry.id.padEnd(16),
+              formatMechanism(entry.behavior.sessionStart).padEnd(34),
+              formatMechanism(entry.behavior.subagentContext).padEnd(34),
+              formatMechanism(entry.behavior.workflowState).padEnd(34),
+              formatMechanism(entry.behavior.shellIdentity).padEnd(24),
+              entry.loopControl,
+            ].join(" "),
+          );
+        }
+        return;
+      }
+
       const configured = getConfiguredPlatforms(cwd);
       const platforms = [...configured].map((id) => ({
         id,
@@ -436,6 +496,12 @@ program
       process.exit(1);
     }
   });
+
+function formatMechanism(mechanism: Mechanism): string {
+  if (mechanism.kind === "none") return "—";
+  if ("event" in mechanism && mechanism.event) return `${mechanism.kind} ${mechanism.event}`;
+  return mechanism.detail ? `${mechanism.kind} ${mechanism.detail}` : mechanism.kind;
+}
 
 registerChannelCommand(program);
 

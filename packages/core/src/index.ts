@@ -8,3 +8,4 @@ export * from "./task/index.js";
 export * from "./layout/index.js";
 export * from "./layout/env.js";
 export * from "./state/index.js";
+export * from "./platform/index.js";
