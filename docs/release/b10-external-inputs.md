@@ -58,11 +58,12 @@ that only the maintainer can supply. This file is the exact checklist.
 
 ## Current decision
 
-**B10 is code-complete and blocked only at signing/publishing.** `bun build
+**B10 is code-complete and release is deferred by decision (ADR-0014, accepted 2026-10-21).** `bun build
 --compile` produces all five targets on this machine; the binary embeds the
 templates, extracts them to a cache directory, and runs `--version` and
 `context session-start` successfully. `packages/runtime/scripts/package-npm.mjs`
 stages the five platform packages and the main package with
 `optionalDependencies` populated. What remains is exactly section A and
 B/C: credentials to sign, notarize, and publish. Re-open B10 when those are
-supplied.
+supplied. Until then the release is explicitly deferred, not silently
+incomplete.

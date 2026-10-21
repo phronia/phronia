@@ -1,6 +1,6 @@
 # ADR-0014: B10 signing/publishing is deferred pending credentials
 
-- Status: proposed (requires maintainer confirmation)
+- Status: accepted (deferred by explicit decision)
 - Date: 2026-10-21
 - Deciders: maintainer
 - Supersedes: none
@@ -32,15 +32,16 @@ see Gatekeeper/SmartScreen failures without an explanation.
 
 ## Decision
 
-Defer B10's signing, notarization, and npm publish until the credentials in
-`docs/release/b10-external-inputs.md` are supplied. Do not delete the runtime
-package, the staging script, or the release workflow; they are the tested
-implementation waiting for credentials.
+Accepted on 2026-10-21: defer B10's signing, notarization, and npm publish
+until the credentials in `docs/release/b10-external-inputs.md` are supplied.
+Do not delete the runtime package, the staging script, or the release
+workflow; they are the tested implementation waiting for credentials.
 
 ## Consequences
 
-- B0–B9 and B11–B13 are complete; B10 is complete except for release signing
-  and publishing.
+- B0–B9 and B11–B13 are complete; B10 is marked **code complete, release
+  deferred**. The deferral is a decision, not an unfinished implementation
+  task.
 - The JS fallback and the five unsigned binaries can be built and smoke-tested
   locally by anyone with Bun.
 - On credential availability: run the release workflow, import the
