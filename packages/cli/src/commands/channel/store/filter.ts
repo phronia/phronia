@@ -1,6 +1,6 @@
 export {
   MEANINGFUL_EVENT_KINDS,
   matchesEventFilter,
-} from "@mindfoldhq/trellis-core/channel";
+} from "@phronia/core/channel";
 
-export type { ChannelEventFilter } from "@mindfoldhq/trellis-core/channel";
+export type { ChannelEventFilter } from "@phronia/core/channel";

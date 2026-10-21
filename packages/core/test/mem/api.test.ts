@@ -1,5 +1,5 @@
 /**
- * End-to-end tests for the public `@mindfoldhq/trellis-core/mem` API against a
+ * End-to-end tests for the public `@phronia/core/mem` API against a
  * small Claude fixture tree under a mocked $HOME.
  */
 

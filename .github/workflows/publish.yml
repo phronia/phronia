@@ -64,7 +64,7 @@ jobs:
         id: plan
         run: node packages/cli/scripts/release-preflight.js publish-plan --github
 
-      - name: Publish @mindfoldhq/trellis-core
+      - name: Publish @phronia/core
         if: steps.plan.outputs.core_publish == 'true'
         run: pnpm publish --access public --no-git-checks --tag ${{ steps.plan.outputs.tag }}
         working-directory: packages/core
@@ -72,11 +72,11 @@ jobs:
           NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
           NPM_CONFIG_PROVENANCE: "true"
 
-      - name: Skip @mindfoldhq/trellis-core (already on npm)
+      - name: Skip @phronia/core (already on npm)
         if: steps.plan.outputs.core_publish != 'true'
-        run: echo "@mindfoldhq/trellis-core@${{ steps.plan.outputs.version }} already published; skipping."
+        run: echo "@phronia/core@${{ steps.plan.outputs.version }} already published; skipping."
 
-      - name: Publish @mindfoldhq/trellis
+      - name: Publish @phronia/cli
         if: steps.plan.outputs.cli_publish == 'true'
         run: pnpm publish --access public --no-git-checks --tag ${{ steps.plan.outputs.tag }}
         working-directory: packages/cli
@@ -84,9 +84,9 @@ jobs:
           NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
           NPM_CONFIG_PROVENANCE: "true"
 
-      - name: Skip @mindfoldhq/trellis (already on npm)
+      - name: Skip @phronia/cli (already on npm)
         if: steps.plan.outputs.cli_publish != 'true'
-        run: echo "@mindfoldhq/trellis@${{ steps.plan.outputs.version }} already published; skipping."
+        run: echo "@phronia/cli@${{ steps.plan.outputs.version }} already published; skipping."
 
       - name: Verify published packages on public npm
         run: node packages/cli/scripts/release-preflight.js verify-npm --package all

@@ -103,7 +103,7 @@ The shape and dispatch wiring are already generic, so adding a skill requires on
 5. **Verify the distribution path** before shipping. Skipping any of these steps has historically caused features to be documented as bundled while the published npm tarball was missing the files:
 
    - Source files exist on the branch being tagged.
-   - `pnpm --filter @mindfoldhq/trellis build` copies the asset into `dist/templates/common/bundled-skills/<skill>/`.
+   - `pnpm --filter @phronia/cli build` copies the asset into `dist/templates/common/bundled-skills/<skill>/`.
    - `npm pack --dry-run --json` includes the expected `dist/**` paths.
    - In a fresh temp project, `trellis init` writes `.claude/skills/<skill>/SKILL.md`, `.agents/skills/<skill>/SKILL.md`, etc.
    - `.phronia/.template-hashes.json` lists the generated files.

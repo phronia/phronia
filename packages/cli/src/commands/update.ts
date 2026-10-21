@@ -5,7 +5,7 @@ import chalk from "chalk";
 import inquirer from "inquirer";
 
 import { DIR_NAMES, FILE_NAMES, PATHS } from "../constants/paths.js";
-import { LAYOUT } from "@mindfoldhq/trellis-core/layout";
+import { LAYOUT } from "@phronia/core/layout";
 import type { AITool } from "../types/ai-tools.js";
 import { VERSION, PACKAGE_NAME } from "../constants/version.js";
 import {

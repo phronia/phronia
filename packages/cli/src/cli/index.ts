@@ -38,10 +38,10 @@ function checkForUpdates(cwd: string): void {
     // CLI is newer than project - update available
     console.log(
       chalk.yellow(
-        `\n⚠️  Trellis update available: ${projectVersion} → ${cliVersion}`,
+        `\n⚠️  Phronia update available: ${projectVersion} → ${cliVersion}`,
       ),
     );
-    console.log(chalk.gray(`   Run: trellis update\n`));
+    console.log(chalk.gray(`   Run: phronia update\n`));
   } else if (comparison < 0) {
     // CLI is older than project - CLI needs updating
     console.log(
@@ -49,8 +49,16 @@ function checkForUpdates(cwd: string): void {
         `\n⚠️  Your CLI (${cliVersion}) is older than project (${projectVersion})`,
       ),
     );
-    console.log(chalk.gray(`   Run: trellis upgrade\n`));
+    console.log(chalk.gray(`   Run: phronia upgrade\n`));
   }
+}
+
+// `trellis` remains a one-major compatibility alias.
+const invokedAs = path.basename(process.argv[1] ?? "");
+if (invokedAs === "trellis" || invokedAs === "trellis.js") {
+  process.stderr.write(
+    "ℹ️  `trellis` is the legacy name; use `phronia` instead. The alias is removed in the next major version.\n",
+  );
 }
 
 // Check for updates at CLI startup (only if .phronia exists)
@@ -62,9 +70,9 @@ if (fs.existsSync(path.join(cwd, DIR_NAMES.WORKFLOW))) {
 const program = new Command();
 
 program
-  .name("trellis")
+  .name("phronia")
   .description(
-    "AI-assisted development workflow framework for Cursor, Claude Code and more",
+    "Phronia — an AI-assisted development workflow framework for Cursor, Claude Code, and more",
   )
   .version(VERSION, "-v, --version", "output the version number");
 

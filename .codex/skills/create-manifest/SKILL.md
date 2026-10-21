@@ -15,8 +15,8 @@ Create a migration manifest for a new patch, beta, rc, or minor release based on
 
 Trellis currently publishes two npm packages from the same git tag:
 
-- `@mindfoldhq/trellis`
-- `@mindfoldhq/trellis-core`
+- `@phronia/cli`
+- `@phronia/core`
 
 Both packages must always share the exact same version and npm dist-tag. Source uses `workspace:*`; the packed CLI must depend on the exact published core version.
 
@@ -205,7 +205,7 @@ Verify:
 2. Manifest `changelog` renders as real newlines.
 3. Both docs-site changelog MDX files exist and match 1:1.
 4. **All** submodule commits are pushed before the main repo pointer commit (currently `docs-site/` + `marketplace/`). Verify with: `git submodule foreach 'sha=$(git rev-parse HEAD); git ls-remote origin $sha | grep -q $sha && echo "ok $name" || echo "FAIL $name $sha"'`. Tag-triggered CI does `git submodule update --init --recursive` and fails on the first unpushed pointer with `fatal: remote error: upload-pack: not our ref <SHA>`.
-5. `@mindfoldhq/trellis` and `@mindfoldhq/trellis-core` versions still match.
+5. `@phronia/cli` and `@phronia/core` versions still match.
 
 ## Step 11: Publish Through CI
 
@@ -221,8 +221,8 @@ pnpm release:promote
 After CI succeeds, verify public npm:
 
 ```bash
-npm view @mindfoldhq/trellis@<version> version dist-tags --json --registry=https://registry.npmjs.org/
-npm view @mindfoldhq/trellis-core@<version> version dist-tags --json --registry=https://registry.npmjs.org/
+npm view @phronia/cli@<version> version dist-tags --json --registry=https://registry.npmjs.org/
+npm view @phronia/core@<version> version dist-tags --json --registry=https://registry.npmjs.org/
 ```
 
 If CI fails or npm visibility is wrong, fix the workflow/scripts and re-run the CI path. Do not use local publish to fill the gap.
@@ -233,7 +233,7 @@ Breaking releases must run end-to-end migration in a throwaway directory:
 
 ```bash
 mkdir /tmp/migrate-test && cd /tmp/migrate-test && git init -q .
-npx -y @mindfoldhq/trellis@<last-ga> init -y -u test --claude --cursor --<platforms>
+npx -y @phronia/cli@<last-ga> init -y -u test --claude --cursor --<platforms>
 node <repo>/packages/cli/dist/cli/index.js update --migrate --dry-run
 yes | node <repo>/packages/cli/dist/cli/index.js update --migrate --force
 yes | node <repo>/packages/cli/dist/cli/index.js update

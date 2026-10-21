@@ -70,7 +70,7 @@ jobs:
         run: pnpm typecheck
 
       - name: Typecheck Python
-        run: pnpm --filter @mindfoldhq/trellis lint:py
+        run: pnpm --filter @phronia/cli lint:py
 
       - name: Lint (core + cli)
         run: pnpm lint

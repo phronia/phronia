@@ -135,7 +135,7 @@ function main() {
 
   run("node scripts/check-manifest-continuity.js");
   docsGuard(type);
-  run("pnpm --filter @mindfoldhq/trellis-core test");
+  run("pnpm --filter @phronia/core test");
   run("pnpm test");
 
   // Exclude .phronia/ from the pre-release sweep: dirty task/workspace files

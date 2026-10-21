@@ -15,7 +15,7 @@ import type {
   MigrationManifest,
 } from "../types/migration.js";
 import { compareVersions } from "../utils/compare-versions.js";
-import { LAYOUT } from "@mindfoldhq/trellis-core/layout";
+import { LAYOUT } from "@phronia/core/layout";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const MANIFESTS_DIR = path.join(__dirname, "manifests");

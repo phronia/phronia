@@ -4,7 +4,7 @@ import {
   resolveChannelRef,
   type ChannelScope,
   type ChannelType,
-} from "@mindfoldhq/trellis-core/channel";
+} from "@phronia/core/channel";
 
 import {
   parseChannelScope,

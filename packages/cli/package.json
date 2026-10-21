@@ -1,13 +1,14 @@
 {
-  "name": "@mindfoldhq/trellis",
+  "name": "@phronia/cli",
   "version": "0.6.17",
-  "description": "AI capabilities grow like ivy — Trellis provides the structure to guide them along a disciplined path",
+  "description": "Phronia — practical wisdom for AI-assisted software development",
   "type": "module",
   "main": "./dist/index.js",
   "types": "./dist/index.d.ts",
   "bin": {
+    "phronia": "./bin/phronia.js",
     "trellis": "./bin/trellis.js",
-    "tl": "./bin/trellis.js"
+    "tl": "./bin/phronia.js"
   },
   "publishConfig": {
     "access": "public"
@@ -52,7 +53,7 @@
   "author": "Mindfold LLC",
   "license": "AGPL-3.0-only",
   "dependencies": {
-    "@mindfoldhq/trellis-core": "workspace:*",
+    "@phronia/core": "workspace:*",
     "chalk": "^5.3.0",
     "commander": "^12.1.0",
     "figlet": "^1.9.4",

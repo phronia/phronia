@@ -1,7 +1,7 @@
 /**
  * Path constants for the Phronia workflow structure.
  *
- * Values come from `@mindfoldhq/trellis-core/layout`, which is the single
+ * Values come from `@phronia/core/layout`, which is the single
  * source of truth. Changing a directory means changing `LAYOUT` and running the
  * generator that produces the Python `layout.json`; editing values here is not
  * supported.
@@ -10,7 +10,7 @@
  * compatibility with existing call sites.
  */
 
-import { LAYOUT } from "@mindfoldhq/trellis-core/layout";
+import { LAYOUT } from "@phronia/core/layout";
 
 // Directory names.
 export const DIR_NAMES = {

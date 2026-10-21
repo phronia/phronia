@@ -20,8 +20,8 @@
 </p>
 
 <p align="center">
-<a href="https://www.npmjs.com/package/@mindfoldhq/trellis"><img src="https://img.shields.io/npm/v/@mindfoldhq/trellis.svg?style=flat-square&color=2563eb" alt="npm version" /></a>
-<a href="https://www.npmjs.com/package/@mindfoldhq/trellis"><img src="https://img.shields.io/npm/dw/@mindfoldhq/trellis?style=flat-square&color=cb3837&label=downloads" alt="npm downloads" /></a>
+<a href="https://www.npmjs.com/package/@phronia/cli"><img src="https://img.shields.io/npm/v/@phronia/cli.svg?style=flat-square&color=2563eb" alt="npm version" /></a>
+<a href="https://www.npmjs.com/package/@phronia/cli"><img src="https://img.shields.io/npm/dw/@phronia/cli?style=flat-square&color=cb3837&label=downloads" alt="npm downloads" /></a>
 <a href="https://github.com/mindfold-ai/Trellis/blob/main/LICENSE"><img src="https://img.shields.io/badge/license-AGPL--3.0-16a34a.svg?style=flat-square" alt="license" /></a>
 <a href="https://github.com/mindfold-ai/Trellis/stargazers"><img src="https://img.shields.io/github/stars/mindfold-ai/Trellis?style=flat-square&color=eab308" alt="stars" /></a>
 <a href="https://docs.trytrellis.app/zh"><img src="https://img.shields.io/badge/docs-trytrellis.app-0f766e?style=flat-square" alt="docs" /></a>
@@ -55,7 +55,7 @@
 
 ```bash
 # 1. 安装 Trellis
-npm install -g @mindfoldhq/trellis@latest
+npm install -g @phronia/cli@latest
 
 # 2. 在仓库中初始化
 trellis init -u your-name
