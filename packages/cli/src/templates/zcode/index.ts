@@ -10,42 +10,21 @@
  * implement/check prelude, and persists findings under the active task's
  * research directory instead.
  *
- * ZCode 3.x supports a workspace hook config at `.zcode/config.json`
- * (SessionStart + UserPromptSubmit). Shared Python hook scripts are written
- * to `.zcode/hooks/` and registered via the config. The config schema is the
- * workspace form: `{ hooks: { enabled: true, events: { <Event>: [...] } } }`
- * — distinct from plugin `hooks.json` files (no `enabled`/`events` wrapper).
+ * Hook registration lives in the project-local plugin under
+ * `.zcode/plugins/phronia/`; the shared Python shims are still written to
+ * `.zcode/hooks/` and invoked by `phronia hook`.
  */
 
-import { readFileSync } from "node:fs";
-import { join } from "node:path";
-import {
-  createTemplateReader,
-  type AgentTemplate,
-  type HookTemplate,
-} from "../template-utils.js";
-import { assetDir } from "../asset-root.js";
+import { createTemplateReader, type AgentTemplate } from "../template-utils.js";
 
-export type { AgentTemplate, HookTemplate };
+export type { AgentTemplate };
 
-const { listMdAgents, getSettings } = createTemplateReader(import.meta.url, "templates/zcode");
+const { listMdAgents } = createTemplateReader(
+  import.meta.url,
+  "templates/zcode",
+);
 
 /** Sub-agent definitions (phronia-implement, phronia-check, phronia-research). */
 export function getAllAgents(): AgentTemplate[] {
   return listMdAgents();
-}
-
-/** Hook configuration written to `.zcode/config.json` (workspace config form). */
-export function getHooksConfig(): HookTemplate {
-  return getSettings("config.json");
-}
-
-/**
- * Self-owned bridge for builds where project hooks are disabled. The file is
- * copied into the project so users can point their global ZCode plugin at it
- * without depending on a third-party repository.
- */
-export function getBridgeTemplate(): string {
-  const here = assetDir(import.meta.url, "templates/zcode");
-  return readFileSync(join(here, "bridge", "phronia-zcode-bridge.mjs"), "utf-8");
 }

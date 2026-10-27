@@ -8,6 +8,7 @@
  */
 
 import { execFileSync } from "node:child_process";
+import fs from "node:fs";
 import path from "node:path";
 import {
   featureStatus,
@@ -29,6 +30,7 @@ import {
   type PlatformId,
 } from "@phronia/core";
 import { getConfiguredPlatforms } from "../configurators/index.js";
+import { ensureZcodePlugin } from "../configurators/zcode-plugin.js";
 import { AI_TOOLS } from "../types/ai-tools.js";
 import { refreshAdapterManifest } from "./adapter-manifest.js";
 
@@ -79,6 +81,12 @@ export interface DoctorReport {
   projectRoot: string;
   environment: DoctorEnvironment;
   platforms: DoctorPlatformReport[];
+  /** Present when doctor checked/repaired the project-local ZCode plugin. */
+  zcodePlugin?: {
+    changed: boolean;
+    pluginDir: string;
+    warnings: string[];
+  };
 }
 
 const FEATURES: readonly FeatureId[] = [
@@ -101,6 +109,11 @@ export interface DoctorOptions {
   refreshManifest?: boolean;
   /** Exit non-zero on unsupported or schema-drift adapters. */
   check?: boolean;
+  /**
+   * Install/repair the project-local ZCode plugin before reporting. Defaults
+   * to true; `--no-fix` makes doctor read-only.
+   */
+  fix?: boolean;
 }
 
 export function collectDoctorReport(options: DoctorOptions): DoctorReport {
@@ -144,7 +157,34 @@ export function runDoctorCommand(options: DoctorOptions): number {
     process.stderr.write(`Unknown platform: ${options.platform}\n`);
     return 2;
   }
+
+  const projectRoot = path.resolve(options.cwd);
+  const configured =
+    options.fix !== false ? getConfiguredPlatforms(projectRoot) : new Set();
+  const hasZcodeHooks = fs.existsSync(
+    path.join(projectRoot, ".zcode", "hooks", "phronia-hook.py"),
+  );
+  const shouldFix =
+    options.fix !== false &&
+    fs.existsSync(path.join(projectRoot, ".phronia")) &&
+    (options.platform === "zcode" ||
+      (!options.platform && (configured.has("zcode") || hasZcodeHooks)));
+
+  let zcodePlugin: DoctorReport["zcodePlugin"];
+  if (shouldFix) {
+    try {
+      zcodePlugin = ensureZcodePlugin(projectRoot);
+    } catch (error) {
+      process.stderr.write(
+        `ZCode plugin: ${error instanceof Error ? error.message : String(error)}\n`,
+      );
+    }
+  }
+
   const report = collectDoctorReport(options);
+  if (zcodePlugin) {
+    report.zcodePlugin = zcodePlugin;
+  }
   if (options.refreshManifest) {
     refreshManifest(report);
   }
@@ -157,6 +197,14 @@ export function runDoctorCommand(options: DoctorOptions): number {
     `Project: ${report.projectRoot}`,
     `Environment: gitRepo=${report.environment.gitRepo ? "yes" : "no"} gitRemote=${report.environment.gitRemote ? "yes" : "no"}`,
   ];
+  if (report.zcodePlugin) {
+    lines.push(
+      `ZCode plugin: ${report.zcodePlugin.changed ? "installed/updated" : "ok"} (${report.zcodePlugin.pluginDir})`,
+    );
+    for (const warning of report.zcodePlugin.warnings) {
+      lines.push(`  warning: ${warning}`);
+    }
+  }
   if (report.platforms.length === 0) {
     lines.push("", "No Phronia platform is configured in this project.");
   }
@@ -303,11 +351,14 @@ function zcodeReport(
   selection: AdapterSelection,
   handshake: ReturnType<typeof readHandshake>,
 ): NonNullable<DoctorPlatformReport["zcode"]> {
-  let pin: "project-hooks" | "bridge" | "prelude" | null = null;
+  let pin: "plugin" | "project-hooks" | "bridge" | "prelude" | null = null;
   try {
     const envPin = process.env.PHRONIA_ZCODE_PATH;
     const validEnvPin =
-      envPin === "project-hooks" || envPin === "bridge" || envPin === "prelude"
+      envPin === "plugin" ||
+      envPin === "project-hooks" ||
+      envPin === "bridge" ||
+      envPin === "prelude"
         ? envPin
         : null;
     pin = readConfig(projectRoot, nodeFs).value.zcodePath ?? validEnvPin;
@@ -315,6 +366,10 @@ function zcodeReport(
     pin = null;
   }
   const bridgePath = process.env.PHRONIA_ZCODE_BRIDGE ?? "";
+  const pluginDir = ".zcode/plugins/phronia";
+  const pluginInstalled = fs.existsSync(
+    path.join(projectRoot, ...pluginDir.split("/"), ".zcode-plugin", "plugin.json"),
+  );
   const state = selectZcodePath({
     version: selection.detection.harnessVersion,
     versionSource:
@@ -323,6 +378,8 @@ function zcodeReport(
     handshake,
     bridgeInstalled: Boolean(bridgePath),
     bridgePath,
+    pluginInstalled,
+    pluginDir,
   });
   return {
     path: state.selected.kind,

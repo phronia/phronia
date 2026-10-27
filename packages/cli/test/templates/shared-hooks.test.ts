@@ -131,6 +131,9 @@ describe("shared-hooks capability table", () => {
             !filePath.endsWith(".md") &&
             (content.includes(`hooks/${hook}`) ||
               content.includes(`phronia-hook.py --event ${event}`) ||
+              // ZCode routes every event through the project plugin bridge.
+              (content.includes("bridge.mjs") &&
+                content.includes(`"${event}"`)) ||
               // ZCode quotes the script path, so the closing quote sits
               // between `.py` and the first argument. The hook config is JSON,
               // so the quote appears escaped in the raw template text.
@@ -185,10 +188,10 @@ describe("shared-hooks capability table", () => {
   });
 
   it("zcode registers session-start, workflow-state, subagent-context, and shell-session hooks", () => {
-    // ZCode 3.x ships a workspace hook config (.zcode/config.json) covering
-    // SessionStart + UserPromptSubmit + PreToolUse Agent/Task + PreToolUse
-    // Bash. ZCode is the platform with no verified session env var name at all,
-    // so the PreToolUse Bash ticket is its only route to session identity.
+    // ZCode ships a project-local plugin whose bridge covers SessionStart +
+    // UserPromptSubmit + PreToolUse Agent/Task + PreToolUse Bash. ZCode is the
+    // platform with no verified session env var name at all, so the
+    // PreToolUse Bash ticket is its only route to session identity.
     expect([...SHARED_HOOKS_BY_PLATFORM.zcode].sort()).toEqual(
       [
         "phronia-hook.py",

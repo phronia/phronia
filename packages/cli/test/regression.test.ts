@@ -9627,7 +9627,7 @@ describe("regression: collectTemplates paths match init directory structure (0.3
     expect(keys).toContain(".github/hooks/trellis.json");
   });
 
-  it("[zcode] collectTemplates tracks hooks + config.json and filters start command", () => {
+  it("[zcode] collectTemplates tracks hooks + project plugin and filters start command", () => {
     const templates = collectPlatformTemplates("zcode");
     expect(templates).toBeInstanceOf(Map);
     if (!templates) return;
@@ -9635,10 +9635,16 @@ describe("regression: collectTemplates paths match init directory structure (0.3
     const keys = [...templates.keys()];
     // Shared hooks written to .zcode/hooks/
     expect(keys).toContain(".zcode/hooks/phronia-hook.py");
-    expect(keys).toContain(".zcode/config.json");
-    
-    // Workspace hook registration
-    expect(keys).toContain(".zcode/config.json");
+
+    // Project-local plugin owns hook registration; the workspace config is
+    // merged by ensureZcodePlugin and is not a template file.
+    expect(keys).toContain(
+      ".zcode/plugins/phronia/.zcode-plugin/plugin.json",
+    );
+    expect(keys).toContain(".zcode/plugins/phronia/hooks/hooks.json");
+    expect(keys).toContain(".zcode/plugins/phronia/hooks/bridge.mjs");
+    expect(keys).not.toContain(".zcode/config.json");
+
     // agentCapable && hasHooks → start command is filtered out.
     expect(keys).not.toContain(".zcode/commands/phronia/start.md");
     expect(keys).toContain(".zcode/commands/phronia/finish-work.md");

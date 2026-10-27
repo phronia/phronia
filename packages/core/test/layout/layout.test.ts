@@ -1,6 +1,14 @@
+import fs from "node:fs";
+import os from "node:os";
 import path from "node:path";
 import { describe, expect, it } from "vitest";
-import { LAYOUT, projectPath, workflowPath } from "../../src/layout/index.js";
+import {
+  LAYOUT,
+  findProjectRoot,
+  projectPath,
+  resolveProjectRoot,
+  workflowPath,
+} from "../../src/layout/index.js";
 import { envName, readEnv, readEnvFlag } from "../../src/layout/env.js";
 
 describe("workspace layout", () => {
@@ -26,6 +34,30 @@ describe("workspace layout", () => {
     expect(workflowPath(root, "spec", "guides")).toBe(
       path.join(root, ".phronia/spec/guides"),
     );
+  });
+
+  it("finds the nearest project root from a nested directory", () => {
+    const root = fs.mkdtempSync(path.join(os.tmpdir(), "phronia-layout-"));
+    try {
+      const nested = path.join(root, ".phronia", "tasks", "10-27-demo");
+      fs.mkdirSync(nested, { recursive: true });
+      expect(findProjectRoot(nested)).toBe(root);
+      expect(resolveProjectRoot(nested)).toBe(root);
+    } finally {
+      fs.rmSync(root, { recursive: true, force: true });
+    }
+  });
+
+  it("returns null when no workflow root exists", () => {
+    const root = fs.mkdtempSync(path.join(os.tmpdir(), "phronia-no-root-"));
+    try {
+      const nested = path.join(root, "a", "b");
+      fs.mkdirSync(nested, { recursive: true });
+      expect(findProjectRoot(nested)).toBeNull();
+      expect(() => resolveProjectRoot(nested)).toThrow(/\.phronia/);
+    } finally {
+      fs.rmSync(root, { recursive: true, force: true });
+    }
   });
 });
 

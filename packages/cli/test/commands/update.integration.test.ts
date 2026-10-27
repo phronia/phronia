@@ -309,67 +309,39 @@ describe("update() integration", () => {
     expect(fs.existsSync(projectFile(".agents/skills"))).toBe(false);
   });
 
-  it("[issue-zcode-plugin-hint] zcode update prints the bilingual plugin hint when already up to date", async () => {
+  it("zcode update keeps the project plugin installed and workspace hooks absent", async () => {
     await init({ yes: true, force: true, zcode: true });
+    await update({});
 
-    const originalVitest = process.env.VITEST;
-    const originalQuiet = process.env.PHRONIA_QUIET;
-    const originalWrite = process.stderr.write.bind(process.stderr);
-    const stderr: string[] = [];
-    process.stderr.write = ((chunk: string) => {
-      stderr.push(String(chunk));
-      return true;
-    }) as typeof process.stderr.write;
-    delete process.env.VITEST;
-    delete process.env.PHRONIA_QUIET;
-
-    try {
-      await update({});
-    } finally {
-      process.stderr.write = originalWrite;
-      if (originalVitest === undefined) delete process.env.VITEST;
-      else process.env.VITEST = originalVitest;
-      if (originalQuiet === undefined) delete process.env.PHRONIA_QUIET;
-      else process.env.PHRONIA_QUIET = originalQuiet;
-    }
-
-    expect(stderr.join("")).toBe(
-      "ℹ️  ZCode: if project Hooks are disabled, install trellis-bridge, then start a new session.\n" +
-        "   ZCode：若项目 Hooks 被禁用，请安装 trellis-bridge，然后新建会话。\n" +
-        "   请手动在 ZCode 插件市场中添加 https://github.com/CNHLAIA/ZCode-Phronia-Plugin.git，并手动安装 ZCode 补丁插件 trellis-bridge\n",
-    );
+    expect(
+      fs.existsSync(
+        projectFile(".zcode/plugins/phronia/.zcode-plugin/plugin.json"),
+      ),
+    ).toBe(true);
+    const config = JSON.parse(readProjectFile(".zcode/config.json")) as {
+      plugins?: { dirs?: string[] };
+      hooks?: unknown;
+    };
+    expect(config.plugins?.dirs).toContain(".zcode/plugins/phronia");
+    expect(config.hooks).toBeUndefined();
   });
 
-  it("[issue-zcode-plugin-hint] zcode update prints the bilingual plugin hint after applying changes", async () => {
+  it("zcode update reasserts the plugin after a forced template update", async () => {
     await init({ yes: true, force: true, zcode: true });
     writeProjectFile(MANAGED_FILE, "user modified content");
+    await update({ force: true });
 
-    const originalVitest = process.env.VITEST;
-    const originalQuiet = process.env.PHRONIA_QUIET;
-    const originalWrite = process.stderr.write.bind(process.stderr);
-    const stderr: string[] = [];
-    process.stderr.write = ((chunk: string) => {
-      stderr.push(String(chunk));
-      return true;
-    }) as typeof process.stderr.write;
-    delete process.env.VITEST;
-    delete process.env.PHRONIA_QUIET;
-
-    try {
-      await update({ force: true });
-    } finally {
-      process.stderr.write = originalWrite;
-      if (originalVitest === undefined) delete process.env.VITEST;
-      else process.env.VITEST = originalVitest;
-      if (originalQuiet === undefined) delete process.env.PHRONIA_QUIET;
-      else process.env.PHRONIA_QUIET = originalQuiet;
-    }
-
-    expect(stderr.join("")).toBe(
-      "ℹ️  ZCode: if project Hooks are disabled, install trellis-bridge, then start a new session.\n" +
-        "   ZCode：若项目 Hooks 被禁用，请安装 trellis-bridge，然后新建会话。\n" +
-        "   请手动在 ZCode 插件市场中添加 https://github.com/CNHLAIA/ZCode-Phronia-Plugin.git，并手动安装 ZCode 补丁插件 trellis-bridge\n",
-    );
+    expect(
+      fs.existsSync(
+        projectFile(".zcode/plugins/phronia/.zcode-plugin/plugin.json"),
+      ),
+    ).toBe(true);
+    const config = JSON.parse(readProjectFile(".zcode/config.json")) as {
+      plugins?: { dirs?: string[] };
+      hooks?: unknown;
+    };
+    expect(config.plugins?.dirs).toContain(".zcode/plugins/phronia");
+    expect(config.hooks).toBeUndefined();
   });
 
   it("[issue-447] 0.6.8 rename-dir migration moves legacy .pi/skills/ into shared .agents/skills/ even when Codex already installed the shared root", async () => {

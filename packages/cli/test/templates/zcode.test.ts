@@ -1,5 +1,10 @@
 import { describe, expect, it } from "vitest";
-import { getAllAgents, getHooksConfig } from "../../src/templates/zcode/index.js";
+import { getAllAgents } from "../../src/templates/zcode/index.js";
+import {
+  ZCODE_PLUGIN_DIR,
+  ZCODE_PLUGIN_ID,
+  zcodePluginFiles,
+} from "../../src/templates/zcode/plugin.js";
 
 const EXPECTED_AGENT_NAMES = [
   "phronia-check",
@@ -26,60 +31,64 @@ describe("zcode getAllAgents", () => {
   });
 });
 
-describe("zcode getHooksConfig", () => {
-  it("targets .zcode/config.json (workspace config form)", () => {
-    const cfg = getHooksConfig();
-    expect(cfg.targetPath).toBe("config.json");
-    expect(cfg.content.length).toBeGreaterThan(0);
+describe("zcode project-local plugin", () => {
+  it("ships a manifest, hooks, and a thin CLI bridge", () => {
+    const files = zcodePluginFiles();
+    expect([...files.keys()]).toEqual([
+      `${ZCODE_PLUGIN_DIR}/.zcode-plugin/plugin.json`,
+      `${ZCODE_PLUGIN_DIR}/hooks/hooks.json`,
+      `${ZCODE_PLUGIN_DIR}/hooks/bridge.mjs`,
+    ]);
+    expect(ZCODE_PLUGIN_ID).toBe("phronia@inline");
+
+    const manifest = JSON.parse(
+      files.get(`${ZCODE_PLUGIN_DIR}/.zcode-plugin/plugin.json`) ?? "{}",
+    ) as { name?: string; version?: string };
+    expect(manifest.name).toBe("phronia");
+    expect(manifest.version).toMatch(/^\d+\.\d+\.\d+/);
+
+    const bridge = files.get(`${ZCODE_PLUGIN_DIR}/hooks/bridge.mjs`) ?? "";
+    expect(bridge).toContain('"hook"');
+    expect(bridge).toContain('"--platform"');
+    expect(bridge).toContain('"zcode"');
+    // The plugin path is stable; root discovery belongs to the CLI.
+    expect(bridge).not.toContain("findProjectRoot");
   });
 
-  it("enables hooks and registers SessionStart + UserPromptSubmit + PreToolUse under events", () => {
-    // ZCode workspace config schema: { hooks: { enabled: true, events: {...} } }
-    // (distinct from plugin hooks.json which omits the enabled/events wrapper).
-    const cfg = getHooksConfig();
-    expect(cfg.content).toContain('"enabled": true');
-    expect(cfg.content).toContain('"events"');
-    expect(cfg.content).toContain('"SessionStart"');
-    expect(cfg.content).toContain('"UserPromptSubmit"');
-    expect(cfg.content).toContain('"PreToolUse"');
-    expect(cfg.content).toContain('"matcher": "Agent|Task"');
-    expect(cfg.content).toContain(
-      'phronia-hook.py\\" --event session-start --platform zcode',
-    );
-    expect(cfg.content).toContain('phronia-hook.py\\" --event user-prompt');
-    expect(cfg.content).toContain('phronia-hook.py\\" --event subagent-spawn');
-    // Uses {{PYTHON_CMD}} placeholder so init resolves host python.
-    expect(cfg.content).toContain("{{PYTHON_CMD}}");
-  });
-
-  it("anchors hook commands to the ZCode project root", () => {
-    const cfg = JSON.parse(getHooksConfig().content) as {
-      hooks: {
-        events: Record<
-          string,
-          { hooks: { command: string }[] }[]
-        >;
-      };
+  it("registers process hooks with stable plugin-root paths", () => {
+    const files = zcodePluginFiles();
+    const hooks = JSON.parse(
+      files.get(`${ZCODE_PLUGIN_DIR}/hooks/hooks.json`) ?? "{}",
+    ) as {
+      hooks: Record<
+        string,
+        { matcher?: string; hooks: { type: string; command: string; args: string[] }[] }[]
+      >;
     };
 
-    const commands = Object.values(cfg.hooks.events).flatMap((entries) =>
-      entries.flatMap((entry) => entry.hooks.map((hook) => hook.command)),
-    );
+    expect(Object.keys(hooks.hooks).sort()).toEqual([
+      "PreToolUse",
+      "SessionStart",
+      "UserPromptSubmit",
+    ]);
 
-    expect(commands).toEqual(
+    const entries = Object.values(hooks.hooks).flatMap((matchers) =>
+      matchers.flatMap((matcher) => matcher.hooks),
+    );
+    const events = entries.map((hook) => hook.args.at(-1));
+    expect(events).toEqual(
       expect.arrayContaining([
-        '{{PYTHON_CMD}} "${ZCODE_PROJECT_DIR}/.zcode/hooks/phronia-hook.py" --event session-start --platform zcode',
-        '{{PYTHON_CMD}} "${ZCODE_PROJECT_DIR}/.zcode/hooks/phronia-hook.py" --event user-prompt --platform zcode',
-        '{{PYTHON_CMD}} "${ZCODE_PROJECT_DIR}/.zcode/hooks/phronia-hook.py" --event subagent-spawn --platform zcode',
+        "session-start",
+        "user-prompt",
+        "subagent-spawn",
+        "pre-shell",
       ]),
     );
-    for (const command of commands) {
-      expect(command).not.toMatch(/{{PYTHON_CMD}}\s+\.zcode\/hooks\//);
-      // The closing quote must sit immediately after the script path. If it
-      // wraps the arguments too, the host passes the whole string to Python
-      // as one filename and the hook fails with ENOENT.
-      expect(command).toContain('phronia-hook.py" --event');
-      expect(command).not.toMatch(/phronia-hook\.py --event[^"]*"$/);
+    for (const hook of entries) {
+      expect(hook.type).toBe("process");
+      expect(hook.command).toBe("node");
+      expect(hook.args[0]).toBe("${ZCODE_PLUGIN_ROOT}/hooks/bridge.mjs");
+      expect(hook.args).not.toContain("ZCODE_PROJECT_DIR");
     }
   });
 });

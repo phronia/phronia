@@ -1,29 +1,26 @@
 /**
  * ZCode configurator.
  *
- * ZCode (智谱) is an agentCapable class-1 platform. Since ZCode 3.x it exposes
- * a workspace hook config at `.zcode/config.json` (SessionStart,
- * UserPromptSubmit, and PreToolUse for Agent/Task), so `hasHooks` is true.
- * Four output paths:
+ * ZCode (智谱) is an agentCapable class-1 platform. Its hooks are registered by
+ * a project-local plugin loaded through `.zcode/config.json` `plugins.dirs`;
+ * the plugin bridge calls `phronia hook`, which resolves the nearest
+ * `.phronia` root. Output paths:
  * - `.zcode/skills/` — ZCode-private workflow and bundled skills
  * - `.zcode/commands/phronia/` — slash commands (invoked as /phronia:<name>)
  * - `.zcode/agents/` — sub-agent definitions with hook-injection fallback
- * - `.zcode/hooks/` + `.zcode/config.json` — shared Python hook scripts and
- *   the workspace hook registration
+ * - `.zcode/hooks/` — shared Python hook scripts invoked by `phronia hook`
+ * - `.zcode/plugins/phronia/` — project-local plugin (manifest + process hooks)
  */
 
 import { AI_TOOLS } from "../types/ai-tools.js";
-import {
-  getAllAgents,
-  getBridgeTemplate,
-  getHooksConfig,
-} from "../templates/zcode/index.js";
+import { getAllAgents } from "../templates/zcode/index.js";
 import { getSharedHookScriptsForPlatform } from "../templates/shared-hooks/index.js";
+import { zcodePluginFiles } from "../templates/zcode/plugin.js";
+import { ensureZcodePlugin } from "./zcode-plugin.js";
 import {
   collectSkillTemplates,
   resolveBundledSkills,
   resolveCommands,
-  resolvePlaceholders,
   resolveSkills,
   writeTemplateMap,
 } from "./shared.js";
@@ -64,38 +61,30 @@ export function collectZcodeTemplates(): Map<string, string> {
     files.set(`${ZCODE_HOOKS_DIR}/${hook.name}`, hook.content);
   }
 
-  // 5. Workspace hook registration → .zcode/config.json
-  files.set(
-    ".zcode/config.json",
-    resolvePlaceholders(getHooksConfig().content),
-  );
-
-  // 6. Self-owned bridge for builds that disable project hooks. Users point
-  //    their global ZCode plugin at this file; init never installs it globally.
-  files.set(".zcode/bridge/phronia-zcode-bridge.mjs", getBridgeTemplate());
+  // 5. Project-local plugin: hooks call `phronia hook`, which resolves the
+  //    nearest .phronia root. The plugin path itself comes from
+  //    ZCODE_PLUGIN_ROOT, so it is independent of the tool cwd.
+  for (const [filePath, content] of zcodePluginFiles()) {
+    files.set(filePath, content);
+  }
 
   return files;
 }
 
-/** Print the manual global-plugin fallback required by affected ZCode builds. */
-export function printZcodeSetupHint(): void {
-  if (process.env.VITEST || process.env.PHRONIA_QUIET) return;
-
-  const plugin = AI_TOOLS.zcode.globalHookPlugin;
-  if (!plugin) return;
-
-  process.stderr.write(
-    `ℹ️  ZCode: if project Hooks are disabled, install ${plugin.name}, then start a new session.\n` +
-      `   ZCode：若项目 Hooks 被禁用，请安装 ${plugin.name}，然后新建会话。\n` +
-      `   请手动在 ZCode 插件市场中添加 ${plugin.marketplaceUrl}，并手动安装 ZCode 补丁插件 ${plugin.name}\n`,
-  );
-}
-
 /**
- * Configure ZCode at init time: write the collected file set, then the one
- * thing a `Map<path, content>` cannot carry — a console notice.
+ * Configure ZCode: write platform templates, then install/repair the
+ * project-local plugin that registers the hooks.
  */
 export async function configureZcode(cwd: string): Promise<void> {
   await writeTemplateMap(cwd, collectZcodeTemplates());
-  printZcodeSetupHint();
+  const result = ensureZcodePlugin(cwd);
+  if (process.env.VITEST || process.env.PHRONIA_QUIET) return;
+  if (result.changed) {
+    process.stderr.write(
+      "ℹ️  ZCode: Phronia plugin installed for this workspace; start a new session.\n",
+    );
+  }
+  for (const warning of result.warnings) {
+    process.stderr.write(`⚠️  ZCode: ${warning}\n`);
+  }
 }

@@ -10,6 +10,7 @@ import { upgrade } from "../commands/upgrade.js";
 import { uninstall } from "../commands/uninstall.js";
 import { adopt, printAdoptReport } from "../commands/adopt.js";
 import { runContextCommand } from "../commands/context.js";
+import { runHookCommand } from "../commands/hook.js";
 import { runDoctorCommand, runZcodeDetectCommand } from "../commands/doctor.js";
 import {
   runRulesCompile,
@@ -106,7 +107,9 @@ if (invokedAs === "trellis" || invokedAs === "trellis.js") {
 // stderr noise into the harness log.
 const cliArgs = process.argv.slice(2);
 const hookContextInvocation =
-  cliArgs[0] === "context" || cliArgs.includes("--render");
+  cliArgs[0] === "context" ||
+  cliArgs[0] === "hook" ||
+  cliArgs.includes("--render");
 const cwd = process.cwd();
 if (
   !hookContextInvocation &&
@@ -477,6 +480,7 @@ program
   .option("--json", "Output machine-readable JSON")
   .option("--no-probe", "Skip `harness --version` probes")
   .option("--refresh-manifest", "Rewrite .phronia/manifest.json from this run")
+  .option("--no-fix", "Do not install or repair the project-local ZCode plugin")
   .option("--check", "Exit non-zero on unsupported or schema-drift adapters")
   .action((options: Record<string, unknown>) => {
     const exitCode = runDoctorCommand({
@@ -486,6 +490,7 @@ program
       probe: options.probe !== false,
       refreshManifest: Boolean(options.refreshManifest),
       check: Boolean(options.check),
+      fix: options.fix !== false,
     });
     if (exitCode !== 0) process.exit(exitCode);
   });
@@ -739,6 +744,19 @@ rulesCommand
   .option("--check", "Exit non-zero when the ledger has errors")
   .action((options: Record<string, unknown>) => {
     const exitCode = runRulesList({ cwd, ...options });
+    if (exitCode !== 0) process.exit(exitCode);
+  });
+
+program
+  .command("hook", { hidden: true })
+  .description("Internal harness hook bridge (resolves the project root from cwd)")
+  .requiredOption("--platform <id>", "Harness platform")
+  .requiredOption("--event <event>", "Hook event")
+  .action((options: Record<string, unknown>) => {
+    const exitCode = runHookCommand({
+      platform: String(options.platform),
+      event: String(options.event),
+    });
     if (exitCode !== 0) process.exit(exitCode);
   });
 

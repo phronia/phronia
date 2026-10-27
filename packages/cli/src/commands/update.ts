@@ -61,7 +61,7 @@ import {
 } from "../configurators/index.js";
 import { replacePythonCommandLiterals } from "../configurators/shared.js";
 import { preserveCodexAgentModelKeys } from "../configurators/codex.js";
-import { printZcodeSetupHint } from "../configurators/zcode.js";
+import { ensureZcodePlugin } from "../configurators/zcode-plugin.js";
 import { ensureGitattributes } from "../configurators/workflow.js";
 import { pruneOrphanManifestKeys } from "../utils/manifest-prune.js";
 import {
@@ -2003,6 +2003,26 @@ export function renameTracesToJournal(workspaceDir: string): {
 }
 
 /**
+ * Keep the project-local ZCode plugin aligned with the current CLI. This runs
+ * even when no template file changed, because older projects may still carry
+ * workspace hooks and no plugin directory.
+ */
+function syncZcodePlugin(cwd: string, dryRun: boolean): void {
+  if (dryRun) {
+    return;
+  }
+  const result = ensureZcodePlugin(cwd, { writeFiles: false });
+  if (result.changed) {
+    console.log(
+      chalk.gray("  ✓ ZCode plugin installed/updated for this workspace"),
+    );
+  }
+  for (const warning of result.warnings) {
+    console.log(chalk.yellow(`  ZCode: ${warning}`));
+  }
+}
+
+/**
  * Main update command
  */
 export async function update(options: UpdateOptions): Promise<void> {
@@ -2382,7 +2402,9 @@ export async function update(options: UpdateOptions): Promise<void> {
         );
       }
     }
-    if (zcodeConfigured) printZcodeSetupHint();
+    if (zcodeConfigured) {
+      syncZcodePlugin(cwd, options.dryRun ?? false);
+    }
     return;
   }
 
@@ -2821,7 +2843,9 @@ export async function update(options: UpdateOptions): Promise<void> {
     }
   }
 
-  if (zcodeConfigured) printZcodeSetupHint();
+  if (zcodeConfigured) {
+    syncZcodePlugin(cwd, options.dryRun ?? false);
+  }
 
   // Display breaking change warnings at the very end (so they don't scroll off screen)
   if (cliVsProject > 0 && projectVersion !== "unknown") {

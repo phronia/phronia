@@ -6,7 +6,7 @@ import { describe, expect, it } from "vitest";
 import { CAPABILITIES, PLATFORM_IDS } from "@phronia/core";
 import { AI_TOOLS } from "../src/types/ai-tools.js";
 import { resolveCommands } from "../src/configurators/shared.js";
-import { collectDoctorReport } from "../src/commands/doctor.js";
+import { collectDoctorReport, runDoctorCommand } from "../src/commands/doctor.js";
 import { refreshAdapterManifest } from "../src/commands/adapter-manifest.js";
 import { readAdapterManifest } from "@phronia/core";
 
@@ -144,6 +144,67 @@ describe("doctor report", () => {
       expect(report.platforms[0]?.adapter.adapterId).toBe("kilo@v1");
       expect(report.platforms[0]?.adapter.status).toBe("degraded");
     } finally {
+      fs.rmSync(root, { recursive: true, force: true });
+    }
+  });
+
+  it("repairs the project-local ZCode plugin and removes legacy workspace hooks", () => {
+    const root = fs.mkdtempSync(path.join(os.tmpdir(), "phronia-doctor-zcode-"));
+    const originalLog = console.log;
+    console.log = () => undefined;
+    try {
+      fs.mkdirSync(path.join(root, ".phronia"), { recursive: true });
+      fs.mkdirSync(path.join(root, ".zcode", "hooks"), { recursive: true });
+      fs.writeFileSync(
+        path.join(root, ".zcode", "config.json"),
+        JSON.stringify({
+          hooks: {
+            events: {
+              UserPromptSubmit: [
+                {
+                  hooks: [
+                    {
+                      type: "command",
+                      command:
+                        "python3 .zcode/hooks/phronia-hook.py --event user-prompt",
+                    },
+                  ],
+                },
+              ],
+            },
+          },
+        }),
+      );
+
+      const exit = runDoctorCommand({
+        cwd: root,
+        platform: "zcode",
+        probe: false,
+      });
+      expect(exit).toBe(0);
+
+      const config = JSON.parse(
+        fs.readFileSync(path.join(root, ".zcode", "config.json"), "utf8"),
+      ) as {
+        plugins?: { dirs?: string[] };
+        hooks?: unknown;
+      };
+      expect(config.plugins?.dirs).toContain(".zcode/plugins/phronia");
+      expect(config.hooks).toBeUndefined();
+      expect(
+        fs.existsSync(
+          path.join(
+            root,
+            ".zcode",
+            "plugins",
+            "phronia",
+            ".zcode-plugin",
+            "plugin.json",
+          ),
+        ),
+      ).toBe(true);
+    } finally {
+      console.log = originalLog;
       fs.rmSync(root, { recursive: true, force: true });
     }
   });

@@ -53,6 +53,29 @@ describe("zcode path selection", () => {
     expect(state.reason).toBe("handshake observed");
   });
 
+  it("prefers the project-local plugin when it is installed", () => {
+    const state = selectZcodePath({
+      version: "3.9.0",
+      pluginInstalled: true,
+      pluginDir: ".zcode/plugins/phronia",
+    });
+    expect(state.selected.kind).toBe("plugin");
+    expect(state.trust).toBe("assumed");
+    expect(zcodePathLabel(state.selected)).toContain(".zcode/plugins/phronia");
+  });
+
+  it("confirms the plugin path once a handshake exists", () => {
+    const state = selectZcodePath({
+      version: "3.9.0",
+      handshake,
+      pluginInstalled: true,
+      pluginDir: ".zcode/plugins/phronia",
+    });
+    expect(state.selected.kind).toBe("plugin");
+    expect(state.trust).toBe("confirmed");
+    expect(state.reason).toBe("project plugin; handshake observed");
+  });
+
   it("honors explicit pins above build evidence", () => {
     expect(
       selectZcodePath({ version: "3.8.1", pin: "prelude" }).selected.kind,
@@ -63,5 +86,8 @@ describe("zcode path selection", () => {
     expect(
       selectZcodePath({ version: "3.7.9", pin: "project-hooks" }).selected.kind,
     ).toBe("project-hooks");
+    expect(
+      selectZcodePath({ version: "3.9.0", pin: "plugin" }).selected.kind,
+    ).toBe("plugin");
   });
 });

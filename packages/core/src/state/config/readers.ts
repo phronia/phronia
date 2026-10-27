@@ -51,7 +51,7 @@ export interface ConfigView {
   /** Explicit adapter ids: `platforms.<id>.adapter`. */
   adapterPins: Record<string, string>;
   /** ZCode path override: `platforms.zcode.path`. */
-  zcodePath: "project-hooks" | "bridge" | "prelude" | null;
+  zcodePath: "plugin" | "project-hooks" | "bridge" | "prelude" | null;
 }
 
 export interface ConfigReadResult {
@@ -315,11 +315,14 @@ function readAdapterPins(raw: YamlValue | undefined): Record<string, string> {
 
 function readZcodePath(
   raw: YamlValue | undefined,
-): "project-hooks" | "bridge" | "prelude" | null {
+): "plugin" | "project-hooks" | "bridge" | "prelude" | null {
   const platforms = asMap(raw);
   const zcode = platforms ? asMap(platforms.zcode) : null;
   const value = zcode ? stringOrNull(zcode.path) : null;
-  return value === "project-hooks" || value === "bridge" || value === "prelude"
+  return value === "plugin" ||
+    value === "project-hooks" ||
+    value === "bridge" ||
+    value === "prelude"
     ? value
     : null;
 }

@@ -8,6 +8,7 @@
  * converted.
  */
 
+import fs from "node:fs";
 import path from "node:path";
 
 export interface WorkspacePaths {
@@ -116,4 +117,30 @@ export function projectPath(root: string, key: WorkspacePathKey): string {
 /** Resolve an arbitrary relative path under the workflow root. */
 export function workflowPath(root: string, ...segments: string[]): string {
   return path.join(root, LAYOUT.rootDirName, ...segments);
+}
+
+/** Walk up from `start` until a directory contains the workflow root. */
+export function findProjectRoot(start: string): string | null {
+  let directory = path.resolve(start);
+  for (;;) {
+    if (fs.existsSync(path.join(directory, LAYOUT.rootDirName))) {
+      return directory;
+    }
+    const parent = path.dirname(directory);
+    if (parent === directory) {
+      return null;
+    }
+    directory = parent;
+  }
+}
+
+/** Resolve the nearest project root, throwing when none exists. */
+export function resolveProjectRoot(start: string = process.cwd()): string {
+  const root = findProjectRoot(start);
+  if (!root) {
+    throw new Error(
+      `No ${LAYOUT.rootDirName}/ project found from ${path.resolve(start)}`,
+    );
+  }
+  return root;
 }

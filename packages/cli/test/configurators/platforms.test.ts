@@ -100,7 +100,12 @@ function readConfiguredFile(root: string, relativePath: string): string {
  * is frozen after their first `trellis update` and is left behind by
  * `trellis uninstall`.
  */
-const CONFIGURE_ONLY_PATHS = new Set([".claude/hooks/statusline.py"]);
+const CONFIGURE_ONLY_PATHS = new Set([
+  ".claude/hooks/statusline.py",
+  // ZCode merges this file instead of writing a fixed template: it carries the
+  // user's existing plugins/hooks and only adds the Phronia plugin entry.
+  ".zcode/config.json",
+]);
 
 /**
  * Directories `configure` creates with no file underneath. A
@@ -396,7 +401,7 @@ describe("configurePlatform", () => {
     const undescribed = walkFiles(tmpDir).filter(
       (relPath) => !templates.has(relPath),
     );
-    expect(undescribed).toEqual([...CONFIGURE_ONLY_PATHS]);
+    expect(undescribed).toEqual([".claude/hooks/statusline.py"]);
     expect(readConfiguredFile(tmpDir, ".claude/hooks/statusline.py")).toBe(
       replacePythonCommandLiterals(getStatuslineHook()),
     );
@@ -1173,19 +1178,44 @@ describe("configurePlatform", () => {
       "Load Phronia Context First",
     );
 
-    const generatedConfig = readConfiguredFile(tmpDir, ".zcode/config.json");
-    expect(generatedConfig).toContain(
-      '${ZCODE_PROJECT_DIR}/.zcode/hooks/phronia-hook.py\\" --event session-start --platform zcode',
+    const generatedConfig = JSON.parse(
+      readConfiguredFile(tmpDir, ".zcode/config.json"),
+    ) as {
+      plugins?: {
+        dirs?: string[];
+        enabledPlugins?: Record<string, boolean>;
+      };
+      hooks?: unknown;
+    };
+    expect(generatedConfig.plugins?.dirs).toContain(".zcode/plugins/phronia");
+    expect(generatedConfig.plugins?.enabledPlugins?.["phronia@inline"]).toBe(
+      true,
     );
-    expect(generatedConfig).toContain(
-      '${ZCODE_PROJECT_DIR}/.zcode/hooks/phronia-hook.py\\" --event user-prompt --platform zcode',
-    );
-    expect(generatedConfig).toContain(
-      '${ZCODE_PROJECT_DIR}/.zcode/hooks/phronia-hook.py\\" --event subagent-spawn --platform zcode',
-    );
+    // The plugin owns the hooks; keeping workspace hooks here would double-run.
+    expect(generatedConfig.hooks).toBeUndefined();
+    expect(
+      fs.existsSync(
+        path.join(
+          tmpDir,
+          ".zcode",
+          "plugins",
+          "phronia",
+          ".zcode-plugin",
+          "plugin.json",
+        ),
+      ),
+    ).toBe(true);
+    expect(
+      fs.existsSync(
+        path.join(tmpDir, ".zcode", "bridge", "phronia-zcode-bridge.mjs"),
+      ),
+    ).toBe(false);
 
     const templates = collectPlatformTemplates("zcode");
-    expect(templates?.get(".zcode/config.json")).toBe(generatedConfig);
+    expect(templates?.has(".zcode/config.json")).toBe(false);
+    expect(templates?.has(".zcode/plugins/phronia/hooks/hooks.json")).toBe(
+      true,
+    );
     expect(templates?.has(".zcode/commands/phronia/start.md")).toBe(false);
     expect(
       [...(templates?.keys() ?? [])].some((key) =>

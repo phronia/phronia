@@ -12,6 +12,7 @@ import type { HandshakeRecord } from "./manifest.js";
 import { parseSemver, satisfiesRange } from "./semver.js";
 
 export type ZcodePath =
+  | { kind: "plugin"; pluginDir: string }
   | { kind: "project-hooks"; configPath: string }
   | { kind: "bridge"; bridgePath: string }
   | { kind: "prelude"; reason: string };
@@ -56,9 +57,11 @@ export function classifyZcodeVersion(version: string | null): ZcodeBuildClass {
 export function selectZcodePath(input: {
   version: string | null;
   versionSource?: ZcodeBuild["source"];
-  pin?: "project-hooks" | "bridge" | "prelude" | null;
+  pin?: "plugin" | "project-hooks" | "bridge" | "prelude" | null;
   handshake?: HandshakeRecord | null;
   bridgeInstalled?: boolean;
+  pluginInstalled?: boolean;
+  pluginDir?: string;
   configPath?: string;
   bridgePath?: string;
 }): ZcodePathState {
@@ -98,8 +101,32 @@ export function selectZcodePath(input: {
       reason: "pinned: project-hooks",
     };
   }
+  if (input.pin === "plugin") {
+    return {
+      selected: {
+        kind: "plugin",
+        pluginDir: input.pluginDir ?? ".zcode/plugins/phronia",
+      },
+      build,
+      trust: input.handshake?.at ? "confirmed" : "assumed",
+      reason: "pinned: plugin",
+    };
+  }
 
   const handshakeFresh = Boolean(input.handshake?.at);
+  if (input.pluginInstalled) {
+    return {
+      selected: {
+        kind: "plugin",
+        pluginDir: input.pluginDir ?? ".zcode/plugins/phronia",
+      },
+      build,
+      trust: handshakeFresh ? "confirmed" : "assumed",
+      reason: handshakeFresh
+        ? "project plugin; handshake observed"
+        : "project plugin installed",
+    };
+  }
   if (handshakeFresh) {
     return {
       selected: {
@@ -158,6 +185,8 @@ export function selectZcodePath(input: {
 
 export function zcodePathLabel(path: ZcodePath): string {
   switch (path.kind) {
+    case "plugin":
+      return `plugin (${path.pluginDir})`;
     case "project-hooks":
       return `project-hooks (${path.configPath})`;
     case "bridge":

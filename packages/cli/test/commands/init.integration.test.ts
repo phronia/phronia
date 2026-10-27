@@ -747,7 +747,7 @@ describe("init() integration", () => {
     );
   });
 
-  it("#3m zcode platform filters start command and writes hooks (hasHooks=true)", async () => {
+  it("#3m zcode platform filters start command and installs the project plugin", async () => {
     await init({ yes: true, zcode: true });
 
     // ZCode owns its private .zcode surface. Commands remain commands, while
@@ -804,9 +804,29 @@ describe("init() integration", () => {
         path.join(tmpDir, ".zcode", "agents", "phronia-research.md"),
       ),
     ).toBe(true);
+    expect(
+      fs.existsSync(
+        path.join(
+          tmpDir,
+          ".zcode",
+          "plugins",
+          "phronia",
+          ".zcode-plugin",
+          "plugin.json",
+        ),
+      ),
+    ).toBe(true);
+    const config = JSON.parse(
+      fs.readFileSync(path.join(tmpDir, ".zcode", "config.json"), "utf-8"),
+    ) as {
+      plugins?: { dirs?: string[] };
+      hooks?: unknown;
+    };
+    expect(config.plugins?.dirs).toContain(".zcode/plugins/phronia");
+    expect(config.hooks).toBeUndefined();
   });
 
-  it("[issue-zcode-plugin-hint] zcode init prints a concise bilingual plugin hint", async () => {
+  it("[issue-zcode-plugin-hint] zcode init prints a concise plugin install hint", async () => {
     const originalVitest = process.env.VITEST;
     const originalQuiet = process.env.PHRONIA_QUIET;
     const originalWrite = process.stderr.write.bind(process.stderr);
@@ -829,9 +849,7 @@ describe("init() integration", () => {
     }
 
     expect(stderr.join("")).toBe(
-      "ℹ️  ZCode: if project Hooks are disabled, install trellis-bridge, then start a new session.\n" +
-        "   ZCode：若项目 Hooks 被禁用，请安装 trellis-bridge，然后新建会话。\n" +
-        "   请手动在 ZCode 插件市场中添加 https://github.com/CNHLAIA/ZCode-Phronia-Plugin.git，并手动安装 ZCode 补丁插件 trellis-bridge\n",
+      "ℹ️  ZCode: Phronia plugin installed for this workspace; start a new session.\n",
     );
   });
 
@@ -1604,7 +1622,7 @@ describe("init() integration", () => {
   });
 
 
-  it("#29a reinit add-platform: selecting ZCode writes its hooks and workspace config", async () => {
+  it("#29a reinit add-platform: selecting ZCode installs its hooks and project plugin", async () => {
     await init({ yes: true, cursor: true, user: "alice" });
     const inquirer = (await import("inquirer")).default;
     vi.mocked(inquirer.prompt).mockImplementation(((questions: unknown) => {
@@ -1631,10 +1649,19 @@ describe("init() integration", () => {
     const config = JSON.parse(
       fs.readFileSync(path.join(tmpDir, ".zcode/config.json"), "utf-8"),
     ) as {
-      hooks?: { enabled?: boolean; events?: Record<string, unknown> };
+      plugins?: { dirs?: string[] };
+      hooks?: unknown;
     };
-    expect(config.hooks?.enabled).toBe(true);
-    expect(config.hooks?.events?.SessionStart).toBeDefined();
+    expect(config.plugins?.dirs).toContain(".zcode/plugins/phronia");
+    expect(config.hooks).toBeUndefined();
+    expect(
+      fs.existsSync(
+        path.join(
+          tmpDir,
+          ".zcode/plugins/phronia/.zcode-plugin/plugin.json",
+        ),
+      ),
+    ).toBe(true);
   });
 
   it("#29b reinit add-platform: an empty selection is a no-op", async () => {

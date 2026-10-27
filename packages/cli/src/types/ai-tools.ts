@@ -128,16 +128,6 @@ export interface AIToolConfig {
   readonly capabilities: PlatformCapabilities;
   /** Derived: one or more behaviours run through the Python shim */
   readonly hasPythonHooks: boolean;
-  /**
-   * Optional user-global compatibility plugin for platform versions where
-   * project-level integration is unavailable. Phronia may surface a manual
-   * installation hint, but leaves installation and lifecycle management to
-   * the platform UI.
-   */
-  globalHookPlugin?: {
-    name: string;
-    marketplaceUrl: string;
-  };
   /** Template context for placeholder resolution in common templates */
   templateContext: TemplateContext;
 }
@@ -413,24 +403,22 @@ const AI_TOOL_BASES: Record<AITool, AIToolBase> = {
       ".zcode/agents",
       ".zcode/commands",
       ".zcode/skills",
-      // Hook implementations written by configureZcode. On ZCode builds that
-      // disable project hook registration, trellis-bridge invokes them instead.
+      // Hook implementations written by configureZcode and invoked by
+      // `phronia hook` through the project-local plugin bridge.
       ".zcode/hooks",
+      // ZCode loads this directory through `plugins.dirs` as an inline plugin.
+      ".zcode/plugins/phronia",
     ],
     cliFlag: "zcode",
     defaultChecked: false,
-    globalHookPlugin: {
-      name: "trellis-bridge",
-      marketplaceUrl: "https://github.com/CNHLAIA/ZCode-Phronia-Plugin.git",
-    },
     templateContext: {
       cmdRefPrefix: "/phronia:",
       executorAI: "Bash scripts or Agent calls",
       userActionLabel: "Skills",
-      // ZCode supports project hook registration through .zcode/config.json.
-      // On builds that disable it, the optional global trellis-bridge plugin
-      // registers the same events and delegates to the project hook scripts.
-      // PreToolUse can mutate sub-agent prompts, so either path is class-1.
+      // The project-local plugin registers SessionStart / UserPromptSubmit /
+      // PreToolUse and calls `phronia hook`, which resolves the project root
+      // and delegates to the shared Python shim. PreToolUse can mutate
+      // sub-agent prompts, so this is class-1.
       cliFlag: "zcode",
     },
   },

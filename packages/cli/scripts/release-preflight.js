@@ -109,19 +109,32 @@ export function npmVersionExists(pkgName, version) {
 }
 
 function npmViewJSON(args) {
-  const out = execSync(
-    `npm view ${args} --json --prefer-online --registry=https://registry.npmjs.org/`,
-    { encoding: "utf-8", stdio: ["pipe", "pipe", "pipe"], timeout: 15_000 },
-  ).trim();
-  return out ? JSON.parse(out) : null;
+  try {
+    const out = execSync(
+      `npm view ${args} --json --prefer-online --registry=https://registry.npmjs.org/`,
+      { encoding: "utf-8", stdio: ["pipe", "pipe", "pipe"], timeout: 15_000 },
+    ).trim();
+    return out ? JSON.parse(out) : null;
+  } catch (err) {
+    const stderr = err.stderr?.toString() ?? "";
+    // A missing version is a retryable propagation state, not a CLI failure.
+    if (stderr.includes("E404") || stderr.includes("not found")) return null;
+    throw err;
+  }
 }
 
 async function sleep(ms) {
   await new Promise((resolve) => setTimeout(resolve, ms));
 }
 
+/**
+ * npm's registry is eventually consistent: a successful publish can take
+ * several minutes to appear in the packument. Ten minutes is deliberately
+ * longer than the observed CLI propagation window.
+ */
 async function retry(label, fn) {
-  const attempts = 12;
+  const attempts = 30;
+  const delayMs = 20_000;
   let lastError;
   for (let i = 1; i <= attempts; i += 1) {
     try {
@@ -132,7 +145,7 @@ async function retry(label, fn) {
       console.error(
         `${YELLOW}! ${label} not visible yet; retrying (${i}/${attempts})${RESET}`,
       );
-      await sleep(15_000);
+      await sleep(delayMs);
     }
   }
   throw lastError;
@@ -277,23 +290,36 @@ async function verifyNpm({ packageFilter }) {
   ].filter((pkg) => packageFilter === "all" || pkg.key === packageFilter);
 
   for (const pkg of packages) {
-    await retry(`${pkg.name}@${v.cliVersion}`, () => {
-      const version = npmViewJSON(`${pkg.name}@${v.cliVersion} version`);
-      if (version !== v.cliVersion) {
-        fail(
-          `${pkg.name}@${v.cliVersion} is not visible on the public npm registry.`,
+    try {
+      await retry(`${pkg.name}@${v.cliVersion}`, () => {
+        const version = npmViewJSON(`${pkg.name}@${v.cliVersion} version`);
+        if (version === null) {
+          throw new Error(`${pkg.name}@${v.cliVersion} not visible yet`);
+        }
+        if (version !== v.cliVersion) {
+          fail(
+            `${pkg.name}@${v.cliVersion} resolved to ${version} on the public npm registry.`,
+          );
+        }
+        const taggedVersion = npmViewJSON(`${pkg.name}@${tag} version`);
+        if (taggedVersion === null) {
+          throw new Error(`${pkg.name}@${tag} tag not visible yet`);
+        }
+        if (taggedVersion !== v.cliVersion) {
+          fail(
+            `${pkg.name}@${tag} resolves to ${taggedVersion}, expected ${v.cliVersion}.`,
+          );
+        }
+        console.log(
+          `${GREEN}ok${RESET} ${pkg.name}@${v.cliVersion} visible on npm tag "${tag}".`,
         );
-      }
-      const taggedVersion = npmViewJSON(`${pkg.name}@${tag} version`);
-      if (taggedVersion !== v.cliVersion) {
-        fail(
-          `${pkg.name}@${tag} resolves to ${taggedVersion ?? "nothing"}, expected ${v.cliVersion}.`,
-        );
-      }
-      console.log(
-        `${GREEN}ok${RESET} ${pkg.name}@${v.cliVersion} visible on npm tag "${tag}".`,
+      });
+    } catch {
+      fail(
+        `${pkg.name}@${v.cliVersion} did not become visible within 10 minutes. ` +
+          `The publish may still be processing on npm; re-run this job.`,
       );
-    });
+    }
   }
 }
 

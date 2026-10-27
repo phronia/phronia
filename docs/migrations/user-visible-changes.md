@@ -90,18 +90,21 @@ Batches that must update this file:
     that loads but never runs now shows `last handshake never` instead of
     silently doing nothing. OpenCode 2.x selects an unimplemented `@v2`
     shard and reports `unsupported` rather than reusing the v1 plugin.
-- **B7**: ZCode may select `bridge` or `prelude` instead of project hooks; the
-  doctor reports the reason.
-  - **B7 now**: `phronia zcode detect` reports the selected path, build class,
-    trust state, and reason. Pin the path with `platforms.zcode.path:
-    project-hooks|bridge|prelude` in `config.yaml` or `PHRONIA_ZCODE_PATH`.
-    A build in the 3.7.x range is treated as hooks-disabled: the bridge is
-    used when `PHRONIA_ZCODE_BRIDGE` points at one, otherwise pull-based
-    skills. Unknown builds keep project hooks but stay `trust: unknown` until
-    a handshake proves they run. A self-owned ≤30-line bridge is generated at
-    `.zcode/bridge/phronia-zcode-bridge.mjs`; point the global ZCode plugin
-    at it when project hooks are unavailable. The bridge refuses to run when
-    ZCode does not supply a project root instead of searching the cwd.
+- **B7**: ZCode now uses a project-local plugin instead of workspace hooks.
+  - `phronia init` / `update` install `.zcode/plugins/phronia/` and register it
+    through `.zcode/config.json` `plugins.dirs`. The plugin uses
+    `type: "process"` hooks and `${ZCODE_PLUGIN_ROOT}`, so the tool cwd cannot
+    move the script path. Hooks call `phronia hook --platform zcode --event …`,
+    which resolves the nearest `.phronia/` root and delegates to the Python
+    shim.
+  - `phronia doctor` checks and repairs the plugin by default; `--no-fix` is
+    read-only. `phronia zcode detect` reports `plugin` as the selected path.
+  - The old `project-hooks` / `bridge` / `prelude` selection remains as a
+    fallback. Pin it with `platforms.zcode.path:
+    plugin|project-hooks|bridge|prelude` in `config.yaml` or
+    `PHRONIA_ZCODE_PATH`. A build in the 3.7.x range is still treated as
+    hooks-disabled; the legacy bridge/prelude fallback applies only when the
+    project plugin is unavailable.
 - **B8**: the memory floor is now the first recall source.
   - `phronia mem floor [query]` searches session journals, task summaries,
     and spec sections written under `.phronia/`. It works with no harness
