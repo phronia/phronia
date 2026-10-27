@@ -2,7 +2,7 @@
 /**
  * Hook cold-start baseline.
  *
- * Runs each shared hook against the repository's own `.trellis/` state and
+ * Runs each shared hook against the repository's own `.phronia/` state and
  * reports p50/p95/p99 wall time. The numbers are a baseline, not a gate:
  * B3 (context core) and B10 (binary) compare against them, and CI archives
  * the JSON.
@@ -18,7 +18,7 @@ import { fileURLToPath } from "node:url";
 
 const REPO_ROOT = path.resolve(fileURLToPath(new URL("..", import.meta.url)));
 const HOOKS_DIR = path.join(REPO_ROOT, "packages/cli/src/templates/shared-hooks");
-const RUNTIME_DIR = path.join(REPO_ROOT, ".trellis/.runtime/sessions");
+const RUNTIME_DIR = path.join(REPO_ROOT, ".phronia/.runtime/sessions");
 const SESSION_KEY = `bench-${process.pid}`;
 const SESSION_FILE = path.join(RUNTIME_DIR, `${SESSION_KEY}.json`);
 
@@ -42,7 +42,7 @@ function parseArgs(argv) {
 }
 
 function activeTaskRef() {
-  const tasksDir = path.join(REPO_ROOT, ".trellis/tasks");
+  const tasksDir = path.join(REPO_ROOT, ".phronia/tasks");
   if (!existsSync(tasksDir)) {
     return null;
   }
@@ -50,13 +50,13 @@ function activeTaskRef() {
     .filter((entry) => entry.isDirectory() && entry.name !== "archive")
     .sort((a, b) => a.name.localeCompare(b.name))
     .at(0);
-  return task ? `.trellis/tasks/${task.name}` : null;
+  return task ? `.phronia/tasks/${task.name}` : null;
 }
 
 function installSession() {
   const taskRef = activeTaskRef();
   if (!taskRef) {
-    throw new Error("No task directory found under .trellis/tasks; create one before benchmarking.");
+    throw new Error("No task directory found under .phronia/tasks; create one before benchmarking.");
   }
   mkdirSync(RUNTIME_DIR, { recursive: true });
   writeFileSync(
@@ -167,7 +167,7 @@ const cases = [
       cwd: REPO_ROOT,
       session_id: SESSION_KEY,
       tool_name: "Bash",
-      tool_input: { command: "python3 ./.trellis/scripts/task.py current" },
+      tool_input: { command: "python3 ./.phronia/scripts/task.py current" },
     }),
   },
 ];
