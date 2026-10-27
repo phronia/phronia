@@ -14,6 +14,7 @@ import {
   ZCODE_PLUGIN_ID,
   zcodePluginFiles,
 } from "../templates/zcode/plugin.js";
+import { getSharedHookScriptsForPlatform } from "../templates/shared-hooks/index.js";
 import { writeFileAtomic } from "../utils/atomic-write.js";
 import { replacePythonCommandLiterals } from "./shared.js";
 
@@ -44,7 +45,13 @@ export function ensureZcodePlugin(
   let changed = false;
 
   if (options.writeFiles !== false) {
-    for (const [relativePath, content] of zcodePluginFiles()) {
+    const files = new Map(zcodePluginFiles());
+    // The plugin bridge delegates to `phronia hook`, which invokes these
+    // shims. doctor must install them too, not only init/update.
+    for (const hook of getSharedHookScriptsForPlatform("zcode")) {
+      files.set(`.zcode/hooks/${hook.name}`, hook.content);
+    }
+    for (const [relativePath, content] of files) {
       const fullPath = path.join(root, ...relativePath.split("/"));
       const rendered = replacePythonCommandLiterals(content);
       if (readIfExists(fullPath) === rendered) {

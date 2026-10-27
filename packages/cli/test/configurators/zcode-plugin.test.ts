@@ -36,6 +36,9 @@ describe("ensureZcodePlugin", () => {
         path.join(root, ".zcode", "plugins", "phronia", "hooks", "bridge.mjs"),
       ),
     ).toBe(true);
+    expect(
+      fs.existsSync(path.join(root, ".zcode", "hooks", "phronia-hook.py")),
+    ).toBe(true);
 
     const config = readConfig(root);
     expect(config.plugins?.dirs).toEqual([".zcode/plugins/phronia"]);
