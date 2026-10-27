@@ -786,12 +786,12 @@ describe("update() integration", () => {
 
     // Set project version to future
     const versionPath = path.join(tmpDir, DIR_NAMES.WORKFLOW, ".version");
-    fs.writeFileSync(versionPath, "99.99.99");
+    fs.writeFileSync(versionPath, "9999.99.99");
 
     await update({});
 
     // Version should NOT be changed
-    expect(fs.readFileSync(versionPath, "utf-8")).toBe("99.99.99");
+    expect(fs.readFileSync(versionPath, "utf-8")).toBe("9999.99.99");
   });
 
   it("#11 allowDowngrade permits update when CLI is older", async () => {

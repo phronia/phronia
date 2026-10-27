@@ -1,6 +1,6 @@
 {
   "name": "@phronia/cli",
-  "version": "0.6.17",
+  "version": "2610.27.1",
   "description": "Phronia — practical wisdom for AI-assisted software development",
   "type": "module",
   "main": "./dist/index.js",
