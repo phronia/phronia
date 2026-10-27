@@ -17,8 +17,10 @@ release note can be assembled from this file without reading commit history.
 
 ## Unreleased (B1 — Phronia identity)
 
-- **All platforms**: the CLI is `phronia`; `trellis` and `tl` remain aliases for
-  one major version and print a deprecation notice.
+- **All platforms**: the CLI is `phronia`. The published package no longer
+  claims the `trellis`/`tl` bin names, so it can be installed alongside an
+  existing `@mindfoldhq/trellis`. `bin/trellis.js` remains for users who opt
+  into a manual symlink and prints the legacy notice.
 - **All platforms**: the workflow directory is `.phronia/`. Upstream projects
   must run `phronia adopt` once; user specs/tasks/journals are preserved, and
   generated files are regenerated. `adopt-report.md` lists everything kept,

@@ -12,7 +12,7 @@ that only the maintainer can supply. This file is the exact checklist.
 | `NPM_TOKEN` (automation, 2FA-bypass) in CI secrets | `release.yml` publish step | rotate after first publish |
 | GitHub organization/repository and Actions release permission | binaries attached to releases | `contents: write` |
 | Decision: package names and version cadence | `@phronia/cli-darwin-arm64` etc. | must match `optionalDependencies` |
-| Signing key or admin policy for `phronia`/`trellis` bin aliases | single-major legacy aliases | already implemented in source |
+| Signing key or admin policy for the `phronia` bin | single-major legacy alias is opt-in via manual symlink | no published `trellis` bin |
 
 ## B. macOS
 

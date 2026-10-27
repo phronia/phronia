@@ -48,8 +48,10 @@ carrying 270 old-path references forward.
    - local edits to generated files are preserved as conflicts or `.new`, and
      listed as `needs-review`.
 5. Keep a compatibility window of one major version:
-   - `trellis` bin alias and `TRELLIS_*` environment variables still work with
-     a one-time warning;
+   - `TRELLIS_*` environment variables still work with a one-time warning;
+   - the published package does not install a `trellis` bin, so an existing
+     upstream CLI is not clobbered; `bin/trellis.js` is available for an
+     explicit manual symlink and prints the legacy notice;
    - `trellis-*` skill names are recognized.
 
 ## Options rejected
