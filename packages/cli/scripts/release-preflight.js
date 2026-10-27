@@ -118,7 +118,7 @@ async function sleep(ms) {
 }
 
 async function retry(label, fn) {
-  const attempts = 6;
+  const attempts = 12;
   let lastError;
   for (let i = 1; i <= attempts; i += 1) {
     try {
@@ -129,7 +129,7 @@ async function retry(label, fn) {
       console.error(
         `${YELLOW}! ${label} not visible yet; retrying (${i}/${attempts})${RESET}`,
       );
-      await sleep(10_000);
+      await sleep(15_000);
     }
   }
   throw lastError;

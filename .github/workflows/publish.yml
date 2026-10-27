@@ -1,15 +1,11 @@
 name: Publish to npm
 
-# Both event sources stay wired so a published GitHub Release and a raw
-# `v*` tag push both fire a publish. The shared release-preflight script
-# makes reruns idempotent: if a package version is already on npm it is
-# skipped, so duplicate triggers do not produce duplicate publishes.
+# Publish is triggered by a GitHub Release only. A tag push used to fire a
+# second concurrent run; both computed the publish plan before either had
+# published, so the loser failed with E403. One event, one publish.
 on:
   release:
     types: [published]
-  push:
-    tags:
-      - "v*"
 
 concurrency:
   group: publish-${{ github.ref_name || github.ref }}

@@ -1,6 +1,6 @@
 {
   "name": "@phronia/runtime",
-  "version": "2610.27.2",
+  "version": "2610.27.3",
   "private": true,
   "type": "module",
   "description": "Binary/JS bundle packaging for the Phronia CLI. No business logic.",
