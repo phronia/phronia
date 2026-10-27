@@ -48,7 +48,25 @@ export function defaultCommandRunner(
 export function probeHarnessVersion(
   platform: PlatformId,
   run: CommandRunner = defaultCommandRunner,
+  env: NodeJS.ProcessEnv = process.env,
 ): DetectionResult {
+  // ZCode is a desktop app: launched hooks inherit ZCODE_APP_VERSION, while a
+  // `zcode` binary may not be on PATH at all. Prefer the runtime signal so a
+  // healthy hook integration is not reported as a degraded harness.
+  if (platform === "zcode") {
+    const appVersion = env.ZCODE_APP_VERSION?.trim();
+    const parsed = appVersion ? parseSemver(appVersion) : null;
+    if (parsed) {
+      return {
+        status: "detected",
+        harnessVersion: `${parsed.major}.${parsed.minor}.${parsed.patch}`,
+        source: "runtime",
+        confidence: "high",
+        reason: "ZCODE_APP_VERSION",
+      };
+    }
+  }
+
   const probe = PROBE_COMMANDS[platform];
   if (!probe) {
     return {

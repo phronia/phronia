@@ -5,6 +5,7 @@ import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import { handleContext, renderContext } from "../../src/context/index.js";
+import { CORE_VERSION } from "../../src/version.js";
 
 const REPO_ROOT = path.resolve(
   path.dirname(fileURLToPath(import.meta.url)),
@@ -84,7 +85,10 @@ function seed(root: string): void {
       "",
     ].join("\n"),
   );
-  fs.writeFileSync(path.join(root, ".phronia/.version"), "0.6.17");
+  // Keep the fixture at the running CLI version so the Python hook does not
+  // inject a version-dependent "update available" maintenance line; parity is
+  // about the context blocks, not the update hint.
+  fs.writeFileSync(path.join(root, ".phronia/.version"), CORE_VERSION);
   fs.writeFileSync(path.join(root, ".phronia/.developer"), "name=alice\n");
   fs.writeFileSync(path.join(root, ".phronia/workspace/alice/journal-1.md"), "a\nb\n");
   fs.writeFileSync(path.join(root, ".phronia/spec/guides/index.md"), "# guides");

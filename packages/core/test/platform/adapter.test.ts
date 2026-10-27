@@ -52,6 +52,28 @@ describe("harness probing", () => {
     expect(result).toMatchObject({ status: "unknown", harnessVersion: null });
   });
 
+  it("uses ZCODE_APP_VERSION when no zcode CLI is on PATH", () => {
+    const result = probeHarnessVersion("zcode", () => null, {
+      ZCODE_APP_VERSION: "3.16.3",
+    });
+    expect(result).toMatchObject({
+      status: "detected",
+      harnessVersion: "3.16.3",
+      source: "runtime",
+      confidence: "high",
+      reason: "ZCODE_APP_VERSION",
+    });
+  });
+
+  it("falls back to the zcode CLI when ZCODE_APP_VERSION is absent", () => {
+    const result = probeHarnessVersion("zcode", () => "3.7.2\n", {});
+    expect(result).toMatchObject({
+      status: "detected",
+      harnessVersion: "3.7.2",
+      source: "cli",
+    });
+  });
+
   it("degrades to unknown on unparsable output", () => {
     const result = probeHarnessVersion("opencode", () => "build abcdef");
     expect(result).toMatchObject({
