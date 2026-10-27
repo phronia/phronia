@@ -63,7 +63,7 @@ mkdirSync(mainDir, { recursive: true });
 const { optionalDependencies: _ignored, ...base } = cliPkg;
 writeFileSync(
   join(mainDir, "package.json"),
-  `${JSON.stringify({ ...base, bin: { phronia: "./bin/phronia.js", trellis: "./bin/trellis.js", tl: "./bin/phronia.js" }, optionalDependencies }, null, 2)}\n`,
+  `${JSON.stringify({ ...base, bin: { phronia: "./bin/phronia.js" }, optionalDependencies }, null, 2)}\n`,
   "utf8",
 );
 for (const item of ["bin", "dist"]) {

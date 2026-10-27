@@ -50,8 +50,9 @@ carrying 270 old-path references forward.
 5. Keep a compatibility window of one major version:
    - `TRELLIS_*` environment variables still work with a one-time warning;
    - the published package does not install a `trellis` bin, so an existing
-     upstream CLI is not clobbered; `bin/trellis.js` is available for an
-     explicit manual symlink and prints the legacy notice;
+     upstream CLI is not clobbered and users are not asked to uninstall it;
+     `bin/trellis.js` is available for an explicit manual symlink and prints
+     the legacy notice;
    - `trellis-*` skill names are recognized.
 
 ## Options rejected

@@ -54,14 +54,23 @@
 ## Quick Start
 
 ```bash
-# 1. Install Phronia
+# 1. Install Phronia. This does not replace an existing
+#    @mindfoldhq/trellis install: the package publishes only the
+#    `phronia` bin, so both CLIs can coexist.
 npm install -g @phronia/cli@latest
 
-# 2. Initialize in your repo
+# 2. New project: initialize in your repo
 phronia init -u your-name
 
 # 3. Or initialize with the platforms you actually use
 phronia init --cursor --opencode --codex -u your-name
+```
+
+Existing `.trellis/` project? Migrate without uninstalling the old CLI:
+
+```bash
+phronia adopt --dry-run
+phronia adopt
 ```
 
 See the [Quick Start](https://docs.trytrellis.app/start/install-and-first-task) and [Supported Platforms](https://docs.trytrellis.app/advanced/multi-platform) guides for setup details.

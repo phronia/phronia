@@ -1,7 +1,7 @@
 import { execSync } from "node:child_process";
 import fs from "node:fs";
 import path from "node:path";
-import { compileRules, writeCompiledRules, writeGate } from "@phronia/core";
+import { compileRules, LAYOUT, writeCompiledRules, writeGate } from "@phronia/core";
 import { refreshAdapterManifest } from "./adapter-manifest.js";
 import readline from "node:readline";
 import chalk from "chalk";
@@ -1121,6 +1121,23 @@ export async function init(options: InitOptions): Promise<void> {
 
   const cwd = process.cwd();
   const isFirstInit = !fs.existsSync(path.join(cwd, DIR_NAMES.WORKFLOW));
+  // A legacy workflow tree is a migration source, not a fresh project. Creating
+  // `.phronia/` beside it would split the workflow state and lose the chance
+  // to hash-verify and preserve the old generated files.
+  if (
+    isFirstInit &&
+    fs.existsSync(path.join(cwd, LAYOUT.legacyRootDirName))
+  ) {
+    console.error(
+      chalk.red(`Detected a Trellis project (${LAYOUT.legacyRootDirName}/).`),
+    );
+    console.error(
+      chalk.gray(
+        "Run `phronia adopt --dry-run` first, then `phronia adopt` to migrate it.",
+      ),
+    );
+    process.exit(2);
+  }
   // Captured here (before createWorkflowStructure + init_developer run) so
   // the three-branch dispatch at the bottom can tell "fresh clone joiner"
   // (.phronia/ exists, .developer missing) apart from "creator first init".

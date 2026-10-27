@@ -2144,7 +2144,14 @@ export async function update(options: UpdateOptions): Promise<void> {
   // Check if Phronia is initialized
   if (!fs.existsSync(path.join(cwd, DIR_NAMES.WORKFLOW))) {
     console.log(chalk.red("Error: Phronia not initialized in this directory."));
-    console.log(chalk.gray("Run 'trellis init' first."));
+    const legacyRoot = path.join(cwd, LAYOUT.legacyRootDirName);
+    console.log(
+      chalk.gray(
+        fs.existsSync(legacyRoot)
+          ? `Run 'phronia adopt' first to migrate the existing ${LAYOUT.legacyRootDirName} project.`
+          : "Run 'phronia init' first.",
+      ),
+    );
     return;
   }
 
@@ -2222,7 +2229,7 @@ export async function update(options: UpdateOptions): Promise<void> {
   if (isUnknownVersion) {
     console.log(
       chalk.yellow(
-        "⚠️  No version file found. Skipping migrations — run trellis init to fix.",
+        "⚠️  No version file found. Skipping migrations — run phronia init to fix.",
       ),
     );
     console.log(chalk.gray("   Template updates will still be applied."));

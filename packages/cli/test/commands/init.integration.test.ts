@@ -1602,4 +1602,19 @@ describe("init() integration", () => {
     ) as Record<string, unknown>;
     expect(settings).not.toHaveProperty("statusLine");
   });
+
+
+  it("#30 refuses to initialize a project that still has .trellis", async () => {
+    fs.mkdirSync(path.join(tmpDir, ".trellis", "tasks"), { recursive: true });
+    const exit = vi.spyOn(process, "exit").mockImplementation(((code?: number) => {
+      throw new Error(`__exit__:${code ?? 0}`);
+    }) as never);
+    try {
+      await expect(init({ yes: true })).rejects.toThrow("__exit__:2");
+      expect(fs.existsSync(path.join(tmpDir, DIR_NAMES.WORKFLOW))).toBe(false);
+      expect(fs.existsSync(path.join(tmpDir, ".trellis"))).toBe(true);
+    } finally {
+      exit.mockRestore();
+    }
+  });
 });

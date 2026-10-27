@@ -95,7 +95,7 @@ function checkForUpdates(cwd: string): void {
 const invokedAs = path.basename(process.argv[1] ?? "");
 if (invokedAs === "trellis" || invokedAs === "trellis.js") {
   process.stderr.write(
-    "ℹ️  `trellis` is the legacy name; use `phronia` instead. The alias is removed in the next major version.\n",
+    "ℹ️  `trellis` is a manual legacy compatibility entry point; use `phronia`.\n",
   );
 }
 
