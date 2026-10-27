@@ -123,15 +123,18 @@ describe("shared-hooks capability table", () => {
       // (`.gemini/hooks/<hook>`), which is what distinguishes it from the
       // reference docs that merely name the file in a table. Hook configs are
       // never markdown on any platform.
+      const event = HOOK_EVENTS[hook] ?? "";
       return [...files]
         .filter(
           ([filePath, content]) =>
             !filePath.endsWith(hook) &&
             !filePath.endsWith(".md") &&
             (content.includes(`hooks/${hook}`) ||
-              content.includes(
-                `phronia-hook.py --event ${HOOK_EVENTS[hook] ?? ""}`,
-              )),
+              content.includes(`phronia-hook.py --event ${event}`) ||
+              // ZCode quotes the script path, so the closing quote sits
+              // between `.py` and the first argument. The hook config is JSON,
+              // so the quote appears escaped in the raw template text.
+              content.includes(`phronia-hook.py\\" --event ${event}`)),
         )
         .map(([filePath]) => filePath);
     }

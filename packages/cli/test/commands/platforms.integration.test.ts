@@ -86,6 +86,17 @@ describe("trellis platforms (#396)", () => {
     expect(parsed.platforms).toEqual([]);
   });
 
+  it("keeps --json stdout parseable when a project update notice is due", () => {
+    fs.mkdirSync(path.join(tmpDir, ".phronia"), { recursive: true });
+    fs.writeFileSync(path.join(tmpDir, ".phronia", ".version"), "0.0.1\n");
+
+    const result = runCli(tmpDir, ["platforms", "--json"]);
+
+    expect(result.status).toBe(0);
+    expect(() => JSON.parse(result.stdout)).not.toThrow();
+    expect(result.stderr).toContain("Phronia update available");
+  });
+
   it("human output lists configured platforms without --json", () => {
     fs.mkdirSync(path.join(tmpDir, ".claude"), { recursive: true });
     writeTrackedPlatforms(tmpDir, [

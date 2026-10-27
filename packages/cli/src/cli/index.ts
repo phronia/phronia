@@ -73,21 +73,23 @@ function checkForUpdates(cwd: string): void {
   const comparison = compareVersions(cliVersion, projectVersion);
 
   if (comparison > 0) {
-    // CLI is newer than project - update available
-    console.log(
+    // CLI is newer than project - update available.
+    // stderr only: commands such as `context --json` are parsed by hooks, so
+    // the notice must never share stdout with the machine-readable payload.
+    process.stderr.write(
       chalk.yellow(
-        `\n⚠️  Phronia update available: ${projectVersion} → ${cliVersion}`,
+        `\n⚠️  Phronia update available: ${projectVersion} → ${cliVersion}\n`,
       ),
     );
-    console.log(chalk.gray(`   Run: phronia update\n`));
+    process.stderr.write(chalk.gray(`   Run: phronia update\n`));
   } else if (comparison < 0) {
     // CLI is older than project - CLI needs updating
-    console.log(
+    process.stderr.write(
       chalk.yellow(
-        `\n⚠️  Your CLI (${cliVersion}) is older than project (${projectVersion})`,
+        `\n⚠️  Your CLI (${cliVersion}) is older than project (${projectVersion})\n`,
       ),
     );
-    console.log(chalk.gray(`   Run: phronia upgrade\n`));
+    process.stderr.write(chalk.gray(`   Run: phronia upgrade\n`));
   }
 }
 
@@ -99,9 +101,17 @@ if (invokedAs === "trellis" || invokedAs === "trellis.js") {
   );
 }
 
-// Check for updates at CLI startup (only if .phronia exists)
+// Check for updates at CLI startup (only if .phronia exists). Hook-driven
+// context calls run on every prompt; skip them entirely instead of emitting
+// stderr noise into the harness log.
+const cliArgs = process.argv.slice(2);
+const hookContextInvocation =
+  cliArgs[0] === "context" || cliArgs.includes("--render");
 const cwd = process.cwd();
-if (fs.existsSync(path.join(cwd, DIR_NAMES.WORKFLOW))) {
+if (
+  !hookContextInvocation &&
+  fs.existsSync(path.join(cwd, DIR_NAMES.WORKFLOW))
+) {
   checkForUpdates(cwd);
 }
 

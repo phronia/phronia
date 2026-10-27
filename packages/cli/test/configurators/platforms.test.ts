@@ -1175,13 +1175,13 @@ describe("configurePlatform", () => {
 
     const generatedConfig = readConfiguredFile(tmpDir, ".zcode/config.json");
     expect(generatedConfig).toContain(
-      "${ZCODE_PROJECT_DIR}/.zcode/hooks/phronia-hook.py --event session-start --platform zcode",
+      '${ZCODE_PROJECT_DIR}/.zcode/hooks/phronia-hook.py\\" --event session-start --platform zcode',
     );
     expect(generatedConfig).toContain(
-      "${ZCODE_PROJECT_DIR}/.zcode/hooks/phronia-hook.py --event user-prompt --platform zcode",
+      '${ZCODE_PROJECT_DIR}/.zcode/hooks/phronia-hook.py\\" --event user-prompt --platform zcode',
     );
     expect(generatedConfig).toContain(
-      "${ZCODE_PROJECT_DIR}/.zcode/hooks/phronia-hook.py --event subagent-spawn --platform zcode",
+      '${ZCODE_PROJECT_DIR}/.zcode/hooks/phronia-hook.py\\" --event subagent-spawn --platform zcode',
     );
 
     const templates = collectPlatformTemplates("zcode");

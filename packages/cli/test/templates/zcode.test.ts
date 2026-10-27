@@ -43,9 +43,11 @@ describe("zcode getHooksConfig", () => {
     expect(cfg.content).toContain('"UserPromptSubmit"');
     expect(cfg.content).toContain('"PreToolUse"');
     expect(cfg.content).toContain('"matcher": "Agent|Task"');
-    expect(cfg.content).toContain("phronia-hook.py --event session-start --platform zcode");
-    expect(cfg.content).toContain("phronia-hook.py --event user-prompt");
-    expect(cfg.content).toContain("phronia-hook.py --event subagent-spawn");
+    expect(cfg.content).toContain(
+      'phronia-hook.py\\" --event session-start --platform zcode',
+    );
+    expect(cfg.content).toContain('phronia-hook.py\\" --event user-prompt');
+    expect(cfg.content).toContain('phronia-hook.py\\" --event subagent-spawn');
     // Uses {{PYTHON_CMD}} placeholder so init resolves host python.
     expect(cfg.content).toContain("{{PYTHON_CMD}}");
   });
@@ -66,13 +68,18 @@ describe("zcode getHooksConfig", () => {
 
     expect(commands).toEqual(
       expect.arrayContaining([
-        '{{PYTHON_CMD}} "${ZCODE_PROJECT_DIR}/.zcode/hooks/phronia-hook.py --event session-start --platform zcode"',
-        '{{PYTHON_CMD}} "${ZCODE_PROJECT_DIR}/.zcode/hooks/phronia-hook.py --event user-prompt --platform zcode"',
-        '{{PYTHON_CMD}} "${ZCODE_PROJECT_DIR}/.zcode/hooks/phronia-hook.py --event subagent-spawn --platform zcode"',
+        '{{PYTHON_CMD}} "${ZCODE_PROJECT_DIR}/.zcode/hooks/phronia-hook.py" --event session-start --platform zcode',
+        '{{PYTHON_CMD}} "${ZCODE_PROJECT_DIR}/.zcode/hooks/phronia-hook.py" --event user-prompt --platform zcode',
+        '{{PYTHON_CMD}} "${ZCODE_PROJECT_DIR}/.zcode/hooks/phronia-hook.py" --event subagent-spawn --platform zcode',
       ]),
     );
     for (const command of commands) {
       expect(command).not.toMatch(/{{PYTHON_CMD}}\s+\.zcode\/hooks\//);
+      // The closing quote must sit immediately after the script path. If it
+      // wraps the arguments too, the host passes the whole string to Python
+      // as one filename and the hook fails with ENOENT.
+      expect(command).toContain('phronia-hook.py" --event');
+      expect(command).not.toMatch(/phronia-hook\.py --event[^"]*"$/);
     }
   });
 });
