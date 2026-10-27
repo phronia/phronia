@@ -56,6 +56,7 @@ import {
   commonGitContext,
   commonSessionContext,
   getAllScripts,
+  getScriptSupportFiles,
 } from "../src/templates/workflow/index.js";
 import {
   collectPlatformTemplates,
@@ -2277,6 +2278,14 @@ describe("regression: shell to Python migration (beta.0)", () => {
         `${file} exists on disk but is missing from getAllScripts()`,
       ).toBe(true);
     }
+  });
+
+  it("[beta.3] refreshes the generated Python layout bridge with the scripts", () => {
+    const support = getScriptSupportFiles();
+    const layoutSource = support.get("common/layout.json");
+    expect(layoutSource).toBeDefined();
+    const layout = JSON.parse(layoutSource ?? "{}") as { rootDirName?: string };
+    expect(layout.rootDirName).toBe(".phronia");
   });
 });
 

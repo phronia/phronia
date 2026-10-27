@@ -116,7 +116,7 @@ program
 
 program
   .command("init")
-  .description("Initialize trellis in the current project")
+  .description("Initialize Phronia in the current project")
   .option("--cursor", "Include Cursor commands")
   .option("--claude", "Include Claude Code commands")
   .option("--opencode", "Include OpenCode commands")
@@ -201,7 +201,7 @@ program
 
 program
   .command("update")
-  .description("Update trellis configuration and commands to latest version")
+  .description("Update Phronia configuration and commands to latest version")
   .option("--dry-run", "Preview changes without applying them")
   .option("-f, --force", "Overwrite all changed files without asking")
   .option("-s, --skip-all", "Skip all changed files without asking")
@@ -264,6 +264,10 @@ program
   .option("--dry-run", "Report what would change without touching files")
   .option("--force", "Proceed even when the git working tree is dirty")
   .option("--json", "Print the adoption report as JSON")
+  .option(
+    "--backup-root <dir>",
+    "Root directory for the pre-adoption backup (default: ~/.phronia/backups)",
+  )
   .action(async (options: Record<string, unknown>) => {
     try {
       const report = await adopt({
@@ -271,6 +275,7 @@ program
         dryRun: options.dryRun as boolean,
         force: options.force as boolean,
         json: options.json as boolean,
+        backupRoot: options.backupRoot as string | undefined,
       });
       if (options.json) {
         process.stdout.write(`${JSON.stringify(report, null, 2)}\n`);
@@ -341,7 +346,7 @@ program
 
 program
   .command("restore")
-  .description("Restore the exact project state saved by `trellis ablate`")
+  .description("Restore the exact project state saved by `phronia ablate`")
   .option("-y, --yes", "Skip confirmation prompt")
   .option("--dry-run", "Preview restoration and check conflicts")
   .action(async (options: Record<string, unknown>) => {
@@ -365,7 +370,7 @@ program
 program
   .command("mem")
   .description(
-    "Search/recall AI conversation history across Claude Code, Codex, OpenCode, Pi (run 'trellis mem help' for subcommands and flags)",
+    "Search/recall AI conversation history across Claude Code, Codex, OpenCode, Pi (run 'phronia mem help' for subcommands and flags)",
   )
   .allowUnknownOption(true)
   .helpOption(false)

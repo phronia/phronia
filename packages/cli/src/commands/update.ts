@@ -41,12 +41,12 @@ import { emptyTaskJson } from "../utils/task-json.js";
 import {
   getAllScripts,
   getAllAgents,
+  getScriptSupportFiles,
   // Configuration
   configYamlTemplate,
   gitignoreTemplate,
   workflowMdTemplate,
 } from "../templates/workflow/index.js";
-import { agentsMdContent } from "../templates/markdown/index.js";
 import {
   COPILOT_INSTRUCTIONS_BLOCK_END,
   COPILOT_INSTRUCTIONS_BLOCK_START,
@@ -74,13 +74,14 @@ import {
   type RegistrySource,
 } from "../utils/template-fetcher.js";
 import { loadSpecRegistryConfig } from "../utils/registry-config.js";
+import { cleanupEmptyDirs } from "../utils/managed-paths.js";
 import {
-  cleanupEmptyDirs,
-  LEGACY_BLOCK_END,
-  LEGACY_BLOCK_START,
-  PHRONIA_BLOCK_END,
-  PHRONIA_BLOCK_START,
-} from "../utils/managed-paths.js";
+  buildAgentsMdTemplate,
+  buildManagedBlockTemplate,
+  getManagedBlock,
+  getTrellisManagedBlock,
+  mergeManagedBlockContent,
+} from "../utils/managed-block.js";
 import { compileRules, writeCompiledRules, writeGate } from "@phronia/core";
 import { refreshAdapterManifest } from "./adapter-manifest.js";
 
@@ -135,144 +136,6 @@ const PROTECTED_PATHS = [
   `${DIR_NAMES.WORKFLOW}/.developer`,
   `${DIR_NAMES.WORKFLOW}/.current-task`,
 ];
-
-function getManagedBlock(
-  content: string,
-  startMarker: string,
-  endMarker: string,
-): string | null {
-  const start = content.indexOf(startMarker);
-  if (start === -1) {
-    return null;
-  }
-
-  const end = content.indexOf(endMarker, start);
-  if (end === -1) {
-    return null;
-  }
-
-  return content.slice(start, end + endMarker.length);
-}
-
-function getTrellisManagedBlock(content: string): string | null {
-  return (
-    getManagedBlock(content, PHRONIA_BLOCK_START, PHRONIA_BLOCK_END) ??
-    getManagedBlock(content, LEGACY_BLOCK_START, LEGACY_BLOCK_END)
-  );
-}
-
-function replaceManagedBlock(
-  existingContent: string,
-  templateContent: string,
-  startMarker: string,
-  endMarker: string,
-): string | null {
-  const existingStart = existingContent.indexOf(startMarker);
-  if (existingStart === -1) {
-    return null;
-  }
-
-  const existingEnd = existingContent.indexOf(endMarker, existingStart);
-  if (existingEnd === -1) {
-    return null;
-  }
-
-  const templateBlock = getManagedBlock(
-    templateContent,
-    startMarker,
-    endMarker,
-  );
-  if (!templateBlock) {
-    return null;
-  }
-
-  return (
-    existingContent.slice(0, existingStart) +
-    templateBlock +
-    existingContent.slice(existingEnd + endMarker.length)
-  );
-}
-
-function mergeManagedBlockContent(
-  existingContent: string,
-  templateContent: string,
-  startMarker: string,
-  endMarker: string,
-): string {
-  // Pre-rename projects carry TRELLIS markers. Replace that block in place so
-  // the file migrates to PHRONIA markers without duplicating content.
-  const existingStart = existingContent.indexOf(startMarker);
-  if (existingStart === -1) {
-    const templateBlock = getManagedBlock(templateContent, startMarker, endMarker);
-    const legacyStartMarker = startMarker.replace("PHRONIA", "TRELLIS");
-    const legacyEndMarker = endMarker.replace("PHRONIA", "TRELLIS");
-    const legacyStart = existingContent.indexOf(legacyStartMarker);
-    const legacyEnd =
-      legacyStart === -1
-        ? -1
-        : existingContent.indexOf(legacyEndMarker, legacyStart);
-    if (templateBlock && legacyStart !== -1 && legacyEnd !== -1) {
-      return (
-        existingContent.slice(0, legacyStart) +
-        templateBlock +
-        existingContent.slice(legacyEnd + legacyEndMarker.length)
-      );
-    }
-  }
-
-  const replaced = replaceManagedBlock(
-    existingContent,
-    templateContent,
-    startMarker,
-    endMarker,
-  );
-  if (replaced !== null) {
-    return replaced;
-  }
-
-  const templateBlock = getManagedBlock(
-    templateContent,
-    startMarker,
-    endMarker,
-  );
-  if (!templateBlock) {
-    return templateContent;
-  }
-
-  const trimmed = existingContent.replace(/\s+$/, "");
-  return `${trimmed}\n\n${templateBlock}\n`;
-}
-
-function buildManagedBlockTemplate(
-  cwd: string,
-  relativePath: string,
-  templateContent: string,
-  startMarker: string,
-  endMarker: string,
-): string {
-  const fullPath = path.join(cwd, ...relativePath.split("/"));
-  if (!fs.existsSync(fullPath)) {
-    return templateContent;
-  }
-
-  const existingContent = fs.readFileSync(fullPath, "utf-8");
-  return mergeManagedBlockContent(
-    existingContent,
-    templateContent,
-    startMarker,
-    endMarker,
-  );
-}
-
-function buildAgentsMdTemplate(cwd: string): string {
-  return buildManagedBlockTemplate(
-    cwd,
-    FILE_NAMES.AGENTS,
-    agentsMdContent,
-    PHRONIA_BLOCK_START,
-    PHRONIA_BLOCK_END,
-  );
-}
 
 function buildCopilotInstructionsTemplate(cwd: string): string {
   return buildManagedBlockTemplate(
@@ -921,6 +784,10 @@ async function collectTemplateFiles(
 
   // Python scripts (single source of truth: getAllScripts())
   for (const [scriptPath, content] of getAllScripts()) {
+    files.set(`${PATHS.SCRIPTS}/${scriptPath}`, content);
+  }
+  // Generated layout bridge sitting next to paths.py.
+  for (const [scriptPath, content] of getScriptSupportFiles()) {
     files.set(`${PATHS.SCRIPTS}/${scriptPath}`, content);
   }
 

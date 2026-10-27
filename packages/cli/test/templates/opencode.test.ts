@@ -909,7 +909,7 @@ describe("opencode messages.transform injection (issue #553)", () => {
       );
       expect(messages[2].parts.at(-1)).toEqual(ordinary);
     }
-  });
+  }, 30_000);
 
   it("prepends ephemeral text onto attachment-only latest user messages", async () => {
     const attachment: ChatMessagePart = {

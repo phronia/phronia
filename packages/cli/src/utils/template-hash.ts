@@ -100,8 +100,17 @@ export function loadHashes(cwd: string): TemplateHashes {
       (parsed as { hashes: unknown }).hashes !== null
     ) {
       const stored = parsed as StoredHashes;
-      // Defensive: enforce POSIX keys even if a writer slipped through.
-      return normalizeHashKeys(stored.hashes);
+      // Defensive: enforce POSIX keys even if a writer slipped through, and
+      // drop entries that are excluded by the current contract (runtime state,
+      // bytecode, migration reports) so old manifests self-heal on next save.
+      const normalized = normalizeHashKeys(stored.hashes);
+      const filtered: TemplateHashes = {};
+      for (const [key, value] of Object.entries(normalized)) {
+        if (isManifestTrackable(key)) {
+          filtered[key] = value;
+        }
+      }
+      return filtered;
     }
 
     // Legacy flat format (no __version) or unknown shape: discard.
@@ -118,10 +127,16 @@ export function loadHashes(cwd: string): TemplateHashes {
  */
 export function saveHashes(cwd: string, hashes: TemplateHashes): void {
   const hashesPath = getHashesPath(cwd);
+  const filtered: TemplateHashes = {};
+  for (const [key, value] of Object.entries(normalizeHashKeys(hashes))) {
+    if (isManifestTrackable(key)) {
+      filtered[key] = value;
+    }
+  }
   const payload: StoredHashes = {
     __version: HASHES_SCHEMA_VERSION,
     brand: "phronia",
-    hashes: normalizeHashKeys(hashes),
+    hashes: filtered,
   };
   writeFileAtomic(hashesPath, JSON.stringify(payload, null, 2));
 }
@@ -280,10 +295,45 @@ const EXCLUDE_FROM_HASH = [
   ".current-task", // Current task marker (file, not directory)
   `${DIR_NAMES.WORKFLOW}/spec/`, // User-customized spec files
   ".backup-", // Backup directories
+  ".runtime/", // Session/handshake/verdict runtime state
+  "__pycache__/", // Python bytecode
+  ".pyc", // Compiled Python outside __pycache__
+  "adopt-report.md", // One-shot migration report
+  "manifest.json", // Generated adapter manifest
+  "gate.yaml", // Compiled from rules.md with a generation timestamp
 ];
 
 /**
- * Check if a path should be excluded from hash tracking
+ * Paths that must never appear in the manifest, even when a caller writes
+ * them. This is narrower than {@link shouldExcludeFromHash}: `spec/` is
+ * skipped by the directory walk (user-authored guidelines), but a spec file
+ * downloaded from a registry is explicitly tracked so `update` can refresh it.
+ */
+const NEVER_TRACK_IN_MANIFEST = [
+  ".template-hashes.json",
+  ".version",
+  ".developer",
+  ".current-task",
+  ".backup-",
+  ".runtime/",
+  "__pycache__/",
+  ".pyc",
+  "adopt-report.md",
+  "manifest.json",
+  "gate.yaml",
+];
+
+function isManifestTrackable(relativePath: string): boolean {
+  const normalizedPath = toPosix(relativePath);
+  return !NEVER_TRACK_IN_MANIFEST.some((pattern) =>
+    normalizedPath.includes(pattern),
+  );
+}
+
+/**
+ * Check if a path should be skipped by the `.phronia/` directory walk.
+ * Explicit writes (e.g. registry-downloaded specs) still decide their own
+ * tracking via {@link isManifestTrackable}.
  */
 export function shouldExcludeFromHash(relativePath: string): boolean {
   const normalizedPath = toPosix(relativePath);

@@ -874,48 +874,58 @@ async function handleReinit(
       }),
     );
 
-    const reinitWritten = startRecordingWrites(cwd);
-    try {
-      for (const tool of platformsToAdd) {
-        const platformId = resolveCliFlag(tool as CliFlag);
-        if (platformId) {
-          if (configuredPlatforms.has(platformId)) {
-            console.log(
-              chalk.gray(
-                `  ○ ${AI_TOOLS[platformId].name} already configured, skipping`,
-              ),
-            );
-          } else {
-            console.log(
-              chalk.blue(`📝 Configuring ${AI_TOOLS[platformId].name}...`),
-            );
-            await configurePlatform(platformId, cwd, {
-              withStatusline: options.withStatusline,
-            });
-            if (platformId === "claude-code" && options.withStatusline) {
+    if (platformsToAdd.length === 0) {
+      console.log(chalk.yellow("No platforms selected; nothing to add."));
+    } else {
+      const reinitWritten = startRecordingWrites(cwd);
+      let addedAny = false;
+      try {
+        for (const tool of platformsToAdd) {
+          const platformId = resolveCliFlag(tool as CliFlag);
+          if (platformId) {
+            if (configuredPlatforms.has(platformId)) {
               console.log(
                 chalk.gray(
-                  "   ↳ Phronia statusLine installed (--with-statusline)",
+                  `  ○ ${AI_TOOLS[platformId].name} already configured, skipping`,
                 ),
               );
+            } else {
+              console.log(
+                chalk.blue(`📝 Configuring ${AI_TOOLS[platformId].name}...`),
+              );
+              await configurePlatform(platformId, cwd, {
+                withStatusline: options.withStatusline,
+              });
+              addedAny = true;
+              if (platformId === "claude-code" && options.withStatusline) {
+                console.log(
+                  chalk.gray(
+                    "   ↳ Phronia statusLine installed (--with-statusline)",
+                  ),
+                );
+              }
             }
           }
         }
+      } finally {
+        stopRecordingWrites();
       }
-    } finally {
-      stopRecordingWrites();
-    }
 
-    // Update template hashes. Merge mode: preserve previously-tracked
-    // platforms' hashes, layer in the newly-added platform's writes.
-    const hashedCount = initializeHashes(cwd, {
-      trackedPaths: reinitWritten,
-      merge: true,
-    });
-    if (hashedCount > 0) {
-      console.log(
-        chalk.gray(`📋 Tracking ${hashedCount} template files for updates`),
-      );
+      // Update template hashes. Merge mode: preserve previously-tracked
+      // platforms' hashes, layer in the newly-added platform's writes. Skip
+      // the walk entirely when nothing was added so the command does not claim
+      // to have tracked files after a no-op selection.
+      if (addedAny) {
+        const hashedCount = initializeHashes(cwd, {
+          trackedPaths: reinitWritten,
+          merge: true,
+        });
+        if (hashedCount > 0) {
+          console.log(
+            chalk.gray(`📋 Tracking ${hashedCount} template files for updates`),
+          );
+        }
+      }
     }
   }
 

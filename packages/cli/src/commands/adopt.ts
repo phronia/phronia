@@ -18,7 +18,19 @@ import chalk from "chalk";
 import { PLATFORM_IDS, getPlatformFunctions } from "../configurators/index.js";
 import { AI_TOOLS, type AITool } from "../types/ai-tools.js";
 import { VERSION } from "../constants/version.js";
+import { FILE_NAMES } from "../constants/paths.js";
 import { LAYOUT } from "@phronia/core/layout";
+import { ensureGitattributes } from "../configurators/workflow.js";
+import { replacePythonCommandLiterals } from "../configurators/shared.js";
+import {
+  configYamlTemplate,
+  getAllAgents,
+  getAllScripts,
+  getScriptSupportFiles,
+  gitignoreTemplate,
+  workflowMdTemplate,
+} from "../templates/workflow/index.js";
+import { buildAgentsMdTemplate } from "../utils/managed-block.js";
 import { computeHash, initializeHashes } from "../utils/template-hash.js";
 import { cleanupEmptyDirs } from "../utils/managed-paths.js";
 
@@ -87,6 +99,7 @@ export async function adopt(options: AdoptOptions): Promise<AdoptReport> {
 
   if (report.dryRun) {
     planPristineDeletions(cwd, manifest, report);
+    planWorkflowRefresh(cwd, manifest, report);
     planConflicts(cwd, platforms, report);
     return report;
   }
@@ -102,6 +115,14 @@ export async function adopt(options: AdoptOptions): Promise<AdoptReport> {
     }
     removeIfPristine(cwd, relativePath, expectedHash, report);
   }
+
+  // The renamed workflow tree still carries upstream scripts, workflow.md and
+  // config.yaml. Regenerate them here so adoption is complete without a
+  // follow-up `update`, and keep user edits as `.pre-adopt`.
+  const workflowPlan = workflowRefreshPlan(cwd, manifest);
+  preserveWorkflowConflicts(cwd, workflowPlan, report);
+  writeWorkflowFiles(cwd, workflowPlan);
+  report.regenerated.push("workflow", FILE_NAMES.AGENTS);
 
   // Move local edits out of the way before regenerating their paths.
   for (const platform of platforms) {
@@ -257,6 +278,118 @@ function planConflicts(
   }
 }
 
+interface WorkflowRefreshPlan {
+  files: Map<string, string>;
+  conflicts: string[];
+}
+
+/**
+ * The workflow tree is renamed as a whole, so its generated files still carry
+ * upstream content and legacy root paths. Adoption owns these files the same
+ * way `init`/`update` do: write current templates and preserve user edits.
+ */
+function workflowRefreshPlan(
+  cwd: string,
+  manifest: LegacyManifest,
+): WorkflowRefreshPlan {
+  const files = new Map<string, string>();
+  for (const [scriptPath, content] of getAllScripts()) {
+    files.set(
+      `${LAYOUT.paths.scripts}/${scriptPath}`,
+      replacePythonCommandLiterals(content),
+    );
+  }
+  for (const [scriptPath, content] of getScriptSupportFiles()) {
+    files.set(`${LAYOUT.paths.scripts}/${scriptPath}`, content);
+  }
+  for (const [agentFile, content] of getAllAgents()) {
+    files.set(
+      `${LAYOUT.paths.agents}/${agentFile}`,
+      replacePythonCommandLiterals(content),
+    );
+  }
+  files.set(
+    LAYOUT.paths.config,
+    replacePythonCommandLiterals(configYamlTemplate),
+  );
+  files.set(`${LAYOUT.paths.root}/.gitignore`, gitignoreTemplate);
+  files.set(
+    LAYOUT.paths.workflow,
+    replacePythonCommandLiterals(workflowMdTemplate),
+  );
+  files.set(FILE_NAMES.AGENTS, buildAgentsMdTemplate(cwd));
+
+  const conflicts: string[] = [];
+  for (const [relativePath, content] of files) {
+    const fullPath = path.join(cwd, ...relativePath.split("/"));
+    if (!fs.existsSync(fullPath)) {
+      continue;
+    }
+    let existing: string;
+    try {
+      existing = fs.readFileSync(fullPath, "utf8");
+    } catch {
+      continue;
+    }
+    if (existing === content) {
+      continue;
+    }
+    const legacyPath = relativePath.startsWith(`${CURRENT_DIR}/`)
+      ? `${LEGACY_DIR}/${relativePath.slice(CURRENT_DIR.length + 1)}`
+      : relativePath;
+    const expected =
+      manifest.hashes?.[legacyPath] ?? manifest.hashes?.[relativePath];
+    // A hash match means the file is still the upstream template, so replacing
+    // it loses nothing. Anything else is a local edit worth keeping, except
+    // generated executable code: scripts have no user-facing settings and the
+    // full pre-adoption backup already covers them.
+    if (expected !== undefined && computeHash(existing) === expected) {
+      continue;
+    }
+    const isGeneratedCode =
+      relativePath.startsWith(`${LAYOUT.paths.scripts}/`) ||
+      relativePath.startsWith(`${LAYOUT.paths.agents}/`);
+    if (expected === undefined && isGeneratedCode) {
+      continue;
+    }
+    conflicts.push(relativePath);
+  }
+
+  return { files, conflicts };
+}
+
+function planWorkflowRefresh(
+  cwd: string,
+  manifest: LegacyManifest,
+  report: AdoptReport,
+): void {
+  const plan = workflowRefreshPlan(cwd, manifest);
+  for (const relativePath of plan.conflicts) {
+    if (!report.needsReview.includes(relativePath)) {
+      report.needsReview.push(relativePath);
+    }
+  }
+}
+
+function preserveWorkflowConflicts(
+  cwd: string,
+  plan: WorkflowRefreshPlan,
+  report: AdoptReport,
+): void {
+  for (const relativePath of plan.conflicts) {
+    preserveConflict(cwd, relativePath, report);
+  }
+}
+
+function writeWorkflowFiles(cwd: string, plan: WorkflowRefreshPlan): void {
+  for (const [relativePath, content] of plan.files) {
+    const fullPath = path.join(cwd, ...relativePath.split("/"));
+    fs.mkdirSync(path.dirname(fullPath), { recursive: true });
+    fs.writeFileSync(fullPath, content, "utf8");
+  }
+  ensureGitattributes(cwd);
+}
+
 function removeIfPristine(
   cwd: string,
   relativePath: string,
@@ -369,7 +502,7 @@ function createBackup(
 }
 
 function writeVersion(currentDir: string): void {
-  fs.writeFileSync(path.join(currentDir, ".version"), VERSION, "utf8");
+  fs.writeFileSync(path.join(currentDir, ".version"), `${VERSION}\n`, "utf8");
 }
 
 function writeReport(currentDir: string, report: AdoptReport): void {

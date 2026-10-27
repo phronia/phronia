@@ -1,0 +1,39 @@
+{
+  "$comment": "Real upstream projects used as read-only adoption fixtures. Commits are pinned so the suite is deterministic; never point an entry at a moving branch. Each repository is cloned into a cache and adopted in a temporary copy.",
+  "schemaVersion": 1,
+  "projects": [
+    {
+      "name": "oh-my-versioning",
+      "description": "Rust CLI on Trellis 0.5.19 with OMV-managed command blocks, three configured platforms, and archived tasks.",
+      "note": "Last commit before the project adopted Phronia itself (migration commit 3b0141e).",
+      "repo": "https://github.com/magicdian/oh-my-versioning.git",
+      "commit": "b235b348a6d7498c58a257258a26e0093e6f3585",
+      "license": "MIT",
+      "fromVersion": "0.5.19",
+      "platforms": ["claude-code", "opencode", "codex"],
+      "expect": {
+        "preservedPaths": [
+          ".phronia/spec/backend/index.md",
+          ".phronia/spec/guides/index.md",
+          ".phronia/workspace/magicdian/journal-1.md",
+          ".phronia/tasks/archive/2026-06"
+        ],
+        "archiveMonths": {
+          "2026-04": 10,
+          "2026-05": 18,
+          "2026-06": 4
+        },
+        "agentsMdMustContain": [
+          "<!-- PHRONIA:START -->",
+          "OMV-MANAGED-BEGIN:integration-project-instructions"
+        ],
+        "agentsMdMustNotContain": ["<!-- TRELLIS:START -->"],
+        "workflowMustContain": ["# Development Workflow", "Phronia System"],
+        "workflowMustNotContain": [".trellis/"],
+        "tasksCommand": ["list-archive"],
+        "tasksCommandMustContain": ["2026-04", "2026-06"],
+        "updateDryRunMustContain": ["Already up to date"]
+      }
+    }
+  ]
+}

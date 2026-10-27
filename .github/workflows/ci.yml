@@ -9,6 +9,8 @@ on:
       - 'packages/testing/**'
       - 'bench/**'
       - 'docs/**'
+      - 'test/adopt/**'
+      - 'scripts/test-adopt-real-world.mjs'
       - '.phronia/**'
       - '.agents/**'
       - 'pnpm-lock.yaml'
@@ -25,6 +27,8 @@ on:
       - 'packages/testing/**'
       - 'bench/**'
       - 'docs/**'
+      - 'test/adopt/**'
+      - 'scripts/test-adopt-real-world.mjs'
       - '.phronia/**'
       - '.agents/**'
       - 'pnpm-lock.yaml'
@@ -33,6 +37,11 @@ on:
       - 'marketplace'
       - '**/*.py'
       - '.github/workflows/ci.yml'
+  # Pinned fixtures catch environment drift (git, Python, Node) even when this
+  # repository is quiet.
+  schedule:
+    - cron: '17 3 * * 1'
+  workflow_dispatch:
 
 jobs:
   build:
@@ -131,3 +140,45 @@ jobs:
 
       - name: Hook cold-start baseline (archived, not gated)
         run: pnpm bench:hooks -- --iterations 5 > /dev/null
+
+  # Adopt a real upstream project pinned to an exact commit. This is the gate
+  # that would have caught the "renamed root, stale workflow tree" class of bug:
+  # the unit fixture cannot see a real 0.5.x tree with archived tasks, OMV
+  # blocks, and three configured platforms.
+  adopt-real-world:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          submodules: recursive
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+
+      - name: Setup minimum supported Python
+        uses: actions/setup-python@v7
+        with:
+          python-version: "3.9"
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 10.32.1
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Build
+        run: pnpm build
+
+      - name: Cache pinned adoption fixtures
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/phronia-adopt-fixtures
+          key: phronia-adopt-fixtures-${{ hashFiles('test/adopt/real-world-projects.json') }}
+
+      - name: Adopt pinned upstream projects
+        run: pnpm test:adopt-real-world

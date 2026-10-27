@@ -1604,6 +1604,62 @@ describe("init() integration", () => {
   });
 
 
+  it("#29a reinit add-platform: selecting ZCode writes its hooks and workspace config", async () => {
+    await init({ yes: true, cursor: true, user: "alice" });
+    const inquirer = (await import("inquirer")).default;
+    vi.mocked(inquirer.prompt).mockImplementation(((questions: unknown) => {
+      const q = Array.isArray(questions) ? questions[0] : questions;
+      const name = (q as { name?: string }).name;
+      if (name === "action") {
+        return Promise.resolve({ action: "add-platform" });
+      }
+      if (name === "tools") {
+        return Promise.resolve({ tools: ["zcode"] });
+      }
+      return Promise.resolve({});
+    }) as never);
+
+    await init({});
+
+    expect(fs.existsSync(path.join(tmpDir, ".zcode/config.json"))).toBe(true);
+    expect(
+      fs.existsSync(path.join(tmpDir, ".zcode/hooks/phronia-hook.py")),
+    ).toBe(true);
+    expect(
+      fs.existsSync(path.join(tmpDir, ".zcode/agents/phronia-implement.md")),
+    ).toBe(true);
+    const config = JSON.parse(
+      fs.readFileSync(path.join(tmpDir, ".zcode/config.json"), "utf-8"),
+    ) as {
+      hooks?: { enabled?: boolean; events?: Record<string, unknown> };
+    };
+    expect(config.hooks?.enabled).toBe(true);
+    expect(config.hooks?.events?.SessionStart).toBeDefined();
+  });
+
+  it("#29b reinit add-platform: an empty selection is a no-op", async () => {
+    await init({ yes: true, cursor: true, user: "alice" });
+    const inquirer = (await import("inquirer")).default;
+    vi.mocked(inquirer.prompt).mockImplementation(((questions: unknown) => {
+      const q = Array.isArray(questions) ? questions[0] : questions;
+      const name = (q as { name?: string }).name;
+      if (name === "action") {
+        return Promise.resolve({ action: "add-platform" });
+      }
+      if (name === "tools") {
+        return Promise.resolve({ tools: [] });
+      }
+      return Promise.resolve({});
+    }) as never);
+
+    await init({});
+
+    expect(
+      vi.mocked(console.log).mock.calls.flat().join("\n"),
+      JSON.stringify(vi.mocked(console.log).mock.calls),
+    ).toContain("No platforms selected");    expect(fs.existsSync(path.join(tmpDir, ".zcode"))).toBe(false);
+  });
+
   it("#30 refuses to initialize a project that still has .trellis", async () => {
     fs.mkdirSync(path.join(tmpDir, ".trellis", "tasks"), { recursive: true });
     const exit = vi.spyOn(process, "exit").mockImplementation(((code?: number) => {

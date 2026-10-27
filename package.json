@@ -12,6 +12,7 @@
     "test:contract": "pnpm --filter @phronia/testing test -- contract",
     "test:parity": "pnpm --filter @phronia/testing test -- parity",
     "test:idempotence": "pnpm --filter @phronia/testing test -- idempotence",
+    "test:adopt-real-world": "node scripts/test-adopt-real-world.mjs",
     "bench:hooks": "node bench/hook-bench.mjs",
     "bench:state": "node bench/state-bench.mjs",
     "check:layout": "node scripts/check-layout-literals.mjs",

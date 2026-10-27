@@ -13,7 +13,31 @@ permissions:
   contents: write
 
 jobs:
+  # Binary releases must not ship a different tree than the one the unit and
+  # integration suites approved. Publish (npm) already runs the same gate.
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          submodules: recursive
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 10.32.1
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: pnpm
+      - uses: actions/setup-python@v7
+        with:
+          python-version: "3.9"
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm typecheck
+      - run: pnpm build
+      - run: pnpm test
+
   build:
+    needs: test
     strategy:
       fail-fast: false
       matrix:

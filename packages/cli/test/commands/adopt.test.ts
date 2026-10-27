@@ -3,6 +3,7 @@ import os from "node:os";
 import path from "node:path";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import { adopt } from "../../src/commands/adopt.js";
+import { VERSION } from "../../src/constants/version.js";
 import { computeHash } from "../../src/utils/template-hash.js";
 
 describe("adopt", () => {
@@ -66,6 +67,45 @@ describe("adopt", () => {
     expect(
       fs.readFileSync(path.join(tmpDir, ".phronia/tasks/01-01-user/task.json"), "utf8"),
     ).toContain("user task");
+  });
+
+  it("refreshes the workflow tree in the same run", async () => {
+    const report = await adopt({
+      cwd: tmpDir,
+      force: true,
+      backupRoot: path.join(tmpDir, "backups"),
+    });
+
+    // Legacy occurrences of `.trellis` inside generated scripts/workflow docs
+    // are replaced, so a follow-up `update` is not required.
+    expect(
+      fs.readFileSync(path.join(tmpDir, ".phronia/scripts/common/paths.py"), "utf8"),
+    ).toContain("layout.json");
+    expect(
+      fs.readFileSync(path.join(tmpDir, ".phronia/scripts/common/paths.py"), "utf8"),
+    ).not.toContain('".trellis"');
+    const workflow = fs.readFileSync(path.join(tmpDir, ".phronia/workflow.md"), "utf8");
+    expect(workflow).toContain("Phronia");
+    expect(workflow).not.toContain(".trellis/");
+    expect(fs.readFileSync(path.join(tmpDir, ".phronia/.version"), "utf8")).toBe(
+      `${VERSION}\n`,
+    );
+
+    // Locally edited config/workflow files survive beside the fresh template.
+    expect(
+      fs.readFileSync(path.join(tmpDir, ".phronia/config.yaml.pre-adopt"), "utf8"),
+    ).toBe("session_auto_commit: false\n");
+    expect(
+      fs.readFileSync(path.join(tmpDir, ".phronia/workflow.md.pre-adopt"), "utf8"),
+    ).toBe("# Workflow\n");
+    expect(report.needsReview).toContain(".phronia/config.yaml");
+    expect(report.needsReview).toContain(".phronia/workflow.md");
+
+    // AGENTS.md gains the managed block and .gitattributes is added.
+    expect(fs.readFileSync(path.join(tmpDir, "AGENTS.md"), "utf8")).toContain(
+      "<!-- PHRONIA:START -->",
+    );
+    expect(fs.existsSync(path.join(tmpDir, ".gitattributes"))).toBe(true);
   });
 
   it("refuses ambiguous states", async () => {

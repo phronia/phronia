@@ -81,6 +81,24 @@ pnpm bench:hooks        # hook cold-start p50/p95 (baseline, not a gate)
 
 > **Note:** Pre-commit hooks will automatically run `eslint --fix` and `prettier --write` on staged `.ts` files.
 
+### Real-world adoption suite
+
+`adopt` is verified against real upstream projects, not only synthetic
+fixtures. Each project is cloned at a pinned commit from
+`test/adopt/real-world-projects.json` and migrated in a temporary copy:
+
+```bash
+pnpm build
+pnpm test:adopt-real-world                 # all pinned projects
+pnpm test:adopt-real-world --project oh-my-versioning --verbose
+```
+
+The suite checks that the workflow tree is regenerated (scripts, `workflow.md`,
+`AGENTS.md`), user data survives (tasks, specs, journals), and
+`phronia update --dry-run` reports the result as up to date. See
+[docs/testing/real-world-adopt.md](docs/testing/real-world-adopt.md) before
+adding or updating a pin.
+
 ### Refactor branches (Phronia fork)
 
 The fork is being restructured in batches. See `docs/adr/0006-batch-roadmap.md`

@@ -35,6 +35,7 @@ export const scriptsInit = readTemplate("scripts/__init__.py");
 // Python scripts - common
 export const commonInit = readTemplate("scripts/common/__init__.py");
 export const commonPaths = readTemplate("scripts/common/paths.py");
+export const commonLayoutJson = readTemplate("scripts/common/layout.json");
 export const commonDeveloper = readTemplate("scripts/common/developer.py");
 export const commonGitContext = readTemplate("scripts/common/git_context.py");
 export const commonTaskQueue = readTemplate("scripts/common/task_queue.py");
@@ -123,6 +124,16 @@ export function getAllScripts(): Map<string, string> {
   scripts.set("add_session.py", addSessionScript);
 
   return scripts;
+}
+
+/**
+ * Non-Python files that live beside the scripts and must be refreshed with
+ * them. `layout.json` is the generated bridge that lets Python read the
+ * TypeScript `WorkspaceLayout`; without it `paths.py` falls back to the
+ * hardcoded `.phronia` default.
+ */
+export function getScriptSupportFiles(): Map<string, string> {
+  return new Map([["common/layout.json", commonLayoutJson]]);
 }
 
 /**

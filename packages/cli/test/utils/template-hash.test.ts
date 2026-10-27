@@ -428,6 +428,57 @@ describe("initializeHashes", () => {
     expect(hashes).toHaveProperty(".claude/commands/start.md");
   });
 
+  it("never tracks runtime state, bytecode, or one-shot reports", () => {
+    const generated = [
+      ".phronia/.runtime/harness/claude-code.json",
+      ".phronia/.runtime/rules.json",
+      ".phronia/scripts/common/__pycache__/paths.cpython-39.pyc",
+      ".phronia/adopt-report.md",
+      ".phronia/manifest.json",
+      ".phronia/gate.yaml",
+    ];
+    for (const relativePath of generated) {
+      const fullPath = path.join(tmpDir, ...relativePath.split("/"));
+      fs.mkdirSync(path.dirname(fullPath), { recursive: true });
+      fs.writeFileSync(fullPath, "generated\n");
+    }
+
+    initializeHashes(tmpDir);
+    const hashes = loadHashes(tmpDir);
+    for (const relativePath of generated) {
+      expect(hashes).not.toHaveProperty(relativePath);
+    }
+
+    // A manifest written by an older build is cleaned when it is read.
+    const hashFile = path.join(tmpDir, ".phronia", ".template-hashes.json");
+    fs.writeFileSync(
+      hashFile,
+      JSON.stringify({
+        __version: 3,
+        brand: "phronia",
+        hashes: Object.fromEntries(
+          generated.map((relativePath) => [relativePath, "deadbeef"]),
+        ),
+      }),
+    );
+    expect(loadHashes(tmpDir)).toEqual({});
+
+    // The same guard applies on the write path.
+    updateHashes(
+      tmpDir,
+      new Map(generated.map((relativePath) => [relativePath, "generated"])),
+    );
+    expect(loadHashes(tmpDir)).toEqual({});
+
+    // Registry-downloaded specs are explicitly tracked even though the generic
+    // walk skips `spec/` (user-authored guidelines).
+    updateHashes(
+      tmpDir,
+      new Map([[".phronia/spec/index.md", "# remote spec\n"]]),
+    );
+    expect(loadHashes(tmpDir)).toHaveProperty(".phronia/spec/index.md");
+  });
+
   it("does NOT hash platform-dir files that are not in trackedPaths", () => {
     // Regression: blind directory walks swept user-owned runtime data
     // (.codex/sessions/*, .claude/projects/*, user-added skills, pre-existing

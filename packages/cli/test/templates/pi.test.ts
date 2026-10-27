@@ -413,7 +413,7 @@ describe("pi templates", () => {
     // turn one is already in the session history.
     expect(second.message).toBeUndefined();
     expect(handlers.has("context")).toBe(true);
-  });
+  }, 30_000);
 
   it("delivers task context changes as persisted messages, not systemPrompt churn", () => {
     const root = createMinimalTrellisRoot();

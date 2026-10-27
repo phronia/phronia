@@ -19,6 +19,12 @@
     "sessions": ".phronia/.runtime/sessions",
     "shellTickets": ".phronia/.runtime/shell-tickets",
     "manifest": ".phronia/.template-hashes.json",
+    "adapterManifest": ".phronia/manifest.json",
+    "handshakes": ".phronia/.runtime/harness",
+    "rulesCompiled": ".phronia/.runtime/rules.json",
+    "gate": ".phronia/gate.yaml",
+    "worktrees": ".phronia/worktrees",
+    "worktreeRegistry": ".phronia/.runtime/worktrees.json",
     "version": ".phronia/.version",
     "developer": ".phronia/.developer",
     "currentTask": ".phronia/.current-task"
