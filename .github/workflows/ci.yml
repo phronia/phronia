@@ -6,6 +6,11 @@ on:
     paths:
       - 'packages/cli/**'
       - 'packages/core/**'
+      - 'packages/testing/**'
+      - 'bench/**'
+      - 'docs/**'
+      - '.phronia/**'
+      - '.agents/**'
       - 'pnpm-lock.yaml'
       - 'pnpm-workspace.yaml'
       - 'package.json'
@@ -17,6 +22,11 @@ on:
     paths:
       - 'packages/cli/**'
       - 'packages/core/**'
+      - 'packages/testing/**'
+      - 'bench/**'
+      - 'docs/**'
+      - '.phronia/**'
+      - '.agents/**'
       - 'pnpm-lock.yaml'
       - 'pnpm-workspace.yaml'
       - 'package.json'
@@ -45,7 +55,7 @@ jobs:
 
       - name: Check Python 3.9 syntax
         run: |
-          export PYTHONPYCACHEPREFIX="$RUNNER_TEMP/trellis-pycache"
+          export PYTHONPYCACHEPREFIX="$RUNNER_TEMP/phronia-pycache"
           git ls-files -z --recurse-submodules '*.py' | xargs -0 python -m py_compile
 
       - name: Setup pnpm
@@ -60,7 +70,7 @@ jobs:
         run: pnpm typecheck
 
       - name: Typecheck Python
-        run: pnpm --filter @mindfoldhq/trellis lint:py
+        run: pnpm --filter @phronia/cli lint:py
 
       - name: Lint (core + cli)
         run: pnpm lint
@@ -70,7 +80,7 @@ jobs:
       - name: Build (core then cli)
         run: pnpm build
 
-      - name: Test (core + cli)
+      - name: Test (core + cli + testing)
         run: pnpm test
 
       - name: Verify build output
@@ -83,3 +93,41 @@ jobs:
           test -d packages/cli/dist
           test -f packages/cli/dist/index.js
           echo "Build verification passed"
+
+  guardrails:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          submodules: recursive
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+
+      - name: Setup minimum supported Python
+        uses: actions/setup-python@v7
+        with:
+          python-version: "3.9"
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 10.32.1
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Build
+        run: pnpm build
+
+      - name: Dogfood idempotence
+        run: pnpm test:idempotence
+
+      - name: Layout literal ratchet
+        run: pnpm check:layout
+
+      - name: Hook cold-start baseline (archived, not gated)
+        run: pnpm bench:hooks -- --iterations 5 > /dev/null

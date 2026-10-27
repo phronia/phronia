@@ -1,65 +1,38 @@
-<!-- TRELLIS:START -->
-# Trellis Instructions
+<!-- PHRONIA:START -->
+# Phronia Instructions
 
 These instructions are for AI assistants working in this project.
 
-This project is managed by Trellis. The working knowledge you need lives under `.trellis/`:
+This project is managed by Phronia. The working knowledge you need lives under `.phronia/`:
 
-- `.trellis/workflow.md` — development phases, when to create tasks, skill routing
-- `.trellis/spec/` — package- and layer-scoped coding guidelines (read before writing code in a given layer)
-- `.trellis/workspace/` — per-developer journals and session traces
-- `.trellis/tasks/` — active and archived tasks (PRDs, research, jsonl context)
+- `.phronia/workflow.md` — development phases, when to create tasks, skill routing
+- `.phronia/spec/` — package- and layer-scoped coding guidelines (read before writing code in a given layer)
+- `.phronia/workspace/` — per-developer journals and session traces
+- `.phronia/tasks/` — active and archived tasks (PRDs, research, jsonl context)
 
-If a Trellis command is available on your platform (e.g. `/trellis:finish-work`, `/trellis:continue`), prefer it over manual steps. Not every platform exposes every command.
+If a Phronia command is available on your platform (e.g. `/phronia:finish-work`, `/phronia:continue`), prefer it over manual steps. Not every platform exposes every command.
 
 If you're using Codex or another agent-capable tool, additional project-scoped helpers may live in:
-- `.agents/skills/` — reusable Trellis skills
+- `.agents/skills/` — reusable Phronia skills
 - `.codex/agents/` — optional custom subagents
 
-Managed by Trellis. Edits outside this block are preserved; edits inside may be overwritten by a future `trellis update`.
+Managed by Phronia. Edits outside this block are preserved; edits inside may be overwritten by a future `phronia update`.
 
-<!-- TRELLIS:END -->
+<!-- PHRONIA:END -->
 
-<!-- gitnexus:start -->
-# GitNexus — Code Intelligence
+<!-- OMV-MANAGED-BEGIN:integration-project-instructions -->
+<!-- OMV-MANAGED-FILE source=.omv/ai/adapters/project-instructions.md contract=1 -->
+# OMV Agent Instructions
 
-This project is indexed by GitNexus as **Trellis** (14336 symbols, 20870 relationships, 300 execution flows). Use the GitNexus MCP tools to understand code, assess impact, and navigate safely.
+Read `./.omv/ai/instructions.md` before touching project versions.
 
-> Index stale? Run `node .gitnexus/run.cjs analyze` from the project root — it auto-selects an available runner. No `.gitnexus/run.cjs` yet? `npx gitnexus analyze` (npm 11 crash → `npm i -g gitnexus`; #1939).
-
-## Always Do
-
-- **MUST run impact analysis before editing any symbol.** Before modifying a function, class, or method, run `impact({target: "symbolName", direction: "upstream"})` and report the blast radius (direct callers, affected processes, risk level) to the user.
-- **MUST run `detect_changes()` before committing** to verify your changes only affect expected symbols and execution flows. For regression review, compare against the default branch: `detect_changes({scope: "compare", base_ref: "main"})`.
-- **MUST warn the user** if impact analysis returns HIGH or CRITICAL risk before proceeding with edits.
-- When exploring unfamiliar code, use `query({query: "concept"})` to find execution flows instead of grepping. It returns process-grouped results ranked by relevance.
-- When you need full context on a specific symbol — callers, callees, which execution flows it participates in — use `context({name: "symbolName"})`.
-
-## Never Do
-
-- NEVER edit a function, class, or method without first running `impact` on it.
-- NEVER ignore HIGH or CRITICAL risk warnings from impact analysis.
-- NEVER rename symbols with find-and-replace — use `rename` which understands the call graph.
-- NEVER commit changes without running `detect_changes()` to check affected scope.
-
-## Resources
-
-| Resource | Use for |
-|----------|---------|
-| `gitnexus://repo/Trellis/context` | Codebase overview, check index freshness |
-| `gitnexus://repo/Trellis/clusters` | All functional areas |
-| `gitnexus://repo/Trellis/processes` | All execution flows |
-| `gitnexus://repo/Trellis/process/{name}` | Step-by-step execution trace |
-
-## CLI
-
-| Task | Read this skill file |
-|------|---------------------|
-| Understand architecture / "How does X work?" | `.claude/skills/gitnexus/gitnexus-exploring/SKILL.md` |
-| Blast radius / "What breaks if I change X?" | `.claude/skills/gitnexus/gitnexus-impact-analysis/SKILL.md` |
-| Trace bugs / "Why is X failing?" | `.claude/skills/gitnexus/gitnexus-debugging/SKILL.md` |
-| Rename / extract / split / refactor | `.claude/skills/gitnexus/gitnexus-refactoring/SKILL.md` |
-| Tools, resources, schema reference | `.claude/skills/gitnexus/gitnexus-guide/SKILL.md` |
-| Index, status, clean, wiki CLI commands | `.claude/skills/gitnexus/gitnexus-cli/SKILL.md` |
-
-<!-- gitnexus:end -->
+- Use `omv current --json` to inspect the managed version.
+- Use `omv plan --json` before editing version-sensitive surfaces.
+- Use `omv sync --check --json` to verify target drift without writing.
+- Use `omv integrate status --json` and `omv integrate apply --json` for host integration provider/capability status where available.
+- At completion boundaries (during commit confirmation when a unit of work is complete), call the OMV finalize-boundary helper from `.omv/ai/contract.json` with an explicit `change_type`. For Trellis v0.5+ this runs at the commit-confirmation boundary, not at `/trellis:finish-work` (which only verifies the commit-boundary bump). Otherwise, call it manually after tests pass.
+- After a semantic bump, run the project build command (e.g. `cargo build` for Rust, `npm install` for Node) to refresh lock files, then commit the OMV-generated files (`.omv/state.toml`, `.omv/finalizations.toml`, lock files like `Cargo.lock`, generated version files) together.
+- Use `omv bump --json` to advance the managed version.
+- Do not edit native manifest versions directly.
+- Treat this host file as a derived projection; `.omv/*` and `.omv/ai/*` remain authoritative.
+<!-- OMV-MANAGED-END:integration-project-instructions -->

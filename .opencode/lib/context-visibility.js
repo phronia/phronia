@@ -1,3 +1,6 @@
+// phronia-shim: opencode@v1
+// shim-version: 0.6.17
+// DO NOT EDIT. Regenerate with: phronia update --regenerate-shims
 import { createHash } from "node:crypto"
 
 const PART_ID_PATTERN = /^prt_([0-9a-f]{12})[0-9A-Za-z]{14}$/
@@ -13,7 +16,7 @@ const MAX_CONTEXT_PART_OFFSET = Object.values(CONTEXT_PART_KINDS).reduce(
 /**
  * Return the first ordinary user-authored text part.
  *
- * Trellis plugins can run in either order, so callers must not mistake a
+ * Phronia plugins can run in either order, so callers must not mistake a
  * synthetic context part inserted by another plugin for the user's prompt.
  */
 export function findUserTextPart(parts) {
@@ -87,6 +90,15 @@ export function insertSyntheticTextPart(parts, text, kind) {
 
 /** OpenCode hook that mutates the in-memory model payload, not stored history. */
 export const MESSAGES_TRANSFORM_HOOK = "experimental.chat.messages.transform"
+
+const PHRONIA_SUBAGENT_RE = /^(?:phronia|trellis)-/i
+
+/** True for turns produced by a Phronia sub-agent. */
+export function isPhroniaSubagent(input) {
+  if (!input || typeof input !== "object") return false
+  const agent = typeof input.agent === "string" ? input.agent.trim() : ""
+  return PHRONIA_SUBAGENT_RE.test(agent)
+}
 
 /**
  * Index of the last user message in an OpenCode `{info, parts}[]` transcript.

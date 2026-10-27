@@ -59,7 +59,7 @@ import {
 import { VERSION } from "../../src/constants/version.js";
 import { DIR_NAMES, FILE_NAMES, PATHS } from "../../src/constants/paths.js";
 import { computeHash } from "../../src/utils/template-hash.js";
-import { workflowMdTemplate } from "../../src/templates/trellis/index.js";
+import { workflowMdTemplate } from "../../src/templates/workflow/index.js";
 import {
   COPILOT_INSTRUCTIONS_BLOCK_END,
   COPILOT_INSTRUCTIONS_BLOCK_START,
@@ -147,7 +147,7 @@ describe("update() integration", () => {
   }
 
   /**
-   * Stage a project as if an older Trellis version installed pristine template
+   * Stage a project as if an older Phronia version installed pristine template
    * files, then the current CLI is about to update it. The hash file records
    * the older pristine content so update() must treat those files as
    * auto-update candidates.
@@ -176,7 +176,7 @@ describe("update() integration", () => {
   }
 
   beforeEach(() => {
-    tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), "trellis-update-int-"));
+    tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), "phronia-update-int-"));
     vi.spyOn(process, "cwd").mockReturnValue(tmpDir);
     registryDownload.files.clear();
     // eslint-disable-next-line @typescript-eslint/no-empty-function
@@ -259,37 +259,37 @@ describe("update() integration", () => {
   });
 
   it("#1b current OpenCode templates are not classified as deprecated", async () => {
-    const startPath = ".opencode/commands/trellis/start.md";
+    const currentPath = ".opencode/commands/phronia/finish-work.md";
     await init({ yes: true, force: true, opencode: true });
-    expect(fs.existsSync(projectFile(startPath))).toBe(true);
+    expect(fs.existsSync(projectFile(currentPath))).toBe(true);
 
     await update({ dryRun: true });
 
     const output = vi.mocked(console.log).mock.calls.flat().join("\n");
-    expect(output).not.toContain(`${startPath} (modified, skipped)`);
+    expect(output).not.toContain(`${currentPath} (modified, skipped)`);
   });
 
   it("[issue-zcode-codex-upgrade] zcode private skills do not trigger legacy Codex backfill", async () => {
     await init({ yes: true, force: true, zcode: true });
 
-    expect(fs.existsSync(projectFile(".zcode/commands/trellis/start.md"))).toBe(
+    expect(fs.existsSync(projectFile(".zcode/commands/phronia/start.md"))).toBe(
       false,
     );
     expect(
-      fs.existsSync(projectFile(".zcode/skills/trellis-start/SKILL.md")),
+      fs.existsSync(projectFile(".zcode/skills/phronia-start/SKILL.md")),
     ).toBe(false);
     expect(
-      fs.existsSync(projectFile(".zcode/skills/trellis-check/SKILL.md")),
+      fs.existsSync(projectFile(".zcode/skills/phronia-check/SKILL.md")),
     ).toBe(true);
     expect(
-      fs.existsSync(projectFile(".zcode/agents/trellis-research.md")),
+      fs.existsSync(projectFile(".zcode/agents/phronia-research.md")),
     ).toBe(true);
     expect(
-      fs.existsSync(projectFile(".agents/skills/trellis-start/SKILL.md")),
+      fs.existsSync(projectFile(".agents/skills/phronia-start/SKILL.md")),
     ).toBe(false);
     expect(fs.existsSync(projectFile(".agents/skills"))).toBe(false);
     expect(
-      fs.existsSync(projectFile(".agents/skills/trellis-continue/SKILL.md")),
+      fs.existsSync(projectFile(".agents/skills/phronia-continue/SKILL.md")),
     ).toBe(false);
 
     await update({});
@@ -298,13 +298,13 @@ describe("update() integration", () => {
     expect(logOutput).not.toContain("Legacy Codex detected");
     expect(fs.existsSync(projectFile(".codex"))).toBe(false);
     expect(
-      fs.existsSync(projectFile(".zcode/skills/trellis-start/SKILL.md")),
+      fs.existsSync(projectFile(".zcode/skills/phronia-start/SKILL.md")),
     ).toBe(false);
     expect(
-      fs.existsSync(projectFile(".zcode/skills/trellis-check/SKILL.md")),
+      fs.existsSync(projectFile(".zcode/skills/phronia-check/SKILL.md")),
     ).toBe(true);
     expect(
-      fs.existsSync(projectFile(".zcode/agents/trellis-research.md")),
+      fs.existsSync(projectFile(".zcode/agents/phronia-research.md")),
     ).toBe(true);
     expect(fs.existsSync(projectFile(".agents/skills"))).toBe(false);
   });
@@ -313,7 +313,7 @@ describe("update() integration", () => {
     await init({ yes: true, force: true, zcode: true });
 
     const originalVitest = process.env.VITEST;
-    const originalQuiet = process.env.TRELLIS_QUIET;
+    const originalQuiet = process.env.PHRONIA_QUIET;
     const originalWrite = process.stderr.write.bind(process.stderr);
     const stderr: string[] = [];
     process.stderr.write = ((chunk: string) => {
@@ -321,7 +321,7 @@ describe("update() integration", () => {
       return true;
     }) as typeof process.stderr.write;
     delete process.env.VITEST;
-    delete process.env.TRELLIS_QUIET;
+    delete process.env.PHRONIA_QUIET;
 
     try {
       await update({});
@@ -329,14 +329,14 @@ describe("update() integration", () => {
       process.stderr.write = originalWrite;
       if (originalVitest === undefined) delete process.env.VITEST;
       else process.env.VITEST = originalVitest;
-      if (originalQuiet === undefined) delete process.env.TRELLIS_QUIET;
-      else process.env.TRELLIS_QUIET = originalQuiet;
+      if (originalQuiet === undefined) delete process.env.PHRONIA_QUIET;
+      else process.env.PHRONIA_QUIET = originalQuiet;
     }
 
     expect(stderr.join("")).toBe(
       "ℹ️  ZCode: if project Hooks are disabled, install trellis-bridge, then start a new session.\n" +
         "   ZCode：若项目 Hooks 被禁用，请安装 trellis-bridge，然后新建会话。\n" +
-        "   请手动在 ZCode 插件市场中添加 https://github.com/CNHLAIA/ZCode-Trellis-Plugin.git，并手动安装 ZCode 补丁插件 trellis-bridge\n",
+        "   请手动在 ZCode 插件市场中添加 https://github.com/CNHLAIA/ZCode-Phronia-Plugin.git，并手动安装 ZCode 补丁插件 trellis-bridge\n",
     );
   });
 
@@ -345,7 +345,7 @@ describe("update() integration", () => {
     writeProjectFile(MANAGED_FILE, "user modified content");
 
     const originalVitest = process.env.VITEST;
-    const originalQuiet = process.env.TRELLIS_QUIET;
+    const originalQuiet = process.env.PHRONIA_QUIET;
     const originalWrite = process.stderr.write.bind(process.stderr);
     const stderr: string[] = [];
     process.stderr.write = ((chunk: string) => {
@@ -353,7 +353,7 @@ describe("update() integration", () => {
       return true;
     }) as typeof process.stderr.write;
     delete process.env.VITEST;
-    delete process.env.TRELLIS_QUIET;
+    delete process.env.PHRONIA_QUIET;
 
     try {
       await update({ force: true });
@@ -361,14 +361,14 @@ describe("update() integration", () => {
       process.stderr.write = originalWrite;
       if (originalVitest === undefined) delete process.env.VITEST;
       else process.env.VITEST = originalVitest;
-      if (originalQuiet === undefined) delete process.env.TRELLIS_QUIET;
-      else process.env.TRELLIS_QUIET = originalQuiet;
+      if (originalQuiet === undefined) delete process.env.PHRONIA_QUIET;
+      else process.env.PHRONIA_QUIET = originalQuiet;
     }
 
     expect(stderr.join("")).toBe(
       "ℹ️  ZCode: if project Hooks are disabled, install trellis-bridge, then start a new session.\n" +
         "   ZCode：若项目 Hooks 被禁用，请安装 trellis-bridge，然后新建会话。\n" +
-        "   请手动在 ZCode 插件市场中添加 https://github.com/CNHLAIA/ZCode-Trellis-Plugin.git，并手动安装 ZCode 补丁插件 trellis-bridge\n",
+        "   请手动在 ZCode 插件市场中添加 https://github.com/CNHLAIA/ZCode-Phronia-Plugin.git，并手动安装 ZCode 补丁插件 trellis-bridge\n",
     );
   });
 
@@ -389,7 +389,7 @@ describe("update() integration", () => {
     // `.agents/skills/` now holds the correct, neutral, current-version
     // content (written by both Codex and current Pi in current code).
     const neutralContent = readProjectFile(
-      ".agents/skills/trellis-update-spec/SKILL.md",
+      ".agents/skills/phronia-update-spec/SKILL.md",
     );
 
     // Fabricate the pre-fix `.pi/skills/` leftover with Pi-flavored bytes
@@ -402,7 +402,7 @@ describe("update() integration", () => {
     );
 
     const legacyContent = legacyPiSkillFiles.get(
-      ".pi/skills/trellis-update-spec/SKILL.md",
+      ".pi/skills/phronia-update-spec/SKILL.md",
     );
     expect(legacyContent).toBeDefined();
     // Sanity: the Pi-flavored bytes actually differ from the shared neutral
@@ -417,11 +417,11 @@ describe("update() integration", () => {
     }
     writeHashesV2(hashFilePath(), hashes);
 
-    expect(fs.existsSync(projectFile(".pi/skills/trellis-update-spec"))).toBe(
+    expect(fs.existsSync(projectFile(".pi/skills/phronia-update-spec"))).toBe(
       true,
     );
     expect(
-      fs.existsSync(projectFile(".agents/skills/trellis-update-spec")),
+      fs.existsSync(projectFile(".agents/skills/phronia-update-spec")),
     ).toBe(true);
 
     // Build the current-version templates map for `.agents/skills/` the way
@@ -467,7 +467,7 @@ describe("update() integration", () => {
     // `.agents/skills/` must end up with the correct, current, neutral
     // content — not the stale Pi-flavored bytes from the deleted legacy dir.
     expect(
-      readProjectFile(".agents/skills/trellis-update-spec/SKILL.md"),
+      readProjectFile(".agents/skills/phronia-update-spec/SKILL.md"),
     ).toBe(neutralContent);
   });
 
@@ -577,8 +577,8 @@ describe("update() integration", () => {
     const targetFull = path.join(tmpDir, targetRelative);
     const templateContent = fs.readFileSync(targetFull, "utf-8");
     const modifiedOldContent = removeSubagentsSection(templateContent).replace(
-      "# Trellis Instructions",
-      "# Custom Trellis Instructions",
+      "# Phronia Instructions",
+      "# Custom Phronia Instructions",
     );
     fs.writeFileSync(targetFull, modifiedOldContent);
 
@@ -605,7 +605,7 @@ describe("update() integration", () => {
     const targetFull = path.join(tmpDir, targetRelative);
     const templateContent = fs.readFileSync(targetFull, "utf-8");
 
-    // User has a hand-written AGENTS.md with no TRELLIS:START/END markers at
+    // User has a hand-written AGENTS.md with no PHRONIA:START/END markers at
     // all (predates 0.5.0-beta.18 or was authored by hand). Pre-fix behavior
     // would clobber this content; post-fix should append the managed block.
     const userContent = "# Project notes\n\nThings the team agreed on.\n";
@@ -616,17 +616,17 @@ describe("update() integration", () => {
     const result = fs.readFileSync(targetFull, "utf-8");
     expect(result).toContain("# Project notes");
     expect(result).toContain("Things the team agreed on.");
-    expect(result).toContain("<!-- TRELLIS:START -->");
-    expect(result).toContain("<!-- TRELLIS:END -->");
+    expect(result).toContain("<!-- PHRONIA:START -->");
+    expect(result).toContain("<!-- PHRONIA:END -->");
     // Managed block should sit AFTER the user content, not replace it.
     expect(result.indexOf("# Project notes")).toBeLessThan(
-      result.indexOf("<!-- TRELLIS:START -->"),
+      result.indexOf("<!-- PHRONIA:START -->"),
     );
     // Tail equals the canonical template (force-applied managed block).
     expect(result.endsWith(templateContent.trimEnd() + "\n")).toBe(true);
   });
 
-  it("#4e appends Trellis Copilot guidance to existing repo instructions", async () => {
+  it("#4e appends Phronia Copilot guidance to existing repo instructions", async () => {
     await init({ yes: true, force: true, copilot: true });
 
     const userContent =
@@ -647,7 +647,7 @@ describe("update() integration", () => {
     expect(result).toContain("Review app code first.");
     expect(result).toContain(COPILOT_INSTRUCTIONS_BLOCK_START);
     expect(result).toContain(COPILOT_INSTRUCTIONS_BLOCK_END);
-    expect(result).toContain("Trellis-generated runtime");
+    expect(result).toContain("Phronia-generated runtime");
     expect(result.indexOf("# Repo Copilot Instructions")).toBeLessThan(
       result.indexOf(COPILOT_INSTRUCTIONS_BLOCK_START),
     );
@@ -656,7 +656,7 @@ describe("update() integration", () => {
     );
   });
 
-  it("#4f refreshes only the Trellis Copilot guidance block", async () => {
+  it("#4f refreshes only the Phronia Copilot guidance block", async () => {
     await init({ yes: true, force: true, copilot: true });
 
     const oldBlock = getCopilotInstructions().replace(
@@ -786,12 +786,12 @@ describe("update() integration", () => {
 
     // Set project version to future
     const versionPath = path.join(tmpDir, DIR_NAMES.WORKFLOW, ".version");
-    fs.writeFileSync(versionPath, "99.99.99");
+    fs.writeFileSync(versionPath, "9999.99.99");
 
     await update({});
 
     // Version should NOT be changed
-    expect(fs.readFileSync(versionPath, "utf-8")).toBe("99.99.99");
+    expect(fs.readFileSync(versionPath, "utf-8")).toBe("9999.99.99");
   });
 
   it("#11 allowDowngrade permits update when CLI is older", async () => {
@@ -852,7 +852,7 @@ describe("update() integration", () => {
       "#### 2.1 Implement `[required · repeatable]`\n\n" +
       "[Codex]\nSpawn the implement sub-agent:\n[/Codex]\n\n" +
       "[Kilo, Antigravity, Windsurf]\n" +
-      "1. Load the `trellis-before-dev` skill to read project guidelines\n" +
+      "1. Load the `phronia-before-dev` skill to read project guidelines\n" +
       "[/Kilo, Antigravity, Windsurf]\n";
 
     stageVersionedUpgradeProject({
@@ -1095,7 +1095,7 @@ describe("update() integration", () => {
     await update({ force: true });
 
     const content = fs.readFileSync(gitattributesPath, "utf-8");
-    expect(content).toContain(".trellis/workspace/*/journal-*.md merge=union");
+    expect(content).toContain(".phronia/workspace/*/journal-*.md merge=union");
   });
 
   it("#15b does not duplicate an existing user journal merge=union rule (#415)", async () => {
@@ -1103,7 +1103,7 @@ describe("update() integration", () => {
 
     const gitattributesPath = path.join(tmpDir, ".gitattributes");
     const userContent =
-      "# my own rules\n*.png binary\n.trellis/workspace/*/journal-*.md merge=union\n";
+      "# my own rules\n*.png binary\n.phronia/workspace/*/journal-*.md merge=union\n";
     fs.writeFileSync(gitattributesPath, userContent);
 
     await update({ force: true });
@@ -1197,6 +1197,9 @@ describe("update() integration", () => {
   });
 
   // Original template content for check-backend.md (deleted in 0.4.0-beta.1).
+  // Historical content of a file removed by an upstream migration manifest.
+  // The `.trellis` paths are intentional: the fixture must hash to the
+  // manifest's allowed_hashes, which describe the pre-rename tree.
   // Hash: 4e81a28d681ea770f780df55a212fd504ce21ee49b44ba16023b74b5c243cef3
   const ORIGINAL_CHECK_BACKEND_CONTENT = [
     "Check if the code you just wrote follows the backend development guidelines.",
@@ -1423,7 +1426,7 @@ describe("update() integration", () => {
   // The [b] Backup-rename path in the confirm prompt promises "keeps a .backup
   // copy". Previously it was identical to [r] (both relied on the full project
   // snapshot). We now write an INLINE .backup next to the new path so users can
-  // diff/merge their customizations without digging through .trellis/.backup-*/.
+  // diff/merge their customizations without digging through .phronia/.backup-*/.
   /** Install a mock that returns a specific migration choice for the per-file prompt
    *  and {proceed: true} for the top-level confirm. Resolves the flakiness of
    *  matching on `name` field in the dynamic import path. */
@@ -1442,7 +1445,7 @@ describe("update() integration", () => {
   // The [b] Backup-rename path in the confirm prompt promises "keeps a .backup
   // copy". Previously it was identical to [r] (both relied on the full project
   // snapshot). We now write an INLINE .backup next to the new path so users can
-  // diff/merge their customizations without digging through .trellis/.backup-*/.
+  // diff/merge their customizations without digging through .phronia/.backup-*/.
   it("#25 backup-rename leaves inline <new-path>.backup with original content", async () => {
     await setupProject();
     stageLegacy040Project();
@@ -1494,7 +1497,7 @@ describe("update() integration", () => {
       ".claude/skills/trellis-before-dev/SKILL.md",
     );
     expect(fs.existsSync(newPath)).toBe(true);
-    // No inline .backup — the full-project snapshot under .trellis/.backup-*
+    // No inline .backup — the full-project snapshot under .phronia/.backup-*
     // is the single source of recovery for this mode.
     expect(fs.existsSync(newPath + ".backup")).toBe(false);
   });
@@ -1546,7 +1549,7 @@ describe("update() integration", () => {
       "#### 2.1 Implement `[required · repeatable]`\n\n" +
       "[Codex]\nSpawn the implement sub-agent:\n[/Codex]\n\n" +
       "[Kilo, Antigravity, Windsurf]\n" +
-      "1. Load the `trellis-before-dev` skill to read project guidelines\n" +
+      "1. Load the `phronia-before-dev` skill to read project guidelines\n" +
       "[/Kilo, Antigravity, Windsurf]\n";
 
     fs.writeFileSync(workflowPath, staleWorkflow, "utf-8");

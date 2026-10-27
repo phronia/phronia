@@ -1,0 +1,17 @@
+{
+  "name": "@phronia/testing",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "description": "Test infrastructure for Trellis: fixture recording/replay, golden parity, and dogfood idempotence guards.",
+  "scripts": {
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "typecheck": "tsc --noEmit"
+  },
+  "devDependencies": {
+    "@types/node": "^20.17.10",
+    "typescript": "^5.7.2",
+    "vitest": "^4.0.18"
+  }
+}

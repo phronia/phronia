@@ -145,7 +145,7 @@ const codexAdapter: WorkerAdapter<CodexCtx> = {
       ctx,
       "initialize",
       {
-        clientInfo: { name: "trellis-channel", version: "0.1" },
+        clientInfo: { name: "phronia-channel", version: "0.1" },
         capabilities: {},
       },
       "initialize",

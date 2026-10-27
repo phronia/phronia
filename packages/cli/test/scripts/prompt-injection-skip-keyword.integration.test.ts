@@ -3,7 +3,7 @@
  *
  * `shared-hooks/inject-workflow-state.py` checks the user prompt for a
  * configurable, word-boundary, case-insensitive skip keyword (default
- * "no-trellis") right after resolving `.trellis/config.yaml`, before any
+ * "no-trellis") right after resolving `.phronia/config.yaml`, before any
  * task resolution or breadcrumb template loading. On a hit it exits 0 with
  * empty stdout for that turn only. `session-start.py` (SessionStart) and
  * `inject-subagent-context.py` (sub-agent context) must ignore the keyword
@@ -21,7 +21,7 @@ import path from "node:path";
 
 const TEMPLATE_SCRIPTS = path.resolve(
   __dirname,
-  "../../src/templates/trellis/scripts",
+  "../../src/templates/workflow/scripts",
 );
 const SHARED_HOOKS = path.resolve(
   __dirname,
@@ -38,19 +38,19 @@ function hasPython(): boolean {
 }
 
 function setupRepo(tmp: string): void {
-  fs.mkdirSync(path.join(tmp, ".trellis", "scripts"), { recursive: true });
-  fs.cpSync(TEMPLATE_SCRIPTS, path.join(tmp, ".trellis", "scripts"), {
+  fs.mkdirSync(path.join(tmp, ".phronia", "scripts"), { recursive: true });
+  fs.cpSync(TEMPLATE_SCRIPTS, path.join(tmp, ".phronia", "scripts"), {
     recursive: true,
   });
   fs.writeFileSync(
-    path.join(tmp, ".trellis", "workflow.md"),
+    path.join(tmp, ".phronia", "workflow.md"),
     [
       "# Workflow",
       "",
       "## Phase Index",
       "",
       "[workflow-state:no_task]",
-      "No active task. Classify the turn before creating a Trellis task.",
+      "No active task. Classify the turn before creating a Phronia task.",
       "[/workflow-state:no_task]",
       "",
       "## Phase 1: Plan",
@@ -60,7 +60,7 @@ function setupRepo(tmp: string): void {
 }
 
 function writeConfig(tmp: string, yaml: string): void {
-  fs.writeFileSync(path.join(tmp, ".trellis", "config.yaml"), yaml, "utf-8");
+  fs.writeFileSync(path.join(tmp, ".phronia", "config.yaml"), yaml, "utf-8");
 }
 
 function runHook(
@@ -86,7 +86,7 @@ function runConfigProbe(tmp: string, code: string): string {
   const probePath = path.join(tmp, "config_probe.py");
   const script = `
 import sys
-sys.path.insert(0, ${JSON.stringify(path.join(tmp, ".trellis", "scripts"))})
+sys.path.insert(0, ${JSON.stringify(path.join(tmp, ".phronia", "scripts"))})
 from pathlib import Path
 from common.config import get_prompt_injection_config
 REPO_ROOT = Path(${JSON.stringify(tmp)})
@@ -106,7 +106,7 @@ describeFn("no-trellis skip keyword (issue #427)", () => {
   let tmp: string;
 
   beforeEach(() => {
-    tmp = fs.mkdtempSync(path.join(os.tmpdir(), "trellis-skip-keyword-"));
+    tmp = fs.mkdtempSync(path.join(os.tmpdir(), "phronia-skip-keyword-"));
     setupRepo(tmp);
   });
 

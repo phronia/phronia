@@ -120,8 +120,13 @@ export function claudeListSessions(f: MemFilter): MemSessionInfo[] {
           readJsonlFirst<ClaudeEvent>(filePath)?.timestamp;
       }
 
-      const stat = fs.statSync(filePath);
-      const updated = stat.mtime.toISOString();
+      let updated: string;
+      try {
+        updated = fs.statSync(filePath).mtime.toISOString();
+      } catch {
+        // The file disappeared between listing and reading; skip it.
+        continue;
+      }
       // Interval overlap: cross-day sessions that started before --since but
       // were still active inside the window must survive.
       if (!inRangeOverlap(created, updated, f)) continue;

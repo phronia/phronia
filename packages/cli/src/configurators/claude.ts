@@ -101,8 +101,8 @@ function walkClaudeTemplateDir(): Map<string, string> {
  * The Claude Code file set — written at init and diffed by `trellis update`.
  * - agents/, settings.json from the platform template directory
  * - hooks/ from shared-hooks/ (unified with other platforms)
- * - commands/trellis/ — start + finish-work as slash commands
- * - skills/trellis-{name}/SKILL.md — auto-triggered skills from `common/skills/`
+ * - commands/phronia/ — start + finish-work as slash commands
+ * - skills/phronia-{name}/SKILL.md — auto-triggered skills from `common/skills/`
  *
  * The opt-in statusline is deliberately absent — see `configureClaude`.
  */
@@ -111,7 +111,7 @@ export function collectClaudeTemplates(): Map<string, string> {
   const files = walkClaudeTemplateDir();
 
   for (const cmd of resolveCommands(ctx)) {
-    files.set(`.claude/commands/trellis/${cmd.name}.md`, cmd.content);
+    files.set(`.claude/commands/phronia/${cmd.name}.md`, cmd.content);
   }
   for (const [filePath, content] of collectSkillTemplates(
     ".claude/skills",

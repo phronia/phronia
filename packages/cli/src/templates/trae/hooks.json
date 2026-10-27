@@ -6,7 +6,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "{{PYTHON_CMD}} .trae/hooks/session-start.py",
+            "command": "{{PYTHON_CMD}} .trae/hooks/phronia-hook.py --event session-start --platform trae",
             "timeout": 30
           }
         ]
@@ -18,7 +18,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "{{PYTHON_CMD}} .trae/hooks/inject-shell-session-context.py",
+            "command": "{{PYTHON_CMD}} .trae/hooks/phronia-hook.py --event pre-shell --platform trae",
             "timeout": 5
           }
         ]
@@ -29,7 +29,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "{{PYTHON_CMD}} .trae/hooks/inject-workflow-state.py",
+            "command": "{{PYTHON_CMD}} .trae/hooks/phronia-hook.py --event user-prompt --platform trae",
             "timeout": 15
           }
         ]

@@ -21,7 +21,7 @@ function resolvePiCommands(): ReturnType<typeof resolveCommands> {
   // Pi has extension hooks, so the shared command resolver filters `start`.
   // Keep a manual fallback because Pi's `session_start` event cannot mutate
   // model context; the strong startup injection happens later at agent start.
-  const start = resolveCommands({ ...ctx, hasHooks: false }).find(
+  const start = resolveCommands({ ...ctx, autoSessionStart: false }).find(
     (command) => command.name === "start",
   );
   return start ? [start, ...commands] : commands;
@@ -35,7 +35,7 @@ export function collectPiTemplates(): Map<string, string> {
   const ctx = AI_TOOLS.pi.templateContext;
 
   for (const command of resolvePiCommands()) {
-    files.set(`.pi/prompts/trellis-${command.name}.md`, command.content);
+    files.set(`.pi/prompts/phronia-${command.name}.md`, command.content);
   }
 
   // Shared skills go to `.agents/skills/` (Pi discovers this cross-platform
@@ -54,7 +54,7 @@ export function collectPiTemplates(): Map<string, string> {
     files.set(`.pi/agents/${agent.name}.md`, agent.content);
   }
 
-  files.set(".pi/extensions/trellis/index.ts", getExtensionTemplate());
+  files.set(".pi/extensions/phronia/index.ts", getExtensionTemplate());
 
   const settings = getSettingsTemplate();
   files.set(

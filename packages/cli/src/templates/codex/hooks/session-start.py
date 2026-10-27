@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 """
-Codex Session Start Hook - Inject Trellis context into Codex sessions.
+Codex Session Start Hook - Inject Phronia context into Codex sessions.
 
 Output format follows Codex hook protocol:
   stdout JSON → { hookSpecificOutput: { hookEventName: "SessionStart", additionalContext: "..." } }
@@ -11,6 +11,11 @@ from __future__ import annotations
 
 import json
 import os
+
+# TRELLIS_* -> PHRONIA_* compatibility (removed in the next major).
+for _legacy_key in list(os.environ):
+    if _legacy_key.startswith("TRELLIS_"):
+        os.environ.setdefault("PHRONIA_" + _legacy_key[8:], os.environ[_legacy_key])
 import re
 import subprocess
 import sys
@@ -92,11 +97,11 @@ def _normalize_windows_shell_path(path_str: str) -> str:
 warnings.filterwarnings("ignore")
 
 FIRST_REPLY_NOTICE = """<first-reply-notice>
-On the first visible assistant reply in this session, briefly acknowledge that Trellis SessionStart context loaded.
+On the first visible assistant reply in this session, briefly acknowledge that Phronia SessionStart context loaded.
 Choose the acknowledgment language in this order:
 1. Use the language of the user's current request (the user message that triggered this reply).
 2. If that request has no clear natural language, use an explicitly established project communication language.
-3. If neither provides a language, output the language-neutral fallback exactly: `Trellis SessionStart ✓`.
+3. If neither provides a language, output the language-neutral fallback exactly: `Phronia SessionStart ✓`.
 Continue directly with the user's request after the acknowledgment.
 The acknowledgment must not alter the language used for the remainder of the response.
 This notice is one-shot: do not repeat it after the first visible assistant reply in this session.
@@ -104,16 +109,16 @@ This notice is one-shot: do not repeat it after the first visible assistant repl
 
 
 def should_skip_injection() -> bool:
-    if os.environ.get("TRELLIS_HOOKS") == "0":
+    if os.environ.get("PHRONIA_HOOKS") == "0":
         return True
-    if os.environ.get("TRELLIS_DISABLE_HOOKS") == "1":
+    if os.environ.get("PHRONIA_DISABLE_HOOKS") == "1":
         return True
     return os.environ.get("CODEX_NON_INTERACTIVE") == "1"
 
 
 def configure_project_encoding(project_dir: Path) -> None:
-    """Reuse Trellis' shared Windows stdio encoding helper before JSON output."""
-    scripts_dir = project_dir / ".trellis" / "scripts"
+    """Reuse Phronia' shared Windows stdio encoding helper before JSON output."""
+    scripts_dir = project_dir / ".phronia" / "scripts"
     if str(scripts_dir) not in sys.path:
         sys.path.insert(0, str(scripts_dir))
 
@@ -157,7 +162,7 @@ def read_file(path: Path, fallback: str = "") -> str:
 
 
 def _resolve_context_key(project_dir: Path, hook_input: dict) -> str | None:
-    scripts_dir = project_dir / ".trellis" / "scripts"
+    scripts_dir = project_dir / ".phronia" / "scripts"
     if str(scripts_dir) not in sys.path:
         sys.path.insert(0, str(scripts_dir))
     try:
@@ -181,7 +186,7 @@ def run_script(script_path: Path, context_key: str | None = None) -> str:
         env = os.environ.copy()
         env["PYTHONIOENCODING"] = "utf-8"
         if context_key:
-            env["TRELLIS_CONTEXT_ID"] = context_key
+            env["PHRONIA_CONTEXT_ID"] = context_key
         cmd = [sys.executable, "-W", "ignore", str(script_path)]
         result = subprocess.run(
             cmd,
@@ -212,7 +217,7 @@ def _normalize_task_ref(task_ref: str) -> str:
         normalized = normalized[2:]
 
     if normalized.startswith("tasks/"):
-        return f".trellis/{normalized}"
+        return f".phronia/{normalized}"
 
     return normalized
 
@@ -222,7 +227,7 @@ def _resolve_task_dir(trellis_dir: Path, task_ref: str) -> Path:
     path_obj = Path(normalized)
     if path_obj.is_absolute():
         return path_obj
-    if normalized.startswith(".trellis/"):
+    if normalized.startswith(".phronia/"):
         return trellis_dir.parent / path_obj
     return trellis_dir / "tasks" / path_obj
 
@@ -233,7 +238,7 @@ def _get_task_status(trellis_dir: Path, hook_input: dict) -> str:
         return (
             "Status: NO ACTIVE TASK\n"
             "Next: Classify the current turn and ask for task-creation consent "
-            "before creating any Trellis task."
+            "before creating any Phronia task."
         )
 
     task_ref = active.task_path
@@ -241,7 +246,7 @@ def _get_task_status(trellis_dir: Path, hook_input: dict) -> str:
     if active.stale or not task_dir.is_dir():
         return (
             f"Status: STALE POINTER\nTask: {task_ref}\n"
-            "Next: Task directory not found. Run: python3 ./.trellis/scripts/task.py finish"
+            "Next: Task directory not found. Run: python3 ./.phronia/scripts/task.py finish"
         )
 
     task_json_path = task_dir / "task.json"
@@ -258,7 +263,7 @@ def _get_task_status(trellis_dir: Path, hook_input: dict) -> str:
     if task_status == "completed":
         return (
             f"Status: COMPLETED\nTask: {task_title}\n"
-            f"Next: Archive with `python3 ./.trellis/scripts/task.py archive {task_dir.name}` "
+            f"Next: Archive with `python3 ./.phronia/scripts/task.py archive {task_dir.name}` "
             "or start a new task."
         )
 
@@ -275,7 +280,7 @@ def _get_task_status(trellis_dir: Path, hook_input: dict) -> str:
     if not has_prd:
         return (
             f"Status: PLANNING\nTask: {task_title}\nPresent: {present_line}\n"
-            "Next: Load trellis-brainstorm and write prd.md. Stay in planning."
+            "Next: Load phronia-brainstorm and write prd.md. Stay in planning."
         )
 
     if task_status == "planning":
@@ -337,7 +342,7 @@ def _collect_spec_index_paths(trellis_dir: Path) -> list[str]:
     paths: list[str] = []
     guides_index = trellis_dir / "spec" / "guides" / "index.md"
     if guides_index.is_file():
-        paths.append(".trellis/spec/guides/index.md")
+        paths.append(".phronia/spec/guides/index.md")
 
     spec_dir = trellis_dir / "spec"
     if not spec_dir.is_dir():
@@ -348,14 +353,14 @@ def _collect_spec_index_paths(trellis_dir: Path) -> list[str]:
             continue
         index_file = sub / "index.md"
         if index_file.is_file():
-            paths.append(f".trellis/spec/{sub.name}/index.md")
+            paths.append(f".phronia/spec/{sub.name}/index.md")
             continue
         for nested in sorted(sub.iterdir()):
             if not nested.is_dir():
                 continue
             nested_index = nested / "index.md"
             if nested_index.is_file():
-                paths.append(f".trellis/spec/{sub.name}/{nested.name}/index.md")
+                paths.append(f".phronia/spec/{sub.name}/{nested.name}/index.md")
 
     return paths
 
@@ -402,7 +407,7 @@ def _build_compact_current_state(
         try:
             task_count = sum(1 for _ in iter_active_tasks(get_tasks_dir(repo_root)))
             lines.append(
-                f"Active tasks: {task_count} total. Use `python3 ./.trellis/scripts/task.py list --mine` only if needed."
+                f"Active tasks: {task_count} total. Use `python3 ./.phronia/scripts/task.py list --mine` only if needed."
             )
         except Exception:
             pass  # Optional task summary; keep compact state available.
@@ -461,7 +466,7 @@ def _build_workflow_toc(workflow_path: Path) -> str:
 
     out_lines = [
         "# Development Workflow - Session Summary",
-        "Full guide: .trellis/workflow.md. Step detail: `python3 ./.trellis/scripts/get_context.py --mode phase --step <X.Y>`.",
+        "Full guide: .phronia/workflow.md. Step detail: `python3 ./.phronia/scripts/get_context.py --mode phase --step <X.Y>`.",
         "",
     ]
 
@@ -488,13 +493,13 @@ def main() -> None:
 
     configure_project_encoding(project_dir)
 
-    trellis_dir = project_dir / ".trellis"
+    trellis_dir = project_dir / ".phronia"
     spec_index_paths = _collect_spec_index_paths(trellis_dir)
 
     output = StringIO()
 
     output.write("""<session-context>
-Trellis compact SessionStart context. Use it to orient the session; load details on demand.
+Phronia compact SessionStart context. Use it to orient the session; load details on demand.
 </session-context>
 
 """)
@@ -505,9 +510,9 @@ Trellis compact SessionStart context. Use it to orient the session; load details
     output.write(_build_compact_current_state(trellis_dir, hook_input, spec_index_paths))
     output.write("\n</current-state>\n\n")
 
-    output.write("<trellis-workflow>\n")
+    output.write("<phronia-workflow>\n")
     output.write(_build_workflow_toc(trellis_dir / "workflow.md"))
-    output.write("\n</trellis-workflow>\n\n")
+    output.write("\n</phronia-workflow>\n\n")
 
     output.write("<guidelines>\n")
     output.write(
@@ -524,7 +529,7 @@ Trellis compact SessionStart context. Use it to orient the session; load details
 
     output.write(
         "Discover more via: "
-        "`python3 ./.trellis/scripts/get_context.py --mode packages`\n"
+        "`python3 ./.phronia/scripts/get_context.py --mode packages`\n"
     )
     output.write("</guidelines>\n\n")
 
@@ -538,7 +543,7 @@ Context loaded. Follow <task-status>. Load workflow/spec/task details only when 
     context = output.getvalue()
     result = {
         "suppressOutput": True,
-        "systemMessage": f"Trellis context injected ({len(context)} chars)",
+        "systemMessage": f"Phronia context injected ({len(context)} chars)",
         "hookSpecificOutput": {
             "hookEventName": "SessionStart",
             "additionalContext": context,

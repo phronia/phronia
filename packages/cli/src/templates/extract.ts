@@ -1,24 +1,25 @@
 import * as fs from "node:fs";
 import * as path from "node:path";
 import { fileURLToPath } from "node:url";
+import { assetDir } from "./asset-root.js";
 import { ensureDir, writeFile } from "../utils/file-writer.js";
 import { replacePythonCommandLiterals } from "../configurators/shared.js";
 
 const __filename = fileURLToPath(import.meta.url);
-const __dirname = path.dirname(__filename);
+const __dirname = assetDir(import.meta.url, "templates");
 
 type TemplateCategory = "scripts" | "markdown" | "commands";
 
 /**
- * Get the path to the trellis templates directory (.trellis/ scaffolding).
+ * Get the path to the trellis templates directory (.phronia/ scaffolding).
  */
 export function getTrellisTemplatePath(): string {
-  const templatePath = path.join(__dirname, "trellis");
+  const templatePath = path.join(__dirname, "workflow");
   if (fs.existsSync(templatePath)) {
     return templatePath;
   }
   throw new Error(
-    "Could not find trellis templates directory. Expected at templates/trellis/",
+    "Could not find trellis templates directory. Expected at templates/workflow/",
   );
 }
 

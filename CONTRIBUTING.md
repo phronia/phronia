@@ -1,6 +1,6 @@
-# Contributing to Trellis
+# Contributing to Phronia
 
-Thanks for your interest in contributing to Trellis! This document provides guidelines for contributing to the project.
+Thanks for your interest in contributing to Phronia! This document provides guidelines for contributing to the project.
 
 ## Ways to Contribute
 
@@ -9,7 +9,7 @@ Thanks for your interest in contributing to Trellis! This document provides guid
 Before creating a bug report, please check [existing issues](https://github.com/mindfold-ai/Trellis/issues) to avoid duplicates.
 
 When reporting a bug, include:
-- Trellis version (`trellis --version`)
+- Phronia version (`phronia --version`)
 - Node.js version (`node --version`)
 - Operating system
 - Steps to reproduce
@@ -53,8 +53,8 @@ Code contributions are welcome for:
 
 2. **Clone your fork**
    ```bash
-   git clone https://github.com/YOUR_USERNAME/Trellis.git
-   cd Trellis
+   git clone https://github.com/YOUR_USERNAME/Phronia.git
+   cd Phronia
    ```
 
 3. **Install dependencies**
@@ -74,14 +74,34 @@ pnpm lint        # ESLint for TypeScript
 pnpm lint:py     # Type checking for Python (basedpyright)
 pnpm lint:all    # Run both
 pnpm typecheck   # TypeScript type checking
+pnpm verify      # typecheck + lint + build + full test suite
+pnpm test:idempotence   # dogfood tree matches template rendering
+pnpm bench:hooks        # hook cold-start p50/p95 (baseline, not a gate)
 ```
 
 > **Note:** Pre-commit hooks will automatically run `eslint --fix` and `prettier --write` on staged `.ts` files.
 
+### Refactor branches (Phronia fork)
+
+The fork is being restructured in batches. See `docs/adr/0006-batch-roadmap.md`
+for the batch list and gates.
+
+- Branch: `phronia/B<n>-<slug>`.
+- Commit prefix: `refactor(B<n>/T<x>): ...`.
+- Every batch must pass `pnpm verify`; batches touching generated files must
+  also pass `pnpm test:idempotence`.
+- Do not hand-edit generated `.phronia/` (later `.phronia/`) or platform
+  directories. Change the template under `packages/cli/src/templates/` and
+  regenerate.
+- Decisions live in `docs/adr/`. A deviation from an accepted ADR needs a new
+  ADR.
+- Removing or rewriting an upstream file requires a row in
+  `docs/legal/modification-log.md`.
+
 ## Project Structure
 
 ```
-Trellis/
+Phronia/
 ├── src/                    # TypeScript source code
 │   ├── cli/                # CLI entry point
 │   ├── commands/           # CLI commands (init, update)
@@ -92,13 +112,13 @@ Trellis/
 │   ├── agents/             # Agent definitions
 │   ├── commands/           # Slash commands
 │   └── hooks/              # Python hook scripts
-├── .trellis/               # Trellis workflow (project's own) ←
+├── .phronia/               # Phronia workflow (project's own) ←
 │   ├── scripts/            # Bash scripts
 │   └── spec/               # Spec file templates
 └── docs/                   # Documentation
 ```
 
-> **Important:** When modifying `.claude/`, `.trellis/`, or `.cursor/`, check if the same changes need to be applied to `src/templates/`. The project uses its own config files, but templates are what gets installed to user projects.
+> **Important:** When modifying `.claude/`, `.phronia/`, or `.cursor/`, check if the same changes need to be applied to `src/templates/`. The project uses its own config files, but templates are what gets installed to user projects.
 
 ## Commit Guidelines
 
@@ -151,4 +171,4 @@ docs(readme): update quick start instructions
 
 ## Thank You
 
-Every contribution helps make Trellis better. We appreciate your time and effort!
+Every contribution helps make Phronia better. We appreciate your time and effort!

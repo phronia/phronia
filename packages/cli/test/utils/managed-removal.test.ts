@@ -13,7 +13,7 @@ describe("managed-removal strict planning", () => {
   let tmpDir: string;
 
   beforeEach(() => {
-    tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), "trellis-removal-plan-"));
+    tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), "phronia-removal-plan-"));
   });
 
   afterEach(() => {
@@ -37,7 +37,7 @@ describe("managed-removal strict planning", () => {
 
   it("accepts a relative POSIX manifest path", () => {
     expect(() =>
-      validateManagedRelativePath(".codex/hooks/session-start.py"),
+      validateManagedRelativePath(".codex/hooks/phronia-hook.py --event session-start"),
     ).not.toThrow();
   });
 
@@ -86,6 +86,6 @@ describe("managed-removal strict planning", () => {
         { ".codex/hooks.json": "hash" },
         { strictPaths: true },
       ),
-    ).toThrow(/Cannot prove Trellis content was removed/);
+    ).toThrow(/Cannot prove Phronia content was removed/);
   });
 });

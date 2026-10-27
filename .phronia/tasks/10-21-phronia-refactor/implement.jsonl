@@ -1,0 +1,9 @@
+{"file": ".trellis/spec/cli/backend/index.md", "reason": "Entry index for CLI backend guidelines and checklist routing"}
+{"file": ".trellis/spec/cli/backend/quality-guidelines.md", "reason": "TypeScript/ESLint standards for new core, CLI, and testing code"}
+{"file": ".trellis/spec/cli/backend/filesystem-safety.md", "reason": "Atomic writes, path validation, and dogfood twin sync rules"}
+{"file": ".trellis/spec/cli/backend/migrations.md", "reason": "Manifest and hash behavior that B1 must preserve or migrate"}
+{"file": ".trellis/spec/cli/backend/workflow-state-contract.md", "reason": "Status writers, breadcrumb reachability, and lifecycle hooks"}
+{"file": ".trellis/spec/core/backend/index.md", "reason": "Core SDK boundary and public exports"}
+{"file": "docs/adr/0001-fork-baseline.md", "reason": "Recorded baseline numbers and known drift"}
+{"file": "docs/adr/0003-layered-architecture.md", "reason": "Layer boundaries enforced by this task"}
+{"file": "docs/adr/0004-contract-and-failure-policy.md", "reason": "Failure policy and diagnostics required by later batches"}

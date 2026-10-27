@@ -8,9 +8,9 @@
  * - All hash dictionary keys are POSIX style (`/`), never `\`.
  * - Hashes are computed against LF-normalized content, so CRLF and LF
  *   versions of the same logical content produce the same hash.
- * - Persisted JSON uses schema `{ __version: 2, hashes: { ... } }`. Old
- *   flat-format files (no `__version`) are silently discarded; the hash
- *   set is regenerated on next init/update.
+ * - Persisted JSON uses schema `{ __version: 3, brand: "phronia", hashes }`.
+ *   Upstream v2 files are accepted and rewritten as v3 on the next save.
+ *   Flat-format files (no `__version`) are discarded.
  */
 
 import { createHash } from "node:crypto";
@@ -26,11 +26,16 @@ import { toPosix } from "./posix.js";
 const HASHES_FILE = ".template-hashes.json";
 
 /** Current schema version for `.template-hashes.json` */
-const HASHES_SCHEMA_VERSION = 2;
+const HASHES_SCHEMA_VERSION = 3;
 
-/** Persisted shape of the hashes file (v2). */
-interface StoredHashesV2 {
+/** Versions this build can read. v2 is the upstream pre-rename schema. */
+const ACCEPTED_HASHES_VERSIONS = new Set([2, 3]);
+
+/** Persisted shape of the hashes file. */
+interface StoredHashes {
   __version: number;
+  brand?: string;
+  adoptedFrom?: string;
   hashes: TemplateHashes;
 }
 
@@ -86,12 +91,15 @@ export function loadHashes(cwd: string): TemplateHashes {
       parsed !== null &&
       typeof parsed === "object" &&
       "__version" in parsed &&
-      (parsed as { __version: unknown }).__version === HASHES_SCHEMA_VERSION &&
+      typeof (parsed as { __version: unknown }).__version === "number" &&
+      ACCEPTED_HASHES_VERSIONS.has(
+        (parsed as { __version: number }).__version,
+      ) &&
       "hashes" in parsed &&
       typeof (parsed as { hashes: unknown }).hashes === "object" &&
       (parsed as { hashes: unknown }).hashes !== null
     ) {
-      const stored = parsed as StoredHashesV2;
+      const stored = parsed as StoredHashes;
       // Defensive: enforce POSIX keys even if a writer slipped through.
       return normalizeHashKeys(stored.hashes);
     }
@@ -106,12 +114,13 @@ export function loadHashes(cwd: string): TemplateHashes {
 /**
  * Save template hashes.
  *
- * Always writes the v2 schema with POSIX-normalized keys.
+ * Always writes the v3 schema with POSIX-normalized keys.
  */
 export function saveHashes(cwd: string, hashes: TemplateHashes): void {
   const hashesPath = getHashesPath(cwd);
-  const payload: StoredHashesV2 = {
+  const payload: StoredHashes = {
     __version: HASHES_SCHEMA_VERSION,
+    brand: "phronia",
     hashes: normalizeHashKeys(hashes),
   };
   writeFileAtomic(hashesPath, JSON.stringify(payload, null, 2));
@@ -259,7 +268,7 @@ export function getModificationStatus(
 }
 
 /**
- * Patterns to exclude from hash tracking (only applied to the .trellis/ walk).
+ * Patterns to exclude from hash tracking (only applied to the .phronia/ walk).
  */
 const EXCLUDE_FROM_HASH = [
   ".template-hashes.json", // Hash file itself
@@ -269,7 +278,7 @@ const EXCLUDE_FROM_HASH = [
   "workspace/", // Workspace files (user data)
   "tasks/", // Task files (user data)
   ".current-task", // Current task marker (file, not directory)
-  ".trellis/spec/", // User-customized spec files
+  `${DIR_NAMES.WORKFLOW}/spec/`, // User-customized spec files
   ".backup-", // Backup directories
 ];
 
@@ -348,8 +357,8 @@ export interface InitializeHashesOptions {
  * where a blind directory walk of `.codex/` / `.claude/` swept up
  * user-owned runtime data (chat history, session JSONLs).
  *
- * `.trellis/` is still walked recursively (with `EXCLUDE_FROM_HASH`) because
- * uninstall removes `.trellis/` wholesale via `rm -rf` regardless of manifest
+ * `.phronia/` is still walked recursively (with `EXCLUDE_FROM_HASH`) because
+ * uninstall removes `.phronia/` wholesale via `rm -rf` regardless of manifest
  * content — accuracy there doesn't affect data-loss, only `trellis update`
  * 3-way-merge fidelity (preserved by the existing walk).
  *
@@ -365,8 +374,11 @@ export function initializeHashes(
   // Platform + root files: hash only paths actually written this run.
   if (trackedPaths) {
     for (const relativePath of trackedPaths) {
-      // `.trellis/` paths are handled by the walk below — don't double-track.
-      if (relativePath.startsWith(".trellis/") || relativePath === ".trellis") {
+      // Workflow-root paths are handled by the walk below — don't double-track.
+      if (
+        relativePath.startsWith(`${DIR_NAMES.WORKFLOW}/`) ||
+        relativePath === DIR_NAMES.WORKFLOW
+      ) {
         continue;
       }
       const fullPath = path.join(cwd, ...relativePath.split("/"));
@@ -380,11 +392,11 @@ export function initializeHashes(
     }
   }
 
-  // .trellis/ workflow tree: still walked recursively. Accuracy here is for
+  // .phronia/ workflow tree: still walked recursively. Accuracy here is for
   // `trellis update`'s 3-way merge of workflow.md / config.yaml / scripts;
-  // uninstall removes .trellis/ wholesale so it does not matter for the
+  // uninstall removes .phronia/ wholesale so it does not matter for the
   // data-loss bug this contract addresses.
-  const files = collectFiles(cwd, ".trellis");
+  const files = collectFiles(cwd, DIR_NAMES.WORKFLOW);
   for (const relativePath of files) {
     const fullPath = path.join(cwd, relativePath);
     try {

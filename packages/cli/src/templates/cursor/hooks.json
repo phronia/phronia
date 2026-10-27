@@ -3,20 +3,20 @@
   "hooks": {
     "preToolUse": [
       {
-        "command": "{{PYTHON_CMD}} .cursor/hooks/inject-subagent-context.py",
+        "command": "{{PYTHON_CMD}} .cursor/hooks/phronia-hook.py --event subagent-spawn --platform cursor",
         "matcher": "Task|Subagent",
         "timeout": 30
       }
     ],
     "sessionStart": [
       {
-        "command": "{{PYTHON_CMD}} .cursor/hooks/session-start.py",
+        "command": "{{PYTHON_CMD}} .cursor/hooks/phronia-hook.py --event session-start --platform cursor",
         "timeout": 30
       }
     ],
     "beforeShellExecution": [
       {
-        "command": "{{PYTHON_CMD}} .cursor/hooks/inject-shell-session-context.py",
+        "command": "{{PYTHON_CMD}} .cursor/hooks/phronia-hook.py --event pre-shell --platform cursor",
         "timeout": 5
       }
     ]

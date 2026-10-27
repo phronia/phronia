@@ -1,5 +1,5 @@
 /**
- * Migration types for Trellis update command
+ * Migration types for Phronia update command
  *
  * These types support intelligent migration during updates,
  * handling file renames, deletions, and user modification detection.
@@ -37,7 +37,7 @@ export interface MigrationItem {
  * substring (live or commented), the section is treated as already present.
  */
 export interface ConfigSectionAdded {
-  /** Target file relative to project root (e.g. `.trellis/config.yaml`). */
+  /** Target file relative to project root (e.g. `.phronia/config.yaml`). */
   file: string;
   /**
    * Substring whose presence in the user file means this section already

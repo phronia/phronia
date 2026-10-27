@@ -7,12 +7,12 @@
  *
  * Output paths:
  * - `.snow/skills/` — workflow + bundled skills (Claude Code Skills layout)
- * - `.snow/commands/trellis-*.json` — custom prompt slash commands (no trellis-start)
+ * - `.snow/commands/phronia-*.json` — custom prompt slash commands (no phronia-start)
  * - `.snow/agents/` — project sub-agents (auto-discovered by Snow; primary path)
  * - `.snow/hooks/` — inject hooks (session / user / beforeSubAgentStart)
  * - `.snow/SNOW.md` — operator guide
  *
- * Modern Snow does NOT ship `.snow/sub-agents.trellis.json` (legacy merge
+ * Modern Snow does NOT ship `.snow/sub-agents.phronia.json` (legacy merge
  * fragment for older hosts without project-agent discovery).
  *
  * hasHooks=true → filterCommands drops `start`; SessionStart injects context.
@@ -36,10 +36,10 @@ import {
 function buildSnowCommandJson(name: string, content: string): string {
   const description =
     name === "continue"
-      ? "Resume the current Trellis task at the right workflow phase."
+      ? "Resume the current Phronia task at the right workflow phase."
       : name === "finish-work"
-        ? "Wrap up the current Trellis session: archive tasks and record journal."
-        : `Trellis: ${name}`;
+        ? "Wrap up the current Phronia session: archive tasks and record journal."
+        : `Phronia: ${name}`;
 
   return (
     JSON.stringify(
@@ -72,7 +72,7 @@ export function collectSnowTemplates(): Map<string, string> {
   const ctx = config.templateContext;
   const files = new Map<string, string>();
 
-  // hasHooks=true → resolveAllAsSkills drops trellis-start.
+  // hasHooks=true → resolveAllAsSkills drops phronia-start.
   for (const [filePath, content] of collectSkillTemplates(
     ".snow/skills",
     resolveAllAsSkills(ctx),
@@ -84,7 +84,7 @@ export function collectSnowTemplates(): Map<string, string> {
   for (const cmd of resolveCommands(ctx)) {
     const body = replacePythonCommandLiterals(cmd.content);
     files.set(
-      `.snow/commands/trellis-${cmd.name}.json`,
+      `.snow/commands/phronia-${cmd.name}.json`,
       buildSnowCommandJson(cmd.name, body),
     );
   }

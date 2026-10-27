@@ -1,0 +1,46 @@
+schema_version = 1
+
+[[targets]]
+id = "core-package-version"
+kind = "regex-replace"
+adapter = "text"
+path = "packages/core/package.json"
+pattern = "(?m)^  \"version\": \"[^\"]+\""
+template = "  \"version\": \"{version}\""
+mode = "write"
+
+[[targets]]
+id = "cli-package-version"
+kind = "regex-replace"
+adapter = "text"
+path = "packages/cli/package.json"
+pattern = "(?m)^  \"version\": \"[^\"]+\""
+template = "  \"version\": \"{version}\""
+mode = "write"
+
+[[targets]]
+id = "core-runtime-version"
+kind = "regex-replace"
+adapter = "text"
+path = "packages/core/src/version.ts"
+pattern = "CORE_VERSION = \"[^\"]+\""
+template = "CORE_VERSION = \"{version}\""
+mode = "write"
+
+[[targets]]
+id = "workflow-version-file"
+kind = "text-scalar"
+adapter = "text"
+path = ".phronia/.version"
+selector = "whole-file"
+template = "{version}\n"
+mode = "write"
+
+[[targets]]
+id = "runtime-package-version"
+kind = "regex-replace"
+adapter = "text"
+path = "packages/runtime/package.json"
+pattern = "(?m)^  \"version\": \"[^\"]+\""
+template = "  \"version\": \"{version}\""
+mode = "write"

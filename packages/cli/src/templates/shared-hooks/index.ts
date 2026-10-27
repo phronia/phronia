@@ -1,17 +1,16 @@
 /**
  * Shared hook templates — platform-independent Python hook scripts.
  *
- * These scripts read only from .trellis/ paths (JSONL, prd.md, spec/) and
+ * These scripts read only from .phronia/ paths (JSONL, prd.md, spec/) and
  * have no platform-specific placeholders. They can be written as-is to any
  * platform's hooks directory.
  */
 
 import { readdirSync, readFileSync } from "node:fs";
-import { dirname, join } from "node:path";
-import { fileURLToPath } from "node:url";
+import { join } from "node:path";
+import { assetDir } from "../asset-root.js";
 
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = dirname(__filename);
+const __dirname = assetDir(import.meta.url, "templates/shared-hooks");
 
 function readTemplate(relativePath: string): string {
   return readFileSync(join(__dirname, relativePath), "utf-8");
@@ -25,6 +24,7 @@ export interface HookScript {
 }
 
 export type SharedHookName =
+  | "phronia-hook.py"
   | "session-start.py"
   | "inject-shell-session-context.py"
   | "inject-workflow-state.py"
@@ -83,7 +83,7 @@ export type SharedHookPlatform =
  *   stdout directly to the conversation context (no JSON envelope).
  * - Claude Code `statusLine` is intentionally not installed by default.
  *   Users can add their own statusLine command in `.claude/settings.json`,
- *   or opt in to the Trellis one via `trellis init --with-statusline`
+ *   or opt in to the Phronia one via `trellis init --with-statusline`
  *   (installed from `templates/claude/hooks/`, not from this table — no
  *   other platform has a statusLine event).
  * - ZCode (3.x) ships a workspace hook config at `.zcode/config.json` covering
@@ -97,50 +97,61 @@ export const SHARED_HOOKS_BY_PLATFORM: Record<
   readonly SharedHookName[]
 > = {
   claude: [
+    "phronia-hook.py",
     "session-start.py",
     "inject-workflow-state.py",
     "inject-subagent-context.py",
   ],
   cursor: [
+    "phronia-hook.py",
     "session-start.py",
     "inject-shell-session-context.py",
     "inject-subagent-context.py",
   ],
-  codex: ["inject-workflow-state.py", "inject-subagent-context.py"],
+  codex: [
+    "phronia-hook.py","inject-workflow-state.py", "inject-subagent-context.py"],
   gemini: [
+    "phronia-hook.py",
     "session-start.py",
     "inject-shell-session-context.py",
     "inject-workflow-state.py",
   ],
   qoder: [
+    "phronia-hook.py",
     "session-start.py",
     "inject-shell-session-context.py",
     "inject-workflow-state.py",
   ],
-  copilot: ["inject-workflow-state.py"],
+  copilot: [
+    "phronia-hook.py","inject-workflow-state.py"],
   codebuddy: [
+    "phronia-hook.py",
     "session-start.py",
     "inject-shell-session-context.py",
     "inject-workflow-state.py",
     "inject-subagent-context.py",
   ],
   droid: [
+    "phronia-hook.py",
     "session-start.py",
     "inject-shell-session-context.py",
     "inject-workflow-state.py",
     "inject-subagent-context.py",
   ],
   kiro: [
+    "phronia-hook.py",
     "session-start.py",
     "inject-workflow-state.py",
     "inject-subagent-context.py",
   ],
   trae: [
+    "phronia-hook.py",
     "session-start.py",
     "inject-shell-session-context.py",
     "inject-workflow-state.py",
   ],
   zcode: [
+    "phronia-hook.py",
     "session-start.py",
     "inject-shell-session-context.py",
     "inject-workflow-state.py",

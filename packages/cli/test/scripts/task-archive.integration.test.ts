@@ -2,7 +2,7 @@
  * Integration tests for `task.py archive` auto-commit behavior.
  *
  * The python script lives under
- * `src/templates/trellis/scripts/common/task_store.py`; this test stamps
+ * `src/templates/workflow/scripts/common/task_store.py`; this test stamps
  * the templates into a fresh git repo and exercises the real `python3
  * task.py archive` path. Two scenarios:
  *
@@ -24,7 +24,7 @@ import path from "node:path";
 
 const TEMPLATE_SCRIPTS = path.resolve(
   __dirname,
-  "../../src/templates/trellis/scripts",
+  "../../src/templates/workflow/scripts",
 );
 
 function hasPython(): boolean {
@@ -54,19 +54,19 @@ function setupRepo(tmp: string): void {
   git(tmp, "config", "user.name", "Test");
 
   // Stamp the real templates into the test repo.
-  const scriptsDest = path.join(tmp, ".trellis", "scripts");
+  const scriptsDest = path.join(tmp, ".phronia", "scripts");
   fs.mkdirSync(scriptsDest, { recursive: true });
   fs.cpSync(TEMPLATE_SCRIPTS, scriptsDest, { recursive: true });
 
   // session_auto_commit must be enabled for the archive to commit.
   fs.writeFileSync(
-    path.join(tmp, ".trellis", "config.yaml"),
+    path.join(tmp, ".phronia", "config.yaml"),
     "session_auto_commit: true\n",
   );
 }
 
 function makeTask(repo: string, name: string, prdBody: string): void {
-  const dir = path.join(repo, ".trellis", "tasks", name);
+  const dir = path.join(repo, ".phronia", "tasks", name);
   fs.mkdirSync(dir, { recursive: true });
   fs.writeFileSync(path.join(dir, "prd.md"), prdBody);
   fs.writeFileSync(
@@ -91,7 +91,7 @@ function makeTask(repo: string, name: string, prdBody: string): void {
 function runArchive(repo: string, taskName: string): void {
   const r = spawnSync(
     "python3",
-    [".trellis/scripts/task.py", "archive", taskName],
+    [".phronia/scripts/task.py", "archive", taskName],
     { cwd: repo, encoding: "utf-8" },
   );
   if (r.status !== 0) {
@@ -105,7 +105,7 @@ describe.skipIf(!hasPython())(
     let tmp: string;
 
     beforeEach(() => {
-      tmp = fs.mkdtempSync(path.join(os.tmpdir(), "trellis-archive-test-"));
+      tmp = fs.mkdtempSync(path.join(os.tmpdir(), "phronia-archive-test-"));
       setupRepo(tmp);
     });
 
@@ -121,7 +121,7 @@ describe.skipIf(!hasPython())(
 
       // Dirty edit in task-b BEFORE archiving task-a.
       fs.appendFileSync(
-        path.join(tmp, ".trellis", "tasks", "task-b", "prd.md"),
+        path.join(tmp, ".phronia", "tasks", "task-b", "prd.md"),
         "DIRTY EDIT IN TASK-B SHOULD NOT BE COMMITTED\n",
       );
 
@@ -145,7 +145,7 @@ describe.skipIf(!hasPython())(
 
       // task-b dirty change still in working tree.
       const status = git(tmp, "status", "--porcelain");
-      expect(status).toMatch(/M\s+\.trellis\/tasks\/task-b\/prd\.md/);
+      expect(status).toMatch(/M\s+\.phronia\/tasks\/task-b\/prd\.md/);
     });
 
     it("does not sweep pre-staged unrelated files into the archive commit (#579)", () => {
@@ -170,9 +170,9 @@ describe.skipIf(!hasPython())(
         .map((s) => s.trim())
         .filter(Boolean);
 
-      // The archive commit contains only Trellis-owned paths.
+      // The archive commit contains only Phronia-owned paths.
       expect(lastFiles).not.toContain("README.md");
-      expect(lastFiles.every((f) => f.startsWith(".trellis/"))).toBe(true);
+      expect(lastFiles.every((f) => f.startsWith(".phronia/"))).toBe(true);
 
       // The developer's file is still staged, ready for their own commit.
       const status = git(tmp, "status", "--porcelain");
@@ -187,7 +187,7 @@ describe.skipIf(!hasPython())(
         // surfaced the bug.
         const researchDir = path.join(
           tmp,
-          ".trellis",
+          ".phronia",
           "tasks",
           "big",
           "research",
@@ -227,7 +227,7 @@ describe.skipIf(!hasPython())(
           .filter(Boolean);
         expect(deletes.length).toBeGreaterThan(0);
         expect(
-          deletes.every((p) => p.startsWith(".trellis/tasks/big/")),
+          deletes.every((p) => p.startsWith(".phronia/tasks/big/")),
         ).toBe(true);
       },
       30_000, // python startup + 100-file ops can be slow
@@ -244,10 +244,10 @@ describe.skipIf(!hasPython())(
 
       // Typo: `archive src` instead of a task name. resolve_task_dir falls
       // back to repo_root/src; without the guard this moves the whole source
-      // dir into .trellis/tasks/archive/.
+      // dir into .phronia/tasks/archive/.
       const r = spawnSync(
         "python3",
-        [".trellis/scripts/task.py", "archive", "src"],
+        [".phronia/scripts/task.py", "archive", "src"],
         { cwd: tmp, encoding: "utf-8" },
       );
 
@@ -258,7 +258,7 @@ describe.skipIf(!hasPython())(
       // No archive dir was created holding a moved src.
       expect(
         fs.existsSync(
-          path.join(tmp, ".trellis", "tasks", "archive"),
+          path.join(tmp, ".phronia", "tasks", "archive"),
         ),
       ).toBe(false);
     });
@@ -280,7 +280,7 @@ describe.skipIf(!hasPython())(
 
       const r = spawnSync(
         "python3",
-        [".trellis/scripts/task.py", "archive", "tracked"],
+        [".phronia/scripts/task.py", "archive", "tracked"],
         { cwd: tmp, encoding: "utf-8" },
       );
 
@@ -289,8 +289,8 @@ describe.skipIf(!hasPython())(
       expect(r.stderr).toContain("Auto-commit failed");
 
       const status = git(tmp, "status", "--porcelain");
-      expect(status).toContain(".trellis/tasks/tracked/");
-      expect(status).toContain(".trellis/tasks/archive/");
+      expect(status).toContain(".phronia/tasks/tracked/");
+      expect(status).toContain(".phronia/tasks/archive/");
     });
   },
 );

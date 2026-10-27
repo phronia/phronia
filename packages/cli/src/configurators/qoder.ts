@@ -22,7 +22,7 @@ import { getAllAgents, getSettingsTemplate } from "../templates/qoder/index.js";
 export function collectQoderTemplates(): Map<string, string> {
   const files = collectBothTemplates(
     AI_TOOLS.qoder.templateContext,
-    (n) => `.qoder/commands/trellis-${n}.md`,
+    (n) => `.qoder/commands/phronia-${n}.md`,
     ".qoder/skills",
     (filePath, content) => {
       const name = path.basename(filePath, ".md");

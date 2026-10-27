@@ -6,14 +6,18 @@
  * UserPromptSubmit, and PreToolUse for Agent/Task), so `hasHooks` is true.
  * Four output paths:
  * - `.zcode/skills/` — ZCode-private workflow and bundled skills
- * - `.zcode/commands/trellis/` — slash commands (invoked as /trellis:<name>)
+ * - `.zcode/commands/phronia/` — slash commands (invoked as /phronia:<name>)
  * - `.zcode/agents/` — sub-agent definitions with hook-injection fallback
  * - `.zcode/hooks/` + `.zcode/config.json` — shared Python hook scripts and
  *   the workspace hook registration
  */
 
 import { AI_TOOLS } from "../types/ai-tools.js";
-import { getAllAgents, getHooksConfig } from "../templates/zcode/index.js";
+import {
+  getAllAgents,
+  getBridgeTemplate,
+  getHooksConfig,
+} from "../templates/zcode/index.js";
 import { getSharedHookScriptsForPlatform } from "../templates/shared-hooks/index.js";
 import {
   collectSkillTemplates,
@@ -44,9 +48,9 @@ export function collectZcodeTemplates(): Map<string, string> {
     files.set(filePath, content);
   }
 
-  // 2. Commands → .zcode/commands/trellis/
+  // 2. Commands → .zcode/commands/phronia/
   for (const cmd of resolveCommands(ctx)) {
-    files.set(`.zcode/commands/trellis/${cmd.name}.md`, cmd.content);
+    files.set(`.zcode/commands/phronia/${cmd.name}.md`, cmd.content);
   }
 
   // 3. Sub-agents → .zcode/agents/ (hook-inject; templates carry fallback).
@@ -66,12 +70,16 @@ export function collectZcodeTemplates(): Map<string, string> {
     resolvePlaceholders(getHooksConfig().content),
   );
 
+  // 6. Self-owned bridge for builds that disable project hooks. Users point
+  //    their global ZCode plugin at this file; init never installs it globally.
+  files.set(".zcode/bridge/phronia-zcode-bridge.mjs", getBridgeTemplate());
+
   return files;
 }
 
 /** Print the manual global-plugin fallback required by affected ZCode builds. */
 export function printZcodeSetupHint(): void {
-  if (process.env.VITEST || process.env.TRELLIS_QUIET) return;
+  if (process.env.VITEST || process.env.PHRONIA_QUIET) return;
 
   const plugin = AI_TOOLS.zcode.globalHookPlugin;
   if (!plugin) return;

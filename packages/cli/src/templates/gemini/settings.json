@@ -6,7 +6,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "{{PYTHON_CMD}} .gemini/hooks/session-start.py",
+            "command": "{{PYTHON_CMD}} .gemini/hooks/phronia-hook.py --event session-start --platform gemini",
             "timeout": 30000
           }
         ]
@@ -18,7 +18,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "{{PYTHON_CMD}} .gemini/hooks/inject-workflow-state.py",
+            "command": "{{PYTHON_CMD}} .gemini/hooks/phronia-hook.py --event user-prompt --platform gemini",
             "timeout": 15000
           }
         ]
@@ -30,7 +30,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "{{PYTHON_CMD}} .gemini/hooks/inject-shell-session-context.py",
+            "command": "{{PYTHON_CMD}} .gemini/hooks/phronia-hook.py --event pre-shell --platform gemini",
             "timeout": 5000
           }
         ]

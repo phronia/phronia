@@ -1,12 +1,12 @@
 import type { TrellisTaskRecord } from "./schema.js";
 
 /**
- * Coarse-grained Trellis task phase derived from task status.
+ * Coarse-grained Phronia task phase derived from task status.
  *
  * Phase is a projection of {@link TrellisTaskRecord.status} only. There is
  * no separate `current_phase` field stored on disk — `inferTaskPhase`
  * exists so consumers can render the workflow phase without depending on
- * `.trellis/workflow.md` parsing.
+ * `.phronia/workflow.md` parsing.
  *
  * Mapping:
  *

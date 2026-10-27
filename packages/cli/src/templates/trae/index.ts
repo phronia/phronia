@@ -17,7 +17,7 @@ import {
 
 export type { AgentTemplate, HookTemplate };
 
-const { listMdAgents, getSettings } = createTemplateReader(import.meta.url);
+const { listMdAgents, getSettings } = createTemplateReader(import.meta.url, "templates/trae");
 
 export const getAllAgents = (): AgentTemplate[] => listMdAgents();
 export const getSettingsTemplate = (): HookTemplate =>

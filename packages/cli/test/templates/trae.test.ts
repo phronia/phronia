@@ -15,9 +15,9 @@ const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const repoRoot = path.resolve(__dirname, "../../../..");
 
 const EXPECTED_AGENT_NAMES = [
-  "trellis-check",
-  "trellis-implement",
-  "trellis-research",
+  "phronia-check",
+  "phronia-implement",
+  "phronia-research",
 ];
 
 // Shared skills are sourced from common/ via resolveAllAsSkills (written to
@@ -35,8 +35,8 @@ describe("trae shared skills (from common source)", () => {
   it("does not include platform-specific syntax in resolved output", () => {
     const skills = resolveAllAsSkills(AI_TOOLS.trae.templateContext);
     for (const skill of skills) {
-      // Trae uses /trellis- prefix, not /trellis:
-      expect(skill.content).not.toContain("/trellis:");
+      // Trae uses /phronia- prefix, not /phronia:
+      expect(skill.content).not.toContain("/phronia:");
       expect(skill.content).not.toContain(".claude/");
       expect(skill.content).not.toContain(".cursor/");
     }
@@ -78,12 +78,12 @@ describe("trae getAllAgents", () => {
 // Trae sub-agent recursion guard (mirrors codex issue #234)
 // =============================================================================
 //
-// trellis-implement / trellis-check agent markdown MUST contain a hard recursion
+// phronia-implement / phronia-check agent markdown MUST contain a hard recursion
 // guard so the dispatched sub-agent does not spawn another
-// trellis-implement / trellis-check sub-agent.
+// phronia-implement / phronia-check sub-agent.
 describe("trae sub-agent recursion guard", () => {
-  for (const name of ["trellis-implement", "trellis-check"] as const) {
-    it(`${name}.md forbids spawning trellis-implement / trellis-check`, () => {
+  for (const name of ["phronia-implement", "phronia-check"] as const) {
+    it(`${name}.md forbids spawning phronia-implement / phronia-check`, () => {
       const mdPath = path.join(
         repoRoot,
         "packages/cli/src/templates/trae/agents",
@@ -93,8 +93,8 @@ describe("trae sub-agent recursion guard", () => {
       // Hard prohibition keyword
       expect(content).toMatch(/Do NOT spawn/i);
       // Mentions both sibling agent kinds explicitly
-      expect(content).toContain("trellis-implement");
-      expect(content).toContain("trellis-check");
+      expect(content).toContain("phronia-implement");
+      expect(content).toContain("phronia-check");
       // Mentions the leakage source so the reader knows why
       expect(content).toMatch(
         /SessionStart|dispatch.*main session|breadcrumb/i,
@@ -125,7 +125,7 @@ describe("trae hooks.json registers SessionStart + UserPromptSubmit", () => {
     expect(parsed.version).toBe(1);
     expect(parsed.hooks).toBeDefined();
     expect(Object.keys(parsed.hooks ?? {})).toContain("SessionStart");
-    expect(raw).toContain(".trae/hooks/session-start.py");
+    expect(raw).toContain(".trae/hooks/phronia-hook.py --event session-start");
     // Trae docs: matcher is only for PreToolUse/PostToolUse/Notification.
     // SessionStart fires once per new session (source: "startup" only).
     // Having matchers on SessionStart would cause 3x execution or be ignored.
@@ -139,7 +139,7 @@ describe("trae hooks.json registers SessionStart + UserPromptSubmit", () => {
     const parsed = JSON.parse(raw) as { hooks?: Record<string, unknown> };
     expect(parsed.hooks).toBeDefined();
     expect(Object.keys(parsed.hooks ?? {})).toContain("UserPromptSubmit");
-    expect(raw).toContain(".trae/hooks/inject-workflow-state.py");
+    expect(raw).toContain(".trae/hooks/phronia-hook.py --event user-prompt");
   });
 
   it("wires inject-shell-session-context.py under PreToolUse with a Bash matcher", () => {
@@ -157,7 +157,7 @@ describe("trae hooks.json registers SessionStart + UserPromptSubmit", () => {
     // matcher never fired. `Bash` is kept in the alternation because matcher is
     // a regex on every surface and dropping it would be an untested narrowing.
     expect(preToolUseGroups[0].matcher).toBe("RunCommand|Bash");
-    expect(raw).toContain(".trae/hooks/inject-shell-session-context.py");
+    expect(raw).toContain(".trae/hooks/phronia-hook.py --event pre-shell");
   });
 
   it("does not register any other hook events", () => {
@@ -221,16 +221,16 @@ describe("trae platform detection in shared session-start.py", () => {
 //
 // Trae is a class-2 (pull-based) platform: hooks cannot mutate sub-agent
 // prompts. The implement/check agents must have a pull-based prelude injected
-// so they load Trellis context themselves.
+// so they load Phronia context themselves.
 describe("trae pull-based prelude injection (class-2)", () => {
   it("applyPullBasedPreludeMarkdown injects context-loading instructions", () => {
     const agents = applyPullBasedPreludeMarkdown(getAllAgents());
     for (const agent of agents) {
       if (
-        agent.name === "trellis-implement" ||
-        agent.name === "trellis-check"
+        agent.name === "phronia-implement" ||
+        agent.name === "phronia-check"
       ) {
-        expect(agent.content).toContain("Load Trellis Context First");
+        expect(agent.content).toContain("Load Phronia Context First");
         expect(agent.content).toContain("task.py current --source");
       }
     }
@@ -238,9 +238,9 @@ describe("trae pull-based prelude injection (class-2)", () => {
 
   it("research agent does not get the prelude (no task context needed)", () => {
     const agents = applyPullBasedPreludeMarkdown(getAllAgents());
-    const research = agents.find((a) => a.name === "trellis-research");
+    const research = agents.find((a) => a.name === "phronia-research");
     expect(research).toBeDefined();
     if (!research) return; // guard for type-safety
-    expect(research.content).not.toContain("Load Trellis Context First");
+    expect(research.content).not.toContain("Load Phronia Context First");
   });
 });

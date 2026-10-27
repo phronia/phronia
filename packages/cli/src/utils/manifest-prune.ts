@@ -14,11 +14,11 @@
  * self-correct on the next routine command.
  *
  * Rules:
- *   - `.trellis/*` entries are ALWAYS kept. `trellis uninstall` removes
- *     `.trellis/` wholesale via `fs.rmSync(..., { recursive: true })`, so
+ *   - `.phronia/*` entries are ALWAYS kept. `trellis uninstall` removes
+ *     `.phronia/` wholesale via `fs.rmSync(..., { recursive: true })`, so
  *     manifest accuracy there doesn't affect uninstall data-loss. `update`
  *     also relies on these entries to detect user-modified workflow files.
- *   - Root-level `AGENTS.md` is kept only when it still looks Trellis-managed
+ *   - Root-level `AGENTS.md` is kept only when it still looks Phronia-managed
  *     (contains the managed block markers) or is missing on disk. This
  *     self-heals old poisoned manifests for user-owned AGENTS.md files that
  *     predated init and were skipped.
@@ -35,11 +35,16 @@ import fs from "node:fs";
 import path from "node:path";
 
 import { collectPlatformTemplates } from "../configurators/index.js";
-import { FILE_NAMES } from "../constants/paths.js";
+import { DIR_NAMES, FILE_NAMES } from "../constants/paths.js";
 import { getAllMigrations } from "../migrations/index.js";
 import { saveHashes } from "./template-hash.js";
 import { toPosix } from "./posix.js";
-import { TRELLIS_BLOCK_END, TRELLIS_BLOCK_START } from "./managed-paths.js";
+import {
+  LEGACY_BLOCK_END,
+  LEGACY_BLOCK_START,
+  PHRONIA_BLOCK_END,
+  PHRONIA_BLOCK_START,
+} from "./managed-paths.js";
 import type { AITool } from "../types/ai-tools.js";
 import type { TemplateHashes } from "../types/migration.js";
 
@@ -53,7 +58,7 @@ export interface PruneResult {
 /**
  * Compute the union of "what trellis writes" across:
  *   - every configured platform's collectTemplates() output
- *   - root-level AGENTS.md when it still carries Trellis managed-block markers
+ *   - root-level AGENTS.md when it still carries Phronia managed-block markers
  *   - every migration manifest's from/to path (preserve so legitimate
  *     pending migrations can find their source/target)
  */
@@ -91,10 +96,12 @@ function shouldKeepAgentsMd(cwd: string): boolean {
   }
   try {
     const content = fs.readFileSync(fullPath, "utf-8");
-    return (
-      content.includes(TRELLIS_BLOCK_START) &&
-      content.includes(TRELLIS_BLOCK_END)
-    );
+    const current =
+      content.includes(PHRONIA_BLOCK_START) &&
+      content.includes(PHRONIA_BLOCK_END);
+    const legacy =
+      content.includes(LEGACY_BLOCK_START) && content.includes(LEGACY_BLOCK_END);
+    return current || legacy;
   } catch {
     return true;
   }
@@ -133,10 +140,13 @@ export function pruneOrphanManifestKeys(
 
   for (const [rawKey, value] of Object.entries(hashes)) {
     const key = toPosix(rawKey);
-    // Always preserve .trellis/ entries — they're for the workflow tree
+    // Always preserve workflow-root entries — they're for the workflow tree
     // which uninstall removes wholesale and which update needs for
     // modified-file detection.
-    if (key.startsWith(".trellis/") || key === ".trellis") {
+    if (
+      key.startsWith(`${DIR_NAMES.WORKFLOW}/`) ||
+      key === DIR_NAMES.WORKFLOW
+    ) {
       kept[key] = value;
       continue;
     }

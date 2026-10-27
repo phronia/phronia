@@ -23,10 +23,10 @@ describe("kiro templates", () => {
       .map((a) => a.name)
       .sort();
     expect(names).toEqual([
-      "trellis",
-      "trellis-check",
-      "trellis-implement",
-      "trellis-research",
+      "phronia",
+      "phronia-check",
+      "phronia-implement",
+      "phronia-research",
     ]);
   });
 
@@ -37,15 +37,15 @@ describe("kiro templates", () => {
   });
 
   it("main `trellis` agent wires per-turn + session-start hooks and resources", () => {
-    const trellis = parseAgent("trellis");
+    const trellis = parseAgent("phronia");
 
     expect(trellis.hooks?.userPromptSubmit?.[0].command).toContain(
-      ".kiro/hooks/inject-workflow-state.py",
+      ".kiro/hooks/phronia-hook.py --event user-prompt",
     );
     expect(trellis.hooks?.agentSpawn?.[0].command).toContain(
-      ".kiro/hooks/session-start.py",
+      ".kiro/hooks/phronia-hook.py --event session-start",
     );
-    expect(trellis.resources).toContain("file://.trellis/workflow.md");
+    expect(trellis.resources).toContain("file://.phronia/workflow.md");
     // The main agent must NOT inject sub-agent context (that's the sub-agents' job).
     expect(JSON.stringify(trellis.hooks)).not.toContain(
       "inject-subagent-context.py",
@@ -54,13 +54,13 @@ describe("kiro templates", () => {
 
   it("the 3 sub-agents keep agentSpawn → inject-subagent-context.py", () => {
     for (const name of [
-      "trellis-implement",
-      "trellis-check",
-      "trellis-research",
+      "phronia-implement",
+      "phronia-check",
+      "phronia-research",
     ]) {
       const agent = parseAgent(name);
       expect(agent.hooks?.agentSpawn?.[0].command).toContain(
-        ".kiro/hooks/inject-subagent-context.py",
+        ".kiro/hooks/phronia-hook.py --event subagent-spawn",
       );
       // Sub-agents must not carry the main-session per-turn hook.
       expect(agent.hooks?.userPromptSubmit).toBeUndefined();
@@ -70,13 +70,13 @@ describe("kiro templates", () => {
   it("ships the IDE `.kiro.hook` promptSubmit → runCommand definition", () => {
     const hooks = getIdeHooks();
     expect(hooks.map((h) => h.name)).toContain(
-      "trellis-workflow-state.kiro.hook",
+      "phronia-workflow-state.kiro.hook",
     );
 
     const hook = hooks.find(
-      (h) => h.name === "trellis-workflow-state.kiro.hook",
+      (h) => h.name === "phronia-workflow-state.kiro.hook",
     );
-    if (!hook) throw new Error("trellis-workflow-state.kiro.hook is missing");
+    if (!hook) throw new Error("phronia-workflow-state.kiro.hook is missing");
     const parsed = JSON.parse(hook.content) as {
       version: string;
       enabled: boolean;
@@ -86,11 +86,11 @@ describe("kiro templates", () => {
     };
     expect(parsed.version).toBe("1.0.0");
     expect(parsed.enabled).toBe(true);
-    expect(parsed.name).toBe("trellis-workflow-state");
+    expect(parsed.name).toBe("phronia-workflow-state");
     expect(parsed.when.type).toBe("promptSubmit");
     expect(parsed.then.type).toBe("runCommand");
     expect(parsed.then.command).toContain(
-      ".kiro/hooks/inject-workflow-state.py",
+      ".kiro/hooks/phronia-hook.py --event user-prompt",
     );
   });
 });

@@ -1,34 +1,34 @@
-# Trellis on Snow CLI
+# Phronia on Snow CLI
 
-Snow is a **class-1** Trellis host: auto context inject + project agent discovery +
+Snow is a **class-1** Phronia host: auto context inject + project agent discovery +
 `beforeSubAgentStart` prompt enrichment.
 
 | Capability                                        | Status                                                                       |
 | ------------------------------------------------- | ---------------------------------------------------------------------------- |
-| Skills (`.snow/skills/trellis-*/SKILL.md`)        | Works                                                                        |
-| Prompt commands (`.snow/commands/trellis-*.json`) | Works (`/trellis-continue`, `/trellis-finish-work`, …)                       |
-| Context hooks (`.snow/hooks/`)                    | Inject model context via stdout JSON + write `.snow/log/trellis-context.txt` |
-| Project agents (`.snow/agents/*.md`)              | Auto-discovered by Snow (`#trellis-implement`, …)                            |
+| Skills (`.snow/skills/phronia-*/SKILL.md`)        | Works                                                                        |
+| Prompt commands (`.snow/commands/phronia-*.json`) | Works (`/phronia-continue`, `/phronia-finish-work`, …)                       |
+| Context hooks (`.snow/hooks/`)                    | Inject model context via stdout JSON + write `.snow/log/phronia-context.txt` |
+| Project agents (`.snow/agents/*.md`)              | Auto-discovered by Snow (`#phronia-implement`, …)                            |
 | `beforeSubAgentStart`                             | Injects active-task breadcrumb into sub-agent prompts                        |
-| `trellis-start`                                   | Optional — session hooks replace the old manual ritual                       |
+| `phronia-start`                                   | Optional — session hooks replace the old manual ritual                       |
 
 ## Quick start
 
 ```bash
-trellis init --snow -u your-name
+phronia init --snow -u your-name
 snow
 ```
 
 In Snow:
 
-1. Open a session in the project root — `onSessionStart` injects Trellis context automatically.
+1. Open a session in the project root — `onSessionStart` injects Phronia context automatically.
 2. Dispatch implement/check/research (project agents under `.snow/agents/`). Prefer prompt first line:
 
 ```text
-Active task: .trellis/tasks/<id>
+Active task: .phronia/tasks/<id>
 ```
 
-3. Optional: `/trellis-continue` / `/trellis-finish-work`, or `skill-execute` on `trellis-*` skills.
+3. Optional: `/phronia-continue` / `/phronia-finish-work`, or `skill-execute` on `phronia-*` skills.
 4. Debug injects: set `SNOW_DEBUG_HOOKS=1` and inspect `.snow/log/hooks-inject.txt`.
 
 ## Agents
@@ -57,7 +57,7 @@ Session / user / sub-agent hooks emit:
 ```
 
 - exit 0 + JSON → inject (prepend); UI bubble keeps user original text
-- exit 1 on `onUserMessage` → replace (not used by Trellis)
+- exit 1 on `onUserMessage` → replace (not used by Phronia)
 - non-JSON stdout → ignored
 
 Hook modes (same script, different depth):
@@ -75,12 +75,12 @@ Snow injects these env vars into hook commands, `terminal-execute`, bash mode, a
 | Variable             | Example             | Purpose                                   |
 | -------------------- | ------------------- | ----------------------------------------- |
 | `SNOW_SESSION_ID`    | `c2343752-...`      | Native Snow session uuid                  |
-| `TRELLIS_CONTEXT_ID` | `snow-c2343752-...` | Preferred Trellis active-task context key |
+| `PHRONIA_CONTEXT_ID` | `snow-c2343752-...` | Preferred Phronia active-task context key |
 | `SNOW_CWD`           | project root        | Working directory for hooks/tools         |
 | `SNOW_PLATFORM`      | `snow`              | Platform tag                              |
 
 Notes:
 
-- `TRELLIS_CONTEXT_ID` wins when already set (explicit override).
-- Otherwise Trellis resolves `SNOW_SESSION_ID` via `active_task.py` as platform `snow`.
+- `PHRONIA_CONTEXT_ID` wins when already set (explicit override).
+- Otherwise Phronia resolves `SNOW_SESSION_ID` via `active_task.py` as platform `snow`.
 - Hook stdin may also include dual keys: `sessionId` / `session_id`.

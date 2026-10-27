@@ -1,65 +1,152 @@
-/* global process */
-/**
- * Trellis Session Start Plugin
- *
- * Injects compact SessionStart context into the copy of the latest user
- * message that OpenCode sends to the model. Uses
- * `experimental.chat.messages.transform` so TUI / Web / SQLite history
- * stay untouched (issue #553).
- */
+// phronia-shim: opencode@v1
+// shim-version: 2610.27.1
+// build-id: 46320ff21fd6
+// content-hash: 11b8405666fe8d870aa6a9d18bf3d49f225d38f5aef05ca1c6f7a360b5722cb7
+// DO NOT EDIT. Regenerate with: pnpm build:shims
 
-import { TrellisContext, debugLog, isTrellisSubagent } from "../lib/trellis-context.js"
-import {
-  MESSAGES_TRANSFORM_HOOK,
-  platformInputFromMessages,
-  prependEphemeralText,
-  transcriptHasAssistantMessage,
-} from "../lib/context-visibility.js"
-import { buildSessionContext } from "../lib/session-utils.js"
+import { createRequire as __phroniaCreateRequire } from "node:module"; const require = __phroniaCreateRequire(import.meta.url);
 
-const FIRST_REPLY_NOTICE_RE = /<first-reply-notice>[\s\S]*?<\/first-reply-notice>\s*/g
-
-function stripFirstReplyNotice(context) {
-  return context.replace(FIRST_REPLY_NOTICE_RE, "")
+// packages/cli/src/templates/opencode/lib/phronia-client.js
+import { spawnSync } from "node:child_process";
+function resolveCli() {
+  const explicit = process.env.PHRONIA_CLI_PATH;
+  if (explicit) {
+    return explicit.endsWith(".py") ? { command: process.env.PYTHON || "python3", args: [explicit] } : { command: process.execPath, args: [explicit] };
+  }
+  return { command: process.platform === "win32" ? "phronia.cmd" : "phronia", args: [] };
+}
+function runContext({ event, platform, projectRoot, input, render = false }) {
+  const cli = resolveCli();
+  const args = [
+    ...cli.args,
+    "context",
+    "--event",
+    event,
+    "--platform",
+    platform,
+    "--project-root",
+    projectRoot,
+    "--input",
+    "-"
+  ];
+  if (render) {
+    args.push("--render");
+  } else {
+    args.push("--json");
+  }
+  const result = spawnSync(cli.command, args, {
+    input: JSON.stringify(input ?? {}),
+    encoding: "utf8",
+    timeout: 15e3,
+    env: process.env
+  });
+  if (result.error) {
+    throw result.error;
+  }
+  if (result.status !== 0) {
+    throw new Error(result.stderr || `phronia context exited ${result.status}`);
+  }
+  return render ? result.stdout : JSON.parse(result.stdout);
+}
+function blocksText(response) {
+  if (!response || !Array.isArray(response.blocks)) {
+    return "";
+  }
+  return response.blocks.map((block) => block.text).join("\n\n");
 }
 
-// OpenCode 1.2.x expects plugins to be factory functions (see inject-subagent-context.js comment).
-export default async ({ directory }) => {
-  const ctx = new TrellisContext(directory)
-  debugLog("session", "Plugin loaded, directory:", directory)
+// packages/cli/src/templates/opencode/lib/context-visibility.js
+var CONTEXT_PART_KINDS = {
+  sessionStart: { offset: 2n, slot: "0" },
+  workflowState: { offset: 1n, slot: "1" }
+};
+var MAX_CONTEXT_PART_OFFSET = Object.values(CONTEXT_PART_KINDS).reduce(
+  (maximum, definition) => definition.offset > maximum ? definition.offset : maximum,
+  0n
+);
+var MESSAGES_TRANSFORM_HOOK = "experimental.chat.messages.transform";
+var PHRONIA_SUBAGENT_RE = /^(?:phronia|trellis)-/i;
+function isPhroniaSubagent(input) {
+  if (!input || typeof input !== "object") return false;
+  const agent = typeof input.agent === "string" ? input.agent.trim() : "";
+  return PHRONIA_SUBAGENT_RE.test(agent);
+}
+function findLatestUserMessageIndex(messages) {
+  if (!Array.isArray(messages)) return -1;
+  for (let i = messages.length - 1; i >= 0; i--) {
+    if (messages[i]?.info?.role === "user") return i;
+  }
+  return -1;
+}
+function platformInputFromMessages(messages) {
+  const index = findLatestUserMessageIndex(messages);
+  if (index < 0) return null;
+  const info = messages[index].info;
+  if (!info || typeof info !== "object") return null;
+  return {
+    sessionID: info.sessionID,
+    agent: info.agent
+  };
+}
+function transcriptHasAssistantMessage(messages) {
+  if (!Array.isArray(messages)) return false;
+  return messages.some((message) => message?.info?.role === "assistant");
+}
+function prependEphemeralText(messages, text) {
+  if (!Array.isArray(messages)) return false;
+  if (typeof text !== "string") return false;
+  const index = findLatestUserMessageIndex(messages);
+  if (index < 0) return false;
+  const original = messages[index];
+  const parts = Array.isArray(original.parts) ? original.parts.slice() : [];
+  parts.unshift({
+    type: "text",
+    text,
+    synthetic: true
+  });
+  messages[index] = {
+    ...original,
+    parts
+  };
+  return true;
+}
 
+// packages/cli/src/templates/opencode/plugins/session-start.js
+var FIRST_REPLY_NOTICE_RE = /<first-reply-notice>[\s\S]*?<\/first-reply-notice>\s*/g;
+function stripFirstReplyNotice(context) {
+  return context.replace(FIRST_REPLY_NOTICE_RE, "");
+}
+var session_start_default = async ({ directory }) => {
   return {
     [MESSAGES_TRANSFORM_HOOK]: async (_input, output) => {
-      try {
-        const messages = output?.messages
-        const platformInput = platformInputFromMessages(messages)
-        const agent = platformInput?.agent || "unknown"
-        debugLog("session", "messages.transform called, agent:", agent)
-
-        if (isTrellisSubagent(platformInput)) {
-          debugLog("session", "Skipping trellis subagent turn:", agent)
-          return
-        }
-
-        if (process.env.TRELLIS_HOOKS === "0" || process.env.TRELLIS_DISABLE_HOOKS === "1") {
-          debugLog("session", "Skipping - TRELLIS_HOOKS disabled")
-          return
-        }
-
-        if (process.env.OPENCODE_NON_INTERACTIVE === "1") {
-          debugLog("session", "Skipping - non-interactive mode")
-          return
-        }
-
-        let context = buildSessionContext(ctx, platformInput)
-        if (transcriptHasAssistantMessage(messages)) {
-          context = stripFirstReplyNotice(context)
-        }
-        debugLog("session", "Built context, length:", context.length)
-        prependEphemeralText(messages, context)
-      } catch (error) {
-        debugLog("session", "Error in messages.transform:", error.message, error.stack)
+      const messages = output?.messages;
+      const platformInput = platformInputFromMessages(messages);
+      if (!platformInput || isPhroniaSubagent(platformInput)) {
+        return;
       }
-    },
-  }
-}
+      if (process.env.PHRONIA_HOOKS === "0" || process.env.PHRONIA_DISABLE_HOOKS === "1") {
+        return;
+      }
+      if (process.env.OPENCODE_NON_INTERACTIVE === "1") {
+        return;
+      }
+      const response = runContext({
+        event: "session-start",
+        platform: "opencode",
+        projectRoot: directory,
+        input: platformInput
+      });
+      let context = blocksText(response);
+      if (!context) {
+        return;
+      }
+      if (transcriptHasAssistantMessage(messages)) {
+        context = stripFirstReplyNotice(context);
+      }
+      prependEphemeralText(messages, context);
+    }
+  };
+};
+export {
+  session_start_default as default
+};

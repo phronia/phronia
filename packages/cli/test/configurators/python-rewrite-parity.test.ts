@@ -18,7 +18,7 @@ import path from "node:path";
  */
 const { PYTHON3_LINE } = vi.hoisted(() => ({
   PYTHON3_LINE:
-    "\n\nRun `python3 ./.trellis/scripts/task.py current` before starting.\n",
+    "\n\nRun `python3 ./.phronia/scripts/task.py current` before starting.\n",
 }));
 
 vi.mock("../../src/templates/snow/index.js", async (importOriginal) => {
@@ -69,14 +69,14 @@ const { resetResolvedPythonCommand, setResolvedPythonCommand } = await import(
 const RAW_WRITE_SITES = [
   ["snow", ".snow/SNOW.md"],
   ["copilot", ".github/copilot-instructions.md"],
-  ["reasonix", ".reasonix/skills/trellis-implement/SKILL.md"],
+  ["reasonix", ".reasonix/skills/phronia-implement/SKILL.md"],
 ] as const;
 
 async function configureInto(
   id: (typeof RAW_WRITE_SITES)[number][0],
   relPath: string,
 ): Promise<string> {
-  const dir = fs.mkdtempSync(path.join(os.tmpdir(), `trellis-pyrewrite-${id}-`));
+  const dir = fs.mkdtempSync(path.join(os.tmpdir(), `phronia-pyrewrite-${id}-`));
   try {
     await configurePlatform(id, dir);
     return fs.readFileSync(path.join(dir, ...relPath.split("/")), "utf-8");
@@ -101,7 +101,7 @@ describe("python3 rewrite reaches the previously-raw write sites", () => {
     for (const [id, relPath] of RAW_WRITE_SITES) {
       const written = await configureInto(id, relPath);
       expect(written, `${id}: ${relPath}`).toContain(
-        "python3 ./.trellis/scripts/task.py",
+        "python3 ./.phronia/scripts/task.py",
       );
     }
   });
@@ -111,7 +111,7 @@ describe("python3 rewrite reaches the previously-raw write sites", () => {
     for (const [id, relPath] of RAW_WRITE_SITES) {
       const written = await configureInto(id, relPath);
       expect(written, `${id}: ${relPath}`).toContain(
-        "python ./.trellis/scripts/task.py",
+        "python ./.phronia/scripts/task.py",
       );
       expect(written, `${id}: ${relPath}`).not.toContain("python3");
       expect(written, `${id}: ${relPath} must match the collected bytes`).toBe(

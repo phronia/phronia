@@ -1,0 +1,10 @@
+{
+  "version": 1,
+  "recordedAt": "2026-10-21",
+  "total": 3,
+  "files": {
+    "packages/cli/src/commands/update.ts": 1,
+    "packages/cli/src/templates/opencode/lib/session-utils.js": 1,
+    "packages/core/src/layout/index.ts": 1
+  }
+}

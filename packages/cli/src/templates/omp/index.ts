@@ -1,12 +1,12 @@
 import { createTemplateReader } from "../template-utils.js";
 import type { AgentTemplate } from "../template-utils.js";
 
-const { listMdAgents, readTemplate } = createTemplateReader(import.meta.url);
+const { listMdAgents, readTemplate } = createTemplateReader(import.meta.url, "templates/omp");
 
 export function getAllAgents(): AgentTemplate[] {
   return listMdAgents();
 }
 
 export function getExtensionTemplate(): string {
-  return readTemplate("extensions/trellis/index.ts.txt");
+  return readTemplate("extensions/phronia/index.ts.txt");
 }

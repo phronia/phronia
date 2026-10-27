@@ -1,9 +1,19 @@
-// Strip host-shell session env vars so the OpenCode / Trellis context
+// Strip host-shell session env vars so the OpenCode / Phronia context
 // resolvers under test fall through to platform-input-derived keys
 // instead of picking up whatever the dev's terminal happens to export.
-delete process.env.TRELLIS_CONTEXT_ID;
+import path from "node:path";
+import { fileURLToPath } from "node:url";
 
-// Strip CLAUDE_ENV_FILE: session-start.py appends `export TRELLIS_CONTEXT_ID=…`
+delete process.env.PHRONIA_CONTEXT_ID;
+
+// Historical migration-engine tests exercise the archived upstream manifests.
+// Production loads only `migrations/manifests/` (Phronia's own history).
+process.env.PHRONIA_MIGRATION_MANIFESTS_DIR = path.resolve(
+  path.dirname(fileURLToPath(import.meta.url)),
+  "../src/migrations/upstream",
+);
+
+// Strip CLAUDE_ENV_FILE: session-start.py appends `export PHRONIA_CONTEXT_ID=…`
 // to it, so a dev running the suite inside a Claude Code session would write
 // test fixture keys into their own real shell setup file.
 delete process.env.CLAUDE_ENV_FILE;
@@ -11,7 +21,7 @@ delete process.env.CLAUDE_ENV_FILE;
 // Strip *_PROJECT_DIR vars: shared-hooks/session-start.py prefers them over
 // JSON cwd / process cwd, so a dev running tests inside a Claude Code /
 // Copilot / etc. session would otherwise have the hook read the *real*
-// repo's .trellis/ instead of the test tmpDir.
+// repo's .phronia/ instead of the test tmpDir.
 delete process.env.CLAUDE_PROJECT_DIR;
 delete process.env.QODER_PROJECT_DIR;
 delete process.env.CODEBUDDY_PROJECT_DIR;

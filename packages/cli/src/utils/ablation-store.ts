@@ -1,8 +1,8 @@
 /**
- * External, versioned recovery storage for reversible full Trellis ablation.
+ * External, versioned recovery storage for reversible full Phronia ablation.
  *
  * The store intentionally contains only manifest-owned project paths and the
- * exact `.trellis/` tree. User-authored task/spec/workspace files may contain
+ * exact `.phronia/` tree. User-authored task/spec/workspace files may contain
  * sensitive text, so the state root is private and retained only until a
  * verified restore. Unrelated application files and global host state are
  * never copied.
@@ -24,7 +24,7 @@ import {
 
 export const ABLATION_SCHEMA_VERSION = 1;
 export const FULL_ABLATION_CAPABILITY = "trellis.full" as const;
-export const ABLATION_STATE_ROOT_ENV = "TRELLIS_ABLATION_STATE_ROOT";
+export const ABLATION_STATE_ROOT_ENV = "PHRONIA_ABLATION_STATE_ROOT";
 
 export type AblationStatus = "preparing" | "applied" | "restoring" | "conflict";
 
@@ -120,7 +120,7 @@ export class AblationConflictError extends Error {
 
   public constructor(conflicts: AblationConflict[]) {
     super(
-      `Restore refused because ${conflicts.length} Trellis-managed path(s) changed while ablated.`,
+      `Restore refused because ${conflicts.length} Phronia-managed path(s) changed while ablated.`,
     );
     this.name = "AblationConflictError";
     this.conflicts = conflicts;
@@ -287,7 +287,7 @@ export function getAblationStateRoot(): string {
   if (override && override.trim().length > 0) {
     return path.resolve(override);
   }
-  return path.join(os.homedir(), ".trellis", "ablations", "v1");
+  return path.join(os.homedir(), ".phronia", "ablations", "v1");
 }
 
 export function getTransactionPaths(
@@ -635,7 +635,7 @@ function acquireProjectLock(paths: TransactionPaths): void {
     }
     if (holderPid && pidAlive(holderPid)) {
       throw new Error(
-        `Another Trellis ablation operation is already in progress for this project (pid ${holderPid}).`,
+        `Another Phronia ablation operation is already in progress for this project (pid ${holderPid}).`,
       );
     }
     try {
@@ -645,7 +645,7 @@ function acquireProjectLock(paths: TransactionPaths): void {
     }
   }
   throw new Error(
-    "Unable to acquire the Trellis ablation-operation lock; retry the command.",
+    "Unable to acquire the Phronia ablation-operation lock; retry the command.",
   );
 }
 

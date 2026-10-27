@@ -4,7 +4,7 @@ import {
   resolveChannelRef,
   type ChannelScope,
   type ChannelType,
-} from "@mindfoldhq/trellis-core/channel";
+} from "@phronia/core/channel";
 
 import {
   parseChannelScope,
@@ -31,7 +31,7 @@ export interface CreateOptions {
   ephemeral?: boolean;
   /**
    * Optional mode marker for callers like `channel run` that produce
-   * one-shot channels. Stored as `meta.trellis.createMode` so the
+   * one-shot channels. Stored as `meta.phronia.createMode` so the
    * channel event keeps an `origin: "cli"` write entrypoint while still
    * exposing the mode for downstream consumers.
    */

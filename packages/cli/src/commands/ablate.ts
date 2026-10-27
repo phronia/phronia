@@ -1,4 +1,4 @@
-/** Full, reversible project-level Trellis ablation and exact restoration. */
+/** Full, reversible project-level Phronia ablation and exact restoration. */
 
 import fs from "node:fs";
 import path from "node:path";
@@ -128,7 +128,7 @@ function renderAblatePlan(
   console.log(chalk.gray(`\nRecovery transaction: ${transactionDir}`));
   console.log(
     chalk.yellow(
-      "Recovery copies exact .trellis task/spec/workspace bytes, which may contain user-authored sensitive text. " +
+      "Recovery copies exact .phronia task/spec/workspace bytes, which may contain user-authored sensitive text. " +
         "The private transaction is retained until verified restore.\n",
     ),
   );
@@ -141,7 +141,7 @@ function renderRestorePlan(transaction: LoadedAblationTransaction): void {
   );
   console.log(
     chalk.gray(
-      `Transaction created with Trellis ${transaction.state.trellisVersion} at ${transaction.state.createdAt}.\n`,
+      `Transaction created with Phronia ${transaction.state.trellisVersion} at ${transaction.state.createdAt}.\n`,
     ),
   );
 }
@@ -368,13 +368,13 @@ export async function ablate(options: AblateOptions = {}): Promise<void> {
 
   const trellisPath = path.join(projectRoot, DIR_NAMES.WORKFLOW);
   if (!lstatIfPresent(trellisPath)) {
-    console.log(chalk.gray("Trellis is not installed in this project."));
+    console.log(chalk.gray("Phronia is not installed in this project."));
     return;
   }
   const hashes = loadHashes(projectRoot);
   if (Object.keys(hashes).length === 0) {
     throw new Error(
-      "Trellis manifest is missing or not v2. Run the current `trellis update` before ablation.",
+      "Phronia manifest is missing or not v2. Run the current `trellis update` before ablation.",
     );
   }
 
@@ -398,7 +398,7 @@ export async function ablate(options: AblateOptions = {}): Promise<void> {
   } catch (error) {
     throw new Error(
       `${error instanceof Error ? error.message : String(error)} ` +
-        "Restore the managed file to its Trellis-generated form or remove its stale manifest entry, then retry.",
+        "Restore the managed file to its Phronia-generated form or remove its stale manifest entry, then retry.",
       { cause: error },
     );
   }
@@ -414,7 +414,7 @@ export async function ablate(options: AblateOptions = {}): Promise<void> {
     if (!process.stdin.isTTY) refuseNonInteractivePrompt("ablate");
     if (
       !(await promptContinue(
-        "Temporarily remove all project Trellis surfaces?",
+        "Temporarily remove all project Phronia surfaces?",
       ))
     ) {
       console.log(chalk.yellow("Ablation cancelled. No files modified."));
@@ -447,13 +447,13 @@ export async function ablate(options: AblateOptions = {}): Promise<void> {
     }
   });
 
-  console.log(chalk.green("Trellis is fully ablated for this project."));
+  console.log(chalk.green("Phronia is fully ablated for this project."));
   console.log(
     chalk.yellow("Start a fresh agent session before comparing behavior."),
   );
   console.log(
     chalk.gray(
-      "Git may show Trellis-managed deletions. The global CLI, channel logs, and host transcripts were not removed.",
+      "Git may show Phronia-managed deletions. The global CLI, channel logs, and host transcripts were not removed.",
     ),
   );
 }
@@ -464,7 +464,7 @@ export async function restore(options: RestoreOptions = {}): Promise<void> {
   const transaction = loadAblationTransaction(projectRoot);
   if (!transaction) {
     console.log(
-      chalk.gray("No Trellis ablation transaction exists for this project."),
+      chalk.gray("No Phronia ablation transaction exists for this project."),
     );
     return;
   }
@@ -472,7 +472,7 @@ export async function restore(options: RestoreOptions = {}): Promise<void> {
   if (!options.dryRun && !options.yes) {
     if (!process.stdin.isTTY) refuseNonInteractivePrompt("restore");
     if (
-      !(await promptContinue("Restore the exact pre-ablation Trellis state?"))
+      !(await promptContinue("Restore the exact pre-ablation Phronia state?"))
     ) {
       console.log(chalk.yellow("Restore cancelled. No files modified."));
       return;
@@ -491,9 +491,9 @@ export async function restore(options: RestoreOptions = {}): Promise<void> {
     );
     return;
   }
-  console.log(chalk.green("Trellis project state restored exactly."));
+  console.log(chalk.green("Phronia project state restored exactly."));
   console.log(
-    chalk.yellow("Start a fresh agent session to resume with Trellis."),
+    chalk.yellow("Start a fresh agent session to resume with Phronia."),
   );
 }
 

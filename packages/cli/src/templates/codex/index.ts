@@ -2,11 +2,11 @@
  * Codex templates
  *
  * These are GENERIC templates for user projects.
- * Do NOT use Trellis project's own .agents/skills or .codex directories
+ * Do NOT use Phronia project's own .agents/skills or .codex directories
  * (which may be customized).
  *
  * Workflow skills are NOT stored here. They come from templates/common/ and are
- * written to .agents/skills/ as trellis-*, which Codex reads alongside
+ * written to .agents/skills/ as phronia-*, which Codex reads alongside
  * .codex/skills/ (see configurators/codex.ts).
  *
  * Directory structure:
@@ -18,11 +18,10 @@
  */
 
 import { readdirSync, readFileSync } from "node:fs";
-import { dirname, join } from "node:path";
-import { fileURLToPath } from "node:url";
+import { join } from "node:path";
+import { assetDir } from "../asset-root.js";
 
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = dirname(__filename);
+const __dirname = assetDir(import.meta.url, "templates/codex");
 
 function readTemplate(relativePath: string): string {
   return readFileSync(join(__dirname, relativePath), "utf-8");

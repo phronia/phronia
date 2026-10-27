@@ -16,7 +16,7 @@ import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
 
-import { workflowMdTemplate } from "../templates/trellis/index.js";
+import { workflowMdTemplate } from "../templates/workflow/index.js";
 import {
   TIMEOUTS,
   TEMPLATE_INDEX_URL,
@@ -31,8 +31,8 @@ import {
 /**
  * The id used to refer to the bundled native workflow.
  *
- * Treated as Trellis-managed for hash-tracking: when this id is selected by
- * `init --workflow` or `trellis workflow`, `.trellis/workflow.md` stays in
+ * Treated as Phronia-managed for hash-tracking: when this id is selected by
+ * `init --workflow` or `trellis workflow`, `.phronia/workflow.md` stays in
  * `.template-hashes.json`. Any other id is user-managed local workflow and
  * must be removed from the hash file (the durable-state contract in
  * design.md "Durable-state contract").
@@ -91,9 +91,9 @@ function nativeListingEntry(): WorkflowTemplateListing {
   return {
     id: NATIVE_WORKFLOW_ID,
     type: "workflow",
-    name: "Native Trellis Workflow",
+    name: "Native Phronia Workflow",
     description:
-      "Default Trellis Plan / Execute / Finish workflow bundled with the CLI",
+      "Default Phronia Plan / Execute / Finish workflow bundled with the CLI",
     path: "bundled:trellis/workflow.md",
     source: "bundled",
   };
@@ -322,7 +322,7 @@ async function fetchWorkflowFileGit(
   // workflow resolution is a single-file fetch (not a directory copy).
   const { execFile } = await import("node:child_process");
   const dir = await fs.promises.mkdtemp(
-    path.join(os.tmpdir(), "trellis-workflow-"),
+    path.join(os.tmpdir(), "phronia-workflow-"),
   );
 
   function run(args: string[]): Promise<void> {

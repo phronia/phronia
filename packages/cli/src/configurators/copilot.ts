@@ -20,7 +20,7 @@ import {
 /**
  * The GitHub Copilot file set — written at init and diffed by `trellis update`.
  * - prompts/ — start + finish-work as prompt files
- * - skills/trellis-{name}/SKILL.md — auto-triggered skills from `common/skills/`
+ * - skills/phronia-{name}/SKILL.md — auto-triggered skills from `common/skills/`
  * - agents/{name}.agent.md — sub-agent definitions (note .agent.md suffix)
  * - copilot/hooks/ — platform-specific + shared hook scripts
  * - hooks config — hooks.json

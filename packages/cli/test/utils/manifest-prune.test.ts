@@ -1,6 +1,6 @@
 /**
  * Unit tests for pruneOrphanManifestKeys + isCwdHomedir
- * (.trellis/tasks/05-13-uninstall-overdelete-manifest-leak).
+ * (.phronia/tasks/05-13-uninstall-overdelete-manifest-leak).
  */
 
 import { describe, it, expect, beforeEach, afterEach } from "vitest";
@@ -20,19 +20,19 @@ describe("pruneOrphanManifestKeys", () => {
   let tmpDir: string;
 
   beforeEach(() => {
-    tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), "trellis-prune-"));
-    fs.mkdirSync(path.join(tmpDir, ".trellis"), { recursive: true });
+    tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), "phronia-prune-"));
+    fs.mkdirSync(path.join(tmpDir, ".phronia"), { recursive: true });
   });
 
   afterEach(() => {
     fs.rmSync(tmpDir, { recursive: true, force: true });
   });
 
-  it("preserves every .trellis/* entry regardless of platform-collect output", () => {
+  it("preserves every .phronia/* entry regardless of platform-collect output", () => {
     const hashes = {
-      ".trellis/workflow.md": "h1",
-      ".trellis/scripts/task.py": "h2",
-      ".trellis/config.yaml": "h3",
+      ".phronia/workflow.md": "h1",
+      ".phronia/scripts/task.py": "h2",
+      ".phronia/config.yaml": "h3",
     };
     saveHashes(tmpDir, hashes);
 
@@ -82,11 +82,11 @@ describe("pruneOrphanManifestKeys", () => {
     expect(kept).not.toHaveProperty(".claude/sessions/user.jsonl");
   });
 
-  it("keeps root-level AGENTS.md when it has Trellis managed-block markers", () => {
+  it("keeps root-level AGENTS.md when it has Phronia managed-block markers", () => {
     const hashes = { "AGENTS.md": "h" };
     fs.writeFileSync(
       path.join(tmpDir, "AGENTS.md"),
-      "<!-- TRELLIS:START -->\nmanaged\n<!-- TRELLIS:END -->\n",
+      "<!-- PHRONIA:START -->\nmanaged\n<!-- PHRONIA:END -->\n",
     );
     saveHashes(tmpDir, hashes);
 
@@ -100,7 +100,7 @@ describe("pruneOrphanManifestKeys", () => {
     expect(kept).toHaveProperty("AGENTS.md");
   });
 
-  it("prunes poisoned root-level AGENTS.md when the file lacks Trellis markers", () => {
+  it("prunes poisoned root-level AGENTS.md when the file lacks Phronia markers", () => {
     const hashes = { "AGENTS.md": "user-hash" };
     fs.writeFileSync(path.join(tmpDir, "AGENTS.md"), "my own AGENTS.md\n");
     saveHashes(tmpDir, hashes);
@@ -117,7 +117,7 @@ describe("pruneOrphanManifestKeys", () => {
 
   it("persists pruned manifest to disk by default", () => {
     const hashes = {
-      ".trellis/workflow.md": "h1",
+      ".phronia/workflow.md": "h1",
       ".codex/sessions/user.jsonl": "orphan",
     };
     saveHashes(tmpDir, hashes);
@@ -127,12 +127,12 @@ describe("pruneOrphanManifestKeys", () => {
     expect(pruned).toEqual([".codex/sessions/user.jsonl"]);
     // Disk should reflect the prune.
     expect(loadHashes(tmpDir)).not.toHaveProperty(".codex/sessions/user.jsonl");
-    expect(loadHashes(tmpDir)).toHaveProperty(".trellis/workflow.md");
+    expect(loadHashes(tmpDir)).toHaveProperty(".phronia/workflow.md");
   });
 
   it("does NOT write disk when persist=false", () => {
     const hashes = {
-      ".trellis/workflow.md": "h1",
+      ".phronia/workflow.md": "h1",
       ".codex/sessions/user.jsonl": "orphan",
     };
     saveHashes(tmpDir, hashes);
@@ -144,10 +144,10 @@ describe("pruneOrphanManifestKeys", () => {
   });
 
   it("does NOT rewrite disk when nothing was pruned", () => {
-    const hashes = { ".trellis/workflow.md": "h1" };
+    const hashes = { ".phronia/workflow.md": "h1" };
     saveHashes(tmpDir, hashes);
 
-    const hashFile = path.join(tmpDir, ".trellis", ".template-hashes.json");
+    const hashFile = path.join(tmpDir, ".phronia", ".template-hashes.json");
     const mtimeBefore = fs.statSync(hashFile).mtimeMs;
 
     // Wait a tick so mtime would visibly differ if a write happened.
@@ -201,30 +201,30 @@ describe("isCwdHomedir / homedir guard helpers", () => {
     }
   });
 
-  it("homedirBypassEnabled reflects TRELLIS_ALLOW_HOMEDIR env var", () => {
-    const orig = process.env.TRELLIS_ALLOW_HOMEDIR;
+  it("homedirBypassEnabled reflects PHRONIA_ALLOW_HOMEDIR env var", () => {
+    const orig = process.env.PHRONIA_ALLOW_HOMEDIR;
     try {
-      delete process.env.TRELLIS_ALLOW_HOMEDIR;
+      delete process.env.PHRONIA_ALLOW_HOMEDIR;
       expect(homedirBypassEnabled()).toBe(false);
-      process.env.TRELLIS_ALLOW_HOMEDIR = "1";
+      process.env.PHRONIA_ALLOW_HOMEDIR = "1";
       expect(homedirBypassEnabled()).toBe(true);
       for (const value of ["0", "false", "true", ""]) {
-        process.env.TRELLIS_ALLOW_HOMEDIR = value;
+        process.env.PHRONIA_ALLOW_HOMEDIR = value;
         expect(homedirBypassEnabled()).toBe(false);
       }
     } finally {
-      if (orig === undefined) delete process.env.TRELLIS_ALLOW_HOMEDIR;
-      else process.env.TRELLIS_ALLOW_HOMEDIR = orig;
+      if (orig === undefined) delete process.env.PHRONIA_ALLOW_HOMEDIR;
+      else process.env.PHRONIA_ALLOW_HOMEDIR = orig;
     }
   });
 
   it("homedirGuardMessage mentions the command and the bypass env var", () => {
     const msgInit = homedirGuardMessage("init");
     expect(msgInit).toContain("init");
-    expect(msgInit).toContain("TRELLIS_ALLOW_HOMEDIR=1");
+    expect(msgInit).toContain("PHRONIA_ALLOW_HOMEDIR=1");
 
     const msgUninstall = homedirGuardMessage("uninstall");
     expect(msgUninstall).toContain("uninstall");
-    expect(msgUninstall).toContain("TRELLIS_ALLOW_HOMEDIR=1");
+    expect(msgUninstall).toContain("PHRONIA_ALLOW_HOMEDIR=1");
   });
 });

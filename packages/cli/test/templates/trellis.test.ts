@@ -28,7 +28,7 @@ import {
   implementAgentTemplate,
   checkAgentTemplate,
   configYamlTemplate,
-} from "../../src/templates/trellis/index.js";
+} from "../../src/templates/workflow/index.js";
 
 // =============================================================================
 // Template Constants — module-level string exports
@@ -131,7 +131,10 @@ describe("trellis template constants", () => {
     expect(workflowMdTemplate).toContain("#");
   });
 
-  it("marketplace native workflow mirror matches the bundled workflow", () => {
+  it("marketplace native workflow keeps the bundled section structure", () => {
+    // The fork renames `.trellis` to `.phronia`, so byte equality with the
+    // upstream marketplace submodule no longer holds. Section headings are the
+    // stable contract: they catch structural drift without pinning paths.
     const repoRoot = fs.existsSync(path.join(process.cwd(), "marketplace"))
       ? process.cwd()
       : path.resolve(process.cwd(), "../..");
@@ -139,7 +142,9 @@ describe("trellis template constants", () => {
       path.join(repoRoot, "marketplace/workflows/native/workflow.md"),
       "utf-8",
     );
-    expect(marketplaceNative).toBe(workflowMdTemplate);
+    const headings = (text: string): string[] =>
+      [...text.matchAll(/^##\s+(.+)$/gm)].map((match) => match[1].replace(/\bTrellis\b/g, "Phronia").trim());
+    expect(headings(marketplaceNative)).toEqual(headings(workflowMdTemplate));
   });
 
   it("marketplace TDD workflow planning breadcrumbs include behavior gates", () => {
@@ -211,8 +216,8 @@ describe("trellis template constants", () => {
         templates !== undefined &&
         [...templates.entries()].some(
           ([filePath, content]) =>
-            /trellis-(implement|check)/.test(filePath) &&
-            content.includes("Required: Load Trellis Context First"),
+            /phronia-(implement|check)/.test(filePath) &&
+            content.includes("Required: Load Phronia Context First"),
         );
       if (!hasPullBasedPrelude) {
         return [];
@@ -264,26 +269,26 @@ describe("trellis template constants", () => {
     const block = inProgressBreadcrumb();
     expect(block).toContain("Main-session default");
     expect(block).toContain("Sub-agent self-exemption");
-    expect(block).toContain("already running as `trellis-implement`");
-    expect(block).toContain("do NOT spawn another `trellis-implement`");
-    expect(block).toContain("already running as `trellis-check`");
-    expect(block).toContain("do NOT spawn another `trellis-check`");
+    expect(block).toContain("already running as `phronia-implement`");
+    expect(block).toContain("do NOT spawn another `phronia-implement`");
+    expect(block).toContain("already running as `phronia-check`");
+    expect(block).toContain("do NOT spawn another `phronia-check`");
     expect(block).toContain("main session only");
   });
 
   it("[issue-237] workflow.md Phase 2 dispatch steps require prompt recursion guards", () => {
     expect(workflowMdTemplate).toContain("**Dispatch prompt guard**");
     expect(workflowMdTemplate).toContain(
-      "already the `trellis-implement` sub-agent",
+      "already the `phronia-implement` sub-agent",
     );
     expect(workflowMdTemplate).toContain(
-      "not spawn another `trellis-implement` / `trellis-check`",
+      "not spawn another `phronia-implement` / `phronia-check`",
     );
     expect(workflowMdTemplate).toContain(
-      "already the `trellis-check` sub-agent",
+      "already the `phronia-check` sub-agent",
     );
     expect(workflowMdTemplate).toContain(
-      "not spawn another `trellis-check` / `trellis-implement`",
+      "not spawn another `phronia-check` / `phronia-implement`",
     );
   });
 
@@ -385,7 +390,7 @@ describe("getAllScripts", () => {
 
 // =============================================================================
 // getAllAgents — channel runtime agent definitions dispatched at init/update.
-// agent-loader.ts loads `.trellis/agents/<name>.md` and requires `---` YAML
+// agent-loader.ts loads `.phronia/agents/<name>.md` and requires `---` YAML
 // frontmatter at the top with a flat `name: <name>` field. These tests pin the
 // contract so a future template edit can't silently break channel spawn.
 // =============================================================================

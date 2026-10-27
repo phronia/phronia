@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
-"""Trellis per-turn breadcrumb hook (UserPromptSubmit / BeforeAgent equivalent).
+"""Phronia per-turn breadcrumb hook (UserPromptSubmit / BeforeAgent equivalent).
 
-Runs on every user prompt. Resolves the active task through Trellis'
+Runs on every user prompt. Resolves the active task through Phronia'
 session-aware active task resolver and emits a short <workflow-state>
 block reminding the main AI what task is active and its expected flow.
 
@@ -28,7 +28,7 @@ custom agent's ``hooks.userPromptSubmit`` and the IDE ``.kiro.hook``
 (Kiro adds hook stdout directly to the conversation context).
 
 Silent exit 0 case (no output):
-  - No .trellis/ directory found (not a Trellis project)
+  - No .phronia/ directory found (not a Phronia project)
 
 When a session points at a task directory whose task.json is missing, malformed,
 or missing a usable status, the hook emits a task_error breadcrumb instead of
@@ -38,6 +38,11 @@ from __future__ import annotations
 
 import json
 import os
+
+# TRELLIS_* -> PHRONIA_* compatibility (removed in the next major).
+for _legacy_key in list(os.environ):
+    if _legacy_key.startswith("TRELLIS_"):
+        os.environ.setdefault("PHRONIA_" + _legacy_key[8:], os.environ[_legacy_key])
 import re
 import sys
 import queue
@@ -71,24 +76,24 @@ from typing import Optional
 # Bootstrap notice for Codex while the session has no active task. Codex does not
 # get the full SessionStart overview; this short reminder points the main session
 # at the start skill once and leaves the per-turn state block compact.
-CODEX_NO_TASK_BOOTSTRAP_NOTICE = """<trellis-bootstrap>
-If you have not already loaded Trellis context this session, read the `trellis-start` skill once.
-</trellis-bootstrap>"""
+CODEX_NO_TASK_BOOTSTRAP_NOTICE = """<phronia-bootstrap>
+If you have not already loaded Phronia context this session, read the `phronia-start` skill once.
+</phronia-bootstrap>"""
 
 
 # ---------------------------------------------------------------------------
-# CWD-robust Trellis root discovery (fixes hook-path-robustness for this hook)
+# CWD-robust Phronia root discovery (fixes hook-path-robustness for this hook)
 # ---------------------------------------------------------------------------
 
 def find_trellis_root(start: Path) -> Optional[Path]:
-    """Walk up from start to find directory containing .trellis/.
+    """Walk up from start to find directory containing .phronia/.
 
     Handles CWD drift: subdirectory launches, monorepo packages, etc.
-    Returns None if no .trellis/ found (silent no-op).
+    Returns None if no .phronia/ found (silent no-op).
     """
     cur = start.resolve()
     while cur != cur.parent:
-        if (cur / ".trellis").is_dir():
+        if (cur / ".phronia").is_dir():
             return cur
         cur = cur.parent
     return None
@@ -150,7 +155,7 @@ def _detect_platform(input_data: dict) -> str | None:
 
 
 def _resolve_active_task(root: Path, input_data: dict):
-    scripts_dir = root / ".trellis" / "scripts"
+    scripts_dir = root / ".phronia" / "scripts"
     if str(scripts_dir) not in sys.path:
         sys.path.insert(0, str(scripts_dir))
     from common.active_task import resolve_active_task  # type: ignore[import-not-found]
@@ -215,7 +220,7 @@ def load_breadcrumbs(root: Path) -> dict[str, str]:
     in build_breadcrumb so users see the broken state and fix
     workflow.md, rather than the hook silently masking the issue.
     """
-    workflow = root / ".trellis" / "workflow.md"
+    workflow = root / ".phronia" / "workflow.md"
     if not workflow.is_file():
         return {}
     try:
@@ -233,12 +238,12 @@ def load_breadcrumbs(root: Path) -> dict[str, str]:
 
 
 def _read_trellis_config(root: Path) -> dict:
-    """Load .trellis/config.yaml via the bundled trellis_config helper.
+    """Load .phronia/config.yaml via the bundled trellis_config helper.
 
-    The helper lives in .trellis/scripts/common; the hook lives outside the
+    The helper lives in .phronia/scripts/common; the hook lives outside the
     scripts tree, so we extend sys.path before importing.
     """
-    scripts_dir = root / ".trellis" / "scripts"
+    scripts_dir = root / ".phronia" / "scripts"
     if str(scripts_dir) not in sys.path:
         sys.path.insert(0, str(scripts_dir))
     try:
@@ -255,7 +260,7 @@ DEFAULT_PROMPT_INJECTION_SKIP_KEYWORD = "no-trellis"
 
 
 def _resolve_skip_keyword(config: dict) -> str:
-    """Read `prompt_injection.skip_keyword` from parsed .trellis/config.yaml.
+    """Read `prompt_injection.skip_keyword` from parsed .phronia/config.yaml.
 
     Mirrors `common.config.get_prompt_injection_config()`. Defaults to
     "no-trellis"; "" disables the escape hatch entirely. A non-string value
@@ -284,7 +289,7 @@ def prompt_has_skip_keyword(prompt: str, keyword: str) -> bool:
 
 
 def _resolve_codex_dispatch_mode(config: dict) -> str:
-    """Normalize `codex.dispatch_mode` from .trellis/config.yaml to "auto" or "inline".
+    """Normalize `codex.dispatch_mode` from .phronia/config.yaml to "auto" or "inline".
 
     Defaults to `auto`. The legacy `sub-agent` value is an alias for `auto`.
     Any other explicit value (including invalid ones) falls back to `inline`
@@ -309,8 +314,8 @@ def _resolve_codex_dispatch_mode(config: dict) -> str:
 def _codex_mode_banner(config: dict) -> str:
     """Emit a `<codex-mode>` banner for the additionalContext payload.
 
-    Reads `codex.dispatch_mode` from .trellis/config.yaml; defaults to
-    `auto`, which dispatches Trellis sub-agents using native Codex context
+    Reads `codex.dispatch_mode` from .phronia/config.yaml; defaults to
+    `auto`, which dispatches Phronia sub-agents using native Codex context
     injection with a child-side fallback. This does not rely on inherited
     parent transcripts: `fork_turns` remains caller-controlled, and
     fresh-history sub-agents still receive their explicit delegated task and
@@ -324,7 +329,7 @@ def _codex_mode_banner(config: dict) -> str:
     mode = _resolve_codex_dispatch_mode(config)
     if mode == "auto":
         meaning = (
-            "auto: implement/check work defaults to Trellis sub-agents; native Codex "
+            "auto: implement/check work defaults to Phronia sub-agents; native Codex "
             "context injection is preferred and child-side loading is the fallback. "
             "The main session still coordinates, clarifies, updates specs, commits, and finishes."
         )
@@ -418,7 +423,7 @@ def _load_hook_input() -> dict:
 
 
 def main() -> int:
-    if os.environ.get("TRELLIS_HOOKS") == "0" or os.environ.get("TRELLIS_DISABLE_HOOKS") == "1":
+    if os.environ.get("PHRONIA_HOOKS") == "0" or os.environ.get("PHRONIA_DISABLE_HOOKS") == "1":
         return 0
 
     data = _load_hook_input()
@@ -428,7 +433,7 @@ def main() -> int:
 
     root = find_trellis_root(cwd)
     if root is None:
-        return 0  # not a Trellis project
+        return 0  # not a Phronia project
 
     config = _read_trellis_config(root)
     if prompt_has_skip_keyword(data.get("prompt", ""), _resolve_skip_keyword(config)):
@@ -439,7 +444,7 @@ def main() -> int:
     task = get_active_task(root, data)
     if task is None:
         # No active task — still emit a breadcrumb nudging AI toward
-        # trellis-brainstorm + task.py create when user describes real work.
+        # phronia-brainstorm + task.py create when user describes real work.
         no_task_key = resolve_breadcrumb_key("no_task", platform, config)
         breadcrumb = build_breadcrumb(
             None, "no_task", templates, breadcrumb_key=no_task_key

@@ -1,7 +1,16 @@
-// Root barrel — re-exports the channel and task public APIs so callers
-// can `import { ... } from "@mindfoldhq/trellis-core"`. Sub-path
-// imports (`@mindfoldhq/trellis-core/channel`, `/task`) remain the
+// Root barrel — re-exports the channel, task, and layout public APIs so callers
+// can `import { ... } from "@phronia/core"`. Sub-path
+// imports (`@phronia/core/channel`, `/task`, `/layout`) remain the
 // recommended form for tree-shake-friendly consumption.
 
 export * from "./channel/index.js";
 export * from "./task/index.js";
+export * from "./layout/index.js";
+export * from "./layout/env.js";
+export * from "./state/index.js";
+export * from "./platform/index.js";
+export * from "./context/index.js";
+export * from "./version.js";
+export * from "./rules/index.js";
+export * from "./spec/status.js";
+export * from "./docs/requirements.js";

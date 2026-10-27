@@ -12,11 +12,10 @@
  */
 
 import { readdirSync, readFileSync, statSync } from "node:fs";
-import { dirname, join, relative, sep } from "node:path";
-import { fileURLToPath } from "node:url";
+import { join, relative, sep } from "node:path";
+import { assetDir } from "../asset-root.js";
 
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = dirname(__filename);
+const __dirname = assetDir(import.meta.url, "templates/common");
 
 function readTemplate(relativePath: string): string {
   return readFileSync(join(__dirname, relativePath), "utf-8");
@@ -47,7 +46,7 @@ export interface CommonBundledSkillFile {
 }
 
 export interface CommonBundledSkill {
-  /** Skill directory name, e.g. "trellis-meta" */
+  /** Skill directory name, e.g. "phronia-meta" */
   name: string;
   /** Files that must be written under the skill directory */
   files: CommonBundledSkillFile[];

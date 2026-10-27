@@ -1,7 +1,7 @@
 /**
- * Canonical task.json shape — single source of truth for Trellis tasks.
+ * Canonical task.json shape — single source of truth for Phronia tasks.
  *
- * The runtime Python writer is `.trellis/scripts/common/task_store.py`
+ * The runtime Python writer is `.phronia/scripts/common/task_store.py`
  * (`cmd_create`). The 24-field shape and field order below mirror that
  * writer exactly so every TS and Python entry point produces structurally
  * identical task.json files.

@@ -40,13 +40,13 @@ describe("CONFIG_DIRS", () => {
 });
 
 describe("ALL_MANAGED_DIRS", () => {
-  it("starts with .trellis", () => {
-    expect(ALL_MANAGED_DIRS[0]).toBe(".trellis");
+  it("starts with .phronia", () => {
+    expect(ALL_MANAGED_DIRS[0]).toBe(".phronia");
   });
 
-  it("contains .trellis plus all managed dirs", () => {
+  it("contains .phronia plus all managed dirs", () => {
     expect(ALL_MANAGED_DIRS).toEqual([
-      ".trellis",
+      ".phronia",
       ...new Set(PLATFORM_MANAGED_DIRS),
     ]);
   });
@@ -71,13 +71,13 @@ describe("isManagedPath", () => {
     expect(isManagedPath(".codex/agents/check.toml")).toBe(true);
     expect(isManagedPath(".agent/workflows/start.md")).toBe(true);
     expect(isManagedPath(".kiro/skills/start/SKILL.md")).toBe(true);
-    expect(isManagedPath(".devin/workflows/trellis-start.md")).toBe(true);
+    expect(isManagedPath(".devin/workflows/phronia-start.md")).toBe(true);
     expect(isManagedPath(".github/prompts/start.prompt.md")).toBe(true);
     expect(isManagedPath(".github/copilot/hooks/session-start.py")).toBe(true);
     expect(isManagedPath(".github/hooks/trellis.json")).toBe(true);
-    expect(isManagedPath(".pi/extensions/trellis/index.ts")).toBe(true);
-    expect(isManagedPath(".pi/prompts/trellis-continue.md")).toBe(true);
-    expect(isManagedPath(".dsh/skills/trellis-start/SKILL.md")).toBe(true);
+    expect(isManagedPath(".pi/extensions/phronia/index.ts")).toBe(true);
+    expect(isManagedPath(".pi/prompts/phronia-continue.md")).toBe(true);
+    expect(isManagedPath(".dsh/skills/phronia-start/SKILL.md")).toBe(true);
   });
 
   // Positive: exact match (startsWith(d + "/") = false, === d = true)
@@ -93,19 +93,19 @@ describe("isManagedPath", () => {
     expect(isManagedPath(".github/prompts")).toBe(true);
     expect(isManagedPath(".github/hooks")).toBe(true);
     expect(isManagedPath(".dsh")).toBe(true);
-    expect(isManagedPath(".trellis")).toBe(true);
+    expect(isManagedPath(".phronia")).toBe(true);
   });
 
-  // Positive: .trellis hardcoded paths
-  it("matches .trellis sub-paths", () => {
-    expect(isManagedPath(".trellis/spec")).toBe(true);
-    expect(isManagedPath(".trellis/tasks/some-task")).toBe(true);
+  // Positive: .phronia hardcoded paths
+  it("matches .phronia sub-paths", () => {
+    expect(isManagedPath(".phronia/spec")).toBe(true);
+    expect(isManagedPath(".phronia/tasks/some-task")).toBe(true);
   });
 
   // Boundary: prefix-similar but NOT a sub-path (no / separator after name)
   it("rejects prefix-similar non-sub-paths", () => {
     expect(isManagedPath(".claude-backup")).toBe(false);
-    expect(isManagedPath(".trellis-old")).toBe(false);
+    expect(isManagedPath(".phronia-old")).toBe(false);
     expect(isManagedPath(".cursorignore")).toBe(false);
     expect(isManagedPath(".opencode-v2")).toBe(false);
     expect(isManagedPath(".agents/skills-backup")).toBe(false);
@@ -127,7 +127,7 @@ describe("isManagedPath", () => {
   // Boundary: path traversal
   it("rejects path traversal", () => {
     expect(isManagedPath("../.claude")).toBe(false);
-    expect(isManagedPath("../.trellis/spec")).toBe(false);
+    expect(isManagedPath("../.phronia/spec")).toBe(false);
   });
 
   // Boundary: unrelated directories
@@ -141,12 +141,12 @@ describe("isManagedPath", () => {
   // Windows path separator (bug fix verification)
   it("matches Windows-style backslash paths", () => {
     expect(isManagedPath(".claude\\commands\\foo.md")).toBe(true);
-    expect(isManagedPath(".trellis\\spec\\backend")).toBe(true);
+    expect(isManagedPath(".phronia\\spec\\backend")).toBe(true);
     expect(isManagedPath(".agents\\skills\\start\\SKILL.md")).toBe(true);
     expect(isManagedPath(".codex\\agents\\check.toml")).toBe(true);
     expect(isManagedPath(".agent\\workflows\\start.md")).toBe(true);
     expect(isManagedPath(".kiro\\skills\\start\\SKILL.md")).toBe(true);
-    expect(isManagedPath(".devin\\workflows\\trellis-start.md")).toBe(true);
+    expect(isManagedPath(".devin\\workflows\\phronia-start.md")).toBe(true);
     expect(isManagedPath(".github\\prompts\\start.prompt.md")).toBe(true);
     expect(isManagedPath(".github\\copilot\\hooks\\session-start.py")).toBe(
       true,
@@ -172,8 +172,8 @@ describe("isManagedRootDir", () => {
     }
   });
 
-  it("matches .trellis", () => {
-    expect(isManagedRootDir(".trellis")).toBe(true);
+  it("matches .phronia", () => {
+    expect(isManagedRootDir(".phronia")).toBe(true);
   });
 
   it("matches shared agent skills layer", () => {
@@ -190,7 +190,7 @@ describe("isManagedRootDir", () => {
 
   it("rejects sub-paths (not a root dir)", () => {
     expect(isManagedRootDir(".claude/commands")).toBe(false);
-    expect(isManagedRootDir(".trellis/spec")).toBe(false);
+    expect(isManagedRootDir(".phronia/spec")).toBe(false);
   });
 
   it("rejects unrelated directories", () => {
@@ -317,7 +317,7 @@ describe("collectPlatformTemplates", () => {
     kilo: ".kilocode/skills",
     kiro: ".kiro/skills",
     // Gemini CLI 0.40+ reads `.agents/skills/` as a workspace alias.
-    // Trellis writes there (shared with Codex) so a single skill set serves
+    // Phronia writes there (shared with Codex) so a single skill set serves
     // both platforms — eliminates duplicate-skill warnings (issue #224).
     gemini: ".agents/skills",
     antigravity: ".agent/skills",
@@ -326,7 +326,7 @@ describe("collectPlatformTemplates", () => {
     codebuddy: ".codebuddy/skills",
     copilot: ".github/skills",
     droid: ".factory/skills",
-    // Pi discovers `.agents/skills/` natively; Trellis writes there (shared
+    // Pi discovers `.agents/skills/` natively; Phronia writes there (shared
     // with Codex/Gemini) instead of a private `.pi/skills/` copy (#447).
     pi: ".agents/skills",
     zcode: ".zcode/skills",
@@ -376,18 +376,18 @@ describe("collectPlatformTemplates", () => {
     for (const [id, skillRoot] of Object.entries(SKILL_ROOTS)) {
       const result = collectPlatformTemplates(id as AITool);
       expect(result, `${id} should have template tracking`).toBeInstanceOf(Map);
-      expect(result?.has(`${skillRoot}/trellis-meta/SKILL.md`)).toBe(true);
+      expect(result?.has(`${skillRoot}/phronia-meta/SKILL.md`)).toBe(true);
       expect(
         result?.has(
-          `${skillRoot}/trellis-meta/references/local-architecture/overview.md`,
+          `${skillRoot}/phronia-meta/references/local-architecture/overview.md`,
         ),
       ).toBe(true);
-      expect(result?.has(`${skillRoot}/trellis-spec-bootstrap/SKILL.md`)).toBe(
+      expect(result?.has(`${skillRoot}/phronia-spec-bootstrap/SKILL.md`)).toBe(
         true,
       );
       expect(
         result?.has(
-          `${skillRoot}/trellis-spec-bootstrap/references/spec-writing.md`,
+          `${skillRoot}/phronia-spec-bootstrap/references/spec-writing.md`,
         ),
       ).toBe(true);
     }
@@ -423,10 +423,10 @@ describe("collectPlatformTemplates", () => {
   it("pi collectTemplates includes prompts, agents, extension, and settings", () => {
     const result = collectPlatformTemplates("pi");
     expect(result).toBeInstanceOf(Map);
-    expect(result?.has(".pi/prompts/trellis-start.md")).toBe(true);
-    expect(result?.has(".pi/prompts/trellis-finish-work.md")).toBe(true);
-    expect(result?.has(".pi/agents/trellis-implement.md")).toBe(true);
-    expect(result?.has(".pi/extensions/trellis/index.ts")).toBe(true);
+    expect(result?.has(".pi/prompts/phronia-start.md")).toBe(true);
+    expect(result?.has(".pi/prompts/phronia-finish-work.md")).toBe(true);
+    expect(result?.has(".pi/agents/phronia-implement.md")).toBe(true);
+    expect(result?.has(".pi/extensions/phronia/index.ts")).toBe(true);
     expect(result?.has(".pi/settings.json")).toBe(true);
   });
 
@@ -438,19 +438,19 @@ describe("collectPlatformTemplates", () => {
         key.startsWith(".agents/skills/"),
       ),
     ).toBe(false);
-    expect(result?.has(".agents/skills/trellis-check/SKILL.md")).toBe(false);
-    expect(result?.has(".agents/skills/trellis-start/SKILL.md")).toBe(false);
-    expect(result?.has(".zcode/skills/trellis-start/SKILL.md")).toBe(false);
-    expect(result?.has(".zcode/skills/trellis-continue/SKILL.md")).toBe(false);
-    expect(result?.has(".zcode/skills/trellis-finish-work/SKILL.md")).toBe(
+    expect(result?.has(".agents/skills/phronia-check/SKILL.md")).toBe(false);
+    expect(result?.has(".agents/skills/phronia-start/SKILL.md")).toBe(false);
+    expect(result?.has(".zcode/skills/phronia-start/SKILL.md")).toBe(false);
+    expect(result?.has(".zcode/skills/phronia-continue/SKILL.md")).toBe(false);
+    expect(result?.has(".zcode/skills/phronia-finish-work/SKILL.md")).toBe(
       false,
     );
-    expect(result?.has(".zcode/skills/trellis-before-dev/SKILL.md")).toBe(true);
-    expect(result?.has(".zcode/skills/trellis-check/SKILL.md")).toBe(true);
-    expect(result?.has(".zcode/commands/trellis/start.md")).toBe(false);
-    expect(result?.has(".zcode/agents/trellis-implement.md")).toBe(true);
-    expect(result?.has(".zcode/agents/trellis-check.md")).toBe(true);
-    expect(result?.has(".zcode/agents/trellis-research.md")).toBe(true);
+    expect(result?.has(".zcode/skills/phronia-before-dev/SKILL.md")).toBe(true);
+    expect(result?.has(".zcode/skills/phronia-check/SKILL.md")).toBe(true);
+    expect(result?.has(".zcode/commands/phronia/start.md")).toBe(false);
+    expect(result?.has(".zcode/agents/phronia-implement.md")).toBe(true);
+    expect(result?.has(".zcode/agents/phronia-check.md")).toBe(true);
+    expect(result?.has(".zcode/agents/phronia-research.md")).toBe(true);
   });
 
   it("grok collectTemplates includes flat commands and .grok-owned skills", () => {
@@ -461,44 +461,44 @@ describe("collectPlatformTemplates", () => {
         key.startsWith(".agents/skills/"),
       ),
     ).toBe(false);
-    expect(result?.has(".grok/commands/trellis-start.md")).toBe(true);
-    expect(result?.has(".grok/commands/trellis-continue.md")).toBe(true);
-    expect(result?.has(".grok/commands/trellis/start.md")).toBe(false);
-    expect(result?.has(".grok/skills/trellis-check/SKILL.md")).toBe(true);
-    expect(result?.has(".grok/skills/trellis-before-dev/SKILL.md")).toBe(true);
-    expect(result?.has(".grok/agents/trellis-implement.md")).toBe(true);
-    expect(result?.has(".grok/agents/trellis-check.md")).toBe(true);
-    expect(result?.has(".grok/agents/trellis-research.md")).toBe(true);
+    expect(result?.has(".grok/commands/phronia-start.md")).toBe(true);
+    expect(result?.has(".grok/commands/phronia-continue.md")).toBe(true);
+    expect(result?.has(".grok/commands/phronia/start.md")).toBe(false);
+    expect(result?.has(".grok/skills/phronia-check/SKILL.md")).toBe(true);
+    expect(result?.has(".grok/skills/phronia-before-dev/SKILL.md")).toBe(true);
+    expect(result?.has(".grok/agents/phronia-implement.md")).toBe(true);
+    expect(result?.has(".grok/agents/phronia-check.md")).toBe(true);
+    expect(result?.has(".grok/agents/phronia-research.md")).toBe(true);
   });
 
   it("kimi collectTemplates includes shared skills and .kimi-code skills", () => {
     const result = collectPlatformTemplates("kimi");
     expect(result).toBeInstanceOf(Map);
     // Shared neutral skills
-    expect(result?.has(".agents/skills/trellis-check/SKILL.md")).toBe(true);
-    expect(result?.has(".agents/skills/trellis-before-dev/SKILL.md")).toBe(
+    expect(result?.has(".agents/skills/phronia-check/SKILL.md")).toBe(true);
+    expect(result?.has(".agents/skills/phronia-before-dev/SKILL.md")).toBe(
       true,
     );
-    expect(result?.has(".agents/skills/trellis-meta/SKILL.md")).toBe(true);
+    expect(result?.has(".agents/skills/phronia-meta/SKILL.md")).toBe(true);
     // Kimi-private entry points + agent prompts
-    expect(result?.has(".kimi-code/skills/trellis-start/SKILL.md")).toBe(true);
-    expect(result?.has(".kimi-code/skills/trellis-continue/SKILL.md")).toBe(
+    expect(result?.has(".kimi-code/skills/phronia-start/SKILL.md")).toBe(true);
+    expect(result?.has(".kimi-code/skills/phronia-continue/SKILL.md")).toBe(
       true,
     );
     expect(
-      result?.has(".kimi-code/skills/trellis-finish-work/SKILL.md"),
+      result?.has(".kimi-code/skills/phronia-finish-work/SKILL.md"),
     ).toBe(true);
     expect(
-      result?.has(".kimi-code/skills/trellis-implement/SKILL.md"),
+      result?.has(".kimi-code/skills/phronia-implement/SKILL.md"),
     ).toBe(true);
-    expect(result?.has(".kimi-code/skills/trellis-check/SKILL.md")).toBe(true);
+    expect(result?.has(".kimi-code/skills/phronia-check/SKILL.md")).toBe(true);
     expect(
-      result?.has(".kimi-code/skills/trellis-research/SKILL.md"),
+      result?.has(".kimi-code/skills/phronia-research/SKILL.md"),
     ).toBe(true);
     // Custom sub-agent definitions
-    expect(result?.has(".kimi-code/agents/trellis-implement.md")).toBe(true);
-    expect(result?.has(".kimi-code/agents/trellis-check.md")).toBe(true);
-    expect(result?.has(".kimi-code/agents/trellis-research.md")).toBe(true);
+    expect(result?.has(".kimi-code/agents/phronia-implement.md")).toBe(true);
+    expect(result?.has(".kimi-code/agents/phronia-check.md")).toBe(true);
+    expect(result?.has(".kimi-code/agents/phronia-research.md")).toBe(true);
     // No project-level hooks/settings for Kimi
     expect(
       [...(result?.keys() ?? [])].some((key) =>

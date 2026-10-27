@@ -1,5 +1,5 @@
 /**
- * End-to-end tests for the public `@mindfoldhq/trellis-core/mem` API against a
+ * End-to-end tests for the public `@phronia/core/mem` API against a
  * small Claude fixture tree under a mocked $HOME.
  */
 
@@ -22,7 +22,7 @@ const { fakeHome } = vi.hoisted(() => {
   const o = require("node:os") as typeof import("node:os");
   // eslint-disable-next-line @typescript-eslint/no-require-imports
   const p = require("node:path") as typeof import("node:path");
-  const fakeHome = f.mkdtempSync(p.join(o.tmpdir(), "trellis-mem-api-"));
+  const fakeHome = f.mkdtempSync(p.join(o.tmpdir(), "phronia-mem-api-"));
   return { fakeHome };
 });
 
@@ -143,7 +143,7 @@ function seedPiPhaseSession(id: string, cwd: string): void {
       timestamp: "2026-06-18T11:00:04.000Z",
       message: {
         role: "bashExecution",
-        command: "task.py start .trellis/tasks/06-18-pi-api",
+        command: "task.py start .phronia/tasks/06-18-pi-api",
         output: "",
       },
     },
@@ -573,5 +573,28 @@ describe("listMemProjects", () => {
     expect(ours?.by_platform.claude).toBe(0);
     expect(ours?.by_platform.zcode).toBe(0);
     expect(ours?.by_platform.devin).toBe(0);
+  });
+});
+
+describe("adapter failure isolation", () => {
+  it("keeps other sources when one adapter throws", async () => {
+    const { MEM_PLATFORMS } = await import("../../src/mem/platforms.js");
+    const spy = vi
+      .spyOn(MEM_PLATFORMS.claude, "list")
+      .mockImplementation(() => {
+        throw new Error("boom");
+      });
+    try {
+      const warnings: { code: string }[] = [];
+      listMemSessions({
+        filter: { platform: "all" },
+        onWarning: (warning) => warnings.push(warning),
+      });
+      expect(
+        warnings.some((warning) => warning.code === "mem.claude.list_failed"),
+      ).toBe(true);
+    } finally {
+      spy.mockRestore();
+    }
   });
 });

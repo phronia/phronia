@@ -1,9 +1,9 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 """
-Trellis StatusLine — project-level status display for Claude Code.
+Phronia StatusLine — project-level status display for Claude Code.
 
-Reads Claude Code session JSON from stdin + Trellis task data from filesystem.
+Reads Claude Code session JSON from stdin + Phronia task data from filesystem.
 Outputs 1-2 lines:
   With active task:  [P1] Task title (status)  +  info line
   Without task:      info line only
@@ -70,7 +70,7 @@ def _normalize_task_ref(task_ref: str) -> str:
         normalized = normalized[2:]
 
     if normalized.startswith("tasks/"):
-        return f".trellis/{normalized}"
+        return f".phronia/{normalized}"
 
     return normalized
 
@@ -80,23 +80,23 @@ def _resolve_task_dir(trellis_dir: Path, task_ref: str) -> Path:
     path_obj = Path(normalized)
     if path_obj.is_absolute():
         return path_obj
-    if normalized.startswith(".trellis/"):
+    if normalized.startswith(".phronia/"):
         return trellis_dir.parent / path_obj
     return trellis_dir / "tasks" / path_obj
 
 
 def _find_trellis_dir() -> Path | None:
-    """Walk up from cwd to find .trellis/ directory."""
+    """Walk up from cwd to find .phronia/ directory."""
     current = Path.cwd()
     for parent in [current, *current.parents]:
-        candidate = parent / ".trellis"
+        candidate = parent / ".phronia"
         if candidate.is_dir():
             return candidate
     return None
 
 
 def _get_current_task(trellis_dir: Path) -> dict | None:
-    """Load current task info through Trellis' active task resolver."""
+    """Load current task info through Phronia' active task resolver."""
     return _get_current_task_for_input(trellis_dir, {})
 
 
@@ -260,7 +260,7 @@ def main() -> None:
     trellis_dir = _find_trellis_dir()
     SEP = " \033[90m·\033[0m "
 
-    # --- Trellis data ---
+    # --- Phronia data ---
     task = _get_current_task_for_input(trellis_dir, cc_data) if trellis_dir else None
     dev = _get_developer(trellis_dir) if trellis_dir else ""
     task_count = _count_active_tasks(trellis_dir) if trellis_dir else 0

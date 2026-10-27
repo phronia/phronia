@@ -25,8 +25,9 @@ const CLAUDE_DELETE_PATHS = [
 ];
 
 const CURSOR_DELETE_PATHS = [
-  ".cursor/hooks/inject-subagent-context.py",
+  ".cursor/hooks/phronia-hook.py",
   ".cursor/hooks/session-start.py",
+  ".cursor/hooks/inject-subagent-context.py",
   ".cursor/hooks/inject-workflow-state.py",
   ".cursor/hooks/inject-shell-session-context.py",
 ];
@@ -78,7 +79,7 @@ describe("scrubHooksJson — nested schema", () => {
     expect(fullyEmpty).toBe(false);
   });
 
-  it("removes the exact opt-in Trellis statusLine while preserving other settings", () => {
+  it("removes the exact opt-in Phronia statusLine while preserving other settings", () => {
     const input = {
       env: { USER_VALUE: "keep" },
       statusLine: {
@@ -111,7 +112,7 @@ describe("scrubHooksJson — nested schema", () => {
     expect(fullyEmpty).toBe(false);
   });
 
-  it("preserves the Trellis-shaped statusLine when the manifest does not own it", () => {
+  it("preserves the Phronia-shaped statusLine when the manifest does not own it", () => {
     const input = {
       statusLine: {
         type: "command",
@@ -265,13 +266,13 @@ describe("scrubHooksJson — flat schema", () => {
       hooks: {
         preToolUse: [
           {
-            command: "python3 .cursor/hooks/inject-subagent-context.py",
+            command: "python3 .cursor/hooks/phronia-hook.py --event subagent-spawn",
             matcher: "Task|Subagent",
             timeout: 30,
           },
         ],
         sessionStart: [
-          { command: "python3 .cursor/hooks/session-start.py", timeout: 10 },
+          { command: "python3 .cursor/hooks/phronia-hook.py --event session-start", timeout: 10 },
         ],
       },
     };
@@ -291,7 +292,7 @@ describe("scrubHooksJson — flat schema", () => {
     const input = {
       hooks: {
         preToolUse: [
-          { command: "python3 .cursor/hooks/inject-subagent-context.py" },
+          { command: "python3 .cursor/hooks/phronia-hook.py --event subagent-spawn" },
           { command: "python3 .cursor/hooks/my-rule.py" },
         ],
       },
@@ -347,7 +348,7 @@ describe("scrubHooksJson — flat schema", () => {
     const input = {
       hooks: {
         sessionStart: [
-          { command: "python3 .cursor/hooks/session-start.py", timeout: 10 },
+          { command: "python3 .cursor/hooks/phronia-hook.py --event session-start", timeout: 10 },
         ],
       },
     };
@@ -449,7 +450,7 @@ describe("scrubPiSettings", () => {
   it("strips trellis entries and reports fullyEmpty", () => {
     const input = {
       enableSkillCommands: true,
-      extensions: ["./extensions/trellis/index.ts"],
+      extensions: ["./extensions/phronia/index.ts"],
       skills: ["./skills"],
       prompts: ["./prompts"],
       packages: [
@@ -472,7 +473,7 @@ describe("scrubPiSettings", () => {
   it("preserves user-added array entries", () => {
     const input = {
       enableSkillCommands: true,
-      extensions: ["./extensions/trellis/index.ts", "./extensions/my-ext"],
+      extensions: ["./extensions/phronia/index.ts", "./extensions/my-ext"],
       skills: ["./skills", "./other-skills"],
       prompts: ["./prompts"],
       packages: [
@@ -510,24 +511,24 @@ describe("scrubPiSettings", () => {
 });
 
 describe("scrubCodexConfigToml", () => {
-  const TEMPLATE = `# Project-scoped Codex defaults for Trellis workflows.
+  const TEMPLATE = `# Project-scoped Codex defaults for Phronia workflows.
 # Codex loads this after ~/.codex/config.toml when you work in this project.
 
 # Keep AGENTS.md as the primary project instruction file.
 project_doc_fallback_filenames = ["AGENTS.md"]
 
-# NOTE: Trellis's SessionStart + UserPromptSubmit hooks require opt-in.
+# NOTE: Phronia's SessionStart + UserPromptSubmit hooks require opt-in.
 # Add the following to your USER-level config at ~/.codex/config.toml
 # (not this project file — features.* must be enabled globally):
 #
 #   [features]
 #   codex_hooks = true
 #
-# Without this flag, hooks.json is ignored and Trellis context won't
+# Without this flag, hooks.json is ignored and Phronia context won't
 # be injected into Codex sessions.
 `;
 
-  it("removes the entire trellis-shipped file and reports fullyEmpty", () => {
+  it("removes the entire phronia-shipped file and reports fullyEmpty", () => {
     const { content, fullyEmpty } = scrubCodexConfigToml(TEMPLATE);
     expect(fullyEmpty).toBe(true);
     expect(content.trim()).toBe("");
@@ -541,14 +542,14 @@ project_doc_fallback_filenames = ["AGENTS.md"]
     expect(content).toBe("");
   });
 
-  it("preserves user-owned keys in the agents table while removing Trellis max_depth", () => {
+  it("preserves user-owned keys in the agents table while removing Phronia max_depth", () => {
     const mixed = `${getCodexConfigTemplate().content}user_key = "keep"\n`;
     const { content, fullyEmpty } = scrubCodexConfigToml(mixed);
     expect(fullyEmpty).toBe(false);
     expect(content).toContain("[agents]");
     expect(content).toContain('user_key = "keep"');
     expect(content).not.toContain("max_depth = 1");
-    expect(content).not.toContain("Trellis");
+    expect(content).not.toContain("Phronia");
   });
 
   it("stops agents cleanup before a user-owned array-of-tables section", () => {
@@ -569,7 +570,7 @@ my_key = "value"
     expect(content).toContain("[my_section]");
     expect(content).toContain('my_key = "value"');
     expect(content).not.toContain("project_doc_fallback_filenames");
-    expect(content).not.toContain("Trellis's SessionStart");
+    expect(content).not.toContain("Phronia's SessionStart");
   });
 
   it("strips just the assignment line when comments are absent", () => {
@@ -584,13 +585,13 @@ key = 1
   });
 
   it("strips the new `hooks = true` marker line (Codex 0.129+) alongside the legacy `codex_hooks` line", () => {
-    const newTemplate = `# Project-scoped Codex defaults for Trellis workflows.
+    const newTemplate = `# Project-scoped Codex defaults for Phronia workflows.
 # Codex loads this after ~/.codex/config.toml when you work in this project.
 
 # Keep AGENTS.md as the primary project instruction file.
 project_doc_fallback_filenames = ["AGENTS.md"]
 
-# NOTE: Trellis's SessionStart + UserPromptSubmit hooks require opt-in.
+# NOTE: Phronia's SessionStart + UserPromptSubmit hooks require opt-in.
 # Add the following to your USER-level config at ~/.codex/config.toml
 # (not this project file — features.* must be enabled globally):
 #
@@ -598,7 +599,7 @@ project_doc_fallback_filenames = ["AGENTS.md"]
 #   hooks = true
 #   codex_hooks = true
 #
-# Without this flag, hooks.json is ignored and Trellis context won't
+# Without this flag, hooks.json is ignored and Phronia context won't
 # be injected into Codex sessions.
 `;
     const { content, fullyEmpty } = scrubCodexConfigToml(newTemplate);

@@ -1,5 +1,5 @@
 /**
- * Migration manifests for Trellis versions
+ * Migration manifests for Phronia versions
  *
  * Each version's migrations are stored in separate JSON files under manifests/
  * Format: manifests/{version}.json (e.g., manifests/0.1.9.json)
@@ -7,7 +7,7 @@
 
 import fs from "node:fs";
 import path from "node:path";
-import { fileURLToPath } from "node:url";
+import { assetDir } from "../templates/asset-root.js";
 
 import type {
   ConfigSectionAdded,
@@ -15,9 +15,18 @@ import type {
   MigrationManifest,
 } from "../types/migration.js";
 import { compareVersions } from "../utils/compare-versions.js";
+import { LAYOUT } from "@phronia/core/layout";
 
-const __dirname = path.dirname(fileURLToPath(import.meta.url));
-const MANIFESTS_DIR = path.join(__dirname, "manifests");
+const __dirname = assetDir(import.meta.url, "migrations");
+
+/**
+ * Production reads only Phronia's own manifests. Tests point this at
+ * `migrations/upstream/` to keep exercising the historical migration engine;
+ * upstream manifests are never replayed in a real project (see ADR-0002).
+ */
+const MANIFESTS_DIR = process.env.PHRONIA_MIGRATION_MANIFESTS_DIR
+  ? path.resolve(process.env.PHRONIA_MIGRATION_MANIFESTS_DIR)
+  : path.join(__dirname, "manifests");
 
 /**
  * Cache for loaded manifests
@@ -177,10 +186,31 @@ export function getConfigSectionsAddedBetween(
   for (const version of applicableVersions) {
     const manifest = manifests[version];
     if (manifest && Array.isArray(manifest.configSectionsAdded)) {
-      collected.push(...manifest.configSectionsAdded);
+      collected.push(
+        ...manifest.configSectionsAdded.map((entry) => ({
+          ...entry,
+          file: normalizeLegacyWorkflowPath(entry.file),
+        })),
+      );
     }
   }
   return collected;
+}
+
+/**
+ * Manifests were written against the pre-rename workflow root. Callers apply
+ * entries to the project's current tree, so normalize at the boundary.
+ */
+function normalizeLegacyWorkflowPath(relativePath: string): string {
+  if (relativePath === LAYOUT.legacyRootDirName) {
+    return LAYOUT.rootDirName;
+  }
+  if (relativePath.startsWith(`${LAYOUT.legacyRootDirName}/`)) {
+    return `${LAYOUT.rootDirName}/${relativePath.slice(
+      LAYOUT.legacyRootDirName.length + 1,
+    )}`;
+  }
+  return relativePath;
 }
 
 /**

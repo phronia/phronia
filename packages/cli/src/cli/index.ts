@@ -1,11 +1,39 @@
+import "./env-compat.js";
 import fs from "node:fs";
 import path from "node:path";
+import { fileURLToPath } from "node:url";
 import chalk from "chalk";
 import { Command } from "commander";
 import { init } from "../commands/init.js";
 import { update } from "../commands/update.js";
 import { upgrade } from "../commands/upgrade.js";
 import { uninstall } from "../commands/uninstall.js";
+import { adopt, printAdoptReport } from "../commands/adopt.js";
+import { runContextCommand } from "../commands/context.js";
+import { runDoctorCommand, runZcodeDetectCommand } from "../commands/doctor.js";
+import {
+  runRulesCompile,
+  runRulesGate,
+  runRulesList,
+  runRulesVerdict,
+} from "../commands/rules.js";
+import {
+  addWorktree,
+  listWorktrees,
+  removeWorktree,
+} from "../commands/worktree.js";
+import {
+  runSpecBootstrap,
+  runSpecSetStatus,
+  runSpecStatus,
+} from "../commands/spec.js";
+import { runDocsGenerate } from "../commands/docs.js";
+import { runOnboard } from "../commands/onboard.js";
+import {
+  runCrossRepoAttach,
+  runCrossRepoStatus,
+} from "../commands/cross-repo.js";
+import { SessionStore } from "@phronia/core";
 import { ablate, restore } from "../commands/ablate.js";
 import { runMem } from "../commands/mem.js";
 import {
@@ -17,13 +45,23 @@ import { DIR_NAMES } from "../constants/paths.js";
 import { PACKAGE_NAME, VERSION } from "../constants/version.js";
 import { compareVersions } from "../utils/compare-versions.js";
 import { getConfiguredPlatforms } from "../configurators/index.js";
-import { AI_TOOLS } from "../types/ai-tools.js";
+import { AI_TOOLS, getManagedPaths } from "../types/ai-tools.js";
+import {
+  CAPABILITIES,
+  PLATFORM_IDS,
+  validateCapabilities,
+} from "@phronia/core";
+import {
+  checkMatrixStructure,
+  renderMatrixMarkdown,
+  renderMatrixTable,
+} from "./platform-matrix.js";
 
 // Re-export for backwards compatibility (consumers should prefer constants/version.js)
 export { VERSION, PACKAGE_NAME };
 
 /**
- * Check if a Trellis update is available (compare project version with CLI version)
+ * Check if a Phronia update is available (compare project version with CLI version)
  */
 function checkForUpdates(cwd: string): void {
   const versionFile = path.join(cwd, DIR_NAMES.WORKFLOW, ".version");
@@ -38,10 +76,10 @@ function checkForUpdates(cwd: string): void {
     // CLI is newer than project - update available
     console.log(
       chalk.yellow(
-        `\n⚠️  Trellis update available: ${projectVersion} → ${cliVersion}`,
+        `\n⚠️  Phronia update available: ${projectVersion} → ${cliVersion}`,
       ),
     );
-    console.log(chalk.gray(`   Run: trellis update\n`));
+    console.log(chalk.gray(`   Run: phronia update\n`));
   } else if (comparison < 0) {
     // CLI is older than project - CLI needs updating
     console.log(
@@ -49,11 +87,19 @@ function checkForUpdates(cwd: string): void {
         `\n⚠️  Your CLI (${cliVersion}) is older than project (${projectVersion})`,
       ),
     );
-    console.log(chalk.gray(`   Run: trellis upgrade\n`));
+    console.log(chalk.gray(`   Run: phronia upgrade\n`));
   }
 }
 
-// Check for updates at CLI startup (only if .trellis exists)
+// `trellis` remains a one-major compatibility alias.
+const invokedAs = path.basename(process.argv[1] ?? "");
+if (invokedAs === "trellis" || invokedAs === "trellis.js") {
+  process.stderr.write(
+    "ℹ️  `trellis` is the legacy name; use `phronia` instead. The alias is removed in the next major version.\n",
+  );
+}
+
+// Check for updates at CLI startup (only if .phronia exists)
 const cwd = process.cwd();
 if (fs.existsSync(path.join(cwd, DIR_NAMES.WORKFLOW))) {
   checkForUpdates(cwd);
@@ -62,9 +108,9 @@ if (fs.existsSync(path.join(cwd, DIR_NAMES.WORKFLOW))) {
 const program = new Command();
 
 program
-  .name("trellis")
+  .name("phronia")
   .description(
-    "AI-assisted development workflow framework for Cursor, Claude Code and more",
+    "Phronia — an AI-assisted development workflow framework for Cursor, Claude Code, and more",
   )
   .version(VERSION, "-v, --version", "output the version number");
 
@@ -96,7 +142,7 @@ program
   .option("--snow", "Include Snow CLI skills and commands")
   .option(
     "--with-statusline",
-    "Install the Trellis statusLine for Claude Code (off by default)",
+    "Install the Phronia statusLine for Claude Code (off by default)",
   )
   .option("-y, --yes", "Skip prompts and use defaults")
   .option(
@@ -122,7 +168,7 @@ program
   )
   .option(
     "--workflow <id>",
-    "Workflow template id for .trellis/workflow.md (default: native; e.g., tdd, channel-driven-subagent-dispatch)",
+    "Workflow template id for .phronia/workflow.md (default: native; e.g., tdd, channel-driven-subagent-dispatch)",
   )
   .option(
     "--workflow-source <source>",
@@ -146,7 +192,7 @@ program
         chalk.red("Error:"),
         error instanceof Error ? error.message : error,
       );
-      if (process.env.DEBUG || process.env.TRELLIS_DEBUG) {
+      if (process.env.DEBUG || process.env.PHRONIA_DEBUG) {
         console.error(error instanceof Error ? error.stack : error);
       }
       process.exit(1);
@@ -177,7 +223,7 @@ program
         chalk.red("Error:"),
         error instanceof Error ? error.message : error,
       );
-      if (process.env.DEBUG || process.env.TRELLIS_DEBUG) {
+      if (process.env.DEBUG || process.env.PHRONIA_DEBUG) {
         console.error(error instanceof Error ? error.stack : error);
       }
       process.exit(1);
@@ -186,7 +232,7 @@ program
 
 program
   .command("upgrade")
-  .description("Upgrade the global Trellis CLI package")
+  .description("Upgrade the global Phronia CLI package")
   .option(
     "--tag <tag>",
     "npm dist-tag or version to install (default follows current channel: latest, beta, or rc)",
@@ -203,7 +249,40 @@ program
         chalk.red("Error:"),
         error instanceof Error ? error.message : error,
       );
-      if (process.env.DEBUG || process.env.TRELLIS_DEBUG) {
+      if (process.env.DEBUG || process.env.PHRONIA_DEBUG) {
+        console.error(error instanceof Error ? error.stack : error);
+      }
+      process.exit(1);
+    }
+  });
+
+program
+  .command("adopt")
+  .description(
+    "Adopt an upstream Phronia project (rename the workflow root and regenerate platform files)",
+  )
+  .option("--dry-run", "Report what would change without touching files")
+  .option("--force", "Proceed even when the git working tree is dirty")
+  .option("--json", "Print the adoption report as JSON")
+  .action(async (options: Record<string, unknown>) => {
+    try {
+      const report = await adopt({
+        cwd: process.cwd(),
+        dryRun: options.dryRun as boolean,
+        force: options.force as boolean,
+        json: options.json as boolean,
+      });
+      if (options.json) {
+        process.stdout.write(`${JSON.stringify(report, null, 2)}\n`);
+      } else {
+        printAdoptReport(report);
+      }
+    } catch (error) {
+      console.error(
+        chalk.red("Error:"),
+        error instanceof Error ? error.message : error,
+      );
+      if (process.env.DEBUG || process.env.PHRONIA_DEBUG) {
         console.error(error instanceof Error ? error.stack : error);
       }
       process.exit(1);
@@ -213,7 +292,7 @@ program
 program
   .command("uninstall")
   .description(
-    "Remove all trellis files (managed platform files + .trellis/) from this project",
+    "Remove all Phronia files (managed platform files + .phronia/) from this project",
   )
   .option("-y, --yes", "Skip confirmation prompt")
   .option("--dry-run", "List what would be removed without changing anything")
@@ -228,7 +307,7 @@ program
         chalk.red("Error:"),
         error instanceof Error ? error.message : error,
       );
-      if (process.env.DEBUG || process.env.TRELLIS_DEBUG) {
+      if (process.env.DEBUG || process.env.PHRONIA_DEBUG) {
         console.error(error instanceof Error ? error.stack : error);
       }
       process.exit(1);
@@ -238,7 +317,7 @@ program
 program
   .command("ablate")
   .description(
-    "Temporarily remove all project Trellis surfaces with an external recovery transaction",
+    "Temporarily remove all project Phronia surfaces with an external recovery transaction",
   )
   .option("-y, --yes", "Skip confirmation prompt")
   .option("--dry-run", "Preview full ablation without changing files or state")
@@ -253,7 +332,7 @@ program
         chalk.red("Error:"),
         error instanceof Error ? error.message : error,
       );
-      if (process.env.DEBUG || process.env.TRELLIS_DEBUG) {
+      if (process.env.DEBUG || process.env.PHRONIA_DEBUG) {
         console.error(error instanceof Error ? error.stack : error);
       }
       process.exit(1);
@@ -276,7 +355,7 @@ program
         chalk.red("Error:"),
         error instanceof Error ? error.message : error,
       );
-      if (process.env.DEBUG || process.env.TRELLIS_DEBUG) {
+      if (process.env.DEBUG || process.env.PHRONIA_DEBUG) {
         console.error(error instanceof Error ? error.stack : error);
       }
       process.exit(1);
@@ -302,7 +381,7 @@ program
         chalk.red("Error:"),
         error instanceof Error ? error.message : error,
       );
-      if (process.env.DEBUG || process.env.TRELLIS_DEBUG) {
+      if (process.env.DEBUG || process.env.PHRONIA_DEBUG) {
         console.error(error instanceof Error ? error.stack : error);
       }
       process.exit(1);
@@ -312,7 +391,7 @@ program
 program
   .command("workflow")
   .description(
-    "List or switch the project's .trellis/workflow.md template (native, tdd, channel-driven-subagent-dispatch, or marketplace)",
+    "List or switch the project's .phronia/workflow.md template (native, tdd, channel-driven-subagent-dispatch, or marketplace)",
   )
   .option(
     "-t, --template <id>",
@@ -326,7 +405,7 @@ program
   .option("-f, --force", "Overwrite a modified workflow.md without asking")
   .option(
     "-n, --create-new",
-    "Write .trellis/workflow.md.new instead of replacing the active workflow",
+    "Write .phronia/workflow.md.new instead of replacing the active workflow",
   )
   .action(async (options: Record<string, unknown>) => {
     try {
@@ -346,11 +425,319 @@ program
         chalk.red("Error:"),
         error instanceof Error ? error.message : error,
       );
-      if (process.env.DEBUG || process.env.TRELLIS_DEBUG) {
+      if (process.env.DEBUG || process.env.PHRONIA_DEBUG) {
         console.error(error instanceof Error ? error.stack : error);
       }
       process.exit(1);
     }
+  });
+
+program
+  .command("context")
+  .description("Build harness-neutral context for an event (session-start, user-prompt, ...)")
+  .option("--event <event>", "Context event")
+  .option("--platform <id>", "Platform id (claude-code, cursor, opencode, ...)")
+  .option("--project-root <path>", "Explicit project root")
+  .option("--input <path>", "Input JSON file, or - for stdin", "-")
+  .option("--render", "Render the harness envelope instead of JSON")
+  .option("--schema", "Print the context JSON Schema and exit")
+  .option("--json", "Output the versioned JSON plan (default)")
+  .action((options: Record<string, unknown>) => {
+    const exitCode = runContextCommand({
+      event: (options.event as never) ?? ("session-start" as never),
+      platform: (options.platform as string) ?? "",
+      projectRoot: options.projectRoot as string | undefined,
+      input: (options.input as string) ?? "-",
+      render: Boolean(options.render),
+      schema: Boolean(options.schema),
+      json: Boolean(options.json),
+    });
+    if (exitCode !== 0) process.exit(exitCode);
+  });
+
+program
+  .command("doctor")
+  .description("Report platform capability and environment feature availability")
+  .option("--platform <id>", "Inspect one platform instead of configured ones")
+  .option("--json", "Output machine-readable JSON")
+  .option("--no-probe", "Skip `harness --version` probes")
+  .option("--refresh-manifest", "Rewrite .phronia/manifest.json from this run")
+  .option("--check", "Exit non-zero on unsupported or schema-drift adapters")
+  .action((options: Record<string, unknown>) => {
+    const exitCode = runDoctorCommand({
+      cwd,
+      platform: options.platform as string | undefined,
+      json: Boolean(options.json),
+      probe: options.probe !== false,
+      refreshManifest: Boolean(options.refreshManifest),
+      check: Boolean(options.check),
+    });
+    if (exitCode !== 0) process.exit(exitCode);
+  });
+
+const specCommand = program
+  .command("spec")
+  .description("Inspect and manage spec status");
+
+specCommand
+  .command("status")
+  .option("--json", "Output machine-readable JSON")
+  .action((options: Record<string, unknown>) => {
+    process.exitCode = runSpecStatus({ cwd, json: Boolean(options.json) });
+  });
+
+specCommand
+  .command("verify <paths...>")
+  .option("--by <name>", "Who verified the spec")
+  .option("--json", "Output machine-readable JSON")
+  .action((paths: string[], options: Record<string, unknown>) => {
+    process.exitCode = runSpecSetStatus("verified", paths, {
+      cwd,
+      by: options.by as string | undefined,
+      json: Boolean(options.json),
+    });
+  });
+
+specCommand
+  .command("deprecate <paths...>")
+  .option("--json", "Output machine-readable JSON")
+  .action((paths: string[], options: Record<string, unknown>) => {
+    process.exitCode = runSpecSetStatus("deprecated", paths, {
+      cwd,
+      json: Boolean(options.json),
+    });
+  });
+
+specCommand
+  .command("bootstrap")
+  .option("--dry-run", "Only report missing index files")
+  .option("--write", "Create draft index files for missing layers")
+  .option("--json", "Output machine-readable JSON")
+  .action((options: Record<string, unknown>) => {
+    process.exitCode = runSpecBootstrap({
+      cwd,
+      dryRun: Boolean(options.dryRun),
+      write: Boolean(options.write),
+      json: Boolean(options.json),
+    });
+  });
+
+program
+  .command("docs")
+  .description("Knowledge-layer operations")
+  .command("generate")
+  .option("--check", "Exit non-zero when docs/requirements.md is stale")
+  .option("--json", "Output machine-readable JSON")
+  .action((options: Record<string, unknown>) => {
+    process.exitCode = runDocsGenerate({
+      cwd,
+      check: Boolean(options.check),
+      json: Boolean(options.json),
+    });
+  });
+
+program
+  .command("onboard")
+  .description("Print or write a project onboarding brief")
+  .option("--write", "Write docs/onboarding.md")
+  .option("--json", "Output machine-readable JSON")
+  .action((options: Record<string, unknown>) => {
+    process.exitCode = runOnboard({
+      cwd,
+      write: Boolean(options.write),
+      json: Boolean(options.json),
+    });
+  });
+
+const sessionCommand = program
+  .command("session")
+  .description("Session runtime operations");
+
+sessionCommand
+  .command("gc")
+  .option("--ttl-days <n>", "Delete entries older than N days", "30")
+  .option("--dry-run", "Report without deleting")
+  .option("--json", "Output machine-readable JSON")
+  .action((options: Record<string, unknown>) => {
+    const report = new SessionStore(cwd).gc({
+      ttlDays: Number(options.ttlDays ?? 30),
+      dryRun: Boolean(options.dryRun),
+    });
+    if (options.json) {
+      console.log(JSON.stringify(report, null, 2));
+      return;
+    }
+    console.log(
+      `${report.dryRun ? "would remove" : "removed"} ${report.removed.length} session(s); kept ${report.kept}.`,
+    );
+    for (const file of report.removed) console.log(`  ${file}`);
+  });
+
+const taskCommand = program
+  .command("task")
+  .description("Task-scoped operations");
+
+const worktreeCommand = taskCommand
+  .command("worktree")
+  .description("Create, list, and remove per-task git worktrees");
+
+worktreeCommand
+  .command("add <task-ref>")
+  .option("--path <dir>", "Worktree directory")
+  .option("--branch <name>", "Branch to create or reuse")
+  .option("--base <ref>", "Base revision for a new branch")
+  .option("--force", "Allow a dirty main checkout")
+  .option("--json", "Output machine-readable JSON")
+  .action((taskRef: string, options: Record<string, unknown>) => {
+    const result = addWorktree(taskRef, {
+      cwd,
+      path: options.path as string | undefined,
+      branch: options.branch as string | undefined,
+      base: options.base as string | undefined,
+      force: Boolean(options.force),
+      json: Boolean(options.json),
+    });
+    if (options.json) {
+      console.log(JSON.stringify(result, null, 2));
+    } else {
+      (result.ok ? console.log : console.error)(result.message);
+    }
+    if (!result.ok) process.exit(1);
+  });
+
+worktreeCommand
+  .command("list")
+  .option("--json", "Output machine-readable JSON")
+  .action((options: Record<string, unknown>) => {
+    const records = listWorktrees({ cwd, json: Boolean(options.json) });
+    if (options.json) {
+      console.log(JSON.stringify({ worktrees: records }, null, 2));
+      return;
+    }
+    if (records.length === 0) {
+      console.log("No task worktrees.");
+      return;
+    }
+    for (const record of records) {
+      console.log(
+        `${record.taskRef.padEnd(40)} ${record.branch.padEnd(30)} ${record.path}`,
+      );
+    }
+  });
+
+const crossRepoCommand = taskCommand
+  .command("cross-repo")
+  .description("Link tasks across repositories (git as transport)");
+
+crossRepoCommand
+  .command("attach <task-ref> <repos...>")
+  .option("--consume <repo:path@ref>", "Record a spec dependency (repeatable)", (value, previous: string[] = []) => [...previous, value], [])
+  .option("--json", "Output machine-readable JSON")
+  .action((taskRef: string, repos: string[], options: Record<string, unknown>) => {
+    process.exitCode = runCrossRepoAttach(taskRef, repos, {
+      cwd,
+      json: Boolean(options.json),
+      consumes: options.consume as string[],
+    });
+  });
+
+crossRepoCommand
+  .command("status <task-ref>")
+  .option("--json", "Output machine-readable JSON")
+  .action((taskRef: string, options: Record<string, unknown>) => {
+    process.exitCode = runCrossRepoStatus(taskRef, {
+      cwd,
+      json: Boolean(options.json),
+    });
+  });
+
+worktreeCommand
+  .command("remove <task-ref>")
+  .option("--force", "Remove even with uncommitted changes")
+  .option("--delete-branch", "Delete the task branch after removal")
+  .option("--json", "Output machine-readable JSON")
+  .action((taskRef: string, options: Record<string, unknown>) => {
+    const result = removeWorktree(taskRef, {
+      cwd,
+      force: Boolean(options.force),
+      deleteBranch: Boolean(options.deleteBranch),
+      json: Boolean(options.json),
+    });
+    if (options.json) {
+      console.log(JSON.stringify(result, null, 2));
+    } else {
+      (result.ok ? console.log : console.error)(result.message);
+    }
+    if (!result.ok) process.exit(1);
+  });
+
+const rulesCommand = program
+  .command("rules")
+  .description("Compile and inspect the specification rule ledger");
+
+rulesCommand
+  .command("compile")
+  .option("--json", "Output machine-readable JSON")
+  .option("--check", "Exit non-zero when the ledger has errors")
+  .action((options: Record<string, unknown>) => {
+    const exitCode = runRulesCompile({ cwd, ...options });
+    if (exitCode !== 0) process.exit(exitCode);
+  });
+
+rulesCommand
+  .command("gate")
+  .option("--changed", "Check changed paths against protected scopes")
+  .option("--task <ref>", "Task whose check-results.json provides verdicts")
+  .option("--json", "Output machine-readable JSON")
+  .action((options: Record<string, unknown>) => {
+    const exitCode = runRulesGate({
+      cwd,
+      changed: Boolean(options.changed),
+      task: options.task as string | undefined,
+      json: Boolean(options.json),
+    });
+    if (exitCode !== 0) process.exit(exitCode);
+  });
+
+rulesCommand
+  .command("verdict")
+  .requiredOption("--task <ref>", "Task directory reference")
+  .requiredOption("--input <file>", "Verdict JSON file, or - for stdin")
+  .option("--check", "Exit non-zero on unknown rules or a failed verdict")
+  .option("--json", "Output machine-readable JSON")
+  .action((options: Record<string, unknown>) => {
+    const exitCode = runRulesVerdict({
+      cwd,
+      task: options.task as string,
+      input: options.input as string,
+      check: Boolean(options.check),
+      json: Boolean(options.json),
+    });
+    if (exitCode !== 0) process.exit(exitCode);
+  });
+
+rulesCommand
+  .command("list")
+  .option("--severity <level>", "Filter by severity")
+  .option("--status <status>", "Filter by status")
+  .option("--json", "Output machine-readable JSON")
+  .option("--check", "Exit non-zero when the ledger has errors")
+  .action((options: Record<string, unknown>) => {
+    const exitCode = runRulesList({ cwd, ...options });
+    if (exitCode !== 0) process.exit(exitCode);
+  });
+
+program
+  .command("zcode")
+  .description("Inspect the ZCode integration path selected for this machine")
+  .command("detect")
+  .option("--json", "Output machine-readable JSON")
+  .action((options: Record<string, unknown>) => {
+    const exitCode = runZcodeDetectCommand({
+      cwd,
+      json: Boolean(options.json),
+    });
+    if (exitCode !== 0) process.exit(exitCode);
   });
 
 program
@@ -359,8 +746,81 @@ program
     "Show which AI platforms are configured (active) in the current project",
   )
   .option("--json", "Output machine-readable JSON")
+  .option("--matrix", "Print the full capability matrix")
+  .option("--markdown", "Print the capability matrix as Markdown (for docs)")
+  .option("--detect", "Probe harness versions and rewrite .phronia/manifest.json")
+  .option("--check", "Validate capability coverage and exit non-zero on failure")
   .action((options: Record<string, unknown>) => {
     try {
+      if (options.detect) {
+        const exitCode = runDoctorCommand({
+          cwd,
+          json: Boolean(options.json),
+          refreshManifest: true,
+        });
+        if (exitCode !== 0) process.exit(exitCode);
+        return;
+      }
+      if (options.check) {
+        const problems = checkMatrixStructure().problems;
+        for (const violation of validateCapabilities()) {
+          problems.push(`${violation.platform}: ${violation.message}`);
+        }
+        const templatesRoot = fileURLToPath(
+          new URL("../templates", import.meta.url),
+        );
+        for (const id of PLATFORM_IDS) {
+          const tool = AI_TOOLS[id];
+          for (const dir of tool.templateDirs) {
+            if (dir === "common") continue;
+            if (!fs.existsSync(path.join(templatesRoot, dir))) {
+              problems.push(`${id}: template directory missing: ${dir}`);
+            }
+          }
+          const managed = getManagedPaths(id);
+          if (new Set(managed).size !== managed.length) {
+            problems.push(`${id}: duplicate managed path`);
+          }
+          if (managed.some((entry) => !entry)) {
+            problems.push(`${id}: empty managed path`);
+          }
+        }
+        const docsFile = path.join(cwd, "docs", "platform-matrix.md");
+        if (fs.existsSync(docsFile)) {
+          const expected = renderMatrixMarkdown();
+          const actual = fs.readFileSync(docsFile, "utf8");
+          if (actual !== expected) {
+            problems.push(
+              "docs/platform-matrix.md is stale; run `phronia platforms --matrix --markdown > docs/platform-matrix.md`",
+            );
+          }
+        }
+        if (problems.length > 0) {
+          for (const problem of problems) console.error(chalk.red(`  ${problem}`));
+          process.exit(1);
+        }
+        console.log(chalk.green(`Capability matrix covers ${PLATFORM_IDS.length} platforms.`));
+        return;
+      }
+
+      if (options.matrix) {
+        const matrix = PLATFORM_IDS.map((id) => ({
+          id,
+          displayName: AI_TOOLS[id].name,
+          ...CAPABILITIES[id],
+        }));
+        if (options.json) {
+          console.log(JSON.stringify({ platforms: matrix }, null, 2));
+          return;
+        }
+        if (options.markdown) {
+          process.stdout.write(renderMatrixMarkdown());
+          return;
+        }
+        console.log(renderMatrixTable());
+        return;
+      }
+
       const configured = getConfiguredPlatforms(cwd);
       const platforms = [...configured].map((id) => ({
         id,
@@ -387,12 +847,14 @@ program
         chalk.red("Error:"),
         error instanceof Error ? error.message : error,
       );
-      if (process.env.DEBUG || process.env.TRELLIS_DEBUG) {
+      if (process.env.DEBUG || process.env.PHRONIA_DEBUG) {
         console.error(error instanceof Error ? error.stack : error);
       }
       process.exit(1);
     }
   });
+
+
 
 registerChannelCommand(program);
 

@@ -1,5 +1,5 @@
 /**
- * mem.ts — CLI wrapper over `@mindfoldhq/trellis-core/mem`.
+ * mem.ts — CLI wrapper over `@phronia/core/mem`.
  *
  * The reusable retrieval / context-extraction logic lives in core; this file
  * owns only CLI concerns: argument parsing, terminal rendering, warning
@@ -20,20 +20,24 @@ import * as path from "node:path";
 
 import {
   extractMemDialogue,
+  listFloorRecords,
   listMemProjects,
+  memDoctor,
   listMemSessions,
+  searchFloor,
   MEM_SOURCE_KINDS,
   MemSessionNotFoundError,
   readMemContext,
   searchMemSessions,
-} from "@mindfoldhq/trellis-core/mem";
+} from "@phronia/core/mem";
 import type {
   MemFilter,
+  MemoryKind,
   MemPhase,
   MemSessionInfo,
   MemSourceFilter,
   MemSourceKind,
-} from "@mindfoldhq/trellis-core/mem";
+} from "@phronia/core/mem";
 
 // ---------- argv ----------
 
@@ -50,10 +54,11 @@ export function parseArgv(argv: readonly string[]): Argv {
   for (let i = 1; i < argv.length; i++) {
     const a = argv[i];
     if (a === undefined) continue;
-    if (a.startsWith("--")) {
-      const key = a.slice(2);
+    if (a.startsWith("-") && a !== "-") {
+      // Both `--flag` and `-h` are accepted; the help text documents `-h`.
+      const key = a.startsWith("--") ? a.slice(2) : a.slice(1);
       const next = argv[i + 1];
-      if (next !== undefined && !next.startsWith("--")) {
+      if (next !== undefined && !next.startsWith("-")) {
         flags[key] = next;
         i++;
       } else {
@@ -85,7 +90,11 @@ export function buildFilter(flags: Argv["flags"]): MemFilter {
   const untilRaw = flags.until;
   const until =
     typeof untilRaw === "string"
-      ? new Date(`${untilRaw}T23:59:59.999Z`)
+      ? new Date(
+          /^\d{4}-\d{2}-\d{2}$/.test(untilRaw.trim())
+            ? `${untilRaw.trim()}T23:59:59.999Z`
+            : untilRaw,
+        )
       : undefined;
   if (until && Number.isNaN(+until)) die(`bad --until: ${String(untilRaw)}`);
 
@@ -102,11 +111,15 @@ function parseOptionalNumberFlag(
   raw: string | boolean | undefined,
   name: string,
   fallback: number,
+  min = 1,
 ): number {
   if (raw === undefined || raw === false) return fallback;
   if (typeof raw !== "string") die(`${name} requires a number`);
   const value = Number(raw);
-  if (!Number.isFinite(value)) die(`bad ${name}: ${raw}`);
+  if (!Number.isFinite(value) || !Number.isInteger(value)) {
+    die(`bad ${name}: ${raw}`);
+  }
+  if (value < min) die(`${name} must be at least ${min}`);
   return value;
 }
 
@@ -166,7 +179,7 @@ function cmdList(argv: Argv): void {
   });
   printWarnings(warnings);
   if (argv.flags.json) {
-    console.log(JSON.stringify(rows, null, 2));
+    console.log(JSON.stringify({ sessions: rows, warnings }, null, 2));
     return;
   }
   console.log(
@@ -183,6 +196,30 @@ function cmdSearch(argv: Argv): void {
   if (!kw) die("usage: search <keyword>");
   const f = buildFilter(argv.flags);
   const includeChildren = argv.flags["include-children"] === true;
+  const scope =
+    argv.flags.scope === "floor" ||
+    argv.flags.scope === "all" ||
+    argv.flags.scope === "enhancers"
+      ? argv.flags.scope
+      : "enhancers";
+
+  const floor =
+    scope === "enhancers"
+      ? null
+      : searchFloor(f.cwd ?? process.cwd(), kw, { limit: f.limit });
+  if (scope === "floor") {
+    if (argv.flags.json) {
+      console.log(JSON.stringify({ floor }, null, 2));
+      return;
+    }
+    for (const hit of floor?.hits ?? []) {
+      console.log(`[${hit.score}] ${hit.record.title}\n  ${hit.record.source.path}\n  ${hit.snippet.replace(/\s+/g, " ").trim()}`);
+    }
+    console.log(`\n${floor?.total ?? 0} floor match(es).`);
+    printWarnings(floor?.warnings);
+    return;
+  }
+
   const result = searchMemSessions({
     keyword: kw,
     filter: f,
@@ -194,7 +231,8 @@ function cmdSearch(argv: Argv): void {
   if (argv.flags.json) {
     console.log(
       JSON.stringify(
-        top.map((m) => ({
+        {
+          matches: top.map((m) => ({
           session: m.session,
           score: Number(m.score.toFixed(4)),
           hit_count: m.hit.count,
@@ -203,12 +241,23 @@ function cmdSearch(argv: Argv): void {
           total_turns: m.hit.totalTurns,
           descendants_merged: includeChildren ? m.descendantsMerged : 0,
           excerpts: m.hit.excerpts,
-        })),
+          })),
+          totalMatches: result.totalMatches,
+          warnings: result.warnings,
+          ...(floor ? { floor } : {}),
+        },
         null,
         2,
       ),
     );
     return;
+  }
+  if (floor && floor.hits.length > 0) {
+    console.log("Memory floor:");
+    for (const hit of floor.hits) {
+      console.log(`  [${hit.score}] ${hit.record.title}  (${hit.record.source.path})`);
+    }
+    console.log("");
   }
   console.log(
     `scope: ${f.cwd ? `project=${shortPath(f.cwd)}` : "global"}  keyword="${kw}"  platform=${f.platform}` +
@@ -255,7 +304,7 @@ function cmdProjects(argv: Argv): void {
   const top = rows.slice(0, limit);
 
   if (argv.flags.json) {
-    console.log(JSON.stringify(top, null, 2));
+    console.log(JSON.stringify({ projects: top, warnings }, null, 2));
     return;
   }
   console.log(
@@ -295,7 +344,7 @@ function cmdContext(argv: Argv): void {
   if (grep?.split(/\s+/).filter(Boolean).length === 0)
     die("--grep requires non-empty value");
   const nTurns = parseOptionalNumberFlag(argv.flags.turns, "--turns", 3);
-  const around = parseOptionalNumberFlag(argv.flags.around, "--around", 1);
+  const around = parseOptionalNumberFlag(argv.flags.around, "--around", 1, 0);
   const maxChars = parseOptionalNumberFlag(
     argv.flags["max-chars"],
     "--max-chars",
@@ -466,13 +515,17 @@ flags:
   --cwd <path>                           override the project cwd
   --limit N                              cap output (default 50)
   --grep KW                              extract / context: filter turns by keyword (multi-token AND)
-  --phase brainstorm|implement|all       extract: slice by Trellis brainstorm windows
+  --phase brainstorm|implement|all       extract: slice by Phronia brainstorm windows
                                          (default all; brainstorm = [task.py create, task.py start);
                                          Claude/Codex/Devin/Grok/Pi/ZCode supported; OpenCode warns + returns all)
   --turns N                              context: number of hit turns to return (default 3)
   --around N                             context: turns of surrounding context per hit (default 1)
   --max-chars N                          context: total char budget (default 6000, ~1500 tokens)
   --include-children                     search / context: merge OpenCode sub-agent sessions into parent
+  doctor                                 report every memory source, its path, readability, and schema
+  floor [query]                          search Phronia-written memory (journal/task/spec)
+                                         flags: --kind journal|task-summary|spec --limit N --cwd DIR
+  --scope enhancers|floor|all            search: which partition to query (default enhancers)
   --json                                 emit JSON
   --help, -h                             show this help
 
@@ -483,6 +536,73 @@ examples:
   trellis mem extract 5842592d --grep memory
   trellis mem extract 5842592d --phase brainstorm
 `);
+}
+
+function cmdDoctor(argv: Argv): void {
+  const cwd = typeof argv.flags.cwd === "string" ? argv.flags.cwd : process.cwd();
+  const statuses = memDoctor(cwd);
+  if (argv.flags.json) {
+    console.log(JSON.stringify({ sources: statuses }, null, 2));
+    return;
+  }
+  for (const status of statuses) {
+    const state = status.exists
+      ? status.readable
+        ? "readable"
+        : "unreadable"
+      : "missing";
+    const schema = status.schema ? `  schema=${status.schema.join(",")}` : "";
+    console.log(
+      `${status.platform.padEnd(10)} ${state.padEnd(10)} ${status.path}${schema}`,
+    );
+    for (const warning of status.warnings) {
+      console.log(`  warning: ${warning.message}`);
+    }
+  }
+}
+
+function cmdFloor(argv: Argv): void {
+  const cwd = typeof argv.flags.cwd === "string" ? argv.flags.cwd : process.cwd();
+  const query = argv.positional.join(" ").trim();
+  const limit = parseOptionalNumberFlag(argv.flags.limit, "--limit", 50);
+  const kind =
+    typeof argv.flags.kind === "string" ? argv.flags.kind : undefined;
+  const kinds: MemoryKind[] | undefined =
+    kind === "journal" || kind === "task-summary" || kind === "spec"
+      ? [kind]
+      : undefined;
+
+  if (!query) {
+    const { records, warnings } = listFloorRecords(cwd);
+    const selected = kinds
+      ? records.filter((record) => kinds.includes(record.kind))
+      : records;
+    if (argv.flags.json) {
+      console.log(JSON.stringify({ records: selected.slice(0, limit), warnings }, null, 2));
+      return;
+    }
+    for (const record of selected.slice(0, limit)) {
+      console.log(`${record.kind.padEnd(13)} ${record.title}`);
+      console.log(`  ${record.source.path}  ${record.id}`);
+    }
+    console.log(`\n${selected.length} floor record(s).`);
+    for (const warning of warnings) console.error(`warning: ${warning.message}`);
+    return;
+  }
+
+  const result = searchFloor(cwd, query, { limit, ...(kinds ? { kinds } : {}) });
+  if (argv.flags.json) {
+    console.log(JSON.stringify(result, null, 2));
+    return;
+  }
+  for (const hit of result.hits) {
+    console.log(`[${hit.score}] ${hit.record.title}`);
+    console.log(`  ${hit.record.source.path}`);
+    console.log(`  ${hit.snippet.replace(/\s+/g, " ").trim()}`);
+    console.log("");
+  }
+  console.log(`${result.total} floor match(es).`);
+  for (const warning of result.warnings) console.error(`warning: ${warning.message}`);
 }
 
 // ---------- entry ----------
@@ -508,6 +628,10 @@ export function runMem(args: readonly string[]): void {
       return cmdContext(argv);
     case "projects":
       return cmdProjects(argv);
+    case "floor":
+      return cmdFloor(argv);
+    case "doctor":
+      return cmdDoctor(argv);
     default:
       die(`unknown command: ${argv.cmd} (try 'help')`);
   }

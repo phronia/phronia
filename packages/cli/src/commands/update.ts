@@ -5,6 +5,7 @@ import chalk from "chalk";
 import inquirer from "inquirer";
 
 import { DIR_NAMES, FILE_NAMES, PATHS } from "../constants/paths.js";
+import { LAYOUT } from "@phronia/core/layout";
 import type { AITool } from "../types/ai-tools.js";
 import { VERSION, PACKAGE_NAME } from "../constants/version.js";
 import {
@@ -44,7 +45,7 @@ import {
   configYamlTemplate,
   gitignoreTemplate,
   workflowMdTemplate,
-} from "../templates/trellis/index.js";
+} from "../templates/workflow/index.js";
 import { agentsMdContent } from "../templates/markdown/index.js";
 import {
   COPILOT_INSTRUCTIONS_BLOCK_END,
@@ -75,14 +76,18 @@ import {
 import { loadSpecRegistryConfig } from "../utils/registry-config.js";
 import {
   cleanupEmptyDirs,
-  TRELLIS_BLOCK_END,
-  TRELLIS_BLOCK_START,
+  LEGACY_BLOCK_END,
+  LEGACY_BLOCK_START,
+  PHRONIA_BLOCK_END,
+  PHRONIA_BLOCK_START,
 } from "../utils/managed-paths.js";
+import { compileRules, writeCompiledRules, writeGate } from "@phronia/core";
+import { refreshAdapterManifest } from "./adapter-manifest.js";
 
 export {
   cleanupEmptyDirs,
-  TRELLIS_BLOCK_END,
-  TRELLIS_BLOCK_START,
+  PHRONIA_BLOCK_END,
+  PHRONIA_BLOCK_START,
 } from "../utils/managed-paths.js";
 
 export interface UpdateOptions {
@@ -115,7 +120,7 @@ type ConflictAction = "overwrite" | "skip" | "create-new";
 const CLAUDE_SETTINGS_PATH = ".claude/settings.json";
 const LEGACY_UNTRACKED_AGENTS_MD_BLOCK_HASHES = new Set<string>([
   // v0.5.0-beta.17 and earlier wrote AGENTS.md but did not hash-track it.
-  // This hash is the pristine Trellis-managed block before the Subagents
+  // This hash is the pristine Phronia-managed block before the Subagents
   // section was added, so old untouched projects can be updated without a
   // false "modified by you" conflict.
   "c1f511b1cfc1902f2147da159f09cc51f380b0c9e341cdb3ac5dea5233f3e307",
@@ -150,7 +155,10 @@ function getManagedBlock(
 }
 
 function getTrellisManagedBlock(content: string): string | null {
-  return getManagedBlock(content, TRELLIS_BLOCK_START, TRELLIS_BLOCK_END);
+  return (
+    getManagedBlock(content, PHRONIA_BLOCK_START, PHRONIA_BLOCK_END) ??
+    getManagedBlock(content, LEGACY_BLOCK_START, LEGACY_BLOCK_END)
+  );
 }
 
 function replaceManagedBlock(
@@ -191,6 +199,27 @@ function mergeManagedBlockContent(
   startMarker: string,
   endMarker: string,
 ): string {
+  // Pre-rename projects carry TRELLIS markers. Replace that block in place so
+  // the file migrates to PHRONIA markers without duplicating content.
+  const existingStart = existingContent.indexOf(startMarker);
+  if (existingStart === -1) {
+    const templateBlock = getManagedBlock(templateContent, startMarker, endMarker);
+    const legacyStartMarker = startMarker.replace("PHRONIA", "TRELLIS");
+    const legacyEndMarker = endMarker.replace("PHRONIA", "TRELLIS");
+    const legacyStart = existingContent.indexOf(legacyStartMarker);
+    const legacyEnd =
+      legacyStart === -1
+        ? -1
+        : existingContent.indexOf(legacyEndMarker, legacyStart);
+    if (templateBlock && legacyStart !== -1 && legacyEnd !== -1) {
+      return (
+        existingContent.slice(0, legacyStart) +
+        templateBlock +
+        existingContent.slice(legacyEnd + legacyEndMarker.length)
+      );
+    }
+  }
+
   const replaced = replaceManagedBlock(
     existingContent,
     templateContent,
@@ -240,8 +269,8 @@ function buildAgentsMdTemplate(cwd: string): string {
     cwd,
     FILE_NAMES.AGENTS,
     agentsMdContent,
-    TRELLIS_BLOCK_START,
-    TRELLIS_BLOCK_END,
+    PHRONIA_BLOCK_START,
+    PHRONIA_BLOCK_END,
   );
 }
 
@@ -473,7 +502,7 @@ function executeSafeFileDeletes(
 }
 
 /**
- * Load update.skip paths from .trellis/config.yaml
+ * Load update.skip paths from .phronia/config.yaml
  *
  * Parses simple YAML structure:
  *   update:
@@ -611,11 +640,15 @@ export function applyConfigSectionsAdded(
   let appended = 0;
 
   for (const entry of entries) {
-    const dedupeKey = `${entry.file}::${entry.sentinel}`;
+    // Manifests were written when the workflow root was `.trellis`; the
+    // section must land in the project's current root and resolve against the
+    // current template key.
+    const targetFile = normalizeLegacyWorkflowPath(entry.file);
+    const dedupeKey = `${targetFile}::${entry.sentinel}`;
     if (seen.has(dedupeKey)) continue;
     seen.add(dedupeKey);
 
-    const targetPath = path.join(cwd, entry.file);
+    const targetPath = path.join(cwd, targetFile);
     if (!fs.existsSync(targetPath)) continue;
 
     let userContent: string;
@@ -626,7 +659,7 @@ export function applyConfigSectionsAdded(
     }
     if (userContent.includes(entry.sentinel)) continue;
 
-    const template = bundledTemplates.get(entry.file);
+    const template = bundledTemplates.get(targetFile);
     if (!template) continue;
 
     const section = extractConfigSection(template, entry.sectionHeading);
@@ -641,13 +674,25 @@ export function applyConfigSectionsAdded(
     }
     console.log(
       chalk.green(
-        `  + Added config section "${entry.sectionHeading}" to ${entry.file}`,
+        `  + Added config section "${entry.sectionHeading}" to ${targetFile}`,
       ),
     );
     appended++;
   }
 
   return { appended };
+}
+
+/** Rewrite a manifest's historical workflow-root prefix to the current one. */
+export function normalizeLegacyWorkflowPath(relativePath: string): string {
+  const legacy = LAYOUT.legacyRootDirName;
+  if (relativePath === legacy) {
+    return LAYOUT.rootDirName;
+  }
+  if (relativePath.startsWith(`${legacy}/`)) {
+    return `${LAYOUT.rootDirName}/${relativePath.slice(legacy.length + 1)}`;
+  }
+  return relativePath;
 }
 
 /**
@@ -657,11 +702,11 @@ export function applyConfigSectionsAdded(
 /**
  * Detect if legacy Codex upgrade is needed.
  *
- * Old Trellis versions used `.agents/skills/` as codex's configDir.
+ * Old Phronia versions used `.agents/skills/` as codex's configDir.
  * New versions use `.codex/` for Codex-specific config and `.agents/skills/`
  * as a shared layer.
  *
- * Detection: Trellis-tracked hashes contain `.agents/skills/` entries
+ * Detection: Phronia-tracked hashes contain `.agents/skills/` entries
  * but `.codex/` does not exist. This avoids misclassifying repos that
  * have `.agents/skills/` from other tools (Kimi CLI, Amp, etc.).
  *
@@ -680,8 +725,8 @@ function needsCodexUpgrade(cwd: string): boolean {
   // the marker paths in its templates.
   const hashes = loadHashes(cwd);
   const legacyMarkers = [
-    ".agents/skills/trellis-continue/SKILL.md",
-    ".agents/skills/trellis-finish-work/SKILL.md",
+    ".agents/skills/phronia-continue/SKILL.md",
+    ".agents/skills/phronia-finish-work/SKILL.md",
   ];
   const hasLegacyMarker = legacyMarkers.some(
     (key) => hashes[key] !== undefined,
@@ -750,7 +795,7 @@ function preserveExistingRegistryConfig(cwd: string, template: string): string {
     "#-------------------------------------------------------------------------------\n" +
     "# Registry\n" +
     "#-------------------------------------------------------------------------------\n\n" +
-    "# Source used to install .trellis/spec. trellis update refreshes this\n" +
+    "# Source used to install .phronia/spec. trellis update refreshes this\n" +
     "# hash-tracked spec template while preserving local edits through the\n" +
     "# normal update conflict flow.\n" +
     "registry:\n" +
@@ -772,7 +817,7 @@ async function collectRegistrySpecTemplates(
   } catch (error) {
     console.log(
       chalk.yellow(
-        `Warning: invalid registry.spec.source in .trellis/config.yaml: ${
+        `Warning: invalid registry.spec.source in .phronia/config.yaml: ${
           error instanceof Error ? error.message : String(error)
         }`,
       ),
@@ -805,7 +850,7 @@ async function collectRegistrySpecTemplates(
       return new Map();
     }
     const tempRoot = await fs.promises.mkdtemp(
-      path.join(os.tmpdir(), "trellis-registry-template-"),
+      path.join(os.tmpdir(), "phronia-registry-template-"),
     );
     try {
       const result = await downloadTemplateById(
@@ -1062,7 +1107,7 @@ function analyzeChanges(
  * `changedFiles`, and is never seen by this function.
  *
  * That also leaves the mixed-ownership paths — `AGENTS.md`,
- * `.github/copilot-instructions.md`, `.trellis/config.yaml` — free to differ
+ * `.github/copilot-instructions.md`, `.phronia/config.yaml` — free to differ
  * from their recorded hash, which for them is the correct state: once the
  * repository has appended its own content they are no longer `unchanged`.
  */
@@ -1079,7 +1124,7 @@ function collectUnchangedFileHashRepairs(
     if (recorded === undefined) {
       // A missing entry is only an omission for a path the receipt is meant
       // to carry. `EXCLUDE_FROM_HASH` holds paths deliberately left out —
-      // `.trellis/.gitignore` among them — and adding those here would put
+      // `.phronia/.gitignore` among them — and adding those here would put
       // this path in disagreement with `initializeHashes` about what the
       // receipt tracks at all.
       if (!shouldExcludeFromHash(key)) {
@@ -1540,9 +1585,9 @@ function isFileSafeToReplace(
  */
 /**
  * Whether the manifest records any file under `dirRelativePath` — i.e. whether
- * Trellis actually created this directory. Used to gate rename-dir migrations:
- * a directory Trellis never wrote (e.g. a user's own `.windsurf/` editor
- * config that merely shares a path with a retired Trellis platform dir) must
+ * Phronia actually created this directory. Used to gate rename-dir migrations:
+ * a directory Phronia never wrote (e.g. a user's own `.windsurf/` editor
+ * config that merely shares a path with a retired Phronia platform dir) must
  * not be auto-moved.
  */
 export function dirHasManifestEntries(
@@ -1580,7 +1625,7 @@ export function classifyMigrations(
       continue;
     }
     // For non-rename types, also block writing TO protected paths
-    // rename/rename-dir are allowed to target protected paths (e.g., 0.2.0 renames into .trellis/workspace)
+    // rename/rename-dir are allowed to target protected paths (e.g., 0.2.0 renames into .phronia/workspace)
     if (
       item.to &&
       isProtectedPath(item.to) &&
@@ -1634,13 +1679,13 @@ export function classifyMigrations(
           result.conflict.push(item);
         }
       } else if (dirHasManifestEntries(item.from, hashes)) {
-        // Trellis created this directory (the manifest tracks files under it),
+        // Phronia created this directory (the manifest tracks files under it),
         // so the rename is ours to make.
         result.auto.push(item);
       } else {
         // Target absent and the source has no manifest record: this is very
         // likely a user-owned directory that merely shares a path with a
-        // retired Trellis platform dir (e.g. a real `.windsurf/` editor
+        // retired Phronia platform dir (e.g. a real `.windsurf/` editor
         // config). Skipping avoids silently moving the user's data out from
         // under their editor — even under --force, since skip never executes.
         result.skip.push(item);
@@ -1719,7 +1764,7 @@ function printMigrationSummary(classified: ClassifiedMigrations): void {
 
   if (classified.skip.length > 0) {
     console.log(
-      chalk.gray("  ○ Skipping (not found, protected, or not Trellis-owned):"),
+      chalk.gray("  ○ Skipping (not found, protected, or not Phronia-owned):"),
     );
     for (const item of classified.skip.slice(0, 3)) {
       console.log(chalk.gray(`    ${item.from}`));
@@ -1779,7 +1824,7 @@ async function promptMigrationAction(
           .join("\n"),
       )
     : chalk.gray(
-        `  Why prompted: file content doesn't match the Trellis template hash\n` +
+        `  Why prompted: file content doesn't match the Phronia template hash\n` +
           `  for this path — usually local customization. If unsure, pick [b].`,
       );
 
@@ -1976,7 +2021,7 @@ export async function executeMigrations(
 
     // For `backup-rename`, leave an inline .backup copy of the user's modified
     // original next to the new location (for rename) or in place (for delete).
-    // This is in addition to the full project snapshot at .trellis/.backup-*/;
+    // This is in addition to the full project snapshot at .phronia/.backup-*/;
     // the inline copy is more discoverable when the user wants to diff or merge
     // their customizations against the new template.
     if (item.type === "rename" && item.to) {
@@ -2007,7 +2052,7 @@ export async function executeMigrations(
 
       if (action === "backup-rename") {
         // Keep a .backup copy in place before deletion so the user can recover
-        // inline without digging through .trellis/.backup-*/.
+        // inline without digging through .phronia/.backup-*/.
         fs.copyFileSync(filePath, filePath + ".backup");
       }
 
@@ -2058,7 +2103,7 @@ function printMigrationResult(result: MigrationResult): void {
  * developer workspace directory.
  *
  * Never overwrites an existing `journal-N.md`: a newer session may already
- * have created it, and `.trellis/workspace/` is excluded from the update
+ * have created it, and `.phronia/workspace/` is excluded from the update
  * backup (see `BACKUP_EXCLUDE_PATTERNS`), so clobbering it would be
  * unrecoverable data loss. Conflicting `traces-N.md` files are left in place
  * and reported instead.
@@ -2096,9 +2141,9 @@ export function renameTracesToJournal(workspaceDir: string): {
 export async function update(options: UpdateOptions): Promise<void> {
   const cwd = process.cwd();
 
-  // Check if Trellis is initialized
+  // Check if Phronia is initialized
   if (!fs.existsSync(path.join(cwd, DIR_NAMES.WORKFLOW))) {
-    console.log(chalk.red("Error: Trellis not initialized in this directory."));
+    console.log(chalk.red("Error: Phronia not initialized in this directory."));
     console.log(chalk.gray("Run 'trellis init' first."));
     return;
   }
@@ -2186,7 +2231,7 @@ export async function update(options: UpdateOptions): Promise<void> {
     );
   }
 
-  // Detect legacy Codex (has .agents/skills/ tracked by Trellis but no .codex/)
+  // Detect legacy Codex (has .agents/skills/ tracked by Phronia but no .codex/)
   // NOTE: this MUST happen before pruneOrphanManifestKeys below, since the
   // detector reads the raw manifest looking for .agents/skills/ markers that
   // the prune step would otherwise consider orphans (codex hasn't been added
@@ -2520,7 +2565,7 @@ export async function update(options: UpdateOptions): Promise<void> {
           );
           console.log(
             chalk.gray(
-              "  Hash-verified: only files matching known Trellis templates are deleted. Your local customizations (hash mismatch) are still preserved.",
+              "  Hash-verified: only files matching known Phronia templates are deleted. Your local customizations (hash mismatch) are still preserved.",
             ),
           );
         }
@@ -2578,7 +2623,7 @@ export async function update(options: UpdateOptions): Promise<void> {
 
     // Hardcoded: Rename traces-*.md to journal-*.md in workspace directories
     // Why hardcoded: The migration system only supports fixed path renames, not pattern-based.
-    // traces-*.md files are in .trellis/workspace/{developer}/ with variable developer names
+    // traces-*.md files are in .phronia/workspace/{developer}/ with variable developer names
     // and variable file numbers (traces-1.md, traces-2.md, etc.), so we can't enumerate them
     // in the migration manifest. This is a one-time migration for the 0.2.0 naming redesign.
     const workspaceDir = path.join(cwd, PATHS.WORKSPACE);
@@ -2663,6 +2708,27 @@ export async function update(options: UpdateOptions): Promise<void> {
     const applyToAll: { action: ConflictAction | null } = { action: null };
 
     for (const file of changes.changedFiles) {
+      // A modified shim is never overwritten silently or behind an
+      // interactive prompt: write the new artifact beside it and say how to
+      // adopt or discard. `--force` remains the explicit overwrite path.
+      if (!options.force && isShimArtifact(file.path)) {
+        fs.writeFileSync(`${file.path}.new`, file.newContent);
+        console.log(
+          chalk.blue(`  ✓ ${file.relativePath}.new (locally modified shim preserved)`),
+        );
+        console.log(
+          chalk.gray(
+            `    adopt: mv ${file.relativePath}.new ${file.relativePath}`,
+          ),
+        );
+        console.log(
+          chalk.gray(
+            `    reset: phronia update --force  (discards local shim changes)`,
+          ),
+        );
+        createdNew++;
+        continue;
+      }
       const action = await promptConflictResolution(file, options, applyToAll);
 
       if (action === "overwrite") {
@@ -2821,7 +2887,7 @@ export async function update(options: UpdateOptions): Promise<void> {
           status: "planning",
           scope: "migration",
           priority: "P1",
-          creator: "trellis-update",
+          creator: "phronia-update",
           assignee: currentDeveloper,
           createdAt: todayStr,
         });
@@ -2920,5 +2986,31 @@ export async function update(options: UpdateOptions): Promise<void> {
 
       console.log(chalk.cyan("═".repeat(60)));
     }
+  }
+
+
+  // Refresh the runtime adapter record; probing failures degrade, never throw.
+  try {
+    refreshAdapterManifest(cwd)
+    writeCompiledRules(cwd)
+    writeGate(cwd, compileRules(cwd).rules)
+  } catch {
+    // manifest is diagnostic state, not required for the update to succeed
+  }
+}
+
+/** Shims carry a `phronia-shim:` stamp; they use the artifact conflict path. */
+export function isShimArtifact(filePath: string): boolean {
+  try {
+    const fd = fs.openSync(filePath, "r");
+    try {
+      const buffer = Buffer.alloc(512);
+      const read = fs.readSync(fd, buffer, 0, buffer.length, 0);
+      return buffer.subarray(0, read).toString("utf8").includes("phronia-shim:");
+    } finally {
+      fs.closeSync(fd);
+    }
+  } catch {
+    return false;
   }
 }

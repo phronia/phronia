@@ -23,7 +23,7 @@ Pick the most recent release tag (e.g., `v0.3.0`).
 # Show all commits since last release
 git log <last-release-tag>..HEAD --oneline
 
-# Show src/ changes only (skip .trellis/, docs, chore)
+# Show src/ changes only (skip .phronia/, docs, chore)
 git log <last-release-tag>..HEAD --oneline -- src/
 ```
 

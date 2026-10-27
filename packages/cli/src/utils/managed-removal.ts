@@ -26,8 +26,8 @@ import {
 } from "./uninstall-scrubbers.js";
 import {
   cleanupEmptyDirs,
-  TRELLIS_BLOCK_END,
-  TRELLIS_BLOCK_START,
+  PHRONIA_BLOCK_END,
+  PHRONIA_BLOCK_START,
 } from "./managed-paths.js";
 
 export interface StructuredFileSpec {
@@ -98,7 +98,7 @@ function assertWithinProject(projectRoot: string, absPath: string): void {
  * Validate a manifest key before it reaches path.join/path.resolve.
  * Manifest keys are intentionally stricter than generic relative paths: empty,
  * dot, dotdot, NUL, absolute, and Windows-separator segments are not ownership
- * claims that Trellis can safely act on.
+ * claims that Phronia can safely act on.
  */
 export function validateManagedRelativePath(posixPath: string): void {
   if (
@@ -207,7 +207,7 @@ export function buildStructuredFileSpecs(): Map<string, StructuredFileSpec> {
     },
     {
       posixPath: COPILOT_INSTRUCTIONS_PATH,
-      reason: "Remove Trellis Copilot guidance; preserve repo instructions",
+      reason: "Remove Phronia Copilot guidance; preserve repo instructions",
       scrub: (content) =>
         scrubManagedMarkdownBlock(
           content,
@@ -217,12 +217,12 @@ export function buildStructuredFileSpecs(): Map<string, StructuredFileSpec> {
     },
     {
       posixPath: FILE_NAMES.AGENTS,
-      reason: "Strip Trellis managed block; preserve user instructions",
+      reason: "Strip Phronia managed block; preserve user instructions",
       scrub: (content) =>
         scrubManagedMarkdownBlock(
           content,
-          TRELLIS_BLOCK_START,
-          TRELLIS_BLOCK_END,
+          PHRONIA_BLOCK_START,
+          PHRONIA_BLOCK_END,
         ),
     },
   ];
@@ -279,7 +279,7 @@ export function buildManagedRemovalPlan(
       result.content === content
     ) {
       throw new Error(
-        `Cannot prove Trellis content was removed from structured file: ${posixPath}`,
+        `Cannot prove Phronia content was removed from structured file: ${posixPath}`,
       );
     }
     if (result.fullyEmpty) {

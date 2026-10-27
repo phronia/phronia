@@ -17,6 +17,11 @@ from __future__ import annotations
 import hashlib
 import json
 import os
+
+# TRELLIS_* -> PHRONIA_* compatibility (removed in the next major).
+for _legacy_key in list(os.environ):
+    if _legacy_key.startswith("TRELLIS_"):
+        os.environ.setdefault("PHRONIA_" + _legacy_key[8:], os.environ[_legacy_key])
 import shlex
 import sys
 import time
@@ -32,7 +37,7 @@ if callable(_stdin_reconfigure):
         pass
 
 
-DIR_WORKFLOW = ".trellis"
+DIR_WORKFLOW = ".phronia"
 DIR_RUNTIME = ".runtime"
 DIR_SHELL_TICKETS = "shell-tickets"
 SESSION_SUBCOMMANDS = {"start", "current", "finish"}
@@ -52,7 +57,7 @@ CONTEXT_IDENTITY_KEYS = (
 # CONTEXT_IDENTITY_KEYS above.
 TOOL_INPUT_KEYS = ("tool_input", "toolInput")
 # Answering a shell-execution event with an explicit allow is what keeps
-# Cursor from re-prompting for a command Trellis itself asked for. Tool-call
+# Cursor from re-prompting for a command Phronia itself asked for. Tool-call
 # hosts read a different response schema, so they get no answer at all rather
 # than a key they would have to ignore.
 SHELL_EVENT_RESPONSE = {"permission": "allow"}
@@ -69,7 +74,7 @@ def _resolve_trellis_root(hook_input: dict[str, Any]) -> Path | None:
     """Locate the project root, trying the payload cwd and then our own.
 
     Hosts disagree about what `cwd` means. CodeBuddy IDE 4.10.4 sends `"/"` for
-    every PreToolUse event, so trusting the payload alone finds no `.trellis`
+    every PreToolUse event, so trusting the payload alone finds no `.phronia`
     and the bridge silently does nothing — the hook is invoked, writes no
     ticket, and `task.py start` degrades. Observed with a wildcard probe:
 
@@ -250,7 +255,7 @@ def _write_ticket(
 
 
 def main() -> int:
-    if os.environ.get("TRELLIS_HOOKS") == "0" or os.environ.get("TRELLIS_DISABLE_HOOKS") == "1":
+    if os.environ.get("PHRONIA_HOOKS") == "0" or os.environ.get("PHRONIA_DISABLE_HOOKS") == "1":
         return 0
 
     try:

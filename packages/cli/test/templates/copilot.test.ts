@@ -24,7 +24,7 @@ describe("copilot getAllHooks", () => {
 	});
 
 	it("session-start.py does not emit a misleading 'Copilot ignores' systemMessage", () => {
-		// Regression guard for GitHub #248: the previous Trellis hook hardcoded a
+		// Regression guard for GitHub #248: the previous Phronia hook hardcoded a
 		// user-visible systemMessage claiming Copilot ignores SessionStart output.
 		// Microsoft's VS Code Agent hooks docs (preview, since VS Code 1.110)
 		// document additionalContext as the injection field, so neither the
@@ -58,7 +58,7 @@ describe("copilot getHooksConfig", () => {
 		expect(raw.length).toBeGreaterThan(0);
 		expect(parsed.hooks?.SessionStart?.length).toBe(1);
 		expect(parsed.hooks?.SessionStart?.[0]?.command).toContain(
-			"{{PYTHON_CMD}} .github/copilot/hooks/session-start.py",
+			"{{PYTHON_CMD}} .github/copilot/hooks/phronia-hook.py --event session-start --platform copilot",
 		);
 	});
 

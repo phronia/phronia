@@ -1,6 +1,6 @@
 /**
  * Integration tests for the init + uninstall data-loss fix
- * (.trellis/tasks/05-13-uninstall-overdelete-manifest-leak).
+ * (.phronia/tasks/05-13-uninstall-overdelete-manifest-leak).
  *
  * Reproduces GitHub Issue #221 (.codex/sessions/ deletion) and PR #271 review
  * comment (pre-existing AGENTS.md deletion). Verifies:
@@ -44,7 +44,7 @@ describe("init + uninstall: manifest accuracy + homedir guard", () => {
   let tmpDir: string;
 
   beforeEach(() => {
-    tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), "trellis-overdelete-"));
+    tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), "phronia-overdelete-"));
     vi.spyOn(process, "cwd").mockReturnValue(tmpDir);
     vi.spyOn(console, "log").mockImplementation(noop);
     vi.spyOn(console, "error").mockImplementation(noop);
@@ -53,13 +53,13 @@ describe("init + uninstall: manifest accuracy + homedir guard", () => {
       configurable: true,
       value: true,
     });
-    delete process.env.TRELLIS_ALLOW_HOMEDIR;
+    delete process.env.PHRONIA_ALLOW_HOMEDIR;
   });
 
   afterEach(() => {
     vi.restoreAllMocks();
     fs.rmSync(tmpDir, { recursive: true, force: true });
-    delete process.env.TRELLIS_ALLOW_HOMEDIR;
+    delete process.env.PHRONIA_ALLOW_HOMEDIR;
   });
 
   // ----- R1: manifest accuracy after init -----
@@ -163,20 +163,20 @@ describe("init + uninstall: manifest accuracy + homedir guard", () => {
     );
   });
 
-  // ----- R1.6: Trellis-written AGENTS.md with user content outside the block -----
+  // ----- R1.6: Phronia-written AGENTS.md with user content outside the block -----
 
-  it("#R1.6 uninstall strips only the Trellis block from a tracked AGENTS.md, preserving user content outside it", async () => {
-    // Trellis writes AGENTS.md (so it's manifest-tracked, unlike the
+  it("#R1.6 uninstall strips only the Phronia block from a tracked AGENTS.md, preserving user content outside it", async () => {
+    // Phronia writes AGENTS.md (so it's manifest-tracked, unlike the
     // skip-existing cases above). The user then adds their own instructions
-    // OUTSIDE the <!-- TRELLIS:START/END --> block — a supported layout that
+    // OUTSIDE the <!-- PHRONIA:START/END --> block — a supported layout that
     // update.ts explicitly preserves. Uninstall must not unlink the whole
     // file and take the user content with it.
     await init({ yes: true, claude: true, force: true });
     const agentsPath = path.join(tmpDir, "AGENTS.md");
-    // Sanity: Trellis tracked it and wrote the managed block.
+    // Sanity: Phronia tracked it and wrote the managed block.
     expect(loadHashes(tmpDir)).toHaveProperty("AGENTS.md");
     const written = fs.readFileSync(agentsPath, "utf-8");
-    expect(written).toContain("<!-- TRELLIS:START -->");
+    expect(written).toContain("<!-- PHRONIA:START -->");
 
     const userSection = "\n## My project rules\n\nAlways rebase.\n";
     fs.writeFileSync(agentsPath, written + userSection);
@@ -185,13 +185,13 @@ describe("init + uninstall: manifest accuracy + homedir guard", () => {
 
     expect(fs.existsSync(agentsPath)).toBe(true);
     const after = fs.readFileSync(agentsPath, "utf-8");
-    expect(after).not.toContain("<!-- TRELLIS:START -->");
-    expect(after).not.toContain("<!-- TRELLIS:END -->");
+    expect(after).not.toContain("<!-- PHRONIA:START -->");
+    expect(after).not.toContain("<!-- PHRONIA:END -->");
     expect(after).toContain("## My project rules");
     expect(after).toContain("Always rebase.");
   });
 
-  it("#R1.7 uninstall still deletes a tracked AGENTS.md that is only the Trellis block", async () => {
+  it("#R1.7 uninstall still deletes a tracked AGENTS.md that is only the Phronia block", async () => {
     // Normal case: user never edited AGENTS.md, so once the block is stripped
     // nothing user-authored remains and the file is removed.
     await init({ yes: true, claude: true, force: true });
@@ -282,17 +282,17 @@ describe("init + uninstall: manifest accuracy + homedir guard", () => {
     await init({ yes: true, claude: true, force: true });
 
     // We can't easily fabricate a real migration entry in this test, but we
-    // CAN assert the prune behavior preserves .trellis/ entries which is the
+    // CAN assert the prune behavior preserves .phronia/ entries which is the
     // most common "not-in-collectTemplates-but-important" case. (Migration
     // paths share the same preservation logic in pruneOrphanManifestKeys.)
     const hashes = loadHashes(tmpDir);
-    hashes[".trellis/workflow.md"] = "ok";
+    hashes[".phronia/workflow.md"] = "ok";
     saveHashes(tmpDir, hashes);
 
     await update({});
 
-    // .trellis/* entries are kept.
-    expect(loadHashes(tmpDir)).toHaveProperty(".trellis/workflow.md");
+    // .phronia/* entries are kept.
+    expect(loadHashes(tmpDir)).toHaveProperty(".phronia/workflow.md");
   });
 
   // ----- R2: homedir guard -----
@@ -339,8 +339,8 @@ describe("init + uninstall: manifest accuracy + homedir guard", () => {
       });
       expect(exitSpy).toHaveBeenCalledWith(1);
 
-      // No .trellis dir was created.
-      expect(fs.existsSync(path.join(fakeHome, ".trellis"))).toBe(false);
+      // No .phronia dir was created.
+      expect(fs.existsSync(path.join(fakeHome, ".phronia"))).toBe(false);
     } finally {
       fs.rmSync(fakeHome, { recursive: true, force: true });
     }
@@ -364,20 +364,20 @@ describe("init + uninstall: manifest accuracy + homedir guard", () => {
     expect(exitSpy).toHaveBeenCalledWith(1);
 
     // Project is unchanged.
-    expect(fs.existsSync(path.join(tmpDir, ".trellis"))).toBe(true);
+    expect(fs.existsSync(path.join(tmpDir, ".phronia"))).toBe(true);
   });
 
-  it("#R2.3 TRELLIS_ALLOW_HOMEDIR=1 bypasses the guard for init", async () => {
+  it("#R2.3 PHRONIA_ALLOW_HOMEDIR=1 bypasses the guard for init", async () => {
     const fakeHome = fs.mkdtempSync(path.join(os.tmpdir(), "fake-home-"));
     try {
       vi.spyOn(process, "cwd").mockReturnValue(fakeHome);
-      process.env.TRELLIS_ALLOW_HOMEDIR = "1";
+      process.env.PHRONIA_ALLOW_HOMEDIR = "1";
 
       await withFakeHome(fakeHome, async () => {
         await init({ yes: true, claude: true, force: true });
       });
 
-      expect(fs.existsSync(path.join(fakeHome, ".trellis"))).toBe(true);
+      expect(fs.existsSync(path.join(fakeHome, ".phronia"))).toBe(true);
     } finally {
       fs.rmSync(fakeHome, { recursive: true, force: true });
     }
@@ -395,7 +395,7 @@ describe("init + uninstall: manifest accuracy + homedir guard", () => {
         await init({ yes: true, claude: true, force: true });
       });
 
-      expect(fs.existsSync(path.join(subDir, ".trellis"))).toBe(true);
+      expect(fs.existsSync(path.join(subDir, ".phronia"))).toBe(true);
     } finally {
       fs.rmSync(fakeHome, { recursive: true, force: true });
     }

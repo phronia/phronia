@@ -4,7 +4,7 @@
  * Each scrubber takes the file content (and any context it needs) and returns
  * `{ content, fullyEmpty }`:
  * - `content` is the post-scrub text to write back if the file should remain.
- * - `fullyEmpty` is true when, after stripping every trellis-managed value,
+ * - `fullyEmpty` is true when, after stripping every phronia-managed value,
  *   nothing meaningful is left. The caller deletes the file in that case.
  *
  * Manifest path matching (for hooks.json scrubbers) uses substring containment
@@ -12,6 +12,7 @@
  * does not matter — we just look for the manifest-relative file path.
  */
 
+import path from "node:path";
 import { getConfigTemplate as getCodexConfigTemplate } from "../templates/codex/index.js";
 
 export interface ScrubResult {
@@ -22,7 +23,7 @@ export interface ScrubResult {
 /**
  * Test whether a hook command string references any of the given manifest paths.
  *
- * Trellis-emitted hook commands always have the shape
+ * Phronia-emitted hook commands always have the shape
  *   `<python-cmd> <manifest-path>`
  * so the trailing whitespace-delimited token is the script path. We compare
  * that last token (with surrounding quotes stripped) against the manifest
@@ -40,16 +41,28 @@ function commandMatchesDeletedPath(
   const trimmed = command.trim();
   if (trimmed.length === 0) return false;
 
-  const tokens = trimmed.split(/\s+/);
-  const lastToken = tokens[tokens.length - 1].replace(/^["']|["']$/g, "");
-  if (lastToken.length === 0) return false;
-
-  for (const p of deletedPaths) {
-    if (lastToken === p || lastToken.endsWith("/" + p)) {
-      return true;
+  const tokens = trimmed.split(/\s+/).map((token) => token.replace(/^["']|["']$/g, ""));
+  const interpreters = new Set(["python", "python3", "py", "node", "bash", "sh", "zsh"]);
+  let index = 0;
+  if (interpreters.has(path.basename(tokens[0] ?? ""))) {
+    index = 1;
+  }
+  // Python flags with a value (`-X utf8`, `-W ignore`) sit before the script.
+  const flagsWithValue = new Set(["-X", "-W", "-c", "-m"]);
+  while ((tokens[index] ?? "").startsWith("-")) {
+    const flag = tokens[index];
+    index += 1;
+    if (flagsWithValue.has(flag ?? "")) {
+      index += 1;
     }
   }
-  return false;
+  const scriptToken = tokens[index] ?? "";
+  if (scriptToken.length === 0) return false;
+
+  return deletedPaths.some(
+    (deletedPath) =>
+      scriptToken === deletedPath || scriptToken.endsWith("/" + deletedPath),
+  );
 }
 
 /**
@@ -93,7 +106,7 @@ function isTrellisClaudeStatusLine(
  *
  * Strips every entry whose command references a path in `deletedPaths`,
  * then bottom-up cleans empty containers (matcher block, event array, hooks
- * object). The exact opt-in Trellis Claude statusLine command is also removed;
+ * object). The exact opt-in Phronia Claude statusLine command is also removed;
  * other keys outside `hooks` (e.g. `env`, `model`, `permissions`, `version`)
  * are preserved.
  */
@@ -242,12 +255,12 @@ export function scrubOpencodePackageJson(content: string): ScrubResult {
 }
 
 /**
- * Trellis-specific values written by the Pi configurator.
+ * Phronia-specific values written by the Pi configurator.
  *
  * The `extensions`/`skills`/`prompts` arrays are paths relative to `.pi/`. We
  * remove the exact entries that the Pi configurator emits.
  */
-const PI_TRELLIS_EXTENSION = "./extensions/trellis/index.ts";
+const PI_PHRONIA_EXTENSION = "./extensions/phronia/index.ts";
 const PI_TRELLIS_SKILLS = "./skills";
 const PI_TRELLIS_PROMPTS = "./prompts";
 const PI_SUBAGENTS_PACKAGE = "npm:pi-subagents";
@@ -258,9 +271,9 @@ function isTrellisPiEntry(value: unknown, target: string): boolean {
 
 /**
  * Scrub `.pi/settings.json`:
- * - drop `enableSkillCommands` (trellis-flagged)
+ * - drop `enableSkillCommands` (phronia-flagged)
  * - remove trellis entries from `extensions`/`skills`/`prompts` arrays
- * - remove trellis-managed `packages["npm:pi-subagents"]` isolation override
+ * - remove phronia-managed `packages["npm:pi-subagents"]` isolation override
  * - drop arrays that become empty
  */
 export function scrubPiSettings(content: string): ScrubResult {
@@ -281,7 +294,7 @@ export function scrubPiSettings(content: string): ScrubResult {
   }
 
   const arrayCleanups: [string, string][] = [
-    ["extensions", PI_TRELLIS_EXTENSION],
+    ["extensions", PI_PHRONIA_EXTENSION],
     ["skills", PI_TRELLIS_SKILLS],
     ["prompts", PI_TRELLIS_PROMPTS],
   ];
@@ -328,7 +341,7 @@ export function scrubPiSettings(content: string): ScrubResult {
 /**
  * Scrub `.codex/config.toml`.
  *
- * The current Trellis-emitted file has three owned chunks:
+ * The current Phronia-emitted file has three owned chunks:
  * 1. The line `project_doc_fallback_filenames = ["AGENTS.md"]`.
  * 2. Comment lines derived from the current shipped Codex config template,
  *    plus an allowlist of legacy template comments.
@@ -336,8 +349,8 @@ export function scrubPiSettings(content: string): ScrubResult {
  *
  * Strategy: line-based removal. We strip:
  *  - the `project_doc_fallback_filenames = ...` line
- *  - any line that is *only* a known Trellis template comment
- *  - Trellis's exact `max_depth = 1`, retaining `[agents]` when user keys remain
+ *  - any line that is *only* a known Phronia template comment
+ *  - Phronia's exact `max_depth = 1`, retaining `[agents]` when user keys remain
  *  - blank lines that surrounded those removals
  *
  * If the user added their own non-trellis lines, they are preserved as-is.
@@ -345,16 +358,16 @@ export function scrubPiSettings(content: string): ScrubResult {
  */
 export function scrubCodexConfigToml(content: string): ScrubResult {
   const legacyCommentMarkers = [
-    "Project-scoped Codex defaults for Trellis workflows.",
+    "Project-scoped Codex defaults for Phronia workflows.",
     "Codex loads this after ~/.codex/config.toml when you work in this project.",
     "Keep AGENTS.md as the primary project instruction file.",
-    "NOTE: Trellis's SessionStart + UserPromptSubmit hooks require opt-in.",
+    "NOTE: Phronia's SessionStart + UserPromptSubmit hooks require opt-in.",
     "Add the following to your USER-level config at ~/.codex/config.toml",
     "(not this project file — features.* must be enabled globally):",
     "[features]",
     "hooks = true",
     "codex_hooks = true",
-    "Without this flag, hooks.json is ignored and Trellis context won't",
+    "Without this flag, hooks.json is ignored and Phronia context won't",
     "be injected into Codex sessions.",
   ];
 
@@ -369,7 +382,7 @@ export function scrubCodexConfigToml(content: string): ScrubResult {
     ...currentTemplateCommentMarkers,
   ]);
 
-  // A comment line is "trellis-known" if its content (after `#` and spaces)
+  // A comment line is "phronia-known" if its content (after `#` and spaces)
   // matches one of the known marker strings exactly OR is an empty `#` line.
   function isTrellisCommentLine(line: string): boolean {
     const trimmed = line.trim();
@@ -389,7 +402,7 @@ export function scrubCodexConfigToml(content: string): ScrubResult {
       (line) => !isTrellisAssignment(line) && !isTrellisCommentLine(line),
     );
 
-  // Trellis currently owns `[agents].max_depth = 1`. Remove the assignment,
+  // Phronia currently owns `[agents].max_depth = 1`. Remove the assignment,
   // but retain the table header if user-owned keys remain in that table.
   const withoutAgentDepth: string[] = [];
   for (let index = 0; index < filteredLines.length; index += 1) {

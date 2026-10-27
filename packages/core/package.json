@@ -1,6 +1,6 @@
 {
-  "name": "@mindfoldhq/trellis-core",
-  "version": "0.6.17",
+  "name": "@phronia/core",
+  "version": "2610.27.1",
   "description": "Trellis core SDK — channel and task domain primitives consumed by the Trellis CLI and downstream Node services",
   "type": "module",
   "main": "./dist/index.js",
@@ -21,6 +21,31 @@
       "types": "./dist/mem/index.d.ts",
       "import": "./dist/mem/index.js",
       "default": "./dist/mem/index.js"
+    },
+    "./layout": {
+      "types": "./dist/layout/index.d.ts",
+      "import": "./dist/layout/index.js",
+      "default": "./dist/layout/index.js"
+    },
+    "./state": {
+      "types": "./dist/state/index.d.ts",
+      "import": "./dist/state/index.js",
+      "default": "./dist/state/index.js"
+    },
+    "./platform": {
+      "types": "./dist/platform/index.d.ts",
+      "import": "./dist/platform/index.js",
+      "default": "./dist/platform/index.js"
+    },
+    "./rules": {
+      "types": "./dist/rules/index.d.ts",
+      "import": "./dist/rules/index.js",
+      "default": "./dist/rules/index.js"
+    },
+    "./context": {
+      "types": "./dist/context/index.d.ts",
+      "import": "./dist/context/index.js",
+      "default": "./dist/context/index.js"
     },
     "./task": {
       "types": "./dist/task/index.d.ts",

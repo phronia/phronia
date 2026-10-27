@@ -4,9 +4,7 @@ import {
   type HookTemplate,
 } from "../template-utils.js";
 
-const { listMdAgents, getSettings, readTemplate } = createTemplateReader(
-  import.meta.url,
-);
+const { listMdAgents, getSettings, readTemplate } = createTemplateReader(import.meta.url, "templates/pi");
 
 export function getAllAgents(): AgentTemplate[] {
   return listMdAgents();
@@ -17,5 +15,5 @@ export function getSettingsTemplate(): HookTemplate {
 }
 
 export function getExtensionTemplate(): string {
-  return readTemplate("extensions/trellis/index.ts.txt");
+  return readTemplate("extensions/phronia/index.ts.txt");
 }

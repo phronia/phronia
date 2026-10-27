@@ -1,0 +1,10 @@
+{
+  "version": 1,
+  "recordedAt": "2026-10-21",
+  "note": "Intentional dogfood customizations. config.yaml and workflow.md are project-specific and must not be regenerated.",
+  "modified": [
+    ".phronia/config.yaml",
+    ".phronia/workflow.md"
+  ],
+  "deleted": []
+}

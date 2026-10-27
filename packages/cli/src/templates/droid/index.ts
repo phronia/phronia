@@ -16,7 +16,7 @@ import {
 } from "../template-utils.js";
 export type { AgentTemplate, HookTemplate };
 
-const { listMdAgents, getSettings } = createTemplateReader(import.meta.url);
+const { listMdAgents, getSettings } = createTemplateReader(import.meta.url, "templates/droid");
 
 export const getAllDroids = (): AgentTemplate[] => listMdAgents("droids");
 export const getSettingsTemplate = (): HookTemplate => getSettings();
