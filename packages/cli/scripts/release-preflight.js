@@ -89,7 +89,10 @@ export function computeNpmTag(version) {
 export function npmVersionExists(pkgName, version) {
   try {
     const out = execSync(
-      `npm view ${pkgName}@${version} version --json --registry=https://registry.npmjs.org/`,
+      // --prefer-online matters after a publish: npm can serve a cached
+      // packument that predates the new version, which looks identical to a
+      // propagation delay and burns the whole retry budget.
+      `npm view ${pkgName}@${version} version --json --prefer-online --registry=https://registry.npmjs.org/`,
       { encoding: "utf-8", stdio: ["pipe", "pipe", "pipe"], timeout: 15_000 },
     ).trim();
     if (!out) return false;
@@ -107,7 +110,7 @@ export function npmVersionExists(pkgName, version) {
 
 function npmViewJSON(args) {
   const out = execSync(
-    `npm view ${args} --json --registry=https://registry.npmjs.org/`,
+    `npm view ${args} --json --prefer-online --registry=https://registry.npmjs.org/`,
     { encoding: "utf-8", stdio: ["pipe", "pipe", "pipe"], timeout: 15_000 },
   ).trim();
   return out ? JSON.parse(out) : null;
