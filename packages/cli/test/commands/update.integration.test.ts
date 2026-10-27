@@ -754,7 +754,7 @@ describe("update() integration", () => {
     await update({ force: true });
 
     // Version is updated even when no file changes are needed
-    expect(fs.readFileSync(versionPath, "utf-8")).toBe(VERSION);
+    expect(fs.readFileSync(versionPath, "utf-8").trim()).toBe(VERSION);
   });
 
   it("#9 creates backup directory before applying changes", async () => {
@@ -791,7 +791,7 @@ describe("update() integration", () => {
     await update({});
 
     // Version should NOT be changed
-    expect(fs.readFileSync(versionPath, "utf-8")).toBe("9999.99.99");
+    expect(fs.readFileSync(versionPath, "utf-8").trim()).toBe("9999.99.99");
   });
 
   it("#11 allowDowngrade permits update when CLI is older", async () => {
@@ -819,7 +819,7 @@ describe("update() integration", () => {
     // File recreated (truly new — no stored hash)
     expect(fs.existsSync(target)).toBe(true);
     // Version updated to current
-    expect(fs.readFileSync(versionPath, "utf-8")).toBe(VERSION);
+    expect(fs.readFileSync(versionPath, "utf-8").trim()).toBe(VERSION);
   });
 
   it("#12 prerelease→stable upgrade with no file changes still updates .version", async () => {
@@ -832,7 +832,7 @@ describe("update() integration", () => {
     await update({});
 
     // .version must be updated to the current CLI version
-    expect(fs.readFileSync(versionPath, "utf-8")).toBe(VERSION);
+    expect(fs.readFileSync(versionPath, "utf-8").trim()).toBe(VERSION);
   });
 
   it("#12b versioned upgrade scenario applies auto-updates, additive config sections, and modified-file skips", async () => {
@@ -870,7 +870,7 @@ describe("update() integration", () => {
 
     await update({ skipAll: true });
 
-    expect(fs.readFileSync(versionFilePath(), "utf-8")).toBe(VERSION);
+    expect(fs.readFileSync(versionFilePath(), "utf-8").trim()).toBe(VERSION);
 
     // Hash-tracked pristine templates from the older install are whole-file
     // auto-updated to the current packaged template.
@@ -1193,7 +1193,7 @@ describe("update() integration", () => {
     await update({ force: true });
 
     // Version updated successfully
-    expect(fs.readFileSync(versionPath, "utf-8")).toBe(VERSION);
+    expect(fs.readFileSync(versionPath, "utf-8").trim()).toBe(VERSION);
   });
 
   // Original template content for check-backend.md (deleted in 0.4.0-beta.1).
@@ -1420,7 +1420,7 @@ describe("update() integration", () => {
     expect(exitSpy).not.toHaveBeenCalled();
     // Version must advance to current CLI after the migrate run
     const versionPath = path.join(tmpDir, DIR_NAMES.WORKFLOW, ".version");
-    expect(fs.readFileSync(versionPath, "utf-8")).toBe(VERSION);
+    expect(fs.readFileSync(versionPath, "utf-8").trim()).toBe(VERSION);
   });
 
   // The [b] Backup-rename path in the confirm prompt promises "keeps a .backup

@@ -1,7 +1,7 @@
 {
   "name": "@phronia/cli",
-  "version": "2610.27.1",
-  "description": "Phronia — practical wisdom for AI-assisted software development",
+  "version": "2610.27.2",
+  "description": "Phronia \u2014 practical wisdom for AI-assisted software development",
   "type": "module",
   "main": "./dist/index.js",
   "types": "./dist/index.d.ts",
@@ -86,6 +86,7 @@
   ],
   "repository": {
     "type": "git",
-    "url": "https://github.com/mindfold-ai/trellis.git"
+    "url": "git+https://github.com/phronia/phronia.git",
+    "directory": "packages/cli"
   }
 }

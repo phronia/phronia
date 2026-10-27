@@ -1932,7 +1932,7 @@ export async function init(options: InitOptions): Promise<void> {
 
     // Write version file for update tracking
     const versionPath = path.join(cwd, DIR_NAMES.WORKFLOW, ".version");
-    fs.writeFileSync(versionPath, VERSION);
+    fs.writeFileSync(versionPath, `${VERSION}\n`);
 
     // Configure selected tools by copying entire directories (dogfooding)
     for (const tool of tools) {

@@ -1398,7 +1398,7 @@ function createFullBackup(cwd: string): string | null {
  */
 function updateVersionFile(cwd: string): void {
   const versionPath = path.join(cwd, DIR_NAMES.WORKFLOW, ".version");
-  fs.writeFileSync(versionPath, VERSION);
+  fs.writeFileSync(versionPath, `${VERSION}\n`);
 }
 
 /**

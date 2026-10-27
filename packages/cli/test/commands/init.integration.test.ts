@@ -987,7 +987,7 @@ describe("init() integration", () => {
       path.join(tmpDir, DIR_NAMES.WORKFLOW, ".version"),
       "utf-8",
     );
-    expect(content).toBe(VERSION);
+    expect(content.trim()).toBe(VERSION);
   });
 
   it("#9 initializes template hash tracking file", async () => {
