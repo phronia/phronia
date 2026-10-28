@@ -3,7 +3,7 @@
   "name": "parallel-dispatch-admission",
   "title": "并行执行准入控制：子代理派发前的工作区、租约与父子任务守卫",
   "description": "在子代理派发边界引入统一的准入判定：父任务不可作为实现目标、实现任务必须先 in_progress、隔离任务必须在自己的 worktree、main checkout 不能被跨任务占用；补齐 breadcrumb 实时工作区状态、planner 容器语义、task.py start 父任务门禁、workspace ensure 的 session key 解析。目标不是 hook 补丁，而是补齐并行执行缺失的决策层与能力降级。",
-  "status": "in_progress",
+  "status": "completed",
   "dev_type": null,
   "scope": null,
   "package": "cli",
@@ -11,11 +11,11 @@
   "creator": "jingd2",
   "assignee": "jingd2",
   "createdAt": "2026-10-28",
-  "completedAt": null,
+  "completedAt": "2026-10-29",
   "branch": null,
   "base_branch": "main",
   "worktree_path": null,
-  "commit": null,
+  "commit": "433baad0ddd791f1b4e0fd29a9aeb25b7e114956",
   "pr_url": null,
   "subtasks": [],
   "children": [],
@@ -39,6 +39,17 @@
         "packages/cli/src/templates/opencode/**",
         ".phronia/scripts/task.py"
       ]
+    },
+    "integration": {
+      "mode": "local",
+      "outcome": "landed",
+      "base_sha": "433baad0ddd791f1b4e0fd29a9aeb25b7e114956",
+      "commit": "433baad0ddd791f1b4e0fd29a9aeb25b7e114956",
+      "pr_url": null,
+      "verified": false,
+      "last_error": null,
+      "log_ref": ".phronia/.runtime/integration-logs/parallel-dispatch-admission-2026-10-28T17-11-30-239Z.log",
+      "updated_at": "2026-10-28T17:11:30.344Z"
     }
   }
 }
