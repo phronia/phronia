@@ -50,6 +50,33 @@ const KNOWN_GAPS = new Set([
   "0.3.10-beta.0",
 ]);
 
+/**
+ * One-time baseline for versions published from the pre-rebuild repository.
+ *
+ * The repository was deleted and recreated on 2026-10-28 because its git
+ * history contained incorrect commit metadata. These npm versions came from
+ * the old repository; their manifests exist in neither the current git
+ * history nor the published tarballs. They are acknowledged here so the gate
+ * can protect the new baseline.
+ *
+ * **Do not extend this set.** A version published after the rebuild must have
+ * a local manifest. A new gap here is the beta.10 mistake, not a rebuild.
+ */
+const REBUILD_BASELINE = new Set([
+  "0.0.0-stage",
+  "2610.27.2",
+  "2610.27.3",
+  "2610.27.4",
+  "2610.27.5",
+  "2610.27.6",
+  "2610.27.7",
+  "2610.27.8",
+  "2610.27.9",
+  "2610.28.1",
+  "2610.28.2",
+  "2610.28.3",
+]);
+
 const RED = "\x1b[31m";
 const YELLOW = "\x1b[33m";
 const GREEN = "\x1b[32m";
@@ -98,13 +125,26 @@ function main() {
   const npmVersions = fetchNpmVersions();
 
   const newGaps = npmVersions.filter(
-    (v) => !localVersions.has(v) && !KNOWN_GAPS.has(v),
+    (v) =>
+      !localVersions.has(v) &&
+      !KNOWN_GAPS.has(v) &&
+      !REBUILD_BASELINE.has(v),
   );
+  const baselineGaps = npmVersions.filter(
+    (v) =>
+      !localVersions.has(v) &&
+      REBUILD_BASELINE.has(v),
+  );
+  if (baselineGaps.length > 0) {
+    console.error(
+      `${DIM}note: ${baselineGaps.length} pre-rebuild version(s) acknowledged by REBUILD_BASELINE; a manifest is required for every version published after the rebuild.${RESET}`,
+    );
+  }
 
   if (newGaps.length > 0) {
     console.error(`${RED}✗ Manifest / npm continuity check failed.${RESET}\n`);
     console.error(
-      `${RED}Published-but-missing manifests (new gaps, not in KNOWN_GAPS):${RESET}`,
+      `${RED}Published-but-missing manifests (new gaps, not in KNOWN_GAPS or REBUILD_BASELINE):${RESET}`,
     );
     newGaps.forEach((v) => console.error(`  - ${v}.json`));
     console.error(
