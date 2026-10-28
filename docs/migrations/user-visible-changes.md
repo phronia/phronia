@@ -168,3 +168,73 @@ Batches that must update this file:
     and manually curated. `finish-work` now runs `phronia docs generate`
     after archiving and prompts for narrative updates; `check` now requires
     `phronia rules verdict` output for evaluated verified rules.
+- **B13**: parallel tasks, shared worktree lifecycle, and coordinator mode.
+  - **New commands**
+    - `phronia task parallel plan [refs...] [--include-planning] [--max N] [--allow-unknown] [--explain] [--json]`
+    - `phronia task parallel status [--platform <id>] [--json]`
+    - `phronia task parallel dispatch --batch <id> [--wave N] [--max N] [--dry-run] [--platform <id>] [--session-key <key>] [--owner-id <id>] [--json]`
+    - `phronia task workspace prepare [--for-new-task <title>] [--force] [--reuse-dirty] [--session-key <key>] [--json]`
+      and `workspace ensure <ref>` / `bind <ref>` / `release` / `reclaim` (same workspace flags; `reclaim` adds `--ttl <seconds>`)
+    - `phronia task lease acquire|release|status <ref>` (`acquire` accepts `--owner-type session|subagent|task`, `--owner-id`, `--session-key`, `--workspace`, `--ttl`)
+    - `phronia task worktree attach <ref> [--path <dir>]`, plus `worktree add|list|remove|prune` (existing primitives)
+    - `phronia task integrate <ref> [--mode auto|local|remote] [--base <branch>] [--queue|--wait|--drain] [--verify <cmd>|--no-verify] [--timeout <d>] [--interactive|--yes] [--handoff] [--dry-run] [--recover] [--rollback] [--force] [--sync] [--json]`
+    - `phronia task commit <ref> [-m <message>] [--json]`
+    - `phronia task coordinator status [--batch <id>] [--platform <id>] [--json]`
+  - **Worktree registry moved to the shared runtime.** Runtime mappings are
+    written only to `<git-common-dir>/phronia/worktrees.json`, which every
+    linked worktree of the same repository resolves. The legacy
+    `.phronia/.runtime/worktrees.json` registry and
+    `task.json.worktree_path` / `branch` are read as fallbacks but are no
+    longer written. The repository stays clean after a worktree is created,
+    and machine paths no longer enter task history.
+  - **`task worktree add` default base changed** from `HEAD` to the resolved
+    integration branch (`--base` → task `base_branch` → `origin/HEAD` → current
+    branch). `--base HEAD` restores the old behavior.
+  - **Claims and leases are TTL-only.** `sessionKey` + heartbeat decide
+    staleness; `pid` is diagnostic only (each CLI invocation is a new
+    process). Only the integration lock may opt into `ttl-or-pid`.
+  - **Three distinct mutexes**: task lease (`leases/<hash>.json`), workspace
+    claim (`workspace.claim.json`), integration lock (`integration.lock`).
+    Acquisition order is fixed: task lease → workspace claim → integration
+    lock. The locks coordinate worktrees of one repository (one object
+    database); they are not cross-machine locks. Multi-person projects should
+    use remote mode and the forge's merge queue.
+  - **`integrate` is not `archive`.** Integrate lands the task and writes
+    `meta.integration.outcome` (`none|landed|pushed|blocked|needs_human`).
+    Local mode may add a metadata-only commit (`chore(task): record integration
+    state`) after landing; the verified code commit stays the task branch head.
+    Archive remains a separate step in `finish-work`.
+  - **Archive lifecycle guard.** Archiving a task with a worktree now:
+    - refuses when `git status --porcelain` in that worktree is non-empty
+      (next: `phronia task commit <ref>`, or `phronia task worktree remove
+      <ref> --force` to discard);
+    - removes the worktree and keeps the branch when it is clean and
+      `meta.integration.outcome == "landed"`;
+    - refuses when it is clean but not landed (next: `phronia task integrate
+      <ref>`, or `phronia task worktree remove <ref>` to keep the branch and
+      drop the workspace);
+    - refuses if `git worktree remove` fails, printing the git error.
+    Tasks without a worktree keep the previous archive behavior.
+  - **`parallel.enabled: false`** disables the planner and automatic workspace
+    creation only. `worktree add/attach`, `workspace ensure`, and `integrate`
+    remain general primitives.
+  - **Coordinator capability matrix** (`phronia task parallel status --json`
+    or `coordinator status --json` reports the gate):
+    | Harness | Mode |
+    |---|---|
+    | Claude Code | coordinator candidate (parallel/nested sub-agents + per-task `cwd`); live dogfood pending |
+    | Codex | multi-session (`codex exec -C <worktree>`); sub-agents inherit cwd |
+    | ZCode | multi-session (one window/worktree per task) or serial; sub-agents inherit cwd |
+    | Unverified platforms | unsupported until Phase 0 evidence exists (`coordinator.mode` fails closed) |
+    | No sub-agent surface | unsupported; use the planner plus manual sessions, or serial |
+  - Why: several independent tasks could only be executed one checkout at a
+    time; worktree mappings were machine-local and made the main checkout
+    dirty; and archive could silently leave a worktree behind.
+  - Migration: none required for existing tasks. Old registry entries are
+    merged into the shared location on first use; `task.json` gains only
+    optional `meta.parallel` / `meta.integration` data. Create worktrees from
+    the main checkout so the task artifacts are visible inside them.
+  - Escape hatch: `parallel.enabled: false`; `--mode local|remote` to override
+    mode detection; `--no-verify` when no verification command exists (the
+    result is reported as unverified); `phronia task worktree remove` for an
+    explicit cleanup that archive would otherwise refuse.

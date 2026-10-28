@@ -93,6 +93,27 @@ Phronia runs a 4-phase loop with auto-invoked skills and sub-agents:
 3. **Verify** — a `phronia-check` sub-agent reviews the diff against specs and runs lint, type-check, and tests, self-fixing where it can.
 4. **Finish** — a final check runs, then `phronia-update-spec` promotes new learnings back into `.phronia/spec/` so the next session starts smarter.
 
+## Parallel Tasks and Coordinator Mode
+
+Phronia can run several independent tasks side by side and land them serially. The workflow is optional and builds on the same tasks, PRDs, worktrees, and archive flow.
+
+```bash
+# Declare each task's surface in task.json: meta.parallel.touches / depends_on
+phronia task parallel plan --explain     # which tasks can share a wave, and why
+phronia task workspace ensure <ref>      # reuse-current | attach | create | refuse
+phronia task commit <ref>                # commit inside the task worktree
+phronia task integrate <ref>             # local rebase/verify/ff, or push + PR/MR
+phronia task integrate --drain           # land a batch in FIFO order
+```
+
+Caveats:
+
+- **One task, one branch, at most one worktree.** Sessions attach to a task's workspace; they do not create a second one. Phronia cannot move a running session, so when `workspace ensure` returns `create`, start a new session in the printed directory.
+- **Unknown footprint = serial.** A task without `touches` / `relatedFiles` is scheduled alone rather than guessed into a batch.
+- **Integrate is not archive.** Integrate records `meta.integration.outcome` (`landed` / `pushed` / …); `finish-work` archives afterwards. Archiving refuses a dirty worktree or a clean-but-unlanded one, and removes a landed worktree automatically.
+- **Locks are repository-local.** The integration lock and workspace claim are shared by the worktrees of one repository (one object database); they are not cross-machine locks. Team projects should use remote mode and the forge's merge queue. Phronia never merges remotely.
+- **Coordinator mode is gated.** `phronia task parallel dispatch --batch <id>` only emits a manifest; your harness spawns the sub-agents. It requires parallel sub-agents with per-task workspaces — Claude Code is the only verified candidate today. Codex and ZCode fall back to multi-session (one window/worktree per task) or serial; unverified platforms are unsupported. Run `phronia task parallel status --json` to see the gate.
+
 ## Resources
 
 | Need                            | Link                                                                           |

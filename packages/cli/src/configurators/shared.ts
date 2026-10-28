@@ -248,9 +248,11 @@ export function resolvePlaceholdersNeutral(
 const SKILL_DESCRIPTIONS: Record<string, string> = {
   start: `Initializes an AI development session by reading workflow guides, developer identity, git status, active tasks, and project guidelines from ${DIR_NAMES.WORKFLOW}/. Classifies incoming tasks and routes to brainstorm, direct edit, or task workflow. Use when beginning a new coding session, resuming work, starting a new task, or re-establishing project context.`,
   continue:
-    "Resume work on the current task. Loads the workflow Phase Index, figures out which phase/step to pick up at, then pulls the step-level detail via get_context.py --mode phase. Use when coming back to an in-progress task and you need to know what to do next.",
+    "Resume work on a task. Finds or asks for the task to continue, resolves its workspace (current checkout or worktree), then loads the workflow Phase Index and step-level detail. Use when coming back to a task and you need to know what to do next.",
   "finish-work":
-    "Wrap up the current session: verify quality gate passed, remind user to commit, archive completed tasks, and record session progress to the developer journal. Use when done coding and ready to end the session.",
+    "Wrap up the session: integrate the task (local fast-forward or remote PR/MR), stop on integration failure, archive completed tasks, then regenerate docs and record the session journal. Use when done coding and ready to end the session.",
+  coordinator:
+    "Single-session multi-task orchestration: read a backlog, create tasks with footprints/dependencies, plan waves, dispatch a manifest through the harness's native sub-agents, monitor status, and integrate serially. Use for parallel task execution or coordinator-mode questions. Phronia never spawns agents itself.",
   "before-dev": `Discovers and injects project-specific coding guidelines from ${DIR_NAMES.WORKFLOW}/spec/ before implementation begins. Reads spec indexes, pre-development checklists, and shared thinking guides for the target package. Use when starting a new coding task, before writing any code, switching to a different package, or needing to refresh project conventions and standards.`,
   brainstorm:
     "Guides collaborative requirements discovery before implementation. Creates task directory, seeds PRD, asks high-value questions one at a time, researches technical choices, and converges on MVP scope. Use when requirements are unclear, there are multiple valid approaches, or the user describes a new feature or complex task.",
@@ -286,9 +288,9 @@ export function wrapWithSkillFrontmatter(
  */
 const COMMAND_DESCRIPTIONS: Record<string, string> = {
   start: "Initialize a Phronia development session.",
-  continue: "Resume work on the current task at the correct phase.",
+  continue: "Resume work on a task: choose it, resolve its workspace, then continue.",
   "finish-work":
-    "Wrap up the current session: quality gate, commit reminder, archive, journal.",
+    "Wrap up: integrate the task, archive it, refresh docs, and record the journal.",
 };
 
 /** Wrap resolved command content with YAML frontmatter (name + description). */
