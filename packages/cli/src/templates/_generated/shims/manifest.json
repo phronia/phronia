@@ -1,37 +1,37 @@
 {
   "schemaVersion": 1,
-  "coreVersion": "2610.28.4",
-  "buildId": "9c1ef7d6710b",
+  "coreVersion": "2610.28.5",
+  "buildId": "fc6ff18092d5",
   "artifacts": [
     {
       "path": "v1/session-start.js",
       "adapterId": "opencode@v1",
-      "shimVersion": "2610.28.4",
-      "buildId": "9c1ef7d6710b",
+      "shimVersion": "2610.28.5",
+      "buildId": "fc6ff18092d5",
       "sha256": "75da092bef2b5d55665a4ba937b896b238dcc5c828e210ba4c7c07b85e1d4ac4",
       "lines": 153
     },
     {
       "path": "v1/inject-workflow-state.js",
       "adapterId": "opencode@v1",
-      "shimVersion": "2610.28.4",
-      "buildId": "9c1ef7d6710b",
+      "shimVersion": "2610.28.5",
+      "buildId": "fc6ff18092d5",
       "sha256": "16a30bdee352b926f1a46a87b59e7877454874cef92337ed412274da44566892",
       "lines": 155
     },
     {
       "path": "v1/inject-subagent-context.js",
       "adapterId": "opencode@v1",
-      "shimVersion": "2610.28.4",
-      "buildId": "9c1ef7d6710b",
+      "shimVersion": "2610.28.5",
+      "buildId": "fc6ff18092d5",
       "sha256": "d625a25b85592370915fe09b91adfdcadeaf70984297a67d1ba91628c0e15968",
       "lines": 215
     },
     {
       "path": "v2/phronia.js",
       "adapterId": "opencode@v2",
-      "shimVersion": "2610.28.4",
-      "buildId": "9c1ef7d6710b",
+      "shimVersion": "2610.28.5",
+      "buildId": "fc6ff18092d5",
       "sha256": "09d45b72538b748c677b8fb17ae4ad6a6c6cdf764053992ded2d5fa0771812be",
       "lines": 355
     }

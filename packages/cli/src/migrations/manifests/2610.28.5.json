@@ -1,0 +1,9 @@
+{
+  "version": "2610.28.5",
+  "description": "Fix OpenCode adapter selection without a harness",
+  "breaking": false,
+  "recommendMigrate": false,
+  "changelog": "Infer the installed OpenCode shard from tracked template hashes when no harness is installed, so CI and fresh clones do not flip a v2 project back to v1.",
+  "migrations": [],
+  "notes": "No migration required."
+}

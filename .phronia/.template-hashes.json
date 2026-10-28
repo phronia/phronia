@@ -305,6 +305,6 @@
     ".claude/hooks/phronia-hook.py": "adb4dbda50a6a6b9429c7f744460232c9d215813ab9ffff6a932fee4f01cb8bc",
     ".cursor/hooks/phronia-hook.py": "adb4dbda50a6a6b9429c7f744460232c9d215813ab9ffff6a932fee4f01cb8bc",
     ".codex/hooks/phronia-hook.py": "adb4dbda50a6a6b9429c7f744460232c9d215813ab9ffff6a932fee4f01cb8bc",
-    ".opencode/plugins/phronia.js": "d465e994a45fdbb3eb8abb1edba384e12aaf898df345574c5e33529df3f755fe"
+    ".opencode/plugins/phronia.js": "4933cc604475ec2454b441c5f7a3ac1c6ba5845b414f73d5b24564b2a13d8143"
   }
 }
