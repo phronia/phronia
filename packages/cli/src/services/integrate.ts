@@ -500,10 +500,18 @@ function loadContext(
       "check the task ref, or create the task in this repository first",
     );
   }
-  const ref = canonicalRefForView(view, mainRoot);
+  const requestedRef = canonicalRef(taskRef);
   const entry = registryLoad.registry.worktrees.find(
-    (candidate) => canonicalRef(candidate.taskRef) === ref,
+    (candidate) => canonicalRef(candidate.taskRef) === requestedRef,
   );
+  // A worktree task's physical directory lives under
+  // `.phronia/worktrees/<id>/.phronia/tasks/...`; deriving the ref from
+  // `path.relative(mainRoot, view.dir)` would produce that nested path. Prefer
+  // the registry's canonical taskRef (or the view's stored ref).
+  const ref =
+    entry !== undefined
+      ? canonicalRef(entry.taskRef)
+      : canonicalRefForView(view, mainRoot);
   const legacyWorktree =
     typeof view.raw.worktree_path === "string" && view.raw.worktree_path !== ""
       ? view.raw.worktree_path
@@ -3125,13 +3133,16 @@ function resolveBaseBranch(
 }
 
 function canonicalRefForView(view: TaskRecordView, mainRoot: string): string {
+  const stored = canonicalRef(view.ref);
+  if (stored.startsWith(".phronia/tasks/")) {
+    return stored;
+  }
   const relative = path.relative(mainRoot, view.dir);
   if (relative !== "" && !relative.startsWith("..") && !path.isAbsolute(relative)) {
     return canonicalRef(relative);
   }
-  const ref = canonicalRef(view.ref);
-  return ref.startsWith(".phronia/") || path.isAbsolute(ref)
-    ? ref
+  return stored.startsWith(".phronia/") || path.isAbsolute(stored)
+    ? stored
     : canonicalRef(`.phronia/tasks/${view.id}`);
 }
 

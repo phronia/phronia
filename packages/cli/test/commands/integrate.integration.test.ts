@@ -60,6 +60,27 @@ describe("integrate integration (INT-01..INT-06)", { timeout: 30_000 }, () => {
     expect(typeof landed.commit).toBe("string");
   });
 
+  it("resolves a worktree task given its full ref without nesting the worktree path", () => {
+    planTask(root, "10-28-alpha", ["src/a/**"]);
+    const wt = addTaskWorktree(root, "10-28-alpha");
+    commitFile(wt, "src/a.txt", "alpha\n", "alpha work");
+    const tool = verifyTool(tempDirs, false);
+
+    const result = integrateTask({
+      cwd: root,
+      taskRef: ".phronia/tasks/10-28-alpha",
+      verify: tool.commands,
+      env: {},
+      ownerId: "owner-alpha",
+    });
+
+    expect(result.ok, JSON.stringify(result)).toBe(true);
+    if (!result.ok) return;
+    expect(result.outcome).toBe("landed");
+    expect(fs.readFileSync(path.join(root, "src/a.txt"), "utf8")).toBe("alpha\n");
+    expect(gitOut(root, ["status", "--porcelain"])).toBe("");
+  });
+
   it("INT-02: verification failure leaves the base branch and its reflog unchanged", () => {
     planTask(root, "10-28-alpha", ["src/a/**"]);
     const wt = addTaskWorktree(root, "10-28-alpha");

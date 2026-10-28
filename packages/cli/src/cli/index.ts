@@ -979,6 +979,7 @@ taskCommand
   .description("Land a task locally or hand it off to a remote forge")
   .option("--mode <mode>", "auto | local | remote", "auto")
   .option("--base <branch>", "Integration branch (defaults to the task/base branch)")
+  .option("--session-key <key>", "Override the session identity for the claim")
   .option("--queue", "Enqueue when the integration lock or main claim is busy")
   .option("--wait", "Wait for this task's queue turn and the integration lock")
   .option("--drain", "Process queued integrations in FIFO order")
@@ -1002,6 +1003,7 @@ taskCommand
       cwd,
       mode: options.mode as "auto" | "local" | "remote",
       base: options.base as string | undefined,
+      sessionKey: options.sessionKey as string | undefined,
       queue: Boolean(options.queue),
       wait: Boolean(options.wait),
       drain: Boolean(options.drain),
