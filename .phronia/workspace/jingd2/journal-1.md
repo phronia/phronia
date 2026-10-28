@@ -32,3 +32,36 @@ Added the opencode@v2 adapter (zero-dependency project-local shim), adapter sele
 ### Status
 
 [OK] **Completed**
+
+
+## Session 2: Parallel tasks and coordinator mode
+<!-- phronia-session: v=2 fp=92fad05f991727e3 -->
+
+**Date**: 2026-10-28
+**Task**: Parallel tasks and coordinator mode
+**Package**: cli
+**Branch**: `main`
+
+### Summary
+
+Implemented parallel task execution and coordinator mode: planner/footprint/dependency waves, shared runtime with claim/lease/lock, per-task worktrees and cleanup, serial local integrate with verify-on-rebased-result, remote PR/MR handoff, conflict classification/handoff, coordinator dispatch manifest with fail-closed capability gates, workflow/skills/docs, archive guard, and footprint/docs-lock commands. Full pnpm verify and a no-remote two-task dogfood passed; version 2610.28.6.
+
+### Git Commits
+
+| Hash | Message |
+|------|---------|
+| `24357519` | feat(parallel): add core planning, index, workspace, and integration policies |
+| `39cf6465` | feat(parallel): add shared runtime, git/forge/lease adapters, and parallel config |
+| `53ebdcfa` | feat(parallel): add CLI planning, workspace, lease, and worktree commands |
+| `2cc9bc5a` | feat(parallel): add integrate, commit, remote handoff, and conflict recovery |
+| `354384cc` | feat(parallel): add coordinator mode, capability gates, and dispatch manifest |
+| `f5a0886b` | feat(parallel): add footprint command and serialized docs generation |
+| `7ffbe930` | docs(parallel): wire workflow, skills, archive guard, and spec |
+| `bf312b0e` | fix(parallel): resolve worktree task refs and expose integrate --session-key |
+| `774a7845` | chore(omv): finalize parallel-task-execution feature |
+| `f178d79d` | chore: sync generated shims for 2610.28.6 |
+| `599d35fb` | test(parallel): raise coordinator dispatch timeout for git-heavy cases |
+
+### Status
+
+[OK] **Completed**
