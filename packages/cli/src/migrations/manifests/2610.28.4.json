@@ -1,0 +1,9 @@
+{
+  "version": "2610.28.4",
+  "description": "OpenCode v2 adapter support",
+  "breaking": false,
+  "recommendMigrate": false,
+  "changelog": "Add the opencode@v2 adapter and project-local plugin shard; select the shard from the installed harness, reconcile retired shard files, and keep v1 working.",
+  "migrations": [],
+  "notes": "No migration required."
+}
