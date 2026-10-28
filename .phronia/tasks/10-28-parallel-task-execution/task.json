@@ -1,0 +1,30 @@
+{
+  "id": "parallel-task-execution",
+  "name": "parallel-task-execution",
+  "title": "并行任务执行：worktree 隔离、串行合入与冲突治理",
+  "description": "为 Phronia 增加并行任务编排能力：可并行性判定、每任务 worktree/分支、严格串行的本地合入队列、远端 MR 模式，以及冲突分类与人工接管边界。",
+  "status": "in_progress",
+  "dev_type": null,
+  "scope": null,
+  "package": "cli",
+  "priority": "P2",
+  "creator": "jingd2",
+  "assignee": "jingd2",
+  "createdAt": "2026-10-28",
+  "completedAt": null,
+  "branch": "phronia/parallel-task-execution",
+  "base_branch": "main",
+  "worktree_path": null,
+  "commit": null,
+  "pr_url": null,
+  "subtasks": [],
+  "children": [],
+  "parent": null,
+  "relatedFiles": [],
+  "notes": "",
+  "meta": {
+    "scope": "foundation+coordinator",
+    "coordinator": "included",
+    "phase0": "required"
+  }
+}

@@ -1,0 +1,20 @@
+{"file": ".phronia/tasks/10-28-parallel-task-execution/research.md", "reason": "Conductor/merge queue/多 agent worktree 的调研结论与设计约束"}
+{"file": ".phronia/spec/cli/backend/index.md", "reason": "CLI backend 指南入口与预开发检查清单"}
+{"file": ".phronia/spec/cli/backend/trellis-core-sdk.md", "reason": "core 与 cli 的包边界、公共导出与构建契约"}
+{"file": ".phronia/spec/cli/backend/filesystem-safety.md", "reason": "原子写入、路径校验、锁文件与破坏性操作的所有权规则"}
+{"file": ".phronia/spec/cli/backend/error-handling.md", "reason": "错误类型、失败策略与面向用户的错误信息"}
+{"file": ".phronia/spec/cli/backend/quality-guidelines.md", "reason": "TypeScript/ESLint 标准与禁止模式"}
+{"file": ".phronia/spec/cli/unit-test/conventions.md", "reason": "测试文件命名、结构与何时写测试"}
+{"file": ".phronia/spec/cli/unit-test/integration-patterns.md", "reason": "命令级集成测试模式，用于 land/worktree 的临时仓库测试"}
+{"file": ".phronia/spec/cli/unit-test/mock-strategies.md", "reason": "最小 mock 原则，远端 forge CLI 的 mock 边界"}
+{"file": ".phronia/spec/guides/cross-platform-thinking-guide.md", "reason": "锁文件、路径、PID 探测的跨平台约束"}
+{"file": ".phronia/spec/guides/cross-layer-thinking-guide.md", "reason": "任务元数据、队列状态、CLI 输出之间的数据流"}
+{"file": ".phronia/spec/guides/code-reuse-thinking-guide.md", "reason": "复用现有 worktree/cross-repo/git 探测，避免重复实现"}
+{"file": ".phronia/spec/core/backend/index.md", "reason": "core 的职责边界与公共子路径导出要求"}
+{"file": "docs/adr/0003-layered-architecture.md", "reason": "分层架构约束：决策逻辑在 core，参数/输出在 cli"}
+{"file": "docs/adr/0004-contract-and-failure-policy.md", "reason": "失败策略与显式降级要求"}
+{"file": "docs/adr/0006-batch-roadmap.md", "reason": "B11 worktree 批次的既定范围与 gate"}
+{"file": "docs/migrations/user-visible-changes.md", "reason": "现有 worktree/cross-repo 的用户可见行为，用于兼容性设计"}
+{"file": ".phronia/tasks/10-28-parallel-task-execution/decisions.md", "reason": "待拍板决策的选项、推荐、代价与可逆性"}
+{"file": ".phronia/tasks/10-28-parallel-task-execution/delegation.md", "reason": "子代理工作流、文件所有权、派发顺序与最终验收协议"}
+{"file": ".phronia/tasks/10-28-parallel-task-execution/capability-report.md", "reason": "Phase 0 实测能力矩阵与 W5 的平台门控结论"}
