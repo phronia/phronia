@@ -30,6 +30,8 @@ export interface ParallelCommandOptions {
   readonly max?: number;
   readonly allowUnknown?: boolean;
   readonly refs?: readonly string[];
+  /** Optional harness id for the coordinator capability gate. */
+  readonly platform?: string;
 }
 
 export interface WorkspaceCommandOptions {
@@ -76,7 +78,10 @@ export function runParallelPlan(options: ParallelCommandOptions): number {
 }
 
 export function runParallelStatus(options: ParallelCommandOptions): number {
-  const result = parallelStatus({ cwd: options.cwd });
+  const result = parallelStatus({
+    cwd: options.cwd,
+    ...(options.platform === undefined ? {} : { platform: options.platform }),
+  });
   if (options.json === true) {
     process.stdout.write(`${JSON.stringify(toStatusJson(result), null, 2)}\n`);
   } else if (!result.ok) {

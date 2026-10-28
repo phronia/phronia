@@ -224,16 +224,35 @@ function readTaskRef(request: ContextRequest): string | null {
     return request.hints.taskRef.trim();
   }
   const input = objectInput(request.input);
-  if (!input) return null;
-  for (const key of ["task_ref", "taskRef", "active_task", "activeTask"]) {
-    const value = stringField(input[key]);
-    if (value) return value;
+  if (input) {
+    for (const key of ["task_ref", "taskRef", "active_task", "activeTask"]) {
+      const value = stringField(input[key]);
+      if (value) return value;
+    }
+    const toolInput = objectInput(input.tool_input) ?? objectInput(input.toolInput);
+    if (toolInput) {
+      for (const key of ["task_ref", "taskRef"]) {
+        const value = stringField(toolInput[key]);
+        if (value) return value;
+      }
+    }
   }
-  const toolInput = objectInput(input.tool_input) ?? objectInput(input.toolInput);
-  if (!toolInput) return null;
-  for (const key of ["task_ref", "taskRef"]) {
-    const value = stringField(toolInput[key]);
-    if (value) return value;
+  // None of the three mainstream Agent tools exposes a task_ref field (W0), so
+  // the dispatch prompt is the only portable channel. Only the first non-empty
+  // line is considered: a stray "Active task:" mid-paragraph must not win.
+  return readTaskRefFromPrompt(readPrompt(request));
+}
+
+const ACTIVE_TASK_LINE = /^\s*Active task:\s*(.+?)\s*$/i;
+
+function readTaskRefFromPrompt(prompt: string): string | null {
+  if (prompt.trim() === "") return null;
+  for (const line of prompt.split(/\r?\n/)) {
+    if (line.trim() === "") continue;
+    const match = ACTIVE_TASK_LINE.exec(line);
+    if (match === null) return null;
+    const value = match[1]?.trim() ?? "";
+    return value === "" ? null : value;
   }
   return null;
 }

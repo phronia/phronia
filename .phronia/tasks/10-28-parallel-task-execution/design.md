@@ -1405,6 +1405,24 @@ export interface LeaseStore {
 
 `kind`: `phronia | platform`。`provisional`: 任务尚未创建时为 `true`。
 
+### 19.7 `batches/<id>.json`
+
+```json
+{
+  "schemaVersion": 1,
+  "id": "bedrock-20261028",
+  "wave": 1,
+  "tasks": [".phronia/tasks/10-28-a"],
+  "maxConcurrent": 3,
+  "createdAt": "2026-10-28T10:00:00Z",
+  "manifestHash": "…",
+  "workspaces": { ".phronia/tasks/10-28-a": "/repo/.phronia/worktrees/a" },
+  "leases": { ".phronia/tasks/10-28-a": "lease-token" }
+}
+```
+
+这是 coordinator 的**投影**，不是第二份事实来源；`coordinator status` 读取它做 batch 聚合，丢失可由 task index + leases 重建。`wave` 从 1 开始，与人类输出一致。
+
 ## 20. 状态机与并发规则
 
 ### 20.1 三个互斥
@@ -1524,8 +1542,8 @@ new task added -> planning (re-plan) -> running
 
 ```ts
 export type SubagentExecution = "none" | "single" | "parallel" | "nested";
-export type SubagentWorkspace = "inherited" | "per-task";
-export type SubagentIdentity = "shared" | "isolated";
+export type SubagentWorkspace = "none" | "inherited" | "per-task";
+export type SubagentIdentity = "none" | "shared" | "isolated";
 ```
 
 ### 22.2 目标平台初始状态

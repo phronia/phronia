@@ -64,6 +64,73 @@ describe("capability matrix", () => {
     expect(profile.toolNames.edit).toContain("apply_patch");
   });
 
+  it("declares the W0 sub-agent dimensions for every platform", () => {
+    for (const id of PLATFORM_IDS) {
+      const capabilities = CAPABILITIES[id];
+      expect(
+        ["unknown", "none", "single", "parallel", "nested"],
+        `${id}.subagentExecution`,
+      ).toContain(capabilities.subagentExecution);
+      expect(
+        ["unknown", "none", "inherited", "per-task"],
+        `${id}.subagentWorkspace`,
+      ).toContain(capabilities.subagentWorkspace);
+      expect(
+        ["unknown", "none", "shared", "isolated"],
+        `${id}.subagentIdentity`,
+      ).toContain(capabilities.subagentIdentity);
+    }
+  });
+
+  it("matches the W0 values for the three verified harnesses", () => {
+    expect(CAPABILITIES["claude-code"]).toMatchObject({
+      subagentExecution: "nested",
+      subagentWorkspace: "per-task",
+      subagentIdentity: "shared",
+    });
+    expect(CAPABILITIES.codex).toMatchObject({
+      subagentExecution: "parallel",
+      subagentWorkspace: "inherited",
+      subagentIdentity: "isolated",
+    });
+    expect(CAPABILITIES.zcode).toMatchObject({
+      subagentExecution: "parallel",
+      subagentWorkspace: "inherited",
+      subagentIdentity: "isolated",
+    });
+  });
+
+  it("marks every platform without a sub-agent surface as none/unknown honestly", () => {
+    for (const id of PLATFORM_IDS) {
+      const capabilities = CAPABILITIES[id];
+      if (capabilities.behavior.subagentContext.kind === "none") {
+        expect(capabilities.subagentExecution, id).toBe("none");
+        expect(capabilities.subagentWorkspace, id).toBe("none");
+        expect(capabilities.subagentIdentity, id).toBe("none");
+      } else if (!["claude-code", "codex", "zcode"].includes(id)) {
+        expect(capabilities.subagentExecution, id).toBe("unknown");
+        expect(capabilities.subagentWorkspace, id).toBe("unknown");
+        expect(capabilities.subagentIdentity, id).toBe("unknown");
+      }
+    }
+  });
+
+  it("gates coordinator.mode on parallel/nested + per-task only", () => {
+    expect(featureStatus("claude-code", "coordinator.mode").available).toBe(true);
+    for (const platform of ["codex", "zcode"] as const) {
+      const status = featureStatus(platform, "coordinator.mode");
+      expect(status.available).toBe(false);
+      expect(status.reason).toContain("subagentWorkspace: inherited");
+      expect(status.reason).toContain("multi-session");
+    }
+    const unknown = featureStatus("cursor", "coordinator.mode");
+    expect(unknown.available).toBe(false);
+    expect(unknown.reason).toContain("unknown");
+    const none = featureStatus("kilo", "coordinator.mode");
+    expect(none.available).toBe(false);
+    expect(none.reason).toContain("subagentExecution: none");
+  });
+
   it("overrides the opencode v2 profile without touching other platforms", () => {
     const v2 = capabilitiesFor("opencode", "opencode@v2");
     expect(v2.behavior.sessionStart).toMatchObject({

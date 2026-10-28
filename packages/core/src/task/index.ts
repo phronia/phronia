@@ -45,3 +45,15 @@ export * from "./workspace/types.js";
 export * from "./workspace/policy.js";
 export * from "./index-types.js";
 export * from "./index-policy.js";
+
+// Coordinator policy (W5). `classifyBatchState` is exported under a distinct
+// name because `index-policy.ts` already exports the single-task classifier.
+export * from "./coordinator/types.js";
+export {
+  buildDispatchManifest,
+  buildPromptPrefix,
+  canRunCoordinator,
+  classifyBatchState as classifyCoordinatorBatch,
+  coordinatorState,
+  nextWave,
+} from "./coordinator/policy.js";

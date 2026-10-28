@@ -17,6 +17,7 @@ import {
   planParallel,
   queuePosition,
   readParallelMeta,
+  canRunCoordinator,
   type Footprint,
   type ParallelPlan,
   type PlannerTask,
@@ -33,6 +34,7 @@ import {
   type SharedRuntimePaths,
   type TaskRecordView,
 } from "@phronia/core/state";
+import { CAPABILITIES, type PlatformId } from "@phronia/core";
 import {
   createGitPort,
   type GitPort,
@@ -114,7 +116,11 @@ export interface ParallelStatusResult {
     readonly fallback: boolean;
   };
   readonly capabilities: {
-    readonly coordinator: { readonly available: boolean; readonly reason: string | null };
+    readonly coordinator: {
+      readonly available: boolean;
+      readonly reason: string | null;
+      readonly fallback: string | null;
+    };
   };
   readonly diagnostics: readonly Diagnostic[];
 }
@@ -125,6 +131,8 @@ export interface StatusOptions {
   readonly cwd: string;
   readonly git?: GitPort;
   readonly env?: Readonly<Record<string, string | undefined>>;
+  /** Optional harness id for the coordinator capability gate. */
+  readonly platform?: string;
 }
 
 interface MainContext {
@@ -370,14 +378,27 @@ export function parallelStatus(options: StatusOptions): StatusServiceResult {
       fallback: resolution.fallback,
     },
     capabilities: {
-      coordinator: {
-        available: false,
-        reason:
-          "coordinator capability gating requires a platform with parallel subagents and per-task workspaces; run `phronia parallel dispatch` after W5 lands",
-      },
+      coordinator: resolveCoordinatorCapability(options.platform),
     },
     diagnostics,
   };
+}
+
+function resolveCoordinatorCapability(
+  platform: string | undefined,
+): { available: boolean; reason: string | null; fallback: string | null } {
+  const id = platform?.trim() ?? "";
+  const capabilities =
+    id !== "" && id in CAPABILITIES
+      ? CAPABILITIES[id as PlatformId]
+      : null;
+  return canRunCoordinator(
+    capabilities ?? {
+      subagentExecution: "unknown",
+      subagentWorkspace: "unknown",
+      subagentIdentity: "unknown",
+    },
+  );
 }
 
 function mainContext(cwd: string, injected?: GitPort): MainContext {

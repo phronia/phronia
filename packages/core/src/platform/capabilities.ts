@@ -37,16 +37,95 @@ export interface EnvironmentCapabilities {
 
 export type LoopControl = "none" | "hooks" | "full";
 
+/**
+ * Sub-agent execution dimensions (design.md §22.1, W0 capability report).
+ *
+ * `unknown` is first-class: an unverified platform must fail closed, not be
+ * silently treated as supporting coordinator mode.
+ */
+export type SubagentExecution =
+  | "unknown"
+  | "none"
+  | "single"
+  | "parallel"
+  | "nested";
+
+export type SubagentWorkspace = "unknown" | "none" | "inherited" | "per-task";
+
+export type SubagentIdentity = "unknown" | "none" | "shared" | "isolated";
+
+export interface SubagentCapabilities {
+  readonly execution: SubagentExecution;
+  readonly workspace: SubagentWorkspace;
+  readonly identity: SubagentIdentity;
+}
+
 export interface PlatformCapabilities {
   behavior: BehaviorBindings;
   environment: EnvironmentCapabilities;
   loopControl: LoopControl;
+  /** How many sub-agents a harness can run (W0). */
+  subagentExecution: SubagentExecution;
+  /** Whether each sub-agent can get its own cwd/worktree (W0). */
+  subagentWorkspace: SubagentWorkspace;
+  /** Whether sub-agents share the parent session identity (W0). */
+  subagentIdentity: SubagentIdentity;
   evidence: {
     verifiedAt: string;
     verifiedBy: string;
     notes?: string;
   };
 }
+
+type BasePlatformCapabilities = Omit<
+  PlatformCapabilities,
+  "subagentExecution" | "subagentWorkspace" | "subagentIdentity"
+>;
+
+/**
+ * W0 values (`capability-report.md` §2, §7.2).
+ *
+ * - Claude Code: nested / per-task / shared (schema + docs; live run pending)
+ * - Codex: parallel / inherited / isolated (docs + spawn.rs + config)
+ * - ZCode: parallel / inherited / isolated (runtime-verified 3.16.3)
+ * - `subagentContext.kind === "none"`: none / none / none
+ * - everything else: unknown until Phase 0 verifies it
+ */
+const SUBAGENT_UNKNOWN: SubagentCapabilities = {
+  execution: "unknown",
+  workspace: "unknown",
+  identity: "unknown",
+};
+const SUBAGENT_NONE: SubagentCapabilities = {
+  execution: "none",
+  workspace: "none",
+  identity: "none",
+};
+
+export const SUBAGENT_CAPABILITIES: Record<PlatformId, SubagentCapabilities> = {
+  "claude-code": { execution: "nested", workspace: "per-task", identity: "shared" },
+  cursor: SUBAGENT_UNKNOWN,
+  opencode: SUBAGENT_UNKNOWN,
+  codex: { execution: "parallel", workspace: "inherited", identity: "isolated" },
+  kilo: SUBAGENT_NONE,
+  kiro: SUBAGENT_UNKNOWN,
+  gemini: SUBAGENT_NONE,
+  antigravity: SUBAGENT_NONE,
+  devin: SUBAGENT_NONE,
+  qoder: SUBAGENT_NONE,
+  codebuddy: SUBAGENT_UNKNOWN,
+  copilot: SUBAGENT_NONE,
+  droid: SUBAGENT_UNKNOWN,
+  dsh: SUBAGENT_NONE,
+  pi: SUBAGENT_UNKNOWN,
+  reasonix: SUBAGENT_NONE,
+  zcode: { execution: "parallel", workspace: "inherited", identity: "isolated" },
+  trae: SUBAGENT_NONE,
+  omp: SUBAGENT_UNKNOWN,
+  grok: SUBAGENT_NONE,
+  kimi: SUBAGENT_NONE,
+  snow: SUBAGENT_UNKNOWN,
+};
 
 const hook = (event: string, detail?: string): Mechanism => ({ kind: "hook", event, detail });
 const plugin = (event: string, detail?: string): Mechanism => ({ kind: "plugin", event, detail });
@@ -73,7 +152,7 @@ const evidence = (notes: string): PlatformCapabilities["evidence"] => ({
   notes,
 });
 
-export const CAPABILITIES: Record<PlatformId, PlatformCapabilities> = {
+const BASE_CAPABILITIES = {
   "claude-code": {
     behavior: {
       sessionStart: hook("SessionStart"),
@@ -338,7 +417,27 @@ export const CAPABILITIES: Record<PlatformId, PlatformCapabilities> = {
     loopControl: "hooks",
     evidence: evidence("class-1; own context writer"),
   },
-};
+} satisfies Record<PlatformId, BasePlatformCapabilities>;
+
+/**
+ * The public matrix: every platform entry carries both the historical
+ * behaviour bindings and the W0 sub-agent dimensions. Keeping the merge in one
+ * place makes "new platform forgot the coordinator fields" a type error.
+ */
+export const CAPABILITIES: Record<PlatformId, PlatformCapabilities> = Object.fromEntries(
+  PLATFORM_IDS.map((id) => {
+    const subagent = SUBAGENT_CAPABILITIES[id];
+    return [
+      id,
+      {
+        ...BASE_CAPABILITIES[id],
+        subagentExecution: subagent.execution,
+        subagentWorkspace: subagent.workspace,
+        subagentIdentity: subagent.identity,
+      },
+    ];
+  }),
+) as Record<PlatformId, PlatformCapabilities>;
 
 export interface MatrixViolation {
   platform: string;

@@ -41,6 +41,8 @@ import {
 } from "../commands/lease.js";
 import { runTaskCommit } from "../commands/commit.js";
 import { runTaskIntegrate } from "../commands/integrate.js";
+import { runTaskDispatch } from "../commands/dispatch.js";
+import { runCoordinatorStatus } from "../commands/coordinator.js";
 import {
   runSpecBootstrap,
   runSpecSetStatus,
@@ -754,9 +756,42 @@ parallelCommand
 
 parallelCommand
   .command("status")
+  .option("--platform <id>", "Harness id for the coordinator capability gate")
   .option("--json", "Output machine-readable JSON")
   .action((options: Record<string, unknown>) => {
-    const code = runParallelStatus({ cwd, json: Boolean(options.json) });
+    const code = runParallelStatus({
+      cwd,
+      platform: options.platform as string | undefined,
+      json: Boolean(options.json),
+    });
+    if (code !== 0) process.exitCode = code;
+  });
+
+parallelCommand
+  .command("dispatch")
+  .description("Emit a coordinator dispatch manifest (Phronia starts no agent process)")
+  .requiredOption("--batch <id>", "Batch id recorded in the shared runtime")
+  .option("--wave <n>", "1-based wave to dispatch", (value) => Number(value))
+  .option("--max <n>", "Maximum tasks per wave", (value) => Number(value))
+  .option("--include-planning", "Include planning tasks")
+  .option("--dry-run", "Show the manifest without creating worktrees or leases")
+  .option("--platform <id>", "Override harness detection")
+  .option("--session-key <key>", "Coordinator session key")
+  .option("--owner-id <id>", "Lease owner id recorded for dispatched tasks")
+  .option("--json", "Output machine-readable JSON")
+  .action((options: Record<string, unknown>) => {
+    const code = runTaskDispatch({
+      cwd,
+      batch: options.batch as string,
+      wave: options.wave as number | undefined,
+      max: options.max as number | undefined,
+      includePlanning: Boolean(options.includePlanning),
+      dryRun: Boolean(options.dryRun),
+      platform: options.platform as string | undefined,
+      sessionKey: options.sessionKey as string | undefined,
+      ownerId: options.ownerId as string | undefined,
+      json: Boolean(options.json),
+    });
     if (code !== 0) process.exitCode = code;
   });
 
@@ -898,6 +933,25 @@ leaseCommand
   .option("--json", "Output machine-readable JSON")
   .action((taskRef: string, options: Record<string, unknown>) => {
     const code = runLeaseStatus(taskRef, { cwd, json: Boolean(options.json) });
+    if (code !== 0) process.exitCode = code;
+  });
+
+const coordinatorCommand = taskCommand
+  .command("coordinator")
+  .description("Inspect coordinator batches and capability status");
+
+coordinatorCommand
+  .command("status")
+  .option("--batch <id>", "Limit the report to a dispatched batch")
+  .option("--platform <id>", "Override harness detection")
+  .option("--json", "Output machine-readable JSON")
+  .action((options: Record<string, unknown>) => {
+    const code = runCoordinatorStatus({
+      cwd,
+      batch: options.batch as string | undefined,
+      platform: options.platform as string | undefined,
+      json: Boolean(options.json),
+    });
     if (code !== 0) process.exitCode = code;
   });
 

@@ -15,7 +15,8 @@ export type FeatureId =
   | "task.branch"
   | "task.worktree"
   | "crossRepo.task"
-  | "rules.gate";
+  | "rules.gate"
+  | "coordinator.mode";
 
 export interface FeatureStatus {
   id: FeatureId;
@@ -72,5 +73,19 @@ function missingRequirement(
       return capabilities.loopControl === "full"
         ? null
         : "requires loopControl: full";
+    case "coordinator.mode": {
+      const execution = capabilities.subagentExecution;
+      const workspace = capabilities.subagentWorkspace;
+      if (execution === "unknown" || workspace === "unknown") {
+        return "subagent capabilities are unknown; Phase 0 verification is required";
+      }
+      if (execution !== "parallel" && execution !== "nested") {
+        return `subagentExecution: ${execution}; coordinator requires parallel or nested`;
+      }
+      if (workspace !== "per-task") {
+        return `subagentWorkspace: ${workspace}; use multi-session instead`;
+      }
+      return null;
+    }
   }
 }

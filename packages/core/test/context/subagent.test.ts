@@ -139,6 +139,66 @@ describe("context-only materialization", () => {
   });
 });
 
+describe("task_ref prompt fallback (W5)", () => {
+  let root: string;
+
+  beforeEach(() => {
+    root = fs.mkdtempSync(path.join(os.tmpdir(), "phronia-subagent-taskref-"));
+    seed(root);
+    fs.mkdirSync(path.join(root, ".phronia/tasks/01-01-two"), { recursive: true });
+    fs.writeFileSync(
+      path.join(root, ".phronia/tasks/01-01-two/task.json"),
+      JSON.stringify({ id: "two", title: "Two", status: "in_progress" }),
+    );
+  });
+
+  afterEach(() => {
+    fs.rmSync(root, { recursive: true, force: true });
+  });
+
+  it("lets an explicit field win over the prompt prefix", () => {
+    const response = buildSubagentSpawn(
+      request(root, {
+        session_id: "prompt",
+        subagent_type: "phronia-research",
+        task_ref: ".phronia/tasks/01-01-two",
+        prompt: "Active task: .phronia/tasks/01-01-one\nplease investigate",
+        allow_single_session_fallback: false,
+      }),
+    );
+    expect(response.session.task).toBe(".phronia/tasks/01-01-two");
+    expect(response.session.taskSource).toBe("hint");
+  });
+
+  it("parses a leading 'Active task:' line from the dispatch prompt", () => {
+    const response = buildSubagentSpawn(
+      request(root, {
+        session_id: "prompt",
+        subagent_type: "phronia-research",
+        prompt:
+          "\n  \tActive task: .phronia/tasks/01-01-one\nResearch the codebase.",
+        allow_single_session_fallback: false,
+      }),
+    );
+    expect(response.session.task).toBe(".phronia/tasks/01-01-one");
+    expect(response.session.taskSource).toBe("hint");
+  });
+
+  it("ignores 'Active task:' after the first non-empty line", () => {
+    const response = buildSubagentSpawn(
+      request(root, {
+        session_id: "prompt",
+        subagent_type: "phronia-research",
+        prompt:
+          "Please investigate the codebase.\nActive task: .phronia/tasks/01-01-one",
+        allow_single_session_fallback: false,
+      }),
+    );
+    expect(response.session.task).toBeNull();
+    expect(response.session.taskSource).toBe("none");
+  });
+});
+
 describe.skipIf(!pythonAvailable)("subagent prompt parity", () => {
   let root: string;
 
