@@ -65,3 +65,26 @@ Implemented parallel task execution and coordinator mode: planner/footprint/depe
 ### Status
 
 [OK] **Completed**
+
+
+## Session 3: Parallel dispatch admission
+<!-- phronia-session: v=2 fp=8e6bc20f8d1b19c7 -->
+
+**Date**: 2026-10-29
+**Task**: Parallel dispatch admission
+**Package**: cli
+**Branch**: `main`
+
+### Summary
+
+Added dispatch admission at the subagent boundary: pure policy, zero-cost runtime facts, deny/guard rendering across ZCode/Claude/OpenCode/Codex, parent-task container semantics, task.py parent gate, workspace main reuse, and session-key ticket bridge. Verified with pnpm verify, ZCode 3.16.3 live deny, real plugin bridge, and worktree e2e.
+
+### Git Commits
+
+| Hash | Message |
+|------|---------|
+| `433baad0` | feat(parallel): enforce dispatch admission at subagent spawn |
+
+### Status
+
+[OK] **Completed**
