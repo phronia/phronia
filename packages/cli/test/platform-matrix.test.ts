@@ -189,7 +189,9 @@ describe("doctor report", () => {
         plugins?: { dirs?: string[] };
         hooks?: unknown;
       };
-      expect(config.plugins?.dirs).toContain(".zcode/plugins/phronia");
+      expect(config.plugins?.dirs).toContain(
+        path.join(root, ".zcode", "plugins", "phronia"),
+      );
       expect(config.hooks).toBeUndefined();
       expect(
         fs.existsSync(

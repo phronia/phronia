@@ -1187,7 +1187,9 @@ describe("configurePlatform", () => {
       };
       hooks?: unknown;
     };
-    expect(generatedConfig.plugins?.dirs).toContain(".zcode/plugins/phronia");
+    expect(generatedConfig.plugins?.dirs).toEqual([
+      path.join(tmpDir, ".zcode", "plugins", "phronia"),
+    ]);
     expect(generatedConfig.plugins?.enabledPlugins?.["phronia@inline"]).toBe(
       true,
     );

@@ -110,14 +110,17 @@ export function ensureZcodePlugin(
   const dirs = Array.isArray(plugins.dirs)
     ? plugins.dirs.filter((entry): entry is string => typeof entry === "string")
     : [];
+  // ZCode resolves plugins.dirs relative to the host process cwd, not the
+  // workspace root, so a relative entry is unreliable after an app restart.
+  // Write the absolute path for this machine; doctor/update repair it on a
+  // different checkout.
   const pluginDirIndex = dirs.findIndex(
     (entry) => path.resolve(root, entry) === pluginDir,
   );
   if (pluginDirIndex === -1) {
-    dirs.push(ZCODE_PLUGIN_DIR);
-  } else if (dirs[pluginDirIndex] !== ZCODE_PLUGIN_DIR) {
-    // Migrate the POC's absolute path to the portable workspace-relative form.
-    dirs[pluginDirIndex] = ZCODE_PLUGIN_DIR;
+    dirs.push(pluginDir);
+  } else if (dirs[pluginDirIndex] !== pluginDir) {
+    dirs[pluginDirIndex] = pluginDir;
   }
   plugins.dirs = dirs;
 

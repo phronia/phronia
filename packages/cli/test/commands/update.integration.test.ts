@@ -322,7 +322,9 @@ describe("update() integration", () => {
       plugins?: { dirs?: string[] };
       hooks?: unknown;
     };
-    expect(config.plugins?.dirs).toContain(".zcode/plugins/phronia");
+    expect(config.plugins?.dirs).toContain(
+      path.join(tmpDir, ".zcode", "plugins", "phronia"),
+    );
     expect(config.hooks).toBeUndefined();
   });
 
@@ -340,7 +342,9 @@ describe("update() integration", () => {
       plugins?: { dirs?: string[] };
       hooks?: unknown;
     };
-    expect(config.plugins?.dirs).toContain(".zcode/plugins/phronia");
+    expect(config.plugins?.dirs).toContain(
+      path.join(tmpDir, ".zcode", "plugins", "phronia"),
+    );
     expect(config.hooks).toBeUndefined();
   });
 

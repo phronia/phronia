@@ -41,7 +41,7 @@ describe("ensureZcodePlugin", () => {
     ).toBe(true);
 
     const config = readConfig(root);
-    expect(config.plugins?.dirs).toEqual([".zcode/plugins/phronia"]);
+    expect(config.plugins?.dirs).toEqual([result.pluginDir]);
     expect(config.plugins?.enabledPlugins?.["phronia@inline"]).toBe(true);
     expect(config.hooks).toBeUndefined();
   });
@@ -79,7 +79,7 @@ describe("ensureZcodePlugin", () => {
     const config = readConfig(root);
     expect(config.plugins?.dirs).toEqual([
       "custom/plugin",
-      ".zcode/plugins/phronia",
+      path.join(root, ".zcode", "plugins", "phronia"),
     ]);
     expect(config.plugins?.enabledPlugins).toEqual({
       "other@market": true,
@@ -90,12 +90,14 @@ describe("ensureZcodePlugin", () => {
     ]);
   });
 
-  it("migrates an absolute POC dir to the portable relative form", () => {
-    const absolute = path.join(root, ".zcode", "plugins", "phronia");
-    writeConfig(root, { plugins: { dirs: [absolute] } });
+  it("migrates a relative dir to the absolute path ZCode can resolve", () => {
+    const relative = ".zcode/plugins/phronia";
+    writeConfig(root, { plugins: { dirs: [relative] } });
 
     ensureZcodePlugin(root);
-    expect(readConfig(root).plugins?.dirs).toEqual([".zcode/plugins/phronia"]);
+    expect(readConfig(root).plugins?.dirs).toEqual([
+      path.join(root, ".zcode", "plugins", "phronia"),
+    ]);
   });
 
   it("refuses malformed config instead of overwriting it", () => {
