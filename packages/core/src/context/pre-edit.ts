@@ -29,6 +29,7 @@ const EDIT_TOOLS = new Set([
   "notebook_edit",
   "applypatch",
   "apply_patch",
+  "patch",
 ]);
 
 export function isEditTool(toolName: string | null): boolean {

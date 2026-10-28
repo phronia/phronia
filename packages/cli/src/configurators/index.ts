@@ -24,7 +24,7 @@ import { loadHashes } from "../utils/template-hash.js";
 // what its platform installs, and lives next to any residual behavior.
 import { collectClaudeTemplates, configureClaude } from "./claude.js";
 import { collectCursorTemplates } from "./cursor.js";
-import { collectOpenCodeTemplates } from "./opencode.js";
+import { collectOpenCodeTemplates, OPENCODE_ADAPTERS } from "./opencode.js";
 import { collectCodexTemplates, configureCodex } from "./codex.js";
 import { collectKiloTemplates } from "./kilo.js";
 import { collectKiroTemplates } from "./kiro.js";
@@ -60,7 +60,9 @@ export interface PlatformFunctions {
   /** Configure platform during init (copy templates to project) */
   configure: (cwd: string, options?: PlatformConfigureOptions) => Promise<void>;
   /** Collect template files for update tracking. Undefined = platform skipped during update. */
-  collectTemplates?: () => Map<string, string>;
+  collectTemplates?: (
+    options?: import("./shared.js").TemplateCollectOptions,
+  ) => Map<string, string>;
 }
 
 /**
@@ -74,10 +76,13 @@ export interface PlatformFunctions {
  * behavior inline in their own configurator.
  */
 function fromTemplates(
-  collectTemplates: () => Map<string, string>,
+  collectTemplates: (
+    options?: import("./shared.js").TemplateCollectOptions,
+  ) => Map<string, string>,
 ): PlatformFunctions {
   return {
-    configure: (cwd) => writeTemplateMap(cwd, collectTemplates()),
+    configure: (cwd, options) =>
+      writeTemplateMap(cwd, collectTemplates(options)),
     collectTemplates,
   };
 }
@@ -148,13 +153,21 @@ export function getConfiguredPlatforms(cwd: string): Set<AITool> {
 
   for (const id of PLATFORM_IDS) {
     const configDir = AI_TOOLS[id].configDir;
-    const templates = collectPlatformTemplates(id);
-    const hasTrackedTemplate = [...(templates?.keys() ?? [])].some(
-      (relativePath) =>
-        (relativePath === configDir ||
-          relativePath.startsWith(`${configDir}/`)) &&
-        hashes[relativePath] !== undefined,
-    );
+    // OpenCode has one file set per generation; a v2-only install tracks
+    // `.opencode/plugins/phronia.js`, which the v1 set does not contain.
+    const adapterIds = id === "opencode" ? OPENCODE_ADAPTERS : [undefined];
+    const hasTrackedTemplate = adapterIds.some((adapterId) => {
+      const templates = collectPlatformTemplates(
+        id,
+        adapterId ? { adapterId } : undefined,
+      );
+      return [...(templates?.keys() ?? [])].some(
+        (relativePath) =>
+          (relativePath === configDir ||
+            relativePath.startsWith(`${configDir}/`)) &&
+          hashes[relativePath] !== undefined,
+      );
+    });
     if (hasTrackedTemplate) {
       platforms.add(id);
     }
@@ -228,8 +241,9 @@ export function configurePlatform(
  */
 export function collectPlatformTemplates(
   platformId: AITool,
+  options?: PlatformConfigureOptions,
 ): Map<string, string> | undefined {
-  const map = PLATFORM_FUNCTIONS[platformId].collectTemplates?.();
+  const map = PLATFORM_FUNCTIONS[platformId].collectTemplates?.(options);
   return map ? renderTemplateMap(map) : map;
 }
 

@@ -35,6 +35,7 @@ import fs from "node:fs";
 import path from "node:path";
 
 import { collectPlatformTemplates } from "../configurators/index.js";
+import { OPENCODE_ADAPTERS } from "../configurators/opencode.js";
 import { DIR_NAMES, FILE_NAMES } from "../constants/paths.js";
 import { getAllMigrations } from "../migrations/index.js";
 import { saveHashes } from "./template-hash.js";
@@ -65,10 +66,16 @@ export interface PruneResult {
 function buildKnownKeys(configuredPlatforms: readonly AITool[]): Set<string> {
   const known = new Set<string>();
   for (const id of configuredPlatforms) {
-    const templates = collectPlatformTemplates(id);
-    if (!templates) continue;
-    for (const key of templates.keys()) {
-      known.add(toPosix(key));
+    const adapterIds = id === "opencode" ? OPENCODE_ADAPTERS : [undefined];
+    for (const adapterId of adapterIds) {
+      const templates = collectPlatformTemplates(
+        id,
+        adapterId ? { adapterId } : undefined,
+      );
+      if (!templates) continue;
+      for (const key of templates.keys()) {
+        known.add(toPosix(key));
+      }
     }
   }
   // Preserve any path referenced by a migration: legitimate pending

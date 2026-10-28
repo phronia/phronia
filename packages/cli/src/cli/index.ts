@@ -455,6 +455,7 @@ program
   .description("Build harness-neutral context for an event (session-start, user-prompt, ...)")
   .option("--event <event>", "Context event")
   .option("--platform <id>", "Platform id (claude-code, cursor, opencode, ...)")
+  .option("--adapter <id>", "Adapter id observed by the shim (opencode@v2, ...)")
   .option("--project-root <path>", "Explicit project root")
   .option("--input <path>", "Input JSON file, or - for stdin", "-")
   .option("--render", "Render the harness envelope instead of JSON")
@@ -464,6 +465,7 @@ program
     const exitCode = runContextCommand({
       event: (options.event as never) ?? ("session-start" as never),
       platform: (options.platform as string) ?? "",
+      adapter: options.adapter as string | undefined,
       projectRoot: options.projectRoot as string | undefined,
       input: (options.input as string) ?? "-",
       render: Boolean(options.render),

@@ -75,7 +75,58 @@ export const SESSION_ENV_KEYS: readonly PlatformEnvEntry[] = [
     provenance: "real",
     note: "Snow exports this into hook/terminal/sub-agent children",
   },
+  {
+    platform: "opencode",
+    keys: ["OPENCODE_SESSION_ID"],
+    provenance: "real",
+    note: "OpenCode 2.x shell tool sets it per command (tool/plugin/shell.ts)",
+  },
 ];
+
+/**
+ * Host markers used to scope identity lookup before walking the flat table.
+ *
+ * The explicit `PHRONIA_HOST` wins: shims set it from a shell hook, so a
+ * nested harness (ZCode launched from an OpenCode shell, or the reverse)
+ * cannot borrow the parent's session variable. The remaining markers are a
+ * best-effort fallback for platforms that do not set it yet.
+ */
+export const HOST_ENV_KEY = "PHRONIA_HOST";
+
+export const HOST_MARKERS: readonly PlatformEnvEntry[] = [
+  {
+    platform: "zcode",
+    keys: ["ZCODE_PROJECT_DIR", "ZCODE_PLUGIN_ROOT"],
+    provenance: "real",
+    note: "ZCode hook bridge exports these",
+  },
+  {
+    platform: "opencode",
+    keys: ["OPENCODE"],
+    provenance: "real",
+    note: "OpenCode 2.x shell sets OPENCODE=1",
+  },
+  {
+    platform: "claude",
+    keys: ["CLAUDE_CODE_ENTRYPOINT", "CLAUDE_PROJECT_DIR"],
+    provenance: "real",
+    note: "Claude Code sets the entrypoint/project dir",
+  },
+];
+
+/** Resolve the host platform from explicit or inferred markers. */
+export function detectHostPlatform(
+  env: Readonly<Record<string, string | undefined>>,
+): string | null {
+  const explicit = env[HOST_ENV_KEY]?.trim();
+  if (explicit) return explicit;
+  for (const marker of HOST_MARKERS) {
+    for (const key of marker.keys) {
+      if (env[key]?.trim()) return marker.platform;
+    }
+  }
+  return null;
+}
 
 export const CONVERSATION_ENV_KEYS: readonly PlatformEnvEntry[] = [
   {

@@ -1,15 +1,15 @@
 // phronia-shim: opencode@v1
 // shim-version: 2610.28.3
-// build-id: ae29014ff865
-// content-hash: 8cb176cb8837a9d1bda4adbe7089ce918ca50e363110adc91d82db31840523e7
+// build-id: ad06e583eed1
+// content-hash: d625a25b85592370915fe09b91adfdcadeaf70984297a67d1ba91628c0e15968
 // DO NOT EDIT. Regenerate with: pnpm build:shims
 
 import { createRequire as __phroniaCreateRequire } from "node:module"; const require = __phroniaCreateRequire(import.meta.url);
 
-// packages/cli/src/templates/opencode/plugins/inject-subagent-context.js
+// packages/cli/src/templates/opencode/adapters/v1/plugins/inject-subagent-context.js
 import { createHash } from "node:crypto";
 
-// packages/cli/src/templates/opencode/lib/debug.js
+// packages/cli/src/templates/opencode/adapters/v1/lib/debug.js
 import { appendFileSync } from "node:fs";
 import { platform } from "node:os";
 import { join } from "node:path";
@@ -28,7 +28,7 @@ function debugLog(prefix, ...args) {
   }
 }
 
-// packages/cli/src/templates/opencode/lib/phronia-client.js
+// packages/cli/src/templates/opencode/adapters/v1/lib/phronia-client.js
 import { spawnSync } from "node:child_process";
 function resolveCli() {
   const explicit = process.env.PHRONIA_CLI_PATH;
@@ -71,7 +71,7 @@ function runContext({ event, platform: platform2, projectRoot, input, render = f
   return render ? result.stdout : JSON.parse(result.stdout);
 }
 
-// packages/cli/src/templates/opencode/plugins/inject-subagent-context.js
+// packages/cli/src/templates/opencode/adapters/v1/plugins/inject-subagent-context.js
 var AGENTS_ALL = ["implement", "check", "research"];
 var ACTIVE_TASK_HINT_RE = /^\s*Active task:\s*(\S+)\s*$/m;
 function sanitizeKey(raw) {

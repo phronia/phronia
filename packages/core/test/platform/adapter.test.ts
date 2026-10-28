@@ -5,6 +5,7 @@ import { describe, expect, it } from "vitest";
 import {
   ADAPTERS,
   adapterById,
+  adapterForRuntime,
   adaptersFor,
   selectAdapter,
 } from "../../src/platform/registry.js";
@@ -104,7 +105,7 @@ describe("adapter selection", () => {
     expect(selection.status).toBe("ok");
   });
 
-  it("refuses opencode v1 for a 2.x harness and reports v2 unimplemented", () => {
+  it("selects opencode v2 for a 2.x harness", () => {
     const selection = selectAdapter({
       platform: "opencode",
       detection: {
@@ -115,7 +116,41 @@ describe("adapter selection", () => {
       },
     });
     expect(selection.adapter?.id).toBe("opencode@v2");
-    expect(selection.status).toBe("unsupported");
+    expect(selection.status).toBe("ok");
+    expect(selection.reason).toBe("semver-match");
+  });
+
+  it("keeps the recorded adapter when the probe is unavailable", () => {
+    const selection = selectAdapter({
+      platform: "opencode",
+      recorded: "opencode@v2",
+      detection: {
+        status: "unknown",
+        harnessVersion: null,
+        source: "none",
+        confidence: "low",
+        reason: "opencode --version is unavailable",
+      },
+    });
+    expect(selection.adapter?.id).toBe("opencode@v2");
+    expect(selection.status).toBe("ok");
+    expect(selection.reason).toBe("recorded-adapter");
+    expect(selection.detection.source).toBe("recorded");
+  });
+
+  it("lets a successful probe override the recorded adapter", () => {
+    const selection = selectAdapter({
+      platform: "opencode",
+      recorded: "opencode@v1",
+      detection: {
+        status: "detected",
+        harnessVersion: "2.0.32",
+        source: "cli",
+        confidence: "high",
+      },
+    });
+    expect(selection.adapter?.id).toBe("opencode@v2");
+    expect(selection.reason).toBe("semver-match");
   });
 
   it("degrades to v1 when the version is unknown", () => {
@@ -169,6 +204,13 @@ describe("adapter selection", () => {
     expect(adapterById("opencode@v2")).not.toBeNull();
     expect(adaptersFor("codex").map((entry) => entry.id)).toEqual(["codex@v1"]);
     expect(ADAPTERS.some((entry) => entry.id === "dsh@v1")).toBe(true);
+  });
+
+  it("uses the reported adapter at runtime and falls back by platform", () => {
+    expect(adapterForRuntime("opencode", "opencode@v2").id).toBe("opencode@v2");
+    expect(adapterForRuntime("opencode", "opencode@v1").id).toBe("opencode@v1");
+    expect(adapterForRuntime("opencode", "codex@v1").id).toBe("opencode@v1");
+    expect(adapterForRuntime("opencode", null).id).toBe("opencode@v1");
   });
 });
 

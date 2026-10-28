@@ -12,8 +12,9 @@ import { CONTEXT_SCHEMA_VERSION } from "./types.js";
 import { buildSessionStart } from "./session-start.js";
 import { buildUserPrompt } from "./user-prompt.js";
 import { buildPreShell } from "./pre-shell.js";
-import { buildPreEdit, isEditTool } from "./pre-edit.js";
+import { buildPreEdit } from "./pre-edit.js";
 import { buildSubagentSpawn } from "./subagent/index.js";
+import { capabilitiesFor } from "../platform/capabilities.js";
 import { CORE_VERSION } from "../version.js";
 import { diagnostic, type Diagnostic } from "../state/diagnostics.js";
 
@@ -49,19 +50,21 @@ export function handleContext(request: ContextRequest): ContextResponse {
     case "subagent-spawn":
       return buildSubagentSpawn(request);
     case "pre-tool-use": {
-      const toolName = readToolName(request.input);
-      if (isEditTool(toolName)) {
+      const toolName = readToolName(request.input, request.hints?.toolName);
+      const { toolNames } = capabilitiesFor(
+        request.platform.id,
+        request.platform.adapterId,
+      );
+      if (toolName === null) {
+        return buildSubagentSpawn(request);
+      }
+      if (toolNames.edit.includes(toolName)) {
         return buildPreEdit(request);
       }
-      if (toolName === "bash" || toolName === "shell") {
+      if (toolNames.shell.includes(toolName)) {
         return buildPreShell(request);
       }
-      if (
-        toolName === "task" ||
-        toolName === "agent" ||
-        toolName === "subagent" ||
-        toolName === null
-      ) {
+      if (toolNames.subagent.includes(toolName)) {
         return buildSubagentSpawn(request);
       }
       return notImplemented(request);
@@ -163,7 +166,10 @@ export function renderContext(
   }
 }
 
-function readToolName(input: unknown): string | null {
+function readToolName(input: unknown, hint?: string): string | null {
+  if (typeof hint === "string" && hint.trim()) {
+    return hint.trim().toLowerCase();
+  }
   if (typeof input !== "object" || input === null) {
     return null;
   }

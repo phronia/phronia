@@ -9,11 +9,11 @@ import fs from "node:fs";
 import path from "node:path";
 import {
   ContextContractError,
+  adapterForRuntime,
   contextJsonSchema,
   handleContext,
   LAYOUT,
   renderContext,
-  runtimeAdapter,
   writeHandshake,
   type ContextEvent,
   type ContextRequest,
@@ -23,6 +23,8 @@ import { normalizePlatformId } from "@phronia/core/platform";
 export interface ContextCommandOptions {
   event: ContextEvent;
   platform: string;
+  /** Adapter observed by the shim, e.g. `opencode@v2`. */
+  adapter?: string;
   projectRoot?: string;
   input: string;
   render?: boolean;
@@ -68,7 +70,10 @@ export function runContextCommand(options: ContextCommandOptions): number {
   const request: ContextRequest = {
     schemaVersion: 1,
     event: options.event,
-    platform: { id: platform },
+    platform: {
+      id: platform,
+      ...(options.adapter ? { adapterId: options.adapter } : {}),
+    },
     projectRoot: path.resolve(options.projectRoot ?? process.cwd()),
     input,
   };
@@ -82,7 +87,7 @@ export function runContextCommand(options: ContextCommandOptions): number {
         request.projectRoot,
         platform,
         request.event,
-        runtimeAdapter(platform).id,
+        request.platform.adapterId ?? adapterForRuntime(platform).id,
         input,
       );
     }

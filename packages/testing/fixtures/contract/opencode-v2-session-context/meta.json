@@ -1,0 +1,11 @@
+{
+  "platform": "opencode",
+  "adapterId": "opencode@v2",
+  "event": "session-start",
+  "harnessVersion": "2.0.32",
+  "recordedAt": "2026-10-28T00:00:00Z",
+  "source": "synthetic",
+  "redactionVersion": 1,
+  "payloadKeys": ["session_id"],
+  "notes": "Shape-only fixture for the v2 session.hook(\"context\") request shape."
+}

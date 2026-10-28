@@ -1,12 +1,12 @@
 // phronia-shim: opencode@v1
 // shim-version: 2610.28.3
-// build-id: ae29014ff865
-// content-hash: 11b8405666fe8d870aa6a9d18bf3d49f225d38f5aef05ca1c6f7a360b5722cb7
+// build-id: ad06e583eed1
+// content-hash: 75da092bef2b5d55665a4ba937b896b238dcc5c828e210ba4c7c07b85e1d4ac4
 // DO NOT EDIT. Regenerate with: pnpm build:shims
 
 import { createRequire as __phroniaCreateRequire } from "node:module"; const require = __phroniaCreateRequire(import.meta.url);
 
-// packages/cli/src/templates/opencode/lib/phronia-client.js
+// packages/cli/src/templates/opencode/adapters/v1/lib/phronia-client.js
 import { spawnSync } from "node:child_process";
 function resolveCli() {
   const explicit = process.env.PHRONIA_CLI_PATH;
@@ -55,7 +55,7 @@ function blocksText(response) {
   return response.blocks.map((block) => block.text).join("\n\n");
 }
 
-// packages/cli/src/templates/opencode/lib/context-visibility.js
+// packages/cli/src/templates/opencode/adapters/v1/lib/context-visibility.js
 var CONTEXT_PART_KINDS = {
   sessionStart: { offset: 2n, slot: "0" },
   workflowState: { offset: 1n, slot: "1" }
@@ -111,7 +111,7 @@ function prependEphemeralText(messages, text) {
   return true;
 }
 
-// packages/cli/src/templates/opencode/plugins/session-start.js
+// packages/cli/src/templates/opencode/adapters/v1/plugins/session-start.js
 var FIRST_REPLY_NOTICE_RE = /<first-reply-notice>[\s\S]*?<\/first-reply-notice>\s*/g;
 function stripFirstReplyNotice(context) {
   return context.replace(FIRST_REPLY_NOTICE_RE, "");

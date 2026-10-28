@@ -89,6 +89,8 @@ export async function replayFixture(
       "<PROJECT_ROOT>",
       root,
     );
+    const adapterId = (request.platform as { adapterId?: string } | undefined)
+      ?.adapterId;
     const result = spawnSync(
       process.execPath,
       [
@@ -101,6 +103,7 @@ export async function replayFixture(
           (request.platform as { id?: string } | undefined)?.id ??
             fixture.meta.platform,
         ),
+        ...(adapterId ? ["--adapter", adapterId] : []),
         "--project-root",
         projectRoot,
         "--input",

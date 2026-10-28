@@ -7,15 +7,15 @@ import {
   insertSyntheticTextPart,
   MESSAGES_TRANSFORM_HOOK,
   prependEphemeralText,
-} from "../../src/templates/opencode/lib/context-visibility.js";
+} from "../../src/templates/opencode/adapters/v1/lib/context-visibility.js";
 import {
   contextCollector,
   hasInjectedTrellisContext,
   isTrellisSubagent,
-} from "../../src/templates/opencode/lib/session-utils.js";
-import injectSubagentContextPlugin from "../../src/templates/opencode/plugins/inject-subagent-context.js";
-import sessionStartPlugin from "../../src/templates/opencode/plugins/session-start.js";
-import injectWorkflowStatePlugin from "../../src/templates/opencode/plugins/inject-workflow-state.js";
+} from "../../src/templates/opencode/adapters/v1/lib/session-utils.js";
+import injectSubagentContextPlugin from "../../src/templates/opencode/adapters/v1/plugins/inject-subagent-context.js";
+import sessionStartPlugin from "../../src/templates/opencode/adapters/v1/plugins/session-start.js";
+import injectWorkflowStatePlugin from "../../src/templates/opencode/adapters/v1/plugins/inject-workflow-state.js";
 
 beforeAll(() => {
   process.env.PHRONIA_CLI_PATH = join(

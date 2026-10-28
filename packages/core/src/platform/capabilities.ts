@@ -345,6 +345,87 @@ export interface MatrixViolation {
   message: string;
 }
 
+/** Tool names a platform generation exposes for the three behaviours core
+ * needs to recognise. Kept separate from `BehaviorBindings` so the context
+ * handlers can normalize `bash`/`shell`, `task`/`subagent`, and the edit
+ * family without hard-coding per-platform strings. */
+export interface ToolNameProfile {
+  shell: readonly string[];
+  subagent: readonly string[];
+  edit: readonly string[];
+}
+
+const DEFAULT_TOOL_NAMES: ToolNameProfile = {
+  shell: ["bash", "shell"],
+  subagent: ["task", "agent", "subagent"],
+  edit: [
+    "write",
+    "edit",
+    "multiedit",
+    "multi_edit",
+    "notebookedit",
+    "notebook_edit",
+    "applypatch",
+    "apply_patch",
+    "patch",
+  ],
+};
+
+interface AdapterCapabilityOverride {
+  behavior?: Partial<BehaviorBindings>;
+  toolNames?: Partial<ToolNameProfile>;
+  evidence?: PlatformCapabilities["evidence"];
+}
+
+/**
+ * Per-generation overrides. A platform without an entry keeps its historical
+ * profile, so adding a shard never changes the other twenty platforms.
+ */
+const ADAPTER_CAPABILITY_OVERRIDES: Record<string, AdapterCapabilityOverride> = {
+  "opencode@v2": {
+    behavior: {
+      sessionStart: plugin("session.hook context"),
+      subagentContext: plugin("tool.hook execute.before"),
+      workflowState: plugin("session.hook context"),
+      shellIdentity: config("env OPENCODE_SESSION_ID"),
+      agentDefinitions: native(".opencode/agents"),
+    },
+    toolNames: {
+      shell: ["shell"],
+      subagent: ["subagent"],
+      edit: ["write", "edit", "patch"],
+    },
+    evidence: {
+      verifiedAt: "2026-10-28",
+      verifiedBy: "opencode v2 source audit",
+      notes: "@opencode/plugin 2.x; session context hook; shell env identity",
+    },
+  },
+};
+
+export interface AdapterCapabilityProfile extends PlatformCapabilities {
+  toolNames: ToolNameProfile;
+}
+
+/**
+ * Resolve the capability profile for a platform generation. Unknown or
+ * omitted adapter ids return the platform's historical profile, which keeps
+ * every pre-existing consumer working unchanged.
+ */
+export function capabilitiesFor(
+  platform: PlatformId,
+  adapterId?: string | null,
+): AdapterCapabilityProfile {
+  const base = CAPABILITIES[platform];
+  const override = adapterId ? ADAPTER_CAPABILITY_OVERRIDES[adapterId] : undefined;
+  return {
+    ...base,
+    behavior: { ...base.behavior, ...(override?.behavior ?? {}) },
+    toolNames: { ...DEFAULT_TOOL_NAMES, ...(override?.toolNames ?? {}) },
+    evidence: override?.evidence ?? base.evidence,
+  };
+}
+
 export function validateCapabilities(): MatrixViolation[] {
   const violations: MatrixViolation[] = [];
   for (const id of PLATFORM_IDS) {

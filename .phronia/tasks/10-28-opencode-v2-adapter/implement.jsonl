@@ -1,0 +1,12 @@
+{"file": ".phronia/tasks/10-28-opencode-v2-adapter/research/opencode-v2-plugin-api.md", "reason": "OpenCode v2 插件入口、hook、工具重命名、存储 schema 的一手事实"}
+{"file": ".phronia/tasks/10-28-opencode-v2-adapter/research/phronia-touchpoints.md", "reason": "Phronia 现有 OpenCode 集成触点与缺口清单，实施时逐项对照"}
+{"file": ".phronia/tasks/10-28-opencode-v2-adapter/research/community-migration.md", "reason": "官方迁移指南与社区移植经验，避免重复踩坑"}
+{"file": ".phronia/tasks/10-28-opencode-v2-adapter/design.md", "reason": "分层架构、关键决策、shim cadence 与模板组合设计"}
+{"file": ".phronia/tasks/10-28-opencode-v2-adapter/implement.md", "reason": "四个 wave 的有序任务、验证命令与回滚点"}
+{"file": ".phronia/spec/cli/backend/platform-integration.md", "reason": "新增/修改平台集成的既有约定（文件较大，按需直接读原文）"}
+{"file": ".phronia/spec/cli/backend/commands-update.md", "reason": "update 管线的 plan/apply、幂等与迁移边界"}
+{"file": ".phronia/spec/cli/backend/migrations.md", "reason": "历史迁移清单机制及其与 adapter 切换的区别"}
+{"file": ".phronia/spec/cli/backend/trellis-core-sdk.md", "reason": "core/CLI 包边界与公开导出契约"}
+{"file": ".phronia/spec/cli/backend/filesystem-safety.md", "reason": "删除/移动用户项目文件时的所有权与原子写要求"}
+{"file": ".phronia/spec/cli/unit-test/conventions.md", "reason": "测试目录、命名与隔离约定"}
+{"file": ".phronia/spec/core/backend/index.md", "reason": "core 包的职责边界与质量检查命令"}

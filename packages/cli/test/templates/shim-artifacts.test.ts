@@ -21,7 +21,10 @@ describe("generated shim artifacts", () => {
       }[];
     };
     expect(manifest.schemaVersion).toBe(1);
-    expect(manifest.artifacts).toHaveLength(3);
+    expect(manifest.artifacts).toHaveLength(4);
+    expect(new Set(manifest.artifacts.map((item) => item.adapterId))).toEqual(
+      new Set(["opencode@v1", "opencode@v2"]),
+    );
     for (const artifact of manifest.artifacts) {
       const file = path.join(GENERATED, artifact.path);
       const text = fs.readFileSync(file, "utf8");
@@ -39,10 +42,15 @@ describe("generated shim artifacts", () => {
 
   it("does not keep a second copy of the assembly in the bundle", () => {
     for (const entry of ["session-start.js", "inject-workflow-state.js", "inject-subagent-context.js"]) {
-      const text = fs.readFileSync(path.join(GENERATED, "opencode", entry), "utf8");
+      const text = fs.readFileSync(path.join(GENERATED, "v1", entry), "utf8");
       expect(text).not.toContain("readJsonlWithFiles");
       expect(text).not.toContain("materializeArtifact(");
       expect(text).toContain("runContext");
     }
+    const v2 = fs.readFileSync(path.join(GENERATED, "v2", "phronia.js"), "utf8");
+    expect(v2).not.toContain("readJsonlWithFiles");
+    expect(v2).not.toContain("materializeArtifact(");
+    expect(v2).toContain("runContext");
+    expect(v2).toContain("phronia.opencode.v2");
   });
 });

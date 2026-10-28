@@ -1,0 +1,7 @@
+{
+  "schemaVersion": 1,
+  "event": "session-start",
+  "platform": { "id": "opencode", "adapterId": "opencode@v2" },
+  "projectRoot": "<PROJECT_ROOT>",
+  "input": { "session_id": "v2-demo" }
+}

@@ -7,8 +7,10 @@
 
 import {
   CORE_VERSION,
+  nodeFs,
   probeHarnessVersion,
   readAdapterManifest,
+  readConfig,
   recordPlatform,
   selectAdapter,
   writeAdapterManifest,
@@ -38,6 +40,8 @@ export function refreshAdapterManifest(
   if (ids.length === 0) return [];
 
   let manifest = readAdapterManifest(cwd);
+  const recorded = manifest.platforms;
+  const pins = readConfig(cwd, nodeFs).value.adapterPins;
   const detectedAt = new Date().toISOString();
   const results: RefreshedPlatform[] = [];
 
@@ -52,7 +56,12 @@ export function refreshAdapterManifest(
             reason: "probing disabled",
           }
         : probeHarnessVersion(id);
-    const selection = selectAdapter({ platform: id, detection });
+    const selection = selectAdapter({
+      platform: id,
+      detection,
+      pin: pins[id] ?? null,
+      recorded: recorded[id]?.adapterId ?? null,
+    });
     manifest = recordPlatform(manifest, id, {
       adapterId: selection.adapter?.id ?? `${id}@v1`,
       harnessVersion: detection.harnessVersion,

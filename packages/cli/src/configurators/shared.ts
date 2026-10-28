@@ -19,7 +19,16 @@ export interface PlatformConfigureOptions {
    * `configureClaude` in `claude.ts`.
    */
   withStatusline?: boolean;
+  /**
+   * Generation selected for platforms that have more than one adapter shard
+   * (currently `opencode@v1` / `opencode@v2`). Platforms with a single
+   * generation ignore it.
+   */
+  adapterId?: string;
 }
+
+/** Options passed to `collectTemplates` during update/diffing. */
+export type TemplateCollectOptions = Pick<PlatformConfigureOptions, "adapterId">;
 
 /**
  * Module-level resolved Python command, set by the init flow after probing.

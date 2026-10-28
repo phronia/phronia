@@ -11,11 +11,18 @@ import {
   resolveSkills,
 } from "./shared.js";
 
+export const OPENCODE_V1 = "opencode@v1";
+export const OPENCODE_V2 = "opencode@v2";
+export type OpenCodeAdapterId = typeof OPENCODE_V1 | typeof OPENCODE_V2;
+
+export const OPENCODE_ADAPTERS: readonly OpenCodeAdapterId[] = [
+  OPENCODE_V1,
+  OPENCODE_V2,
+];
+
 /**
  * Files under packages/cli/src/templates/opencode/ that are NOT user-facing
- * assets (build artifacts, runtime caches, etc.). The template dir has a
- * real package.json that declares the @opencode-ai/plugin dep — that one
- * IS user-facing and must be shipped.
+ * assets (build artifacts, runtime caches, etc.).
  */
 const EXCLUDE_PATTERNS = [
   ".d.ts",
@@ -37,63 +44,152 @@ function shouldExclude(filename: string): boolean {
 }
 
 /**
- * Walk the opencode template directory and produce a `Map<relPath, content>`
- * rooted at `.opencode/`. Shared by both `configureOpenCode` (init-time write)
- * and `collectOpenCodeTemplates` (update-time hash tracking) so the two paths
- * always agree on the exact file set. `commands/` is handled separately (sourced
- * from common template context, not from this directory tree).
+ * Paths each generation owns inside the user's project. Reconciliation uses
+ * these to remove a retired shard without touching the shared base
+ * (agents/commands/skills) or files the user added.
  */
-function walkOpenCodeTemplateDir(): Map<string, string> {
-  const files = new Map<string, string>();
+const V1_OWNED_PATHS = [
+  ".opencode/plugins/session-start.js",
+  ".opencode/plugins/inject-workflow-state.js",
+  ".opencode/plugins/inject-subagent-context.js",
+  ".opencode/lib/debug.js",
+  ".opencode/lib/phronia-client.js",
+  ".opencode/lib/context-visibility.js",
+  ".opencode/lib/session-utils.js",
+  ".opencode/package.json",
+] as const;
+
+const V2_OWNED_PATHS = [".opencode/plugins/phronia.js"] as const;
+
+function generatedShimDir(adapterId: OpenCodeAdapterId): string {
   const sourcePath = getOpenCodeTemplatePath();
+  return path.resolve(
+    sourcePath,
+    "..",
+    "_generated/shims",
+    adapterId === OPENCODE_V2 ? "v2" : "v1",
+  );
+}
 
-  function walk(relDir: string): void {
-    const absDir = path.join(sourcePath, relDir);
-    for (const entry of readdirSync(absDir)) {
-      if (shouldExclude(entry)) continue;
-      const absEntry = path.join(absDir, entry);
-      const relEntry = relDir ? path.join(relDir, entry) : entry;
-      const stat = statSync(absEntry);
-      if (stat.isDirectory()) {
-        // Skip commands/ — that's sourced from common/ templates, not the
-        // opencode/ dir. Including both paths would double-write.
-        if (relEntry === "commands") continue;
-        walk(relEntry);
-      } else {
-        const content = readFileSync(absEntry, "utf-8");
-        // Map keys are logical paths used as cross-platform hash keys / lookup
-        // keys downstream. Always POSIX, regardless of host OS.
-        files.set(
-          toPosix(path.join(".opencode", relEntry)),
-          replacePythonCommandLiterals(content),
-        );
-      }
+function addTree(
+  files: Map<string, string>,
+  sourceRoot: string,
+  relDir: string,
+  destPrefix: string,
+): void {
+  const absDir = path.join(sourceRoot, relDir);
+  if (!fs.existsSync(absDir)) return;
+  for (const entry of readdirSync(absDir)) {
+    if (shouldExclude(entry)) continue;
+    const absEntry = path.join(absDir, entry);
+    const stat = statSync(absEntry);
+    if (stat.isDirectory()) {
+      addTree(files, sourceRoot, path.posix.join(relDir, entry), destPrefix);
+      continue;
     }
+    const rel = path.posix.join(relDir, entry);
+    const dest = path.posix.join(destPrefix, rel.slice(relDir.length).replace(/^\//, ""));
+    files.set(
+      toPosix(dest),
+      replacePythonCommandLiterals(readFileSync(absEntry, "utf-8")),
+    );
   }
+}
 
-  walk("");
-
-  // Prefer the build-time single-file artifacts. They replace the source
-  // plugins (and their lib imports) in the generated file set. If the build
-  // step has not run yet, keep the source files so local development works.
-  const generated = path.resolve(sourcePath, "..", "_generated/shims/opencode");
-  if (fs.existsSync(generated)) {
-    for (const entry of fs.readdirSync(generated)) {
-      if (!entry.endsWith(".js")) continue;
-      files.set(
-        `.opencode/plugins/${entry}`,
-        fs.readFileSync(path.join(generated, entry), "utf-8"),
-      );
-    }
+function addGeneratedShims(
+  files: Map<string, string>,
+  adapterId: OpenCodeAdapterId,
+): boolean {
+  const generated = generatedShimDir(adapterId);
+  if (!fs.existsSync(generated)) return false;
+  let added = false;
+  for (const entry of readdirSync(generated)) {
+    if (!entry.endsWith(".js")) continue;
+    files.set(
+      `.opencode/plugins/${entry}`,
+      fs.readFileSync(path.join(generated, entry), "utf-8"),
+    );
+    added = true;
   }
+  return added;
+}
+
+/**
+ * Generation-independent assets. Agents are file-based in both OpenCode v1
+ * and v2, so they stay in one place.
+ */
+function collectOpenCodeBase(): Map<string, string> {
+  const files = new Map<string, string>();
+  addTree(files, getOpenCodeTemplatePath(), "base/agents", ".opencode/agents");
   return files;
 }
 
 /**
- * The opencode file set — written at init and diffed by `trellis update`.
+ * Generation-specific files. The build artifacts are preferred; the v1 source
+ * tree remains a development fallback. v2 has no source fallback because the
+ * source file imports sibling modules that must be bundled into one artifact.
  */
-export function collectOpenCodeTemplates(): Map<string, string> {
-  const files = walkOpenCodeTemplateDir();
+export function collectOpenCodeShard(
+  adapterId: OpenCodeAdapterId = OPENCODE_V1,
+): Map<string, string> {
+  const files = new Map<string, string>();
+  const sourceRoot = getOpenCodeTemplatePath();
+
+  if (addGeneratedShims(files, adapterId)) {
+    if (adapterId === OPENCODE_V1) {
+      // The v1 bundle inlines its helpers, but the lib files remain part of the
+      // managed set: earlier installs tracked them and `update` must keep
+      // diffing them instead of treating them as user files.
+      addTree(files, sourceRoot, "adapters/v1/lib", ".opencode/lib");
+      const manifest = path.join(sourceRoot, "adapters/v1/package.json");
+      files.set(".opencode/package.json", readFileSync(manifest, "utf-8"));
+    }
+    return files;
+  }
+
+  if (adapterId === OPENCODE_V2) {
+    throw new Error(
+      "OpenCode v2 shim is missing; run `pnpm build:shims` before configuring v2",
+    );
+  }
+
+  addTree(files, sourceRoot, "adapters/v1/plugins", ".opencode/plugins");
+  addTree(files, sourceRoot, "adapters/v1/lib", ".opencode/lib");
+  files.set(
+    ".opencode/package.json",
+    readFileSync(path.join(sourceRoot, "adapters/v1/package.json"), "utf-8"),
+  );
+  return files;
+}
+
+export function openCodeShardOwnedPaths(
+  adapterId: OpenCodeAdapterId,
+): readonly string[] {
+  return adapterId === OPENCODE_V2 ? V2_OWNED_PATHS : V1_OWNED_PATHS;
+}
+
+function normalizeAdapterId(
+  adapterId: string | null | undefined,
+): OpenCodeAdapterId {
+  return adapterId === OPENCODE_V2 ? OPENCODE_V2 : OPENCODE_V1;
+}
+
+/**
+ * The opencode file set — written at init and diffed by `phronia update`.
+ * Both paths call this with the same adapter id, so they cannot disagree.
+ */
+export function collectOpenCodeTemplates(
+  options: string | { adapterId?: string } | null | undefined = OPENCODE_V1,
+): Map<string, string> {
+  const adapterId =
+    typeof options === "string" ? options : options?.adapterId ?? OPENCODE_V1;
+  const files = collectOpenCodeBase();
+  for (const [filePath, content] of collectOpenCodeShard(
+    normalizeAdapterId(adapterId),
+  )) {
+    files.set(filePath, content);
+  }
+
   const ctx = AI_TOOLS.opencode.templateContext;
   for (const cmd of resolveCommands(ctx)) {
     files.set(`.opencode/commands/phronia/${cmd.name}.md`, cmd.content);

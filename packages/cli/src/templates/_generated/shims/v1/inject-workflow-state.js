@@ -1,12 +1,12 @@
 // phronia-shim: opencode@v1
 // shim-version: 2610.28.3
-// build-id: ae29014ff865
-// content-hash: 11b8405666fe8d870aa6a9d18bf3d49f225d38f5aef05ca1c6f7a360b5722cb7
+// build-id: ad06e583eed1
+// content-hash: 16a30bdee352b926f1a46a87b59e7877454874cef92337ed412274da44566892
 // DO NOT EDIT. Regenerate with: pnpm build:shims
 
 import { createRequire as __phroniaCreateRequire } from "node:module"; const require = __phroniaCreateRequire(import.meta.url);
 
-// packages/cli/src/templates/opencode/lib/phronia-client.js
+// packages/cli/src/templates/opencode/adapters/v1/lib/phronia-client.js
 import { spawnSync } from "node:child_process";
 function resolveCli() {
   const explicit = process.env.PHRONIA_CLI_PATH;
@@ -55,7 +55,7 @@ function blocksText(response) {
   return response.blocks.map((block) => block.text).join("\n\n");
 }
 
-// packages/cli/src/templates/opencode/lib/context-visibility.js
+// packages/cli/src/templates/opencode/adapters/v1/lib/context-visibility.js
 var CONTEXT_PART_KINDS = {
   sessionStart: { offset: 2n, slot: "0" },
   workflowState: { offset: 1n, slot: "1" }
@@ -64,6 +64,12 @@ var MAX_CONTEXT_PART_OFFSET = Object.values(CONTEXT_PART_KINDS).reduce(
   (maximum, definition) => definition.offset > maximum ? definition.offset : maximum,
   0n
 );
+function findUserTextPart(parts) {
+  if (!Array.isArray(parts)) return void 0;
+  return parts.find(
+    (part) => part?.type === "text" && part.synthetic !== true && part.text !== void 0
+  );
+}
 var MESSAGES_TRANSFORM_HOOK = "experimental.chat.messages.transform";
 var PHRONIA_SUBAGENT_RE = /^(?:phronia|trellis)-/i;
 function isPhroniaSubagent(input) {
@@ -88,9 +94,11 @@ function platformInputFromMessages(messages) {
     agent: info.agent
   };
 }
-function transcriptHasAssistantMessage(messages) {
-  if (!Array.isArray(messages)) return false;
-  return messages.some((message) => message?.info?.role === "assistant");
+function latestUserPromptText(messages) {
+  const index = findLatestUserMessageIndex(messages);
+  if (index < 0) return "";
+  const part = findUserTextPart(messages[index].parts);
+  return typeof part?.text === "string" ? part.text : "";
 }
 function prependEphemeralText(messages, text) {
   if (!Array.isArray(messages)) return false;
@@ -111,12 +119,8 @@ function prependEphemeralText(messages, text) {
   return true;
 }
 
-// packages/cli/src/templates/opencode/plugins/session-start.js
-var FIRST_REPLY_NOTICE_RE = /<first-reply-notice>[\s\S]*?<\/first-reply-notice>\s*/g;
-function stripFirstReplyNotice(context) {
-  return context.replace(FIRST_REPLY_NOTICE_RE, "");
-}
-var session_start_default = async ({ directory }) => {
+// packages/cli/src/templates/opencode/adapters/v1/plugins/inject-workflow-state.js
+var inject_workflow_state_default = async ({ directory }) => {
   return {
     [MESSAGES_TRANSFORM_HOOK]: async (_input, output) => {
       const messages = output?.messages;
@@ -130,23 +134,21 @@ var session_start_default = async ({ directory }) => {
       if (process.env.OPENCODE_NON_INTERACTIVE === "1") {
         return;
       }
+      const prompt = latestUserPromptText(messages);
       const response = runContext({
-        event: "session-start",
+        event: "user-prompt",
         platform: "opencode",
         projectRoot: directory,
-        input: platformInput
+        input: { ...platformInput, prompt }
       });
-      let context = blocksText(response);
-      if (!context) {
+      const breadcrumb = blocksText(response);
+      if (!breadcrumb) {
         return;
       }
-      if (transcriptHasAssistantMessage(messages)) {
-        context = stripFirstReplyNotice(context);
-      }
-      prependEphemeralText(messages, context);
+      prependEphemeralText(messages, breadcrumb);
     }
   };
 };
 export {
-  session_start_default as default
+  inject_workflow_state_default as default
 };

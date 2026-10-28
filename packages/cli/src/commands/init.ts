@@ -12,9 +12,13 @@ import {
   getInitToolChoices,
   resolveCliFlag,
   configurePlatform,
+  collectPlatformTemplates,
   getConfiguredPlatforms,
   getPlatformsWithPythonHooks,
 } from "../configurators/index.js";
+import { reconcileOpenCodeAdapter } from "../configurators/adapter-files.js";
+import type { OpenCodeAdapterId } from "../configurators/opencode.js";
+import { resolveAdapter } from "../platform/selection.js";
 import {
   getPythonCommandForPlatform,
   setResolvedPythonCommand,
@@ -893,9 +897,37 @@ async function handleReinit(
               console.log(
                 chalk.blue(`📝 Configuring ${AI_TOOLS[platformId].name}...`),
               );
+              const adapter =
+                platformId === "opencode"
+                  ? resolveAdapter(cwd, platformId)
+                  : null;
+              if (adapter && adapter.status !== "ok") {
+                console.warn(
+                  chalk.yellow(
+                    `   ⚠ OpenCode adapter ${adapter.adapterId}: ${adapter.reason}`,
+                  ),
+                );
+              }
               await configurePlatform(platformId, cwd, {
                 withStatusline: options.withStatusline,
+                ...(adapter ? { adapterId: adapter.adapterId } : {}),
               });
+              if (platformId === "opencode" && adapter) {
+                const desired =
+                  collectPlatformTemplates(platformId, {
+                    adapterId: adapter.adapterId,
+                  }) ?? new Map<string, string>();
+                const reconciled = reconcileOpenCodeAdapter(
+                  cwd,
+                  adapter.adapterId as OpenCodeAdapterId,
+                  new Set(desired.keys()),
+                );
+                for (const file of reconciled.kept) {
+                  console.warn(
+                    chalk.yellow(`   ⚠ kept modified adapter file: ${file}`),
+                  );
+                }
+              }
               addedAny = true;
               if (platformId === "claude-code" && options.withStatusline) {
                 console.log(
@@ -1968,9 +2000,35 @@ export async function init(options: InitOptions): Promise<void> {
         console.log(
           chalk.blue(`📝 Configuring ${AI_TOOLS[platformId].name}...`),
         );
+        const adapter =
+          platformId === "opencode" ? resolveAdapter(cwd, platformId) : null;
+        if (adapter && adapter.status !== "ok") {
+          console.warn(
+            chalk.yellow(
+              `   ⚠ OpenCode adapter ${adapter.adapterId}: ${adapter.reason}`,
+            ),
+          );
+        }
         await configurePlatform(platformId, cwd, {
           withStatusline: options.withStatusline,
+          ...(adapter ? { adapterId: adapter.adapterId } : {}),
         });
+        if (platformId === "opencode" && adapter) {
+          const desired =
+            collectPlatformTemplates(platformId, {
+              adapterId: adapter.adapterId,
+            }) ?? new Map<string, string>();
+          const reconciled = reconcileOpenCodeAdapter(
+            cwd,
+            adapter.adapterId as OpenCodeAdapterId,
+            new Set(desired.keys()),
+          );
+          for (const file of reconciled.kept) {
+            console.warn(
+              chalk.yellow(`   ⚠ kept modified adapter file: ${file}`),
+            );
+          }
+        }
         if (platformId === "claude-code" && options.withStatusline) {
           console.log(
             chalk.gray("   ↳ Phronia statusLine installed (--with-statusline)"),

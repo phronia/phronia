@@ -19,6 +19,7 @@ import {
   PLATFORM_IDS,
   nodeFs,
   probeHarnessVersion,
+  readAdapterManifest,
   readConfig,
   readHandshake,
   selectZcodePath,
@@ -133,7 +134,11 @@ export function collectDoctorReport(options: DoctorOptions): DoctorReport {
     projectRoot,
     environment,
     platforms: ids.map((id) => {
-      const selection = detectAdapter(id, options.probe !== false);
+      const selection = detectAdapter(
+        projectRoot,
+        id,
+        options.probe !== false,
+      );
       const handshake = readHandshake(projectRoot, id);
       const age = handshakeAgeMs(handshake);
       return {
@@ -290,7 +295,11 @@ function git(cwd: string, args: string[]): string {
   }
 }
 
-function detectAdapter(platform: PlatformId, probe: boolean): AdapterSelection {
+function detectAdapter(
+  projectRoot: string,
+  platform: PlatformId,
+  probe: boolean,
+): AdapterSelection {
   const detection = probe
     ? probeHarnessVersion(platform)
     : {
@@ -300,7 +309,10 @@ function detectAdapter(platform: PlatformId, probe: boolean): AdapterSelection {
         confidence: "low" as const,
         reason: "probing disabled",
       };
-  return selectAdapter({ platform, detection });
+  const manifest = readAdapterManifest(projectRoot);
+  const pin = readConfig(projectRoot, nodeFs).value.adapterPins[platform] ?? null;
+  const recorded = manifest.platforms[platform]?.adapterId ?? null;
+  return selectAdapter({ platform, detection, pin, recorded });
 }
 
 function adapterReport(
@@ -315,6 +327,10 @@ function adapterReport(
     if (handshake?.adapterId && handshake.adapterId !== adapter.id) {
       status = "schema-drift";
       reason = `handshake reports ${handshake.adapterId}, expected ${adapter.id}`;
+    } else if (!handshake && adapter.id === "opencode@v2") {
+      // v2 loads local plugins through the server; a missing handshake means
+      // the plugin has not run yet (or is disabled), not that the adapter is bad.
+      reason = "opencode@v2 selected; no handshake yet — the plugin may not have loaded";
     }
   }
   return {

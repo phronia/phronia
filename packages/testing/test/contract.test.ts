@@ -52,4 +52,28 @@ describe.skipIf(!existsSync(CLI_ENTRY))("contract fixture replay", () => {
     const drift = diffShape(["sessionID"], shapeOf({ sessionID: "demo", newKey: 1 }));
     expect(drift.extra).toEqual(["newKey"]);
   });
+
+  it(
+    "replays the OpenCode v2 context fixture with the reported adapter",
+    async () => {
+      const result = await replayFixture(
+        path.join(FIXTURES, "opencode-v2-session-context"),
+        { cliPath: CLI_ENTRY },
+      );
+      expect(result.status, result.stderr).toBe(0);
+      expect(result.payloadShape).toEqual({ missing: [], extra: [] });
+      expect(result.responseShape).toEqual({ missing: [], extra: [] });
+      const response = result.response as {
+        event: string;
+        platform: string;
+        session: { task: string | null };
+        blocks: unknown[];
+      };
+      expect(response.event).toBe("session-start");
+      expect(response.platform).toBe("opencode");
+      expect(response.session.task).toContain("demo-task");
+      expect(response.blocks.length).toBeGreaterThan(0);
+    },
+    60_000,
+  );
 });

@@ -2,12 +2,12 @@
 /**
  * Build single-file shim artifacts.
  *
- * OpenCode is the only shim with shared modules; bundling it proves the
- * artifact pipeline for the others (which are already single files). The
- * header carries the adapter id, Phronia version, build id, and a content
- * hash computed over the body, so `update` can classify the installed file.
+ * Each adapter shard is bundled independently. The header carries the adapter
+ * id, Phronia version, build id, and a content hash computed over the body, so
+ * `update` can classify the installed file. The v2 shim is deliberately
+ * dependency-free at runtime: `@opencode/plugin` is only a development-time
+ * type source, so the bundle imports nothing from it.
  */
-import { execFileSync } from "node:child_process";
 import { createHash } from "node:crypto";
 import { mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { dirname, relative, resolve } from "node:path";
@@ -15,17 +15,36 @@ import { fileURLToPath } from "node:url";
 
 const ROOT = resolve(dirname(fileURLToPath(import.meta.url)), "..");
 const CLI = resolve(ROOT, "packages/cli/src/templates");
-const OUT = resolve(CLI, "_generated/shims/opencode");
 const SHIM_VERSION = JSON.parse(
   readFileSync(resolve(ROOT, "packages/cli/package.json"), "utf8"),
 ).version;
 const CHECK = process.argv.includes("--check");
 
-const ADAPTER = "opencode@v1";
-const ENTRIES = [
-  ["session-start.js", "session-start.js"],
-  ["inject-workflow-state.js", "inject-workflow-state.js"],
-  ["inject-subagent-context.js", "inject-subagent-context.js"],
+const SHARDS = [
+  {
+    adapterId: "opencode@v1",
+    out: "v1",
+    entries: [
+      ["session-start.js", "opencode/adapters/v1/plugins/session-start.js"],
+      ["inject-workflow-state.js", "opencode/adapters/v1/plugins/inject-workflow-state.js"],
+      ["inject-subagent-context.js", "opencode/adapters/v1/plugins/inject-subagent-context.js"],
+    ],
+    inputs: [
+      "opencode/adapters/v1/lib/debug.js",
+      "opencode/adapters/v1/lib/phronia-client.js",
+      "opencode/adapters/v1/lib/context-visibility.js",
+      "opencode/adapters/v1/lib/session-utils.js",
+    ],
+  },
+  {
+    adapterId: "opencode@v2",
+    out: "v2",
+    entries: [["phronia.js", "opencode/adapters/v2/plugin.js"]],
+    inputs: [
+      "opencode/adapters/v2/lib/debug.js",
+      "opencode/adapters/v2/lib/phronia-client.js",
+    ],
+  },
 ];
 
 let esbuild;
@@ -42,17 +61,18 @@ function buildId() {
   // Hash the inputs, not the commit: a commit id cannot be embedded in an
   // artifact that is itself committed (the id changes after the commit).
   const hash = createHash("sha256");
-  for (const [entry] of ENTRIES) {
-    const file = resolve(CLI, "opencode/plugins", entry);
-    hash.update(`${entry}\n`);
-    hash.update(readFileSync(file));
-  }
-  for (const lib of ["lib/debug.js", "lib/phronia-client.js", "lib/context-visibility.js"]) {
-    try {
-      hash.update(`${lib}\n`);
-      hash.update(readFileSync(resolve(CLI, "opencode", lib)));
-    } catch {
-      // optional module
+  for (const shard of SHARDS) {
+    for (const [entry, source] of shard.entries) {
+      hash.update(`${shard.adapterId}\n${entry}\n`);
+      hash.update(readFileSync(resolve(CLI, source)));
+    }
+    for (const source of shard.inputs) {
+      try {
+        hash.update(`${shard.adapterId}\n${source}\n`);
+        hash.update(readFileSync(resolve(CLI, source)));
+      } catch {
+        // optional module
+      }
     }
   }
   hash.update(SHIM_VERSION);
@@ -61,10 +81,10 @@ function buildId() {
 
 const build = buildId();
 
-function formatArtifact(body) {
+function formatArtifact(body, adapterId) {
   const hash = createHash("sha256").update(body).digest("hex");
   const header = [
-    `// phronia-shim: ${ADAPTER}`,
+    `// phronia-shim: ${adapterId}`,
     `// shim-version: ${SHIM_VERSION}`,
     `// build-id: ${build}`,
     `// content-hash: ${hash}`,
@@ -76,46 +96,49 @@ function formatArtifact(body) {
 
 let changed = 0;
 const artifacts = [];
-for (const [entry] of ENTRIES) {
-  const result = await esbuild.build({
-    entryPoints: [resolve(CLI, "opencode/plugins", entry)],
-    bundle: true,
-    write: false,
-    platform: "node",
-    format: "esm",
-    target: ["node20"],
-    legalComments: "none",
-    banner: {
-      js: 'import { createRequire as __phroniaCreateRequire } from "node:module"; const require = __phroniaCreateRequire(import.meta.url);',
-    },
-  });
-  const body = result.outputFiles?.[0]?.text ?? "";
-  if (!body) throw new Error(`empty bundle for ${entry}`);
-  const artifact = formatArtifact(body);
-  artifacts.push({
-    path: `opencode/${entry}`,
-    adapterId: ADAPTER,
-    shimVersion: SHIM_VERSION,
-    buildId: build,
-    sha256: createHash("sha256").update(body).digest("hex"),
-    lines: artifact.split("\n").length,
-  });
-  const target = resolve(OUT, entry);
-  const existing = (() => {
-    try {
-      return readFileSync(target, "utf8");
-    } catch {
-      return "";
+for (const shard of SHARDS) {
+  const outDir = resolve(CLI, "_generated/shims", shard.out);
+  for (const [entry, source] of shard.entries) {
+    const result = await esbuild.build({
+      entryPoints: [resolve(CLI, source)],
+      bundle: true,
+      write: false,
+      platform: "node",
+      format: "esm",
+      target: ["node20"],
+      legalComments: "none",
+      banner: {
+        js: 'import { createRequire as __phroniaCreateRequire } from "node:module"; const require = __phroniaCreateRequire(import.meta.url);',
+      },
+    });
+    const body = result.outputFiles?.[0]?.text ?? "";
+    if (!body) throw new Error(`empty bundle for ${shard.adapterId}/${entry}`);
+    const artifact = formatArtifact(body, shard.adapterId);
+    artifacts.push({
+      path: `${shard.out}/${entry}`,
+      adapterId: shard.adapterId,
+      shimVersion: SHIM_VERSION,
+      buildId: build,
+      sha256: createHash("sha256").update(body).digest("hex"),
+      lines: artifact.split("\n").length,
+    });
+    const target = resolve(outDir, entry);
+    const existing = (() => {
+      try {
+        return readFileSync(target, "utf8");
+      } catch {
+        return "";
+      }
+    })();
+    if (existing === artifact) continue;
+    changed += 1;
+    if (CHECK) {
+      console.error(`stale shim artifact: ${relative(ROOT, target)}`);
+      continue;
     }
-  })();
-  if (existing === artifact) continue;
-  changed += 1;
-  if (CHECK) {
-    console.error(`stale shim artifact: ${relative(ROOT, target)}`);
-    continue;
+    mkdirSync(dirname(target), { recursive: true });
+    writeFileSync(target, artifact, "utf8");
   }
-  mkdirSync(dirname(target), { recursive: true });
-  writeFileSync(target, artifact, "utf8");
 }
 
 const manifest = {

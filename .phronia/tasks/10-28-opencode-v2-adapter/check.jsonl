@@ -1,0 +1,9 @@
+{"file": ".phronia/tasks/10-28-opencode-v2-adapter/prd.md", "reason": "验收标准与范围边界"}
+{"file": ".phronia/tasks/10-28-opencode-v2-adapter/design.md", "reason": "实现是否符合分层与关键决策"}
+{"file": ".phronia/tasks/10-28-opencode-v2-adapter/implement.md", "reason": "wave 顺序、验证命令与回滚点"}
+{"file": ".phronia/spec/cli/backend/platform-integration.md", "reason": "平台集成约定是否被遵守（文件较大，按需直接读原文）"}
+{"file": ".phronia/spec/cli/backend/commands-update.md", "reason": "update 行为与幂等要求"}
+{"file": ".phronia/spec/cli/backend/migrations.md", "reason": "迁移机制与 adapter 对账的边界"}
+{"file": ".phronia/spec/cli/backend/filesystem-safety.md", "reason": "删除/覆盖用户文件的安全性"}
+{"file": ".phronia/spec/cli/unit-test/conventions.md", "reason": "新增测试是否符合约定"}
+{"file": ".phronia/spec/core/backend/index.md", "reason": "core 包边界与质量门"}

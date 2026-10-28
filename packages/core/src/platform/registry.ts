@@ -2,8 +2,12 @@
  * Adapter registry and selection.
  *
  * One adapter per platform generation. OpenCode carries two shards so a
- * harness major upgrade selects v2 (and reports unsupported until it exists)
- * instead of silently reusing the v1 plugin.
+ * harness major upgrade selects v2 instead of silently reusing the v1 plugin.
+ *
+ * Selection order is deliberate: an explicit pin wins, a successful probe
+ * wins over the recorded manifest (otherwise an upgrade would keep writing
+ * the previous generation), and the recorded adapter only fills in when the
+ * probe is unavailable on this machine.
  */
 
 import type {
@@ -68,6 +72,18 @@ const OPENCODE_EVENTS = {
   "pre-tool-use": "opencode-v1-tool-before",
 } as const;
 
+/**
+ * OpenCode v2 exposes model-request context through `session.hook("context")`
+ * and tool interception through `tool.hook("execute.before")`. The v1
+ * `experimental.chat.messages.transform` envelope no longer exists.
+ */
+const OPENCODE_V2_EVENTS = {
+  "session-start": "opencode-v2-session-context",
+  "user-prompt": "opencode-v2-session-context",
+  "subagent-spawn": "opencode-v2-tool-before",
+  "pre-tool-use": "opencode-v2-tool-before",
+} as const;
+
 export const ADAPTERS: readonly HarnessAdapter[] = [
   ...PLATFORM_IDS.filter((id) => id !== "opencode").map((id) => adapter(id)),
   adapter("opencode", {
@@ -78,7 +94,7 @@ export const ADAPTERS: readonly HarnessAdapter[] = [
   adapter("opencode", {
     major: 2,
     harnessRange: ">=2.0.0 <3.0.0",
-    unsupported: "opencode@v2 is not implemented",
+    envelopes: OPENCODE_V2_EVENTS,
   }),
 ];
 
@@ -94,6 +110,12 @@ export function selectAdapter(input: {
   platform: PlatformId;
   detection: DetectionResult;
   pin?: string | null;
+  /**
+   * Adapter recorded by the last successful install/update. Only consulted
+   * when the probe did not produce a usable version — a successful probe must
+   * win, otherwise upgrading the harness would keep writing the old shard.
+   */
+  recorded?: string | null;
 }): AdapterSelection {
   const candidates = adaptersFor(input.platform);
   if (input.pin) {
@@ -169,6 +191,27 @@ export function selectAdapter(input: {
     };
   }
 
+  // Probe unavailable on this machine (or detection failed): keep the
+  // generation the project was last installed with instead of degrading to
+  // the fallback shard. This is what keeps a shared repo stable when only
+  // some machines have the harness installed.
+  if (input.recorded) {
+    const recorded = adapterById(input.recorded);
+    if (recorded?.platform === input.platform) {
+      return {
+        adapter: recorded,
+        status: "ok",
+        reason: "recorded-adapter",
+        detection: {
+          ...input.detection,
+          source: "recorded",
+          confidence: "medium",
+        },
+        fallback: "none",
+      };
+    }
+  }
+
   // Unknown version: choose a fallback adapter (range === null), but mark the
   // selection degraded so doctor and the injection header can say so.
   const fallback = candidates.find(
@@ -200,4 +243,20 @@ export function selectAdapter(input: {
 /** Adapter used by shims at runtime; handshake reports what actually loaded. */
 export function runtimeAdapter(platform: PlatformId): Adapter {
   return adaptersFor(platform)[0] ?? adapter(platform);
+}
+
+/**
+ * Resolve the adapter a shim is reporting. An explicit adapter id (sent by the
+ * shim or recorded in the request) wins; otherwise fall back to the platform's
+ * first generation for backward compatibility with older shims.
+ */
+export function adapterForRuntime(
+  platform: PlatformId,
+  adapterId?: string | null,
+): Adapter {
+  if (adapterId) {
+    const explicit = adapterById(adapterId);
+    if (explicit?.platform === platform) return explicit;
+  }
+  return runtimeAdapter(platform);
 }

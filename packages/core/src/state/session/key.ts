@@ -12,6 +12,7 @@ import {
   SESSION_ENV_KEYS,
   TRANSCRIPT_ENV_KEYS,
   contextKeyPlatform,
+  detectHostPlatform,
   envPlatformName,
   type PlatformEnvEntry,
 } from "../platform/env-tables.js";
@@ -33,6 +34,8 @@ export interface ContextKeyResult {
 
 export interface ResolveContextKeyOptions {
   platform?: string | null;
+  /** Host detected by the caller; falls back to env markers. */
+  hostPlatform?: string | null;
   env?: Readonly<Record<string, string | undefined>>;
   allowEnvironmentContext?: boolean;
   /** Shell-ticket lookup, injected by the caller (needs repo root + argv). */
@@ -64,7 +67,15 @@ export function resolveContextKey(
 ): ContextKeyResult {
   const env = options.env ?? process.env;
   const data = asObject(input);
-  const platform = detectPlatform(data, options.platform ?? null);
+  const detected = detectPlatform(data, options.platform ?? null);
+  // A nested harness inherits its parent's session variables. When the caller
+  // did not name a platform, trust the host marker so ZCode launched from an
+  // OpenCode shell is not attributed to the OpenCode session.
+  const host = options.hostPlatform ?? detectHostPlatform(env);
+  const platform =
+    detected === "session" && host
+      ? sanitizeKey(envPlatformName(host) ?? host) || "session"
+      : detected;
 
   const override = stringValue(env.PHRONIA_CONTEXT_ID ?? env.TRELLIS_CONTEXT_ID);
   if (override) {

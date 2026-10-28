@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import { PLATFORM_IDS } from "../../src/platform/ids.js";
 import {
   CAPABILITIES,
+  capabilitiesFor,
   validateCapabilities,
 } from "../../src/platform/capabilities.js";
 import { featureStatus } from "../../src/platform/features.js";
@@ -52,5 +53,34 @@ describe("capability matrix", () => {
     expect(CAPABILITIES.dsh.loopControl).toBe("full");
     expect(CAPABILITIES["claude-code"].loopControl).toBe("hooks");
     expect(CAPABILITIES.kilo.loopControl).toBe("none");
+  });
+
+  it("keeps the v1 profile when no adapter is named", () => {
+    const profile = capabilitiesFor("opencode");
+    expect(profile.behavior.sessionStart.event).toBe(
+      "experimental.chat.messages.transform",
+    );
+    expect(profile.toolNames.subagent).toContain("task");
+    expect(profile.toolNames.edit).toContain("apply_patch");
+  });
+
+  it("overrides the opencode v2 profile without touching other platforms", () => {
+    const v2 = capabilitiesFor("opencode", "opencode@v2");
+    expect(v2.behavior.sessionStart).toMatchObject({
+      kind: "plugin",
+      event: "session.hook context",
+    });
+    expect(v2.behavior.shellIdentity).toMatchObject({
+      kind: "config",
+      detail: "env OPENCODE_SESSION_ID",
+    });
+    expect(v2.toolNames).toEqual({
+      shell: ["shell"],
+      subagent: ["subagent"],
+      edit: ["write", "edit", "patch"],
+    });
+
+    const codex = capabilitiesFor("codex");
+    expect(codex.toolNames.shell).toContain("bash");
   });
 });

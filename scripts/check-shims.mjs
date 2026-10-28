@@ -22,15 +22,27 @@ const SHIM_VERSION = JSON.parse(
 // or blanks), forbidden assembly markers.
 const RULES = [
   {
-    glob: "opencode/plugins",
+    glob: "opencode/adapters/v1/plugins",
     adapter: "opencode@v1",
     maxLines: 240,
     forbidden: [/readJsonl/i, /materialize/i, /resolveTaskDir/, /buildContextFrom/],
   },
   {
-    glob: "opencode/lib",
+    glob: "opencode/adapters/v1/lib",
     adapter: "opencode@v1",
     maxLines: 220,
+    forbidden: [/readJsonl/i, /materialize/i, /current_task/],
+  },
+  {
+    glob: "opencode/adapters/v2/plugin.js",
+    adapter: "opencode@v2",
+    maxLines: 260,
+    forbidden: [/readJsonl/i, /materialize/i, /resolveTaskDir/, /buildContextFrom/],
+  },
+  {
+    glob: "opencode/adapters/v2/lib",
+    adapter: "opencode@v2",
+    maxLines: 160,
     forbidden: [/readJsonl/i, /materialize/i, /current_task/],
   },
   {

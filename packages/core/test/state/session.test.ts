@@ -78,6 +78,35 @@ describe("context key resolution", () => {
     ).toBe("claude_claude");
   });
 
+  it("reads the OpenCode v2 shell identity", () => {
+    expect(
+      resolveContextKey(null, { env: { OPENCODE_SESSION_ID: "v2-session" } }).key,
+    ).toBe("opencode_v2-session");
+  });
+
+  it("scopes inherited identity to the detected host", () => {
+    const inherited = {
+      OPENCODE_SESSION_ID: "opencode-child",
+      CLAUDE_CODE_SESSION_ID: "claude-parent",
+    };
+    // No host marker: the historical table order still wins.
+    expect(resolveContextKey(null, { env: inherited }).key).toBe(
+      "claude_claude-parent",
+    );
+    // A ZCode shell launched from OpenCode must not borrow OpenCode's session.
+    expect(
+      resolveContextKey(null, {
+        env: { ...inherited, ZCODE_PROJECT_DIR: "/repo" },
+      }).key,
+    ).toBe("claude_claude-parent");
+    // The explicit host wins over every inherited variable.
+    expect(
+      resolveContextKey(null, {
+        env: { ...inherited, PHRONIA_HOST: "opencode" },
+      }).key,
+    ).toBe("opencode_opencode-child");
+  });
+
   it("returns no key without identity", () => {
     expect(resolveContextKey(null, { env: {} })).toMatchObject({
       key: null,

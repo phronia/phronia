@@ -34,6 +34,10 @@ export interface ContextRequest {
   env?: Readonly<Record<string, string | undefined>>;
   hints?: {
     sessionId?: string;
+    /** Parent harness session, when a child-agent session is dispatched. */
+    parentSessionId?: string;
+    /** Adapter id observed by the shim; `platform.adapterId` is preferred. */
+    adapterId?: string;
     conversationId?: string;
     transcriptPath?: string;
     toolName?: string;

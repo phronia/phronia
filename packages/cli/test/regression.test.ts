@@ -4026,9 +4026,9 @@ print(json.dumps({
     // and the beforeShellExecution ticket.
     ["cursor", "CURSOR_SESSION_ID"],
     // Zero hits in OpenCode 1.18.13 source; none among the 59 OPENCODE_*
-    // literals in the 1.17.18 binary. The plugin's command prefix is the
-    // real channel.
-    ["opencode", "OPENCODE_SESSION_ID"],
+    // literals in the 1.17.18 binary. OPENCODE_SESSION_ID was re-added on
+    // 2026-10-28 after OpenCode 2.x source confirmed the shell tool exports it
+    // (tool/plugin/shell.ts); the other two names remain purged.
     ["opencode", "OPENCODE_SESSIONID"],
     ["opencode", "OPENCODE_RUN_ID"],
     // Absent from Factory's docs and from droid 0.100.0's binary (the only
@@ -4118,10 +4118,10 @@ print(json.dumps({
     );
 
     expect(result).toEqual({
-      // Gone from every table — identity arrives via the plugin/extension
-      // command prefix (opencode, pi) or not at all (trae).
+      // OpenCode now has a verified session entry (v2 shell); the other two
+      // rows stay empty.
       opencode: {
-        session: [],
+        session: ["opencode"],
         conversation: [],
         transcript: [],
         resolved: null,
@@ -6424,7 +6424,7 @@ print(json.dumps({
 
   it("[workflow-state-r5] opencode inject-workflow-state.js contains no FALLBACK_BREADCRUMBS dict", () => {
     const jsURL = new URL(
-      "../src/templates/opencode/plugins/inject-workflow-state.js",
+      "../src/templates/opencode/adapters/v1/plugins/inject-workflow-state.js",
       import.meta.url,
     );
     const js = fs.readFileSync(jsURL, "utf-8");
@@ -7305,8 +7305,8 @@ print(len(entries))
       "gemini/agents/phronia-check.md",
       "kiro/agents/phronia-implement.json",
       "kiro/agents/phronia-check.json",
-      "opencode/agents/phronia-implement.md",
-      "opencode/agents/phronia-check.md",
+      "opencode/base/agents/phronia-implement.md",
+      "opencode/base/agents/phronia-check.md",
       "pi/agents/phronia-implement.md",
       "pi/agents/phronia-check.md",
       "qoder/agents/phronia-implement.md",
@@ -10242,7 +10242,7 @@ describe("regression: research agent persists findings to task dir", () => {
     const content = fs.readFileSync(
       path.join(
         repoRoot,
-        "packages/cli/src/templates/opencode/agents/phronia-research.md",
+        "packages/cli/src/templates/opencode/base/agents/phronia-research.md",
       ),
       "utf-8",
     );
@@ -10305,7 +10305,7 @@ describe("regression: opencode plugin files have only export default (#212)", ()
   const repoRoot = path.resolve(__dirname2, "../../..");
   const pluginsDir = path.join(
     repoRoot,
-    "packages/cli/src/templates/opencode/plugins",
+    "packages/cli/src/templates/opencode/adapters/v1/plugins",
   );
   const pluginFiles = fs
     .readdirSync(pluginsDir)
@@ -10460,7 +10460,7 @@ describe("regression: Gemini CLI 0.40.x template compatibility (#224)", () => {
     // OpenCode JS plugins (no TS export — read from disk)
     const openCodePluginDir = path.resolve(
       repoRoot,
-      "packages/cli/src/templates/opencode/plugins",
+      "packages/cli/src/templates/opencode/adapters/v1/plugins",
     );
     const jsPlugins = [
       "session-start.js",
@@ -10636,12 +10636,12 @@ describe("regression: sub-agent context injection fallback (0.5.3)", () => {
     },
     {
       platform: "opencode",
-      rel: "packages/cli/src/templates/opencode/agents/phronia-implement.md",
+      rel: "packages/cli/src/templates/opencode/base/agents/phronia-implement.md",
       agent: "implement",
     },
     {
       platform: "opencode",
-      rel: "packages/cli/src/templates/opencode/agents/phronia-check.md",
+      rel: "packages/cli/src/templates/opencode/base/agents/phronia-check.md",
       agent: "check",
     },
     {

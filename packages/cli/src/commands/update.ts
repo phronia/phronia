@@ -59,6 +59,11 @@ import {
   getConfiguredPlatforms,
   collectPlatformTemplates,
 } from "../configurators/index.js";
+import {
+  reconcileOpenCodeAdapter,
+} from "../configurators/adapter-files.js";
+import type { OpenCodeAdapterId } from "../configurators/opencode.js";
+import { resolveAdapter } from "../platform/selection.js";
 import { replacePythonCommandLiterals } from "../configurators/shared.js";
 import { preserveCodexAgentModelKeys } from "../configurators/codex.js";
 import { ensureZcodePlugin } from "../configurators/zcode-plugin.js";
@@ -649,6 +654,33 @@ function preserveExistingClaudeStatusLine(
   }
 }
 
+/**
+ * The `platforms:` block holds adapter pins and other platform options. The
+ * generated config template does not contain it, so re-emit the existing block
+ * verbatim; otherwise `update --force` would drop a pin or a `zcode.path`
+ * override on every run.
+ */
+function preserveExistingPlatformPins(cwd: string, template: string): string {
+  if (/^\s*platforms:\s*$/m.test(template)) return template;
+  const configPath = path.join(cwd, LAYOUT.paths.config);
+  if (!fs.existsSync(configPath)) return template;
+  const lines = fs.readFileSync(configPath, "utf8").split("\n");
+  const start = lines.findIndex((line) => /^platforms:\s*$/.test(line));
+  if (start < 0) return template;
+  let end = lines.length;
+  for (let index = start + 1; index < lines.length; index += 1) {
+    if (/^[A-Za-z0-9_.-]+:/.test(lines[index])) {
+      end = index;
+      break;
+    }
+  }
+  const block = lines.slice(start, end).join("\n").trimEnd();
+  // Preserve every platform setting, not only adapter pins: `zcode.path` and
+  // future per-platform options live in the same block.
+  if (block === "platforms:" || block.trim().length === 0) return template;
+  return `${template.trimEnd()}\n\n${block}\n`;
+}
+
 function preserveExistingRegistryConfig(cwd: string, template: string): string {
   const registry = loadSpecRegistryConfig(cwd);
   if (!registry) return template;
@@ -802,7 +834,10 @@ async function collectTemplateFiles(
   // Configuration
   files.set(
     `${DIR_NAMES.WORKFLOW}/config.yaml`,
-    preserveExistingRegistryConfig(cwd, configYamlTemplate),
+    preserveExistingPlatformPins(
+      cwd,
+      preserveExistingRegistryConfig(cwd, configYamlTemplate),
+    ),
   );
   files.set(`${DIR_NAMES.WORKFLOW}/.gitignore`, gitignoreTemplate);
   // workflow.md is included here because it is runtime-parsed by
@@ -819,7 +854,12 @@ async function collectTemplateFiles(
 
   // Platform-specific templates (only for configured platforms)
   for (const platformId of platforms) {
-    const platformFiles = collectPlatformTemplates(platformId);
+    const adapter =
+      platformId === "opencode" ? resolveAdapter(cwd, platformId) : null;
+    const platformFiles = collectPlatformTemplates(
+      platformId,
+      adapter ? { adapterId: adapter.adapterId } : undefined,
+    );
     if (platformFiles) {
       for (const [filePath, content] of platformFiles) {
         files.set(filePath, content);
@@ -2185,6 +2225,26 @@ export async function update(options: UpdateOptions): Promise<void> {
     codexUpgradeNeeded ? new Set<AITool>(["codex"]) : undefined,
     breakingBypass,
   );
+
+  // Adapter switching is driven by the installed harness, not by the CLI
+  // version, so it is reconciled on every real update. `--dry-run` must not
+  // delete anything: the diff below already reports the new shard as a change.
+  if (!options.dryRun && getConfiguredPlatforms(cwd).has("opencode")) {
+    const openCodeAdapter = resolveAdapter(cwd, "opencode");
+    const reconciled = reconcileOpenCodeAdapter(
+      cwd,
+      openCodeAdapter.adapterId as OpenCodeAdapterId,
+      new Set(templates.keys()),
+    );
+    for (const file of reconciled.removed) {
+      console.log(chalk.gray(`  ✕ retired adapter file: ${file}`));
+    }
+    for (const file of reconciled.kept) {
+      console.warn(
+        chalk.yellow(`  ⚠ kept modified adapter file: ${file}`),
+      );
+    }
+  }
 
   // Load update.skip paths (used for both safe-file-delete and template collection)
   const skipPaths = loadUpdateSkipPaths(cwd);

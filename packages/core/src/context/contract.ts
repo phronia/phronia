@@ -60,6 +60,8 @@ export function contextJsonSchema(): Record<string, unknown> {
         type: "object",
         properties: {
           sessionId: { type: "string" },
+          parentSessionId: { type: "string" },
+          adapterId: { type: "string" },
           conversationId: { type: "string" },
           transcriptPath: { type: "string" },
           toolName: { type: "string" },
