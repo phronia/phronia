@@ -728,6 +728,7 @@ Verification: passed (pnpm lint && pnpm test)
 8. CAS：base 仍等于 `preLandSha`；否则重试（最多 3 次）。
 9. 主 worktree `merge --ff-only <task-branch>`。
 10. 写 task.json outcome + 共享 `last`；释放锁；`--drain` 继续。
+11. 为保证主 checkout 干净，landed 后只提交该任务目录的 `task.json`（`chore(task): record integration state`）。这是 metadata-only commit，不改变已验证的代码树；代码提交仍是验证时的分支头。
 
 rebase 后的树与 ff 合并后的树一致；CAS 保证验证与合并之间 base 未移动。这是"验证合入结果"的最小实现，不需要额外临时分支。
 
@@ -1515,7 +1516,7 @@ new task added -> planning (re-plan) -> running
 | `CONFIG_INVALID` | 配置值非法 | 2 | 打印字段与合法值 |
 | `GIT_UNAVAILABLE` | git 不存在/超时 | 2 | 检查 PATH/仓库 |
 
-约定：所有错误同时输出 `code` 和 `next`；`--json` 用统一错误对象；不得只打印堆栈。
+约定：所有错误同时输出 `code` 和 `next`；`--json` 用统一错误对象；不得只打印堆栈。实现可以在 `INTEGRATE_*` / `TASK_RECORD_*` 前缀下增加子错误码，但必须沿用相同的退出码映射并带 `next`。
 
 ## 22. 能力矩阵与降级
 

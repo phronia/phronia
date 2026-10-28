@@ -120,7 +120,7 @@ Phronia 当前的执行模型是"一次一个活动任务、一个 checkout、�
 - [ ] 两个任务同时执行 `integrate`：只有一个获得锁；另一个返回队列位置或明确的"稍后重试"，不会交错写入集成分支。
 - [ ] `integrate` 在验证失败时不移动集成分支；任务 outcome 变为 `blocked`（reason=verify），并记录日志路径。
 - [ ] `integrate` 在 rebase 冲突时不自动解决；返回冲突文件列表和 `mechanical`/`unknown` 分类。
-- [ ] 合入成功后，集成分支只前进到已验证的提交；任务记录写入 `commit` / `pr_url` 和 `meta.integration.outcome=landed`。
+- [ ] 合入成功后，代码提交是已验证的；随后可能有一个仅改 `task.json` 的 metadata-only commit，不改变代码树。任务记录写入 `commit` / `pr_url` 和 `meta.integration.outcome=landed`。
 - [ ] 模拟进程在 fast-forward 后、状态写入前崩溃：`integrate --recover` 能识别已完成合入并补齐状态，或安全回退。
 - [ ] 主 checkout 脏时 `integrate` 拒绝执行并给出提交/暂存建议。
 - [ ] 任务本身使用主 checkout 时，`integrate` 只做验证 + 写 outcome，不执行 rebase/fast-forward。

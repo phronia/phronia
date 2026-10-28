@@ -39,6 +39,8 @@ import {
   runLeaseRelease,
   runLeaseStatus,
 } from "../commands/lease.js";
+import { runTaskCommit } from "../commands/commit.js";
+import { runTaskIntegrate } from "../commands/integrate.js";
 import {
   runSpecBootstrap,
   runSpecSetStatus,
@@ -896,6 +898,67 @@ leaseCommand
   .option("--json", "Output machine-readable JSON")
   .action((taskRef: string, options: Record<string, unknown>) => {
     const code = runLeaseStatus(taskRef, { cwd, json: Boolean(options.json) });
+    if (code !== 0) process.exitCode = code;
+  });
+
+taskCommand
+  .command("integrate [task-ref]")
+  .description("Land a task locally or hand it off to a remote forge")
+  .option("--mode <mode>", "auto | local | remote", "auto")
+  .option("--base <branch>", "Integration branch (defaults to the task/base branch)")
+  .option("--queue", "Enqueue when the integration lock or main claim is busy")
+  .option("--wait", "Wait for this task's queue turn and the integration lock")
+  .option("--drain", "Process queued integrations in FIFO order")
+  .option("--verify <cmd>", "Verification command (repeatable)", collect, [])
+  .option("--no-verify", "Skip verification explicitly")
+  .option("--timeout <duration>", "Wait/verification timeout (e.g. 30m)")
+  .option("--interactive", "Always ask for the integration mode")
+  .option("--yes", "Skip mode confirmation")
+  .option("--handoff", "Write an integration handoff report on failure")
+  .option("--dry-run", "Show the resolved mode and planned git commands")
+  .option("--recover", "Recover an interrupted integration")
+  .option("--rollback", "Roll back to preLandSha after explicit confirmation")
+  .option("--force", "Reclaim a TTL-expired claim owned by an active task")
+  .option("--sync", "Remote only: fetch the base and detect a merged change request")
+  .option("--json", "Output machine-readable JSON")
+  .action((taskRef: string | undefined, options: Record<string, unknown>) => {
+    // Commander stores `--no-verify` as `verify === false`; it shares the key
+    // with the repeatable `--verify <cmd>` option.
+    const verify = options.verify;
+    const code = runTaskIntegrate(taskRef ?? null, {
+      cwd,
+      mode: options.mode as "auto" | "local" | "remote",
+      base: options.base as string | undefined,
+      queue: Boolean(options.queue),
+      wait: Boolean(options.wait),
+      drain: Boolean(options.drain),
+      verify: Array.isArray(verify) ? (verify as string[]) : undefined,
+      noVerify: verify === false,
+      timeout: options.timeout as string | undefined,
+      interactive: Boolean(options.interactive),
+      yes: Boolean(options.yes),
+      handoff: Boolean(options.handoff),
+      dryRun: Boolean(options.dryRun),
+      recover: Boolean(options.recover),
+      rollback: Boolean(options.rollback),
+      force: Boolean(options.force),
+      sync: Boolean(options.sync),
+      json: Boolean(options.json),
+    });
+    if (code !== 0) process.exitCode = code;
+  });
+
+taskCommand
+  .command("commit <task-ref>")
+  .description("Commit all changes inside a task worktree")
+  .option("-m, --message <message>", "Commit message")
+  .option("--json", "Output machine-readable JSON")
+  .action((taskRef: string, options: Record<string, unknown>) => {
+    const code = runTaskCommit(taskRef, {
+      cwd,
+      message: options.message as string | undefined,
+      json: Boolean(options.json),
+    });
     if (code !== 0) process.exitCode = code;
   });
 
