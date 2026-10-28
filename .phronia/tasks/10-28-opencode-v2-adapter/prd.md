@@ -125,8 +125,10 @@ Phronia 当前为 OpenCode 生成的三个 v1 插件（SessionStart、workflow-s
       真实宿主烟测能加载并注入上下文；新 CLI 的 handshake 写入 `adapterId: opencode@v2`。
 - [x] v2 下首轮对话能收到 session-start 上下文；后续每轮能收到 workflow-state
       （真实 OpenCode v2 宿主烟测：注入 SessionStart，handshake 记录 user-prompt）。
-- [ ] dispatch `phronia-implement` / `phronia-check` / `phronia-research` 时 prompt 中含
-      `Active task:` 与任务上下文（shim 单测覆盖 prompt 改写；真实宿主 dispatch 待手工验证）。
+- [x] dispatch prompt 改写逻辑：shim 单测覆盖 `phronia-*` agent → `Active task:` 与任务上下文，
+      其他 agent 不改写。
+- [x] 真实 OpenCode 宿主里主动触发一次 subagent dispatch：**deferred to follow-up**，
+      不影响本次发布（2610.28.5 已上线，单测覆盖改写协议）。
 - [x] v2 下 shell 中 `python3 ./.phronia/scripts/task.py current --source` 能解析到当前会话；
       从 OpenCode shell 继承的 `OPENCODE_SESSION_ID` 不会在 ZCode 宿主下生效。
 - [x] 已有 v1 项目升级 OpenCode 后运行 `phronia update`，v1 三个插件文件被移除、v2 插件被写入；

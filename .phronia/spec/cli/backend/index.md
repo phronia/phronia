@@ -24,6 +24,7 @@ This directory contains guidelines for backend development. Fill in each file wi
 | [Release Process](./release-process.md) | CI-only publishing, package versioning, release tracks, manifest continuity, submodule ordering | Done |
 | [Trellis Core SDK](./trellis-core-sdk.md) | `@mindfoldhq/trellis-core` / CLI package boundary, public exports, build and versioning contracts | Done |
 | [Platform Integration](./platform-integration.md) | How to add support for new AI CLI platforms | Done |
+| [Adapter Generations](./adapter-generations.md) | Harness API generations: selection precedence, capability profiles, base+shard templates, handshake, identity scoping | Done |
 | [Workflow-State Contract](./workflow-state-contract.md) | Per-turn breadcrumb subsystem: marker syntax, status writers, lifecycle events, reachability | Done |
 | [Configurator Shared Helpers](./configurator-shared.md) | `configurators/shared.ts` public surface: placeholder substitution, write helpers, pull-based prelude, cross-configurator invariants | Done |
 | [`tl mem` Command](./commands-mem.md) | Cross-platform AI session memory: subcommands, schemas, indexing, cleaning pipeline, search relevance | Done |
@@ -44,6 +45,7 @@ Before writing backend code, read the relevant guidelines based on your task:
 - Error handling → [error-handling.md](./error-handling.md)
 - Logging → [logging-guidelines.md](./logging-guidelines.md)
 - Adding a platform → [platform-integration.md](./platform-integration.md)
+- Adding a harness generation (v1→v2) or changing adapter selection/templates → [adapter-generations.md](./adapter-generations.md)
 - Modifying `init.ts` flow (new triggers, dispatch branches, bootstrap/joiner) → [platform-integration.md "Bootstrap & Joiner Task Auto-Generation"](./platform-integration.md) — two-point wiring + `.developer` signal
 - Script work → [script-conventions.md](./script-conventions.md)
 - Migration system → [migrations.md](./migrations.md)
