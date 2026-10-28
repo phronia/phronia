@@ -3,6 +3,7 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import { resolveAdapter } from "../../src/platform/selection.js";
+import { updateHashes } from "../../src/utils/template-hash.js";
 
 describe("installation adapter selection", () => {
   let root: string;
@@ -61,6 +62,17 @@ describe("installation adapter selection", () => {
     expect(resolved.adapterId).toBe("opencode@v1");
     expect(resolved.source).toBe("fallback");
     expect(resolved.status).toBe("degraded");
+  });
+
+  it("infers the installed shard when no manifest is present", () => {
+    const relative = ".opencode/plugins/phronia.js";
+    mkdirSync(join(root, ".opencode", "plugins"), { recursive: true });
+    writeFileSync(join(root, relative), "// v2 shim", "utf8");
+    updateHashes(root, new Map([[relative, "// v2 shim"]]));
+
+    const resolved = resolveAdapter(root, "opencode", { probe: false });
+    expect(resolved.adapterId).toBe("opencode@v2");
+    expect(resolved.source).toBe("installed");
   });
 
   it("treats a single-generation platform the same way", () => {
