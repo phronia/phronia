@@ -1,7 +1,7 @@
 {
   "name": "@phronia/core",
-  "version": "2610.28.7",
-  "description": "Trellis core SDK — channel and task domain primitives consumed by the Trellis CLI and downstream Node services",
+  "version": "2610.28.6",
+  "description": "Trellis core SDK \u2014 channel and task domain primitives consumed by the Trellis CLI and downstream Node services",
   "type": "module",
   "main": "./dist/index.js",
   "types": "./dist/index.d.ts",
