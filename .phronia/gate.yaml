@@ -13,4 +13,4 @@ denyOn:
 phaseGates:
   before_commit:
     - "phronia rules verdict --task {task} --check"
-generatedAt: 2026-10-28T11:38:25.778Z
+generatedAt: 2026-10-28T11:52:15.623Z
