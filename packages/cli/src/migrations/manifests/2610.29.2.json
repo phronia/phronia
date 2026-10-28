@@ -1,0 +1,9 @@
+{
+  "version": "2610.29.2",
+  "description": "Dispatch admission at subagent spawn",
+  "breaking": false,
+  "recommendMigrate": false,
+  "changelog": "Add a dispatch admission decision at the sub-agent boundary: parent/container tasks are refused, unstarted tasks must be started, a task with a worktree must run in it, isolation requires a worktree, and a cross-task main claim is refused. Add advisory guards for unclaimed/leased/soft platforms, zero-cost runtime facts, runtime-state breadcrumbs, Codex SubagentStart injection, planner container semantics, task.py parent gate, workspace main reuse, and the session-key ticket bridge.",
+  "migrations": [],
+  "notes": "No migration required."
+}
