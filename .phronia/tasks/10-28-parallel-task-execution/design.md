@@ -1493,6 +1493,8 @@ new task added -> planning (re-plan) -> running
 | `WORKSPACE_CLAIM_STALE_DIRTY` | stale 且主 checkout 脏 | 3 | 不回收；用 worktree；提示旧占用者 |
 | `WORKSPACE_DIRTY_UNCLAIMED` | 无 claim 但主 checkout 脏 | 3 | 用 worktree，或 `--reuse-dirty` |
 | `WORKSPACE_WORKTREE_DISABLED` | `worktree=never` 但任务需要并行隔离 | 2 | 改 `auto/always`，或串行执行 |
+| `WORKSPACE_SESSION_UNKNOWN` | 无法解析会话身份 | 2 | 传 `--session-key` 或设置 `PHRONIA_CONTEXT_ID` |
+| `LEASE_OWNER_UNKNOWN` | task lease 缺少 ownerId/sessionKey | 2 | 传 `--owner-id` 或 `--session-key` |
 | `WORKSPACE_ATTACH_INVALID` | 路径不是 worktree/分支不匹配 | 2 | 打印期望分支与实际分支 |
 | `WORKSPACE_TARGET_EXISTS` | 目标路径已存在 | 2 | `worktree remove` 或换路径 |
 | `TASK_ARTIFACTS_UNCOMMITTED` | 任务工件未进入集成分支 | 2 | 询问 scoped commit，或 `--copy-task` |

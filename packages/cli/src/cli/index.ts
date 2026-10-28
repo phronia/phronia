@@ -19,10 +19,26 @@ import {
   runRulesVerdict,
 } from "../commands/rules.js";
 import {
-  addWorktree,
-  listWorktrees,
-  removeWorktree,
+  runWorktreeAdd,
+  runWorktreeList,
+  runWorktreeAttach,
+  runWorktreeRemove,
+  runWorktreePrune,
 } from "../commands/worktree.js";
+import {
+  runParallelPlan,
+  runParallelStatus,
+  runWorkspacePrepare,
+  runWorkspaceEnsure,
+  runWorkspaceBind,
+  runWorkspaceRelease,
+  runWorkspaceReclaim,
+} from "../commands/parallel.js";
+import {
+  runLeaseAcquire,
+  runLeaseRelease,
+  runLeaseStatus,
+} from "../commands/lease.js";
 import {
   runSpecBootstrap,
   runSpecSetStatus,
@@ -595,56 +611,78 @@ sessionCommand
     for (const file of report.removed) console.log(`  ${file}`);
   });
 
+const collect = (value: string, previous: string[] = []): string[] => [
+  ...previous,
+  value,
+];
+
 const taskCommand = program
   .command("task")
   .description("Task-scoped operations");
 
 const worktreeCommand = taskCommand
   .command("worktree")
-  .description("Create, list, and remove per-task git worktrees");
+  .description("Create, list, attach, prune, and remove per-task git worktrees");
 
 worktreeCommand
   .command("add <task-ref>")
   .option("--path <dir>", "Worktree directory")
   .option("--branch <name>", "Branch to create or reuse")
   .option("--base <ref>", "Base revision for a new branch")
+  .option("--copy <path>", "Copy a path into the worktree (repeatable)", collect, [])
+  .option("--post-create <cmd>", "Run a command in the worktree (repeatable)", collect, [])
   .option("--force", "Allow a dirty main checkout")
   .option("--json", "Output machine-readable JSON")
   .action((taskRef: string, options: Record<string, unknown>) => {
-    const result = addWorktree(taskRef, {
+    const code = runWorktreeAdd(taskRef, {
       cwd,
       path: options.path as string | undefined,
       branch: options.branch as string | undefined,
       base: options.base as string | undefined,
       force: Boolean(options.force),
+      copy: options.copy as string[],
+      postCreate: options.postCreate as string[],
       json: Boolean(options.json),
     });
-    if (options.json) {
-      console.log(JSON.stringify(result, null, 2));
-    } else {
-      (result.ok ? console.log : console.error)(result.message);
-    }
-    if (!result.ok) process.exit(1);
+    if (code !== 0) process.exitCode = code;
   });
 
 worktreeCommand
   .command("list")
   .option("--json", "Output machine-readable JSON")
   .action((options: Record<string, unknown>) => {
-    const records = listWorktrees({ cwd, json: Boolean(options.json) });
-    if (options.json) {
-      console.log(JSON.stringify({ worktrees: records }, null, 2));
-      return;
-    }
-    if (records.length === 0) {
-      console.log("No task worktrees.");
-      return;
-    }
-    for (const record of records) {
-      console.log(
-        `${record.taskRef.padEnd(40)} ${record.branch.padEnd(30)} ${record.path}`,
-      );
-    }
+    const code = runWorktreeList({ cwd, json: Boolean(options.json) });
+    if (code !== 0) process.exitCode = code;
+  });
+
+worktreeCommand
+  .command("attach <task-ref>")
+  .option("--path <dir>", "Existing platform worktree")
+  .option("--json", "Output machine-readable JSON")
+  .action((taskRef: string, options: Record<string, unknown>) => {
+    const code = runWorktreeAttach(taskRef, {
+      cwd,
+      path: options.path as string | undefined,
+      json: Boolean(options.json),
+    });
+    if (code !== 0) process.exitCode = code;
+  });
+
+worktreeCommand
+  .command("prune")
+  .option("--dry-run", "Show what would be removed")
+  .option("--older-than <duration>", "Only consider worktrees older than e.g. 7d/12h")
+  .option("--delete-branch", "Delete branches after removal")
+  .option("--json", "Output machine-readable JSON")
+  .action((options: Record<string, unknown>) => {
+    const code = runWorktreePrune({
+      cwd,
+      dryRun: Boolean(options.dryRun),
+      olderThan: options.olderThan as string | undefined,
+      deleteBranch: Boolean(options.deleteBranch),
+      json: Boolean(options.json),
+    });
+    if (code !== 0) process.exitCode = code;
   });
 
 const crossRepoCommand = taskCommand
@@ -679,18 +717,186 @@ worktreeCommand
   .option("--delete-branch", "Delete the task branch after removal")
   .option("--json", "Output machine-readable JSON")
   .action((taskRef: string, options: Record<string, unknown>) => {
-    const result = removeWorktree(taskRef, {
+    const code = runWorktreeRemove(taskRef, {
       cwd,
       force: Boolean(options.force),
       deleteBranch: Boolean(options.deleteBranch),
       json: Boolean(options.json),
     });
-    if (options.json) {
-      console.log(JSON.stringify(result, null, 2));
-    } else {
-      (result.ok ? console.log : console.error)(result.message);
-    }
-    if (!result.ok) process.exit(1);
+    if (code !== 0) process.exitCode = code;
+  });
+
+const parallelCommand = taskCommand
+  .command("parallel")
+  .description("Plan and inspect parallel task batches");
+
+parallelCommand
+  .command("plan [refs...]")
+  .option("--include-planning", "Include planning tasks")
+  .option("--max <n>", "Maximum tasks per wave", (value) => Number(value))
+  .option("--allow-unknown", "Allow tasks with unknown footprints to share a wave")
+  .option("--explain", "Print the reason for every wave decision")
+  .option("--json", "Output machine-readable JSON")
+  .action((refs: string[], options: Record<string, unknown>) => {
+    const code = runParallelPlan({
+      cwd,
+      refs,
+      includePlanning: Boolean(options.includePlanning),
+      max: options.max as number | undefined,
+      allowUnknown: Boolean(options.allowUnknown),
+      explain: Boolean(options.explain),
+      json: Boolean(options.json),
+    });
+    if (code !== 0) process.exitCode = code;
+  });
+
+parallelCommand
+  .command("status")
+  .option("--json", "Output machine-readable JSON")
+  .action((options: Record<string, unknown>) => {
+    const code = runParallelStatus({ cwd, json: Boolean(options.json) });
+    if (code !== 0) process.exitCode = code;
+  });
+
+const workspaceCommand = taskCommand
+  .command("workspace")
+  .description("Prepare, bind, release, and reclaim task workspaces");
+
+workspaceCommand
+  .command("prepare")
+  .option("--for-new-task <title>", "Create a provisional workspace when main is occupied")
+  .option("--force", "Accept a dirty/occupied main checkout")
+  .option("--reuse-dirty", "Reuse a dirty main checkout")
+  .option("--session-key <key>", "Override the session identity")
+  .option("--json", "Output machine-readable JSON")
+  .action((options: Record<string, unknown>) => {
+    const code = runWorkspacePrepare({
+      cwd,
+      forNewTask: options.forNewTask as string | undefined,
+      force: Boolean(options.force),
+      reuseDirty: Boolean(options.reuseDirty),
+      sessionKey: options.sessionKey as string | undefined,
+      json: Boolean(options.json),
+    });
+    if (code !== 0) process.exitCode = code;
+  });
+
+workspaceCommand
+  .command("ensure <task-ref>")
+  .option("--path <dir>", "Attach an existing (platform) worktree")
+  .option("--force", "Accept a dirty main checkout")
+  .option("--reuse-dirty", "Reuse a dirty main checkout")
+  .option("--copy-task", "Copy the task directory instead of requiring a scoped commit")
+  .option("--copy <path>", "Copy a path into the worktree (repeatable)", collect, [])
+  .option("--post-create <cmd>", "Run a command in the worktree (repeatable)", collect, [])
+  .option("--session-key <key>", "Override the session identity")
+  .option("--json", "Output machine-readable JSON")
+  .action((taskRef: string, options: Record<string, unknown>) => {
+    const code = runWorkspaceEnsure(taskRef, {
+      cwd,
+      path: options.path as string | undefined,
+      force: Boolean(options.force),
+      reuseDirty: Boolean(options.reuseDirty),
+      copyTask: Boolean(options.copyTask),
+      copy: options.copy as string[],
+      postCreate: options.postCreate as string[],
+      sessionKey: options.sessionKey as string | undefined,
+      json: Boolean(options.json),
+    });
+    if (code !== 0) process.exitCode = code;
+  });
+
+workspaceCommand
+  .command("bind <task-ref>")
+  .option("--path <dir>", "Provisional worktree path (defaults to cwd)")
+  .option("--json", "Output machine-readable JSON")
+  .action((taskRef: string, options: Record<string, unknown>) => {
+    const code = runWorkspaceBind(taskRef, {
+      cwd,
+      path: options.path as string | undefined,
+      json: Boolean(options.json),
+    });
+    if (code !== 0) process.exitCode = code;
+  });
+
+workspaceCommand
+  .command("release")
+  .option("--force", "Release another session's claim")
+  .option("--session-key <key>", "Override the session identity")
+  .option("--json", "Output machine-readable JSON")
+  .action((options: Record<string, unknown>) => {
+    const code = runWorkspaceRelease({
+      cwd,
+      force: Boolean(options.force),
+      sessionKey: options.sessionKey as string | undefined,
+      json: Boolean(options.json),
+    });
+    if (code !== 0) process.exitCode = code;
+  });
+
+workspaceCommand
+  .command("reclaim")
+  .option("--force", "Reclaim even when checks would otherwise refuse")
+  .option("--session-key <key>", "Override the session identity")
+  .option("--ttl <seconds>", "Claim TTL for the new claim", (value) => Number(value))
+  .option("--json", "Output machine-readable JSON")
+  .action((options: Record<string, unknown>) => {
+    const code = runWorkspaceReclaim({
+      cwd,
+      force: Boolean(options.force),
+      sessionKey: options.sessionKey as string | undefined,
+      ttlSeconds: options.ttl as number | undefined,
+      json: Boolean(options.json),
+    });
+    if (code !== 0) process.exitCode = code;
+  });
+
+const leaseCommand = taskCommand
+  .command("lease")
+  .description("Acquire, release, and inspect task leases");
+
+leaseCommand
+  .command("acquire <task-ref>")
+  .option("--owner-type <type>", "session | subagent | task", "session")
+  .option("--owner-id <id>", "Owner identity")
+  .option("--session-key <key>", "Session key recorded on the lease")
+  .option("--workspace <dir>", "Workspace recorded on the lease")
+  .option("--ttl <seconds>", "Lease TTL", (value) => Number(value))
+  .option("--json", "Output machine-readable JSON")
+  .action((taskRef: string, options: Record<string, unknown>) => {
+    const code = runLeaseAcquire(taskRef, {
+      cwd,
+      ownerType: options.ownerType as "session" | "subagent" | "task",
+      ownerId: options.ownerId as string | undefined,
+      sessionKey: options.sessionKey as string | undefined,
+      workspace: options.workspace as string | undefined,
+      ttlSeconds: options.ttl as number | undefined,
+      json: Boolean(options.json),
+    });
+    if (code !== 0) process.exitCode = code;
+  });
+
+leaseCommand
+  .command("release <task-ref>")
+  .option("--session-key <key>", "Session key that owns the lease")
+  .option("--force", "Release another session's lease")
+  .option("--json", "Output machine-readable JSON")
+  .action((taskRef: string, options: Record<string, unknown>) => {
+    const code = runLeaseRelease(taskRef, {
+      cwd,
+      sessionKey: options.sessionKey as string | undefined,
+      force: Boolean(options.force),
+      json: Boolean(options.json),
+    });
+    if (code !== 0) process.exitCode = code;
+  });
+
+leaseCommand
+  .command("status <task-ref>")
+  .option("--json", "Output machine-readable JSON")
+  .action((taskRef: string, options: Record<string, unknown>) => {
+    const code = runLeaseStatus(taskRef, { cwd, json: Boolean(options.json) });
+    if (code !== 0) process.exitCode = code;
   });
 
 const rulesCommand = program

@@ -14,17 +14,27 @@ describe("task worktree lifecycle", () => {
 
   beforeEach(() => {
     root = fs.mkdtempSync(path.join(os.tmpdir(), "phronia-worktree-"));
-    git(root, ["init", "-q"]);
+    git(root, ["init", "-q", "-b", "main"]);
     git(root, ["config", "user.email", "test@example.com"]);
     git(root, ["config", "user.name", "Test"]);
     fs.writeFileSync(path.join(root, "README.md"), "# repo\n");
-    git(root, ["add", "README.md"]);
+    fs.mkdirSync(path.join(root, ".phronia"), { recursive: true });
+    fs.writeFileSync(
+      path.join(root, ".phronia/.gitignore"),
+      ["worktrees/", ".runtime/"].join("\n"),
+    );
+    git(root, ["add", "-A"]);
     git(root, ["commit", "-q", "-m", "init"]);
     const taskDir = path.join(root, ".phronia/tasks/01-01-demo");
     fs.mkdirSync(taskDir, { recursive: true });
     fs.writeFileSync(
       path.join(taskDir, "task.json"),
-      JSON.stringify({ id: "01-01-demo", title: "Demo", status: "in_progress" }),
+      JSON.stringify({
+        id: "01-01-demo",
+        title: "Demo",
+        status: "in_progress",
+        base_branch: "main",
+      }),
     );
   });
 
@@ -40,12 +50,24 @@ describe("task worktree lifecycle", () => {
     if (!record) throw new Error("worktree record missing");
     expect(fs.existsSync(record.path)).toBe(true);
     expect(fs.existsSync(path.join(record.path, ".phronia/.runtime"))).toBe(true);
+    expect(record.path.endsWith(path.join(".phronia/worktrees/01-01-demo"))).toBe(
+      true,
+    );
 
+    // The shared registry is the runtime source of truth; task.json is not
+    // rewritten (design.md §13).
     const taskJson = JSON.parse(
       fs.readFileSync(path.join(root, ".phronia/tasks/01-01-demo/task.json"), "utf8"),
     ) as { worktree_path?: string; branch?: string };
-    expect(taskJson.worktree_path).toBe(record.path);
-    expect(taskJson.branch).toBe(record.branch);
+    expect(taskJson.worktree_path).toBeUndefined();
+    expect(taskJson.branch).toBeUndefined();
+
+    const registry = JSON.parse(
+      fs.readFileSync(path.join(root, ".git/phronia/worktrees.json"), "utf8"),
+    ) as { worktrees: { taskRef: string; path: string }[] };
+    expect(registry.worktrees.map((item) => item.taskRef)).toContain(
+      ".phronia/tasks/01-01-demo",
+    );
 
     expect(listWorktrees({ cwd: root }).map((item) => item.taskRef)).toContain(
       ".phronia/tasks/01-01-demo",
@@ -57,10 +79,6 @@ describe("task worktree lifecycle", () => {
     });
     expect(removed.ok, removed.message).toBe(true);
     expect(fs.existsSync(record.path)).toBe(false);
-    const after = JSON.parse(
-      fs.readFileSync(path.join(root, ".phronia/tasks/01-01-demo/task.json"), "utf8"),
-    ) as { worktree_path?: string | null };
-    expect(after.worktree_path).toBeNull();
     expect(listWorktrees({ cwd: root })).toEqual([]);
   });
 
@@ -73,6 +91,15 @@ describe("task worktree lifecycle", () => {
   it("refuses to add twice while the worktree exists", () => {
     expect(addWorktree("01-01-demo", { cwd: root, force: true }).ok).toBe(true);
     expect(addWorktree("01-01-demo", { cwd: root, force: true }).ok).toBe(false);
+  });
+
+  it("refuses a dirty main checkout unless --force", () => {
+    fs.writeFileSync(path.join(root, "dirty.txt"), "x");
+    const refused = addWorktree("01-01-demo", { cwd: root });
+    expect(refused.ok).toBe(false);
+    expect(refused.code).toBe("WORKSPACE_DIRTY_UNCLAIMED");
+
+    expect(addWorktree("01-01-demo", { cwd: root, force: true }).ok).toBe(true);
   });
 });
 

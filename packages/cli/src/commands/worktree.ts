@@ -1,28 +1,27 @@
 /**
- * `phronia task worktree` — one task, one worktree, one serial workflow.
+ * `phronia task worktree add|list|attach|remove|prune`.
  *
- * The registry is diagnostic state; git itself remains the source of truth
- * for worktree existence. Never create a worktree for a missing task and
- * never remove one with uncommitted changes unless forced.
+ * The worktree primitives now delegate to `services/workspace.ts`, which uses
+ * the W2 `GitPort` and the shared registry. `task.json.worktree_path` /
+ * `branch` are no longer written; the legacy fields are still read as a
+ * fallback (design.md §13).
  */
 
-import { execFileSync } from "node:child_process";
-import fs from "node:fs";
-import path from "node:path";
-import { LAYOUT, openState } from "@phronia/core";
+import {
+  addWorktree as addWorktreeService,
+  attachWorktree as attachWorktreeService,
+  listWorktrees as listWorktreesService,
+  pruneWorktrees as pruneWorktreesService,
+  removeWorktree as removeWorktreeService,
+  type PruneOptions,
+  type PruneResult,
+  type WorktreeOptions as ServiceWorktreeOptions,
+  type WorktreeRecord,
+  type WorktreeResult,
+} from "../services/workspace.js";
+import { exitCodeFor } from "./parallel.js";
 
-export interface WorktreeRecord {
-  taskRef: string;
-  taskId: string;
-  path: string;
-  branch: string;
-  createdAt: string;
-}
-
-interface WorktreeRegistry {
-  schemaVersion: 1;
-  worktrees: WorktreeRecord[];
-}
+export type { WorktreeRecord, WorktreeResult, PruneResult };
 
 export interface WorktreeOptions {
   cwd: string;
@@ -32,228 +31,141 @@ export interface WorktreeOptions {
   branch?: string;
   base?: string;
   deleteBranch?: boolean;
+  /** `--copy <path>` (repeatable); defaults to `parallel.copy`. */
+  copy?: readonly string[];
+  /** `--post-create <cmd>` (repeatable); defaults to `parallel.post_create`. */
+  postCreate?: readonly string[];
 }
 
-export interface WorktreeResult {
-  ok: boolean;
-  message: string;
-  record?: WorktreeRecord;
+
+export function addWorktree(
+  taskRef: string,
+  options: WorktreeOptions,
+): WorktreeResult {
+  return addWorktreeService(taskRef, toServiceOptions(options));
 }
 
-export function addWorktree(taskRef: string, options: WorktreeOptions): WorktreeResult {
-  const root = path.resolve(options.cwd);
-  const state = openState({ root });
-  const record = state.tasks.read(taskRef);
-  if (!record) {
-    return { ok: false, message: `task not found: ${taskRef}` };
-  }
-  if (record.status === "completed") {
-    return { ok: false, message: `task is already completed: ${record.id}` };
-  }
-  const ref = canonicalRef(root, record.dir);
-  const raw = readTaskJson(root, ref);
-  const existing = typeof raw?.worktree_path === "string" ? raw.worktree_path : "";
-  if (existing && fs.existsSync(existing)) {
-    return { ok: false, message: `task already has a worktree at ${existing}` };
-  }
-  if (!options.force && gitDirty(root)) {
-    return {
-      ok: false,
-      message: "main checkout has uncommitted changes; commit them or pass --force",
-    };
-  }
-
-  const target = path.resolve(
-    options.path ?? path.join(root, LAYOUT.paths.worktrees, record.id),
-  );
-  if (fs.existsSync(target)) {
-    return { ok: false, message: `target path already exists: ${target}` };
-  }
-  const branch = options.branch ?? record.branch ?? `phronia/${record.id}`;
-  const base = options.base ?? record.baseBranch ?? "HEAD";
-  try {
-    if (branchExists(root, branch)) {
-      git(root, ["worktree", "add", target, branch]);
-    } else {
-      git(root, ["worktree", "add", "-b", branch, target, base]);
-    }
-  } catch (error) {
-    return { ok: false, message: gitMessage(error) };
-  }
-
-  fs.mkdirSync(path.join(target, LAYOUT.paths.runtime), { recursive: true });
-  writeTaskJson(root, ref, { ...raw, worktree_path: target, branch });
-
-  const entry: WorktreeRecord = {
-    taskRef: ref,
-    taskId: record.id,
-    path: target,
-    branch,
-    createdAt: new Date().toISOString(),
-  };
-  const registry = readRegistry(root);
-  registry.worktrees = [
-    ...registry.worktrees.filter((item) => item.taskRef !== entry.taskRef),
-    entry,
-  ];
-  writeRegistry(root, registry);
-  return { ok: true, message: `worktree ready: ${target} (${branch})`, record: entry };
-}
-
-export function listWorktrees(options: { cwd: string; json?: boolean }): WorktreeRecord[] {
-  const root = path.resolve(options.cwd);
-  const registry = readRegistry(root);
-  const alive = registry.worktrees.filter((entry) => fs.existsSync(entry.path));
-  return alive;
-}
-
-export function removeWorktree(taskRef: string, options: WorktreeOptions): WorktreeResult {
-  const root = path.resolve(options.cwd);
-  const state = openState({ root });
-  const record = state.tasks.read(taskRef);
-  if (!record) {
-    return { ok: false, message: `task not found: ${taskRef}` };
-  }
-  const ref = canonicalRef(root, record.dir);
-  const registry = readRegistry(root);
-  const entry = registry.worktrees.find((item) => item.taskRef === ref);
-  const raw = readTaskJson(root, ref);
-  const target =
-    entry?.path && fs.existsSync(entry.path)
-      ? entry.path
-      : typeof raw?.worktree_path === "string"
-        ? raw.worktree_path
-        : "";
-  if (!target) {
-    return { ok: false, message: `task has no worktree: ${record.id}` };
-  }
-  if (!options.force && fs.existsSync(target) && gitDirty(target)) {
-    return {
-      ok: false,
-      message: "worktree has uncommitted changes; commit them or pass --force",
-    };
-  }
-  try {
-    git(root, ["worktree", "remove", ...(options.force ? ["--force"] : []), target]);
-  } catch (error) {
-    return { ok: false, message: gitMessage(error) };
-  }
-  if (options.deleteBranch && entry?.branch) {
-    try {
-      git(root, ["branch", options.force ? "-D" : "-d", entry.branch]);
-    } catch (error) {
-      return {
-        ok: false,
-        message: `worktree removed, branch not deleted: ${gitMessage(error)}`,
-      };
-    }
-  }
-  writeTaskJson(root, ref, {
-    ...raw,
-    worktree_path: null,
-    branch: options.deleteBranch ? null : (raw?.branch ?? null),
+export function listWorktrees(options: {
+  cwd: string;
+  json?: boolean;
+  includeMissing?: boolean;
+}): WorktreeRecord[] {
+  return listWorktreesService({
+    cwd: options.cwd,
+    ...(options.includeMissing === true ? { includeMissing: true } : {}),
   });
-  registry.worktrees = registry.worktrees.filter(
-    (item) => item.taskRef !== ref,
-  );
-  writeRegistry(root, registry);
-  return { ok: true, message: `worktree removed: ${target}` };
 }
 
-function canonicalRef(root: string, dir: string): string {
-  return path.relative(root, dir).split(path.sep).join("/");
+export function attachWorktree(
+  taskRef: string,
+  options: WorktreeOptions,
+): WorktreeResult {
+  return attachWorktreeService(taskRef, {
+    cwd: options.cwd,
+    ...(options.path === undefined ? {} : { path: options.path }),
+  });
 }
 
-function readTaskJson(root: string, ref: string): Record<string, unknown> | null {
-  try {
-    const parsed = JSON.parse(
-      fs.readFileSync(path.join(root, ref, "task.json"), "utf8"),
-    ) as unknown;
-    return parsed && typeof parsed === "object"
-      ? (parsed as Record<string, unknown>)
-      : null;
-  } catch {
-    return null;
+export function removeWorktree(
+  taskRef: string,
+  options: WorktreeOptions,
+): WorktreeResult {
+  return removeWorktreeService(taskRef, toServiceOptions(options));
+}
+
+export function pruneWorktrees(options: PruneOptions): PruneResult {
+  return pruneWorktreesService(options);
+}
+
+export function runWorktreeAdd(
+  taskRef: string,
+  options: WorktreeOptions,
+): number {
+  return renderWorktree(addWorktree(taskRef, options), options.json === true);
+}
+
+export function runWorktreeAttach(
+  taskRef: string,
+  options: WorktreeOptions,
+): number {
+  return renderWorktree(attachWorktree(taskRef, options), options.json === true);
+}
+
+export function runWorktreeRemove(
+  taskRef: string,
+  options: WorktreeOptions,
+): number {
+  return renderWorktree(removeWorktree(taskRef, options), options.json === true);
+}
+
+export function runWorktreeList(options: WorktreeOptions): number {
+  const records = listWorktrees({
+    cwd: options.cwd,
+    includeMissing: false,
+  });
+  if (options.json === true) {
+    process.stdout.write(`${JSON.stringify({ worktrees: records }, null, 2)}\n`);
+    return 0;
   }
+  if (records.length === 0) {
+    process.stdout.write("No task worktrees.\n");
+    return 0;
+  }
+  for (const record of records) {
+    process.stdout.write(
+      `${record.taskRef.padEnd(40)} ${record.branch.padEnd(30)} ${record.path}\n`,
+    );
+  }
+  return 0;
 }
 
-function writeTaskJson(
-  root: string,
-  ref: string,
-  data: Record<string, unknown>,
-): void {
-  const target = path.join(root, ref, "task.json");
-  const temp = `${target}.${process.pid}.tmp`;
-  fs.writeFileSync(temp, `${JSON.stringify(data, null, 2)}\n`, "utf8");
-  fs.renameSync(temp, target);
-}
-
-function readRegistry(root: string): WorktreeRegistry {
-  try {
-    const parsed = JSON.parse(
-      fs.readFileSync(path.join(root, LAYOUT.paths.worktreeRegistry), "utf8"),
-    ) as WorktreeRegistry;
-    if (parsed?.schemaVersion === 1 && Array.isArray(parsed.worktrees)) {
-      return parsed;
+export function runWorktreePrune(options: WorktreeOptions & {
+  dryRun?: boolean;
+  olderThan?: string;
+}): number {
+  const result = pruneWorktrees({
+    cwd: options.cwd,
+    ...(options.dryRun === true ? { dryRun: true } : {}),
+    ...(options.olderThan === undefined ? {} : { olderThan: options.olderThan }),
+    ...(options.deleteBranch === true ? { deleteBranch: true } : {}),
+  });
+  if (options.json === true) {
+    process.stdout.write(`${JSON.stringify(result, null, 2)}\n`);
+  } else if (!result.ok) {
+    process.stderr.write(`${result.message}\n`);
+    process.stderr.write("next: pass --older-than with a valid duration (e.g. 7d)\n");
+  } else {
+    process.stdout.write(`${result.message}\n`);
+    for (const kept of result.kept) {
+      process.stdout.write(`  kept ${kept.taskRef || "(provisional)"}: ${kept.reason}\n`);
     }
-  } catch {
-    // missing or corrupt registry: rebuild from task.json below
   }
-  const rebuilt: WorktreeRecord[] = [];
-  for (const task of openState({ root }).tasks.list({ includeArchived: true })) {
-    const raw = readTaskJson(root, task.ref);
-    const worktreePath = raw?.worktree_path;
-    if (typeof worktreePath === "string" && worktreePath) {
-      rebuilt.push({
-        taskRef: task.ref,
-        taskId: task.id,
-        path: worktreePath,
-        branch: typeof raw?.branch === "string" ? raw.branch : "",
-        createdAt: "",
-      });
+  return result.ok ? 0 : 2;
+}
+
+function renderWorktree(result: WorktreeResult, json: boolean): number {
+  if (json) {
+    process.stdout.write(`${JSON.stringify(result, null, 2)}\n`);
+  } else if (result.ok) {
+    process.stdout.write(`${result.message}\n`);
+  } else {
+    process.stderr.write(`${result.code ?? "WORKTREE_FAILED"}: ${result.message}\n`);
+    if (result.next !== undefined && result.next !== "") {
+      process.stderr.write(`next: ${result.next}\n`);
     }
   }
-  return { schemaVersion: 1, worktrees: rebuilt };
+  return result.ok ? 0 : exitCodeFor(result.code ?? "GIT_FAILED");
 }
 
-function writeRegistry(root: string, registry: WorktreeRegistry): void {
-  const target = path.join(root, LAYOUT.paths.worktreeRegistry);
-  fs.mkdirSync(path.dirname(target), { recursive: true });
-  const temp = `${target}.${process.pid}.tmp`;
-  fs.writeFileSync(temp, `${JSON.stringify(registry, null, 2)}\n`, "utf8");
-  fs.renameSync(temp, target);
-}
-
-function git(cwd: string, args: string[]): string {
-  return execFileSync("git", args, {
-    cwd,
-    encoding: "utf8",
-    timeout: 15_000,
-    stdio: ["ignore", "pipe", "pipe"],
-  }).trim();
-}
-
-function gitDirty(cwd: string): boolean {
-  try {
-    return git(cwd, ["status", "--porcelain"]).length > 0;
-  } catch {
-    return false;
-  }
-}
-
-function branchExists(cwd: string, branch: string): boolean {
-  try {
-    git(cwd, ["show-ref", "--verify", "--quiet", `refs/heads/${branch}`]);
-    return true;
-  } catch {
-    return false;
-  }
-}
-
-function gitMessage(error: unknown): string {
-  if (error && typeof error === "object" && "stderr" in error) {
-    const stderr = String((error as { stderr?: unknown }).stderr ?? "").trim();
-    if (stderr) return stderr;
-  }
-  return error instanceof Error ? error.message : String(error);
+function toServiceOptions(options: WorktreeOptions): ServiceWorktreeOptions {
+  return {
+    cwd: options.cwd,
+    ...(options.force === true ? { force: true } : {}),
+    ...(options.path === undefined ? {} : { path: options.path }),
+    ...(options.branch === undefined ? {} : { branch: options.branch }),
+    ...(options.base === undefined ? {} : { base: options.base }),
+    ...(options.deleteBranch === true ? { deleteBranch: true } : {}),
+    ...(options.copy === undefined ? {} : { copy: options.copy }),
+    ...(options.postCreate === undefined ? {} : { postCreate: options.postCreate }),
+  };
 }
