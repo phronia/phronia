@@ -3,7 +3,7 @@
   "name": "parallel-task-execution",
   "title": "并行任务执行：worktree 隔离、串行合入与冲突治理",
   "description": "为 Phronia 增加并行任务编排能力：可并行性判定、每任务 worktree/分支、严格串行的本地合入队列、远端 MR 模式，以及冲突分类与人工接管边界。",
-  "status": "in_progress",
+  "status": "completed",
   "dev_type": null,
   "scope": null,
   "package": "cli",
@@ -11,11 +11,11 @@
   "creator": "jingd2",
   "assignee": "jingd2",
   "createdAt": "2026-10-28",
-  "completedAt": null,
+  "completedAt": "2026-10-28",
   "branch": "phronia/parallel-task-execution",
   "base_branch": "main",
   "worktree_path": null,
-  "commit": null,
+  "commit": "599d35fb272c40ca72150d696406cb776ccb97e3",
   "pr_url": null,
   "subtasks": [],
   "children": [],
@@ -25,6 +25,17 @@
   "meta": {
     "scope": "foundation+coordinator",
     "coordinator": "included",
-    "phase0": "required"
+    "phase0": "required",
+    "integration": {
+      "mode": "local",
+      "outcome": "landed",
+      "base_sha": "599d35fb272c40ca72150d696406cb776ccb97e3",
+      "commit": "599d35fb272c40ca72150d696406cb776ccb97e3",
+      "pr_url": null,
+      "verified": true,
+      "last_error": null,
+      "log_ref": ".phronia/.runtime/integration-logs/parallel-task-execution-2026-10-28T12-32-34-615Z.log",
+      "updated_at": "2026-10-28T12:35:02.380Z"
+    }
   }
 }
