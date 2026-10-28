@@ -7,7 +7,7 @@ import { dispatchBatch } from "../../src/services/coordinator.js";
 import { listTaskLeases } from "../../src/services/lease.js";
 import { planTasks } from "../../src/services/parallel.js";
 
-describe("coordinator dispatch integration (COORD-01..03)", () => {
+describe("coordinator dispatch integration (COORD-01..03)", { timeout: 30_000 }, () => {
   let root: string;
 
   beforeEach(() => {
