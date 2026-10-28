@@ -3,8 +3,11 @@ import path from "node:path";
 import { parseSimpleYaml } from "../../src/state/config/yaml.js";
 import {
   DEFAULT_MAX_JOURNAL_LINES,
+  DEFAULT_PARALLEL_CONFIG,
+  packagePathMap,
   readConfig,
 } from "../../src/state/config/readers.js";
+import { normalizeFootprint } from "../../src/task/parallel/footprint.js";
 import { openState } from "../../src/state/index.js";
 import type { FsLike } from "../../src/state/fs.js";
 
@@ -195,6 +198,244 @@ describe("openState", () => {
     expect(reader.exists()).toBe(true);
     expect(reader.config().sessionAutoCommit).toBe(true);
     expect(reader.diagnostics()).toHaveLength(1);
+  });
+});
+
+describe("parallel config", () => {
+  it("returns documented defaults when parallel is absent", () => {
+    const result = readConfig("/repo", memFs({}));
+    expect(result.value.parallel).toEqual(DEFAULT_PARALLEL_CONFIG);
+    expect(result.value.parallel).toMatchObject({
+      enabled: true,
+      maxConcurrent: 3,
+      worktree: "auto",
+      worktreeDir: ".phronia/worktrees",
+      cleanup: "on-archive",
+      location: "persistent",
+      copy: [],
+      postCreate: [],
+      integration: {
+        mode: "auto",
+        confirm: "auto",
+        branch: null,
+        verify: [],
+        timeout: "30m",
+        lockTtl: "30m",
+        maxAttempts: 3,
+      },
+      conflicts: {
+        regenerate: [],
+        mechanicalMaxFiles: 5,
+      },
+    });
+    expect(result.diagnostics).toEqual([]);
+  });
+
+  it("reads parallel policy values", () => {
+    const result = readConfig(
+      "/repo",
+      memFs({
+        ".phronia/config.yaml": [
+          "parallel:",
+          "  enabled: false",
+          "  max_concurrent: 5",
+          "  worktree:",
+          "    dir: .worktrees",
+          "    cleanup: on-integrate",
+          "    location: ephemeral",
+          "  copy:",
+          "    - .env",
+          "    - .phronia/.developer",
+          "  post_create:",
+          "    - pnpm install",
+          "  integration:",
+          "    mode: remote",
+          "    confirm: always",
+          "    branch: develop",
+          "    verify:",
+          "      - pnpm test",
+          "      - pnpm lint",
+          "    timeout: 10m",
+          "    lock_ttl: 5m",
+          "    max_attempts: 2",
+          "  conflicts:",
+          "    always_serial:",
+          "      - custom.lock",
+          "    generated:",
+          '      - "**/out/**"',
+          "    regenerate:",
+          "      - pnpm install --lockfile-only",
+          "    mechanical_max_files: 7",
+        ].join("\n"),
+      }),
+    );
+    expect(result.diagnostics).toEqual([]);
+    expect(result.value.parallel).toMatchObject({
+      enabled: false,
+      maxConcurrent: 5,
+      worktree: "auto",
+      worktreeDir: ".worktrees",
+      cleanup: "on-integrate",
+      location: "ephemeral",
+      copy: [".env", ".phronia/.developer"],
+      postCreate: ["pnpm install"],
+      integration: {
+        mode: "remote",
+        confirm: "always",
+        branch: "develop",
+        verify: ["pnpm test", "pnpm lint"],
+        timeout: "10m",
+        lockTtl: "5m",
+        maxAttempts: 2,
+      },
+      conflicts: {
+        regenerate: ["pnpm install --lockfile-only"],
+        mechanicalMaxFiles: 7,
+      },
+    });
+    expect(result.value.parallel.conflicts.alwaysSerial).toContain(
+      "custom.lock",
+    );
+    expect(result.value.parallel.conflicts.alwaysSerial).toContain(
+      "pnpm-lock.yaml",
+    );
+    expect(result.value.parallel.conflicts.generated).toContain("**/out/**");
+    expect(result.value.parallel.conflicts.generated).toContain("**/dist/**");
+  });
+
+  it("accepts a scalar worktree mode and a top-level worktree_dir", () => {
+    const result = readConfig(
+      "/repo",
+      memFs({
+        ".phronia/config.yaml": [
+          "parallel:",
+          "  worktree: always",
+          "  worktree_dir: /tmp/phronia-wt",
+        ].join("\n"),
+      }),
+    );
+    expect(result.diagnostics).toEqual([]);
+    expect(result.value.parallel.worktree).toBe("always");
+    expect(result.value.parallel.worktreeDir).toBe("/tmp/phronia-wt");
+    expect(result.value.parallel.cleanup).toBe("on-archive");
+    expect(result.value.parallel.location).toBe("persistent");
+  });
+
+  it("accepts top-level worktree_cleanup and worktree_location aliases", () => {
+    const result = readConfig(
+      "/repo",
+      memFs({
+        ".phronia/config.yaml": [
+          "parallel:",
+          "  worktree: auto",
+          "  worktree_cleanup: on-integrate",
+          "  worktree_location: ephemeral",
+        ].join("\n"),
+      }),
+    );
+    expect(result.diagnostics).toEqual([]);
+    expect(result.value.parallel.cleanup).toBe("on-integrate");
+    expect(result.value.parallel.location).toBe("ephemeral");
+  });
+
+  it("warns and falls back on invalid worktree cleanup/location", () => {
+    const result = readConfig(
+      "/repo",
+      memFs({
+        ".phronia/config.yaml": [
+          "parallel:",
+          "  worktree:",
+          "    cleanup: yearly",
+          "    location: nowhere",
+        ].join("\n"),
+      }),
+    );
+    expect(result.value.parallel.cleanup).toBe("on-archive");
+    expect(result.value.parallel.location).toBe("persistent");
+    expect(result.diagnostics).toHaveLength(2);
+    expect(
+      result.diagnostics.every(
+        (item) => item.code === "state.config.invalid_value",
+      ),
+    ).toBe(true);
+  });
+
+  it("warns and falls back on invalid parallel values", () => {
+    const result = readConfig(
+      "/repo",
+      memFs({
+        ".phronia/config.yaml": [
+          "parallel:",
+          "  enabled: maybe",
+          "  max_concurrent: 0",
+          "  worktree: sometimes",
+          "  integration:",
+          "    mode: weird",
+          "    timeout: whenever",
+          "    max_attempts: nope",
+          "  conflicts:",
+          "    mechanical_max_files: -1",
+        ].join("\n"),
+      }),
+    );
+    expect(result.value.parallel).toMatchObject({
+      enabled: true,
+      maxConcurrent: 3,
+      worktree: "auto",
+      integration: {
+        mode: "auto",
+        timeout: "30m",
+        maxAttempts: 3,
+      },
+      conflicts: { mechanicalMaxFiles: 5 },
+    });
+    expect(result.diagnostics).toHaveLength(7);
+    expect(
+      result.diagnostics.every(
+        (item) => item.code === "state.config.invalid_value",
+      ),
+    ).toBe(true);
+  });
+
+  it("maps package names to real paths for footprint normalization", () => {
+    const result = readConfig(
+      "/repo",
+      memFs({
+        ".phronia/config.yaml": [
+          "packages:",
+          "  core:",
+          "    path: libs/core",
+          "  cli:",
+          "    path: packages/cli",
+          "  legacy:",
+          "    type: rust",
+        ].join("\n"),
+      }),
+    );
+    const packagePaths = packagePathMap(result.value);
+    expect(packagePaths).toEqual({
+      core: "libs/core",
+      cli: "packages/cli",
+    });
+    // Packages without an explicit path keep the name as their config path,
+    // but are omitted from the map so W1's packages/<name>/** fallback applies.
+    expect(result.value.packages?.legacy).toMatchObject({
+      path: "legacy",
+    });
+    expect(result.value.packages?.legacy?.pathExplicit).toBeUndefined();
+    expect(normalizeFootprint({ package: "core" }, { packagePaths })).toEqual({
+      raw: ["libs/core/**"],
+      kind: "package",
+    });
+    expect(normalizeFootprint({ package: "legacy" }, { packagePaths })).toEqual({
+      raw: ["packages/legacy/**"],
+      kind: "package",
+    });
+    // Without the map the generic fallback is used.
+    expect(normalizeFootprint({ package: "core" })).toEqual({
+      raw: ["packages/core/**"],
+      kind: "package",
+    });
   });
 });
 

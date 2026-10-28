@@ -757,7 +757,7 @@ rebase 后的树与 ff 合并后的树一致；CAS 保证验证与合并之间 b
 
 - 位置：`<git-common-dir>/phronia/integration.lock`。
 - 获取：`open(path, 'wx')`；EEXIST → 读锁判断。
-- stale：同 host 且 PID 不存在，或心跳超过 TTL。
+- stale：默认只看心跳 + TTL；`pid` 只用于诊断。只有 integration lock 可以显式启用 `ttl-or-pid`（长驻合入进程），workspace claim/task lease 一律 TTL-only。
 - 心跳：合入过程中每 30s 更新；写临时文件 + rename。
 - 释放：关闭句柄后 unlink（Windows 兼容）。
 - 锁的作用域在输出中标注 `scope: repository`（不是 machine）。跨机器仍无效，但至少同仓所有 worktree 一致。
@@ -888,6 +888,9 @@ parallel:
   enabled: true
   max_concurrent: 3
   worktree: auto                 # auto | always | never
+  worktree_dir: .phronia/worktrees
+  worktree_cleanup: on-archive   # on-archive | on-integrate | manual
+  worktree_location: persistent  # persistent | ephemeral
   copy: [.env, .phronia/.developer]
   post_create: [pnpm install]
   integration:
@@ -1412,6 +1415,8 @@ export interface LeaseStore {
 | integration lock | `integration.lock` | 谁在合入 | O_EXCL |
 
 **固定获取顺序：task lease → workspace claim → integration lock。** 释放按相反顺序。任何代码路径不得反过来；这是死锁避免的唯一规则。
+
+**默认 staleness 是 TTL-only。** `pid` 只用于诊断，不能作为短命 CLI 进程的存活依据；只有 integration lock 可以显式使用 `ttl-or-pid`。
 
 ### 20.2 workspace claim 状态
 

@@ -48,6 +48,7 @@ export * from "./diagnostics.js";
 export * from "./fs.js";
 export * from "./config/yaml.js";
 export * from "./config/readers.js";
+export * from "./shared-runtime.js";
 export * from "./platform/env-tables.js";
 export * from "./session/key.js";
 export * from "./session/tickets.js";

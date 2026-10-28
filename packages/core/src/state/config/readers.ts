@@ -21,8 +21,118 @@ export const DEFAULT_CONTEXT_INJECTION_MAX_ARTIFACT_BYTES = 65536;
 export const DEFAULT_CONTEXT_INJECTION_MAX_TOTAL_BYTES = 131072;
 export const DEFAULT_PROMPT_INJECTION_SKIP_KEYWORD = "no-trellis";
 
+export const DEFAULT_PARALLEL_ENABLED = true;
+export const DEFAULT_PARALLEL_MAX_CONCURRENT = 3;
+export const DEFAULT_PARALLEL_WORKTREE = "auto" as const;
+export const DEFAULT_PARALLEL_WORKTREE_DIR = ".phronia/worktrees";
+export const DEFAULT_PARALLEL_WORKTREE_CLEANUP = "on-archive" as const;
+export const DEFAULT_PARALLEL_WORKTREE_LOCATION = "persistent" as const;
+export const DEFAULT_PARALLEL_INTEGRATION_TIMEOUT = "30m";
+export const DEFAULT_PARALLEL_LOCK_TTL = "30m";
+export const DEFAULT_PARALLEL_MAX_ATTEMPTS = 3;
+export const DEFAULT_PARALLEL_MECHANICAL_MAX_FILES = 5;
+
+/**
+ * Shared files that must never be changed in parallel (design.md §5.5).
+ * User config is unioned with these rather than replacing them: losing a
+ * safety default is worse than serializing one extra task.
+ */
+export const DEFAULT_PARALLEL_ALWAYS_SERIAL: readonly string[] = Object.freeze([
+  "pnpm-lock.yaml",
+  "package-lock.json",
+  "yarn.lock",
+  "Cargo.lock",
+  "poetry.lock",
+  "**/migrations/**",
+  "**/migration/**",
+  "docs/requirements.md",
+  ".phronia/config.yaml",
+  ".phronia/workflow.md",
+  ".phronia/spec/**",
+  ".phronia/gate.yaml",
+]);
+
+/** Generated artifacts that may be regenerated after a rebase conflict. */
+export const DEFAULT_PARALLEL_GENERATED: readonly string[] = Object.freeze([
+  "pnpm-lock.yaml",
+  "package-lock.json",
+  "yarn.lock",
+  "Cargo.lock",
+  "poetry.lock",
+  "**/dist/**",
+  "**/generated/**",
+]);
+
 const TRUE_VALUES = new Set(["true", "yes", "1", "on"]);
 const FALSE_VALUES = new Set(["false", "no", "0", "off"]);
+
+export type ParallelIntegrationMode = "auto" | "local" | "remote";
+export type ParallelIntegrationConfirm = "auto" | "always" | "never";
+export type ParallelWorktreeMode = "auto" | "always" | "never";
+export type ParallelWorktreeCleanup = "on-archive" | "on-integrate" | "manual";
+export type ParallelWorktreeLocation = "persistent" | "ephemeral";
+
+export interface ParallelIntegrationConfig {
+  mode: ParallelIntegrationMode;
+  confirm: ParallelIntegrationConfirm;
+  /** Branch to integrate into; null means the task's base branch. */
+  branch: string | null;
+  verify: readonly string[];
+  /** Verification timeout, e.g. `30m`. Parsed by the CLI layer. */
+  timeout: string;
+  /** Integration lock TTL, e.g. `30m`. */
+  lockTtl: string;
+  maxAttempts: number;
+}
+
+export interface ParallelConflictsConfig {
+  alwaysSerial: readonly string[];
+  generated: readonly string[];
+  regenerate: readonly string[];
+  mechanicalMaxFiles: number;
+}
+
+export interface ParallelConfig {
+  enabled: boolean;
+  maxConcurrent: number;
+  worktree: ParallelWorktreeMode;
+  /** Relative to the project root, or absolute. */
+  worktreeDir: string;
+  /** When `task archive` / `integrate` may remove a worktree. */
+  cleanup: ParallelWorktreeCleanup;
+  /** `persistent` keeps worktrees across restarts; `ephemeral` uses tmp. */
+  location: ParallelWorktreeLocation;
+  copy: readonly string[];
+  postCreate: readonly string[];
+  integration: ParallelIntegrationConfig;
+  conflicts: ParallelConflictsConfig;
+}
+
+export const DEFAULT_PARALLEL_CONFIG: ParallelConfig = Object.freeze({
+  enabled: DEFAULT_PARALLEL_ENABLED,
+  maxConcurrent: DEFAULT_PARALLEL_MAX_CONCURRENT,
+  worktree: DEFAULT_PARALLEL_WORKTREE,
+  worktreeDir: DEFAULT_PARALLEL_WORKTREE_DIR,
+  cleanup: DEFAULT_PARALLEL_WORKTREE_CLEANUP,
+  location: DEFAULT_PARALLEL_WORKTREE_LOCATION,
+  copy: Object.freeze([]),
+  postCreate: Object.freeze([]),
+  integration: Object.freeze({
+    mode: "auto",
+    confirm: "auto",
+    branch: null,
+    verify: Object.freeze([]),
+    timeout: DEFAULT_PARALLEL_INTEGRATION_TIMEOUT,
+    lockTtl: DEFAULT_PARALLEL_LOCK_TTL,
+    maxAttempts: DEFAULT_PARALLEL_MAX_ATTEMPTS,
+  }),
+  conflicts: Object.freeze({
+    alwaysSerial: DEFAULT_PARALLEL_ALWAYS_SERIAL,
+    generated: DEFAULT_PARALLEL_GENERATED,
+    regenerate: Object.freeze([]),
+    mechanicalMaxFiles: DEFAULT_PARALLEL_MECHANICAL_MAX_FILES,
+  }),
+});
 
 export interface ContextInjectionLimits {
   maxFileBytes: number;
@@ -32,6 +142,8 @@ export interface ContextInjectionLimits {
 
 export interface PackageConfig {
   path: string;
+  /** True when `packages.<name>.path` was explicitly configured. */
+  pathExplicit?: boolean;
   type?: string;
   git?: boolean;
 }
@@ -52,6 +164,8 @@ export interface ConfigView {
   adapterPins: Record<string, string>;
   /** ZCode path override: `platforms.zcode.path`. */
   zcodePath: "plugin" | "project-hooks" | "bridge" | "prelude" | null;
+  /** `parallel.*` policy (design.md §11). Missing or invalid values fall back. */
+  parallel: ParallelConfig;
 }
 
 export interface ConfigReadResult {
@@ -115,6 +229,7 @@ export function readConfig(
       specScope: readSpecScope(raw.session),
       adapterPins: readAdapterPins(raw.platforms),
       zcodePath: readZcodePath(raw.platforms),
+      parallel: readParallel(raw.parallel, diagnostics, configPath),
     },
     diagnostics,
     raw,
@@ -212,6 +327,495 @@ function readSkipKeyword(raw: YamlValue | undefined): string {
     : DEFAULT_PROMPT_INJECTION_SKIP_KEYWORD;
 }
 
+function readParallel(
+  raw: YamlValue | undefined,
+  diagnostics: Diagnostic[],
+  configPath: string,
+): ParallelConfig {
+  if (raw === undefined) {
+    return DEFAULT_PARALLEL_CONFIG;
+  }
+  if (!isObject(raw)) {
+    diagnostics.push(
+      diagnostic(
+        "state.config.invalid_value",
+        "warn",
+        `invalid parallel config: ${JSON.stringify(raw)}; using defaults`,
+        { path: configPath },
+      ),
+    );
+    return DEFAULT_PARALLEL_CONFIG;
+  }
+
+  const worktree = readParallelWorktree(
+    raw.worktree,
+    raw.worktree_dir,
+    raw.worktree_cleanup,
+    raw.worktree_location,
+    diagnostics,
+    configPath,
+  );
+  return {
+    enabled: coerceBool(
+      raw.enabled,
+      DEFAULT_PARALLEL_ENABLED,
+      "parallel.enabled",
+      diagnostics,
+      configPath,
+    ),
+    maxConcurrent: readPositiveInt(
+      raw.max_concurrent,
+      DEFAULT_PARALLEL_MAX_CONCURRENT,
+      "parallel.max_concurrent",
+      diagnostics,
+      configPath,
+    ),
+    worktree: worktree.mode,
+    worktreeDir: worktree.dir,
+    cleanup: worktree.cleanup,
+    location: worktree.location,
+    copy: readStringList(
+      raw.copy,
+      "parallel.copy",
+      DEFAULT_PARALLEL_CONFIG.copy,
+      diagnostics,
+      configPath,
+    ),
+    postCreate: readStringList(
+      raw.post_create,
+      "parallel.post_create",
+      DEFAULT_PARALLEL_CONFIG.postCreate,
+      diagnostics,
+      configPath,
+    ),
+    integration: readParallelIntegration(raw.integration, diagnostics, configPath),
+    conflicts: readParallelConflicts(raw.conflicts, diagnostics, configPath),
+  };
+}
+
+function readParallelWorktree(
+  rawWorktree: YamlValue | undefined,
+  rawDir: YamlValue | undefined,
+  rawCleanup: YamlValue | undefined,
+  rawLocation: YamlValue | undefined,
+  diagnostics: Diagnostic[],
+  configPath: string,
+): {
+  mode: ParallelWorktreeMode;
+  dir: string;
+  cleanup: ParallelWorktreeCleanup;
+  location: ParallelWorktreeLocation;
+} {
+  let mode: ParallelWorktreeMode = DEFAULT_PARALLEL_WORKTREE;
+  let dir: string = DEFAULT_PARALLEL_WORKTREE_DIR;
+  let cleanup: ParallelWorktreeCleanup = DEFAULT_PARALLEL_WORKTREE_CLEANUP;
+  let location: ParallelWorktreeLocation = DEFAULT_PARALLEL_WORKTREE_LOCATION;
+
+  if (typeof rawWorktree === "string") {
+    mode = readEnum(
+      rawWorktree,
+      ["auto", "always", "never"] as const,
+      DEFAULT_PARALLEL_WORKTREE,
+      "parallel.worktree",
+      diagnostics,
+      configPath,
+    );
+  } else if (isObject(rawWorktree)) {
+    mode = readEnum(
+      rawWorktree.mode,
+      ["auto", "always", "never"] as const,
+      DEFAULT_PARALLEL_WORKTREE,
+      "parallel.worktree.mode",
+      diagnostics,
+      configPath,
+    );
+    cleanup = readEnum(
+      rawWorktree.cleanup,
+      ["on-archive", "on-integrate", "manual"] as const,
+      DEFAULT_PARALLEL_WORKTREE_CLEANUP,
+      "parallel.worktree.cleanup",
+      diagnostics,
+      configPath,
+    );
+    location = readEnum(
+      rawWorktree.location,
+      ["persistent", "ephemeral"] as const,
+      DEFAULT_PARALLEL_WORKTREE_LOCATION,
+      "parallel.worktree.location",
+      diagnostics,
+      configPath,
+    );
+    const dirValue = rawWorktree.dir;
+    if (typeof dirValue === "string" && dirValue.trim() !== "") {
+      dir = dirValue.trim();
+    } else if (dirValue !== undefined) {
+      diagnostics.push(
+        diagnostic(
+          "state.config.invalid_value",
+          "warn",
+          `invalid parallel.worktree.dir value: ${JSON.stringify(dirValue)}; using ${DEFAULT_PARALLEL_WORKTREE_DIR}`,
+          { path: configPath },
+        ),
+      );
+    }
+  } else if (rawWorktree !== undefined) {
+    diagnostics.push(
+      diagnostic(
+        "state.config.invalid_value",
+        "warn",
+        `invalid parallel.worktree value: ${JSON.stringify(rawWorktree)}; using ${DEFAULT_PARALLEL_WORKTREE}`,
+        { path: configPath },
+      ),
+    );
+  }
+
+  if (typeof rawDir === "string" && rawDir.trim() !== "") {
+    dir = rawDir.trim();
+  } else if (rawDir !== undefined) {
+    diagnostics.push(
+      diagnostic(
+        "state.config.invalid_value",
+        "warn",
+        `invalid parallel.worktree_dir value: ${JSON.stringify(rawDir)}; using ${DEFAULT_PARALLEL_WORKTREE_DIR}`,
+        { path: configPath },
+      ),
+    );
+  }
+
+  // Flat aliases documented in design.md §11 (`parallel.worktree_cleanup`,
+  // `parallel.worktree_location`) override the nested form.
+  cleanup = readEnum(
+    rawCleanup,
+    ["on-archive", "on-integrate", "manual"] as const,
+    cleanup,
+    "parallel.worktree_cleanup",
+    diagnostics,
+    configPath,
+  );
+  location = readEnum(
+    rawLocation,
+    ["persistent", "ephemeral"] as const,
+    location,
+    "parallel.worktree_location",
+    diagnostics,
+    configPath,
+  );
+
+  return { mode, dir, cleanup, location };
+}
+
+function readParallelIntegration(
+  raw: YamlValue | undefined,
+  diagnostics: Diagnostic[],
+  configPath: string,
+): ParallelIntegrationConfig {
+  const defaults = DEFAULT_PARALLEL_CONFIG.integration;
+  if (raw === undefined) {
+    return defaults;
+  }
+  if (!isObject(raw)) {
+    diagnostics.push(
+      diagnostic(
+        "state.config.invalid_value",
+        "warn",
+        `invalid parallel.integration config: ${JSON.stringify(raw)}; using defaults`,
+        { path: configPath },
+      ),
+    );
+    return defaults;
+  }
+
+  return {
+    mode: readEnum(
+      raw.mode,
+      ["auto", "local", "remote"] as const,
+      defaults.mode,
+      "parallel.integration.mode",
+      diagnostics,
+      configPath,
+    ),
+    confirm: readEnum(
+      raw.confirm,
+      ["auto", "always", "never"] as const,
+      defaults.confirm,
+      "parallel.integration.confirm",
+      diagnostics,
+      configPath,
+    ),
+    branch: readNullableString(
+      raw.branch,
+      defaults.branch,
+      "parallel.integration.branch",
+      diagnostics,
+      configPath,
+    ),
+    verify: readStringList(
+      raw.verify,
+      "parallel.integration.verify",
+      defaults.verify,
+      diagnostics,
+      configPath,
+    ),
+    timeout: readDuration(
+      raw.timeout,
+      defaults.timeout,
+      "parallel.integration.timeout",
+      diagnostics,
+      configPath,
+    ),
+    lockTtl: readDuration(
+      raw.lock_ttl ?? raw.lockTtl,
+      defaults.lockTtl,
+      "parallel.integration.lock_ttl",
+      diagnostics,
+      configPath,
+    ),
+    maxAttempts: readPositiveInt(
+      raw.max_attempts ?? raw.maxAttempts,
+      defaults.maxAttempts,
+      "parallel.integration.max_attempts",
+      diagnostics,
+      configPath,
+    ),
+  };
+}
+
+function readParallelConflicts(
+  raw: YamlValue | undefined,
+  diagnostics: Diagnostic[],
+  configPath: string,
+): ParallelConflictsConfig {
+  const defaults = DEFAULT_PARALLEL_CONFIG.conflicts;
+  if (raw === undefined) {
+    return defaults;
+  }
+  if (!isObject(raw)) {
+    diagnostics.push(
+      diagnostic(
+        "state.config.invalid_value",
+        "warn",
+        `invalid parallel.conflicts config: ${JSON.stringify(raw)}; using defaults`,
+        { path: configPath },
+      ),
+    );
+    return defaults;
+  }
+
+  return {
+    alwaysSerial: unionPatterns(
+      DEFAULT_PARALLEL_ALWAYS_SERIAL,
+      readStringList(
+        raw.always_serial,
+        "parallel.conflicts.always_serial",
+        defaults.alwaysSerial,
+        diagnostics,
+        configPath,
+      ),
+    ),
+    generated: unionPatterns(
+      DEFAULT_PARALLEL_GENERATED,
+      readStringList(
+        raw.generated,
+        "parallel.conflicts.generated",
+        defaults.generated,
+        diagnostics,
+        configPath,
+      ),
+    ),
+    regenerate: readStringList(
+      raw.regenerate,
+      "parallel.conflicts.regenerate",
+      defaults.regenerate,
+      diagnostics,
+      configPath,
+    ),
+    mechanicalMaxFiles: readPositiveInt(
+      raw.mechanical_max_files ?? raw.mechanicalMaxFiles,
+      defaults.mechanicalMaxFiles,
+      "parallel.conflicts.mechanical_max_files",
+      diagnostics,
+      configPath,
+    ),
+  };
+}
+
+function readEnum<T extends string>(
+  raw: YamlValue | undefined,
+  allowed: readonly T[],
+  fallback: T,
+  label: string,
+  diagnostics: Diagnostic[],
+  configPath: string,
+): T {
+  if (raw === undefined) {
+    return fallback;
+  }
+  const normalized = String(raw).trim().toLowerCase();
+  const match = allowed.find((value) => value === normalized);
+  if (match !== undefined) {
+    return match;
+  }
+  diagnostics.push(
+    diagnostic(
+      "state.config.invalid_value",
+      "warn",
+      `invalid ${label} value: ${JSON.stringify(raw)}; using ${fallback} (${allowed.join("|")})`,
+      { path: configPath },
+    ),
+  );
+  return fallback;
+}
+
+function readPositiveInt(
+  raw: YamlValue | undefined,
+  fallback: number,
+  label: string,
+  diagnostics: Diagnostic[],
+  configPath: string,
+): number {
+  if (raw === undefined) {
+    return fallback;
+  }
+  const parsed = Number.parseInt(String(raw), 10);
+  if (Number.isFinite(parsed) && parsed >= 1) {
+    return parsed;
+  }
+  diagnostics.push(
+    diagnostic(
+      "state.config.invalid_value",
+      "warn",
+      `invalid ${label} value: ${JSON.stringify(raw)}; using ${fallback}`,
+      { path: configPath },
+    ),
+  );
+  return fallback;
+}
+
+function readDuration(
+  raw: YamlValue | undefined,
+  fallback: string,
+  label: string,
+  diagnostics: Diagnostic[],
+  configPath: string,
+): string {
+  if (raw === undefined) {
+    return fallback;
+  }
+  if (typeof raw === "string") {
+    const value = raw.trim();
+    if (/^\d+(?:ms|s|m|h|d)?$/.test(value)) {
+      return value;
+    }
+  }
+  diagnostics.push(
+    diagnostic(
+      "state.config.invalid_value",
+      "warn",
+      `invalid ${label} value: ${JSON.stringify(raw)}; using ${fallback}`,
+      { path: configPath },
+    ),
+  );
+  return fallback;
+}
+
+function readNullableString(
+  raw: YamlValue | undefined,
+  fallback: string | null,
+  label: string,
+  diagnostics: Diagnostic[],
+  configPath: string,
+): string | null {
+  if (raw === undefined) {
+    return fallback;
+  }
+  if (typeof raw === "string") {
+    return raw.trim() === "" ? null : raw.trim();
+  }
+  diagnostics.push(
+    diagnostic(
+      "state.config.invalid_value",
+      "warn",
+      `invalid ${label} value: ${JSON.stringify(raw)}; using ${fallback ?? "null"}`,
+      { path: configPath },
+    ),
+  );
+  return fallback;
+}
+
+/** Read a scalar or `- ` list into a trimmed string list (never throws). */
+function readStringList(
+  raw: YamlValue | undefined,
+  label: string,
+  fallback: readonly string[],
+  diagnostics: Diagnostic[],
+  configPath: string,
+): readonly string[] {
+  if (raw === undefined) {
+    return fallback;
+  }
+  const values = Array.isArray(raw) ? raw : [raw];
+  const out: string[] = [];
+  for (const item of values) {
+    if (typeof item !== "string") {
+      diagnostics.push(
+        diagnostic(
+          "state.config.invalid_value",
+          "warn",
+          `invalid ${label} entry: ${JSON.stringify(item)}; ignoring`,
+          { path: configPath },
+        ),
+      );
+      continue;
+    }
+    const value = item.trim();
+    if (value !== "") {
+      out.push(value);
+    }
+  }
+  return out;
+}
+
+/** Union safety defaults with configured patterns (case-insensitive). */
+function unionPatterns(
+  defaults: readonly string[],
+  configured: readonly string[],
+): readonly string[] {
+  const seen = new Set<string>();
+  const out: string[] = [];
+  for (const pattern of [...defaults, ...configured]) {
+    const key = pattern.toLowerCase();
+    if (seen.has(key)) {
+      continue;
+    }
+    seen.add(key);
+    out.push(pattern);
+  }
+  return out;
+}
+
+/**
+ * Map explicitly configured package paths for footprint normalization.
+ *
+ * Packages without an explicit `path` are omitted so `normalizeFootprint`
+ * keeps its `packages/<name>/**` fallback instead of treating the package
+ * name itself as a directory.
+ */
+export function packagePathMap(
+  config: Pick<ConfigView, "packages">,
+): Record<string, string> {
+  const paths: Record<string, string> = {};
+  if (config.packages === null) {
+    return paths;
+  }
+  for (const [name, pkg] of Object.entries(config.packages)) {
+    if (pkg.pathExplicit !== true) {
+      continue;
+    }
+    paths[name] = pkg.path;
+  }
+  return paths;
+}
+
 function coerceBool(
   raw: YamlValue | undefined,
   fallback: boolean,
@@ -268,8 +872,11 @@ function readPackages(raw: YamlValue | undefined): Record<string, PackageConfig>
     if (!isObject(value)) {
       continue;
     }
+    const explicitPath =
+      typeof value.path === "string" && value.path.trim() !== "";
     packages[name] = {
       path: stringOrDefault(value.path, name),
+      ...(explicitPath ? { pathExplicit: true } : {}),
       ...(typeof value.type === "string" ? { type: value.type } : {}),
       ...(typeof value.git === "boolean"
         ? { git: value.git }
