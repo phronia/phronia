@@ -7,6 +7,7 @@
 - Check target drift without mutation with `omv sync --check --json`.
 - Inspect host integration provider/capability status with `omv integrate status --json` when that command is available.
 - Apply selected or pending host integration capabilities with `omv integrate apply --json` when that command is available.
+- Treat `.trellis` and `.phronia` as mutually exclusive OMV projection targets. When both host trees exist, resolve the conflict (remove or rename one framework) before running `omv integrate apply` or `omv adapter refresh`; OMV does not choose, rewrite records, or delete framework files automatically.
 - Change the managed version with `omv bump --json`.
 - At completion boundaries (during commit confirmation when a unit of work is complete), use the OMV finalize-boundary helper advertised in `.omv/ai/contract.json`; provide an explicit `change_type` value and do not infer or default it.
 - After a semantic bump, run the project build command (e.g. `cargo build` for Rust, `npm install` for Node) to refresh lock files, then commit the OMV-generated files (`.omv/state.toml`, `.omv/finalizations.toml`, lock files like `Cargo.lock`, and generated version files) together.
@@ -14,6 +15,6 @@
 - Do not edit `Cargo.toml`, `CMakeLists.txt`, `pyproject.toml`, `go.mod`, or other native manifest versions directly.
 - Before release-sensitive edits, run `omv plan --json`; before committing or publishing, run `omv sync --check --json`.
 - Treat runtime export files such as `src/generated/version.rs` and `include/omv_version.h` as generated read-only views.
-- Treat host files such as `AGENTS.md`, `CLAUDE.md`, `.codex/skills/*`, and Trellis/OpenSpec guides as derived projections, not OMV authority.
+- Treat host files such as `AGENTS.md`, `CLAUDE.md`, `.codex/skills/*`, and Trellis/Phronia/OpenSpec guides as derived projections, not OMV authority.
 
 When integrating OMV with agents or spec frameworks, keep the detailed rules in `.omv/ai/*` and project only thin host adapters into external files. Legacy `omv adapter ...` commands remain temporary compatibility commands during the MVP transition; new automation should prefer `omv integrate status/apply` where available.

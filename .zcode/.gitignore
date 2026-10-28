@@ -1,0 +1,6 @@
+# ZCode requires an absolute, machine-local plugin path in config.json.
+# These files are generated per checkout by `phronia init` / `phronia update`;
+# do not commit one machine's registration to the repository.
+config.json
+hooks/
+plugins/

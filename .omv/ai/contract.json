@@ -63,6 +63,7 @@
       "source_mapping": "<provider>-<boundary>",
       "task_identity": {
         "override": "--task-id <task-id>",
+        "phronia_default": ".phronia/.runtime/sessions/<session>.json",
         "trellis_default": ".trellis/.current-task"
       },
       "write": [
@@ -154,6 +155,16 @@
         "mvp_supported": false,
         "provider_type": "spec"
       },
+      "phronia": {
+        "bootstrap_policy": "requires existing Phronia installation before mutation",
+        "capabilities": [
+          "spec-guide",
+          "spec-index-snippet",
+          "finalize-boundary"
+        ],
+        "mvp_supported": true,
+        "provider_type": "spec"
+      },
       "trellis": {
         "bootstrap_policy": "requires existing Trellis installation before mutation",
         "capabilities": [
@@ -184,7 +195,9 @@
     ],
     "host_adapter_files_are_derived_outputs": true,
     "native_manifests_are_derived_outputs": true,
-    "runtime_exports_are_read_only_views": true
+    "runtime_exports_are_read_only_views": true,
+    "spec_workflow_hosts_are_mutually_exclusive": true,
+    "sync_comparison_normalizes_line_endings": true
   },
   "truth_source": ".omv/state.toml"
 }
