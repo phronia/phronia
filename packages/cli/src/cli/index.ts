@@ -43,6 +43,7 @@ import { runTaskCommit } from "../commands/commit.js";
 import { runTaskIntegrate } from "../commands/integrate.js";
 import { runTaskDispatch } from "../commands/dispatch.js";
 import { runCoordinatorStatus } from "../commands/coordinator.js";
+import { runTaskFootprintSet } from "../commands/footprint.js";
 import {
   runSpecBootstrap,
   runSpecSetStatus,
@@ -933,6 +934,24 @@ leaseCommand
   .option("--json", "Output machine-readable JSON")
   .action((taskRef: string, options: Record<string, unknown>) => {
     const code = runLeaseStatus(taskRef, { cwd, json: Boolean(options.json) });
+    if (code !== 0) process.exitCode = code;
+  });
+
+const footprintCommand = taskCommand
+  .command("footprint")
+  .description("Declare the paths/globs a parallel task may change");
+
+footprintCommand
+  .command("set <task-ref> [paths...]")
+  .option("--clear", "Clear the declared footprint")
+  .option("--json", "Output machine-readable JSON")
+  .action((taskRef: string, paths: string[], options: Record<string, unknown>) => {
+    const code = runTaskFootprintSet(taskRef, {
+      cwd,
+      paths,
+      clear: Boolean(options.clear),
+      json: Boolean(options.json),
+    });
     if (code !== 0) process.exitCode = code;
   });
 
