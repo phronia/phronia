@@ -1,0 +1,9 @@
+{
+  "version": "2610.28.6",
+  "description": "Parallel task execution and coordinator mode",
+  "breaking": false,
+  "recommendMigrate": false,
+  "changelog": "Add task-level worktrees, the shared runtime (workspace claim, task lease, integration lock), serial local integration with verification on the rebased result, remote PR/MR handoff, conflict classification, the coordinator dispatch manifest with fail-closed capability gates, workflow/skills/docs, the archive guard, and footprint/docs-lock commands.",
+  "migrations": [],
+  "notes": "Backfilled after release: 2610.28.6 shipped without its local manifest. It contained no migrations, so the update chain is unaffected."
+}
