@@ -12,6 +12,7 @@ import { openState } from "../state/index.js";
 import type { ActiveTaskState } from "../state/session/active-task.js";
 import { buildBreadcrumb } from "../state/workflow/breadcrumb.js";
 import { CORE_VERSION } from "../version.js";
+import { buildRuntimeStateLines } from "./runtime-state.js";
 import {
   CONTEXT_SCHEMA_VERSION,
   type ContextBlock,
@@ -107,13 +108,32 @@ export function buildUserPrompt(request: ContextRequest): ContextResponse {
     },
   ];
 
+  const diagnostics: ContextResponse["diagnostics"] = [];
+  if (active.taskPath) {
+    // Facts are read only when a task exists: a session with no task has no
+    // workspace contract to report, and the hook stays cheap.
+    const runtimeState = buildRuntimeStateLines({
+      state,
+      active,
+      task,
+      includeNext: true,
+    });
+    diagnostics.push(...runtimeState.diagnostics);
+    blocks.push({
+      id: "runtime-state",
+      text: `<runtime-state>\n${runtimeState.lines.join("\n")}\n</runtime-state>`,
+      priority: 0,
+      source: { kind: "system", ref: "runtime-facts" },
+    });
+  }
+
   return baseResponse(
     request,
     root,
     active,
     blocks,
     envelopeFor(request),
-    [],
+    diagnostics,
   );
 }
 

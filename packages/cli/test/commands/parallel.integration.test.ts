@@ -114,6 +114,57 @@ describe("parallel plan/status integration (PLAN-01..04, WS-06)", () => {
     }
   });
 
+  it("S3: a parent container is excluded from waves and lists child start commands", () => {
+    writeTask(root, "10-28-parent", {
+      touches: ["src/all/**"],
+      children: ["10-28-alpha", "10-28-beta"],
+    });
+    writeTask(root, "10-28-alpha", { touches: ["src/a/**"], status: "planning" });
+    writeTask(root, "10-28-beta", { touches: ["src/b/**"], status: "planning" });
+
+    const result = planTasks({ cwd: root, includePlanning: true });
+    expect(result.ok, JSON.stringify(result)).toBe(true);
+    if (!result.ok) return;
+
+    expect(result.waves.flatMap((wave) => wave.tasks)).not.toContain(
+      ".phronia/tasks/10-28-parent",
+    );
+    const container = result.diagnostics.find(
+      (item) => item.code === "PARALLEL_CONTAINER_TASK",
+    );
+    expect(container?.severity).toBe("info");
+    expect(container?.details?.next).toEqual([
+      "python3 ./.phronia/scripts/task.py start .phronia/tasks/10-28-alpha",
+      "python3 ./.phronia/scripts/task.py start .phronia/tasks/10-28-beta",
+    ]);
+    const planning = result.diagnostics.find(
+      (item) => item.code === "PARENT_HAS_PLANNING_CHILDREN",
+    );
+    expect(planning?.severity).toBe("warn");
+    expect(planning?.message).toContain("2 planning children");
+    expect(planning?.details?.next).toEqual([
+      "python3 ./.phronia/scripts/task.py start .phronia/tasks/10-28-alpha",
+      "python3 ./.phronia/scripts/task.py start .phronia/tasks/10-28-beta",
+    ]);
+  });
+
+  it("S3: explicit --refs on a parent warns instead of scheduling it", () => {
+    writeTask(root, "10-28-parent", {
+      touches: ["src/all/**"],
+      children: ["10-28-alpha"],
+    });
+    writeTask(root, "10-28-alpha", { touches: ["src/a/**"] });
+
+    const result = planTasks({ cwd: root, refs: [".phronia/tasks/10-28-parent"] });
+    expect(result.ok, JSON.stringify(result)).toBe(true);
+    if (!result.ok) return;
+    expect(result.waves).toEqual([]);
+    const container = result.diagnostics.find(
+      (item) => item.code === "PARALLEL_CONTAINER_TASK",
+    );
+    expect(container?.severity).toBe("warn");
+  });
+
   it("WS-06: status shows control-plane and branch-local tasks together", () => {
     writeTask(root, "10-28-alpha", { touches: ["src/a/**"] });
     git(root, ["add", "-A"]);
@@ -226,6 +277,7 @@ function writeTask(
     dependsOn?: readonly string[];
     status?: string;
     exclusive?: boolean;
+    children?: readonly string[];
   },
 ): void {
   const dir = path.join(root, ".phronia/tasks", id);
@@ -237,6 +289,7 @@ function writeTask(
       title: `Task ${id}`,
       status: options.status ?? "in_progress",
       priority: "P2",
+      ...(options.children === undefined ? {} : { children: options.children }),
       meta: {
         parallel: {
           ...(options.touches === undefined ? {} : { touches: options.touches }),

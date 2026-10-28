@@ -7,7 +7,9 @@ import { dispatchBatch } from "../../src/services/coordinator.js";
 import { listTaskLeases } from "../../src/services/lease.js";
 import { planTasks } from "../../src/services/parallel.js";
 
-describe("coordinator dispatch integration (COORD-01..03)", { timeout: 30_000 }, () => {
+// Git-heavy cases take ~8s alone; the full `pnpm verify` run adds enough
+// parallel load to cross 30s. Keep headroom so the suite is not flaky.
+describe("coordinator dispatch integration (COORD-01..03)", { timeout: 60_000 }, () => {
   let root: string;
 
   beforeEach(() => {

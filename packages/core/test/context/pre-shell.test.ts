@@ -11,6 +11,11 @@ import {
 } from "../../src/context/pre-shell.js";
 import { renderContext } from "../../src/context/index.js";
 import type { ContextRequest } from "../../src/context/types.js";
+import {
+  LEASE_ACTIONS,
+  WORKSPACE_ACTIONS,
+  parseTaskInvocation,
+} from "../../src/state/session/commands.js";
 
 const REPO_ROOT = path.resolve(
   path.dirname(fileURLToPath(import.meta.url)),
@@ -37,11 +42,64 @@ describe("shell command parsing", () => {
   it("extracts session subcommands", () => {
     expect(
       extractTaskSubcommands("python3 ./.phronia/scripts/task.py start .phronia/tasks/01-01-a"),
-    ).toEqual([{ name: "start", task_ref: ".phronia/tasks/01-01-a" }]);
+    ).toEqual([
+      { name: "start", action: "start", task_ref: ".phronia/tasks/01-01-a" },
+    ]);
     expect(extractTaskSubcommands("python3 task.py current")).toEqual([
-      { name: "current" },
+      { name: "current", action: "current" },
     ]);
     expect(extractTaskSubcommands("ls -la")).toEqual([]);
+  });
+
+  it("extracts phronia/trellis workspace and lease actions", () => {
+    expect(
+      extractTaskSubcommands(
+        "phronia task workspace ensure .phronia/tasks/01-01-a",
+      ),
+    ).toEqual([
+      {
+        name: "workspace",
+        action: "ensure",
+        task_ref: ".phronia/tasks/01-01-a",
+      },
+    ]);
+    expect(
+      extractTaskSubcommands("trellis task lease acquire .phronia/tasks/01-01-a"),
+    ).toEqual([
+      { name: "lease", action: "acquire", task_ref: ".phronia/tasks/01-01-a" },
+    ]);
+    expect(extractTaskSubcommands("phronia task workspace reclaim")).toEqual([
+      { name: "workspace", action: "reclaim" },
+    ]);
+    expect(
+      extractTaskSubcommands("phronia task workspace destroy 01-01-a"),
+    ).toEqual([]);
+  });
+
+  it("writer and reader share one command table", () => {
+    const ref = ".phronia/tasks/01-01-a";
+    const groups = [
+      ["workspace", WORKSPACE_ACTIONS],
+      ["lease", LEASE_ACTIONS],
+    ] as const;
+    for (const [group, actions] of groups) {
+      for (const action of actions) {
+        const invocation = parseTaskInvocation(["task", group, action, ref]);
+        expect(invocation?.name).toBe(group);
+        expect(invocation?.action).toBe(action);
+
+        const subcommands = extractTaskSubcommands(
+          `phronia task ${group} ${action} ${ref}`,
+        );
+        expect(subcommands).toEqual([
+          {
+            name: group,
+            action,
+            ...(invocation?.requiresRef === true ? { task_ref: ref } : {}),
+          },
+        ]);
+      }
+    }
   });
 });
 
@@ -83,7 +141,7 @@ describe("pre-shell ticket", () => {
     expect(ticket.context_key).toBe("claude_abc");
     expect(ticket.command).toContain("task.py start");
     expect(ticket.subcommands).toEqual([
-      { name: "start", task_ref: ".phronia/tasks/01-01-a" },
+      { name: "start", action: "start", task_ref: ".phronia/tasks/01-01-a" },
     ]);
     expect(ticket.cwd).toBe(fs.realpathSync(root));
     expect(ticket.expires_at_epoch - ticket.created_at_epoch).toBe(30);

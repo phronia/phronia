@@ -22,6 +22,54 @@ import type {
 
 const DEFAULT_WORKTREE_DIR = ".phronia/worktrees";
 
+/**
+ * Branch names that are integration refs, never a task's dedicated branch.
+ *
+ * Older `task.py start` recorded whatever was checked out (`main`), and an
+ * integration ref may be `origin/main`. Treating either as a feature branch
+ * makes `ensure` attempt a worktree on a branch main already holds.
+ */
+const NON_FEATURE_BRANCHES = new Set([
+  "main",
+  "master",
+  "origin/main",
+  "origin/master",
+]);
+
+/**
+ * Whether `branch` is a real feature branch (`feat/...`, `phronia/...`).
+ *
+ * `main`, `master`, `origin/main`, `origin/master`, the configured integration
+ * branch, and the currently checked-out main branch are all non-dedicated.
+ */
+export function isDedicatedFeatureBranch(
+  branch: string | null | undefined,
+  integrationBranch: string,
+  currentMainBranch?: string | null,
+): boolean {
+  if (branch === null || branch === undefined) return false;
+  const value = normalizeBranch(branch);
+  if (value === "") return false;
+  if (NON_FEATURE_BRANCHES.has(value)) return false;
+  if (normalizeBranch(integrationBranch) === value) return false;
+  if (
+    currentMainBranch !== null &&
+    currentMainBranch !== undefined &&
+    normalizeBranch(currentMainBranch) === value
+  ) {
+    return false;
+  }
+  return true;
+}
+
+function normalizeBranch(value: string): string {
+  let normalized = value.trim();
+  while (normalized.startsWith("refs/heads/")) {
+    normalized = normalized.slice("refs/heads/".length);
+  }
+  return normalized;
+}
+
 export function decideWorkspace(
   context: WorkspacePolicyContext,
 ): WorkspaceDecision {
@@ -237,10 +285,19 @@ function resolveTarget(
     (isAbsoluteDirectory(directory)
       ? joinPath(directory, slug)
       : joinPath(context.currentCheckout, directory, slug));
-  const branch =
-    context.target?.branch ??
-    context.task.branch ??
-    `phronia/${slug}`;
+  // A task whose `branch` is the integration branch has no dedicated feature
+  // branch (older `task.py start` recorded `main`). Creating a worktree on the
+  // integration branch is impossible — it is already checked out — so fall
+  // back to the conventional per-task branch.
+  const taskBranch = context.task.branch ?? null;
+  let featureBranch = `phronia/${slug}`;
+  if (
+    taskBranch !== null &&
+    isDedicatedFeatureBranch(taskBranch, context.integrationBranch)
+  ) {
+    featureBranch = taskBranch;
+  }
+  const branch = context.target?.branch ?? featureBranch;
   return {
     path,
     branch,

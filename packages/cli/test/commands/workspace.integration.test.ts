@@ -291,6 +291,250 @@ describe("workspace integration (WS-01..WS-05)", () => {
     expect(reclaimed.claim?.sessionKey).toBe("session-two");
   });
 
+  it("S3/R7: resolves the session from a pre-shell ticket without --session-key", () => {
+    const now = Date.now() / 1000;
+    const ticketDir = path.join(root, ".phronia/.runtime/shell-tickets");
+    fs.mkdirSync(ticketDir, { recursive: true });
+    fs.writeFileSync(
+      path.join(ticketDir, "ticket.json"),
+      JSON.stringify({
+        context_key: "ticket-session",
+        cwd: fs.realpathSync(root),
+        created_at_epoch: now,
+        expires_at_epoch: now + 30,
+        subcommands: [
+          {
+            name: "workspace",
+            action: "ensure",
+            task_ref: ".phronia/tasks/10-28-alpha",
+          },
+        ],
+      }),
+    );
+
+    const result = ensureWorkspace({
+      cwd: root,
+      taskRef: "10-28-alpha",
+      env: {},
+      argv: ["task", "workspace", "ensure", ".phronia/tasks/10-28-alpha"],
+    });
+
+    expect(result.ok, JSON.stringify(result)).toBe(true);
+    if (!result.ok) return;
+    expect(result.decision.kind).toBe("reuse-current");
+    expect(result.claim?.sessionKey).toBe("ticket-session");
+  });
+
+  it("S3/R7: ambiguous session files produce a copy-paste hint, never a guess", () => {
+    const sessions = path.join(root, ".phronia/.runtime/sessions");
+    fs.mkdirSync(sessions, { recursive: true });
+    for (const key of ["claude_a", "claude_b"]) {
+      fs.writeFileSync(
+        path.join(sessions, `${key}.json`),
+        JSON.stringify({ platform: "claude", current_task: null }),
+      );
+    }
+
+    const result = ensureWorkspace({
+      cwd: root,
+      taskRef: "10-28-alpha",
+      env: {},
+      argv: ["status"],
+    });
+
+    expect(result.ok).toBe(false);
+    if (result.ok) return;
+    expect(result.code).toBe("WORKSPACE_SESSION_UNKNOWN");
+    expect(result.message).toContain("2 session files exist");
+    expect(result.next).toContain("--session-key");
+  });
+
+  it("S3/R7: a unique checkout session is named in the executable next command", () => {
+    const sessions = path.join(root, ".phronia/.runtime/sessions");
+    fs.mkdirSync(sessions, { recursive: true });
+    fs.writeFileSync(
+      path.join(sessions, "claude_abc.json"),
+      JSON.stringify({ platform: "claude", current_task: null }),
+    );
+
+    const result = ensureWorkspace({
+      cwd: root,
+      taskRef: "10-28-alpha",
+      env: {},
+      argv: ["status"],
+    });
+
+    expect(result.ok).toBe(false);
+    if (result.ok) return;
+    expect(result.code).toBe("WORKSPACE_SESSION_UNKNOWN");
+    expect(result.next).toBe(
+      "phronia task workspace ensure 10-28-alpha --session-key claude_abc",
+    );
+    expect(result.details?.hint).toBe(
+      "set PHRONIA_CONTEXT_ID=claude_abc for non-hook shells",
+    );
+  });
+
+  it("S3/R13: branch=main, clean unclaimed main reuses the current checkout", () => {
+    writeTask(root, "10-28-main-branch", {
+      touches: ["src/m/**"],
+      branch: "main",
+    });
+    git(root, ["add", "-A"]);
+    git(root, ["commit", "-q", "-m", "plan main-branch task"]);
+
+    const result = ensureWorkspace({
+      cwd: root,
+      taskRef: "10-28-main-branch",
+      sessionKey: "session-one",
+    });
+
+    expect(result.ok, JSON.stringify(result)).toBe(true);
+    if (!result.ok) return;
+    expect(result.decision.kind).toBe("reuse-current");
+    expect(result.workspace).toBe(fs.realpathSync(root));
+    expect(result.claim?.taskRef).toBe(".phronia/tasks/10-28-main-branch");
+    expect(fs.existsSync(path.join(root, ".phronia/worktrees"))).toBe(false);
+  });
+
+  it("S3/R13: branch=main + parallel.worktree=always creates phronia/<slug>", () => {
+    fs.writeFileSync(
+      path.join(root, ".phronia/config.yaml"),
+      ["parallel:", "  worktree: always"].join("\n"),
+    );
+    writeTask(root, "10-28-main-branch", {
+      touches: ["src/m/**"],
+      branch: "main",
+    });
+    git(root, ["add", "-A"]);
+    git(root, ["commit", "-q", "-m", "plan main-branch task"]);
+
+    const result = ensureWorkspace({
+      cwd: root,
+      taskRef: "10-28-main-branch",
+      sessionKey: "session-one",
+    });
+
+    expect(result.ok, JSON.stringify(result)).toBe(true);
+    if (!result.ok) return;
+    expect(result.decision.kind).toBe("create");
+    if (result.decision.kind !== "create") return;
+    expect(result.decision.branch).toBe("phronia/10-28-main-branch");
+    expect(result.decision.base).toBe("main");
+    expect(fs.existsSync(result.workspace ?? "")).toBe(true);
+  });
+
+  it("S3/R13: a main checkout claimed by another task creates phronia/<slug>", () => {
+    writeTask(root, "10-28-main-branch", {
+      touches: ["src/m/**"],
+      branch: "main",
+    });
+    git(root, ["add", "-A"]);
+    git(root, ["commit", "-q", "-m", "plan main-branch task"]);
+    writeTaskClaim(root, ".phronia/tasks/10-28-other", "other-session");
+
+    const result = ensureWorkspace({
+      cwd: root,
+      taskRef: "10-28-main-branch",
+      sessionKey: "session-one",
+    });
+
+    expect(result.ok, JSON.stringify(result)).toBe(true);
+    if (!result.ok) return;
+    expect(result.decision.kind).toBe("create");
+    if (result.decision.kind !== "create") return;
+    expect(result.decision.branch).toBe("phronia/10-28-main-branch");
+    expect(result.decision.code).toBe("WORKSPACE_CLAIM_BUSY");
+  });
+
+  it("S3/R13: a registered worktree still attaches", () => {
+    writeTask(root, "10-28-main-branch", {
+      touches: ["src/m/**"],
+      branch: "main",
+    });
+    git(root, ["add", "-A"]);
+    git(root, ["commit", "-q", "-m", "plan main-branch task"]);
+
+    const worktree = path.join(root, ".phronia/worktrees/10-28-main-branch");
+    git(root, ["worktree", "add", "-b", "phronia/10-28-main-branch", worktree, "main"]);
+    const shared = path.join(root, ".git/phronia");
+    fs.mkdirSync(shared, { recursive: true });
+    fs.writeFileSync(
+      path.join(shared, "worktrees.json"),
+      JSON.stringify({
+        schemaVersion: 1,
+        worktrees: [
+          {
+            taskRef: ".phronia/tasks/10-28-main-branch",
+            path: worktree,
+            branch: "phronia/10-28-main-branch",
+            kind: "phronia",
+            createdAt: "2026-10-28T00:00:00Z",
+          },
+        ],
+      }),
+    );
+
+    const result = ensureWorkspace({
+      cwd: root,
+      taskRef: "10-28-main-branch",
+      sessionKey: "session-one",
+    });
+
+    expect(result.ok, JSON.stringify(result)).toBe(true);
+    if (!result.ok) return;
+    expect(result.decision.kind).toBe("attach");
+    expect(result.workspace).toBe(worktree);
+  });
+
+  it("S3/R13: branch=main with origin/main integration still reuses main", () => {
+    writeTask(root, "10-28-origin-main", {
+      touches: ["src/o/**"],
+      branch: "main",
+    });
+    git(root, ["add", "-A"]);
+    git(root, ["commit", "-q", "-m", "plan origin-main task"]);
+    git(root, ["update-ref", "refs/remotes/origin/main", "HEAD"]);
+
+    const result = ensureWorkspace({
+      cwd: root,
+      taskRef: "10-28-origin-main",
+      sessionKey: "session-one",
+    });
+
+    expect(result.ok, JSON.stringify(result)).toBe(true);
+    if (!result.ok) return;
+    expect(result.decision.kind).toBe("reuse-current");
+    expect(result.workspace).toBe(fs.realpathSync(root));
+  });
+
+  it("S3/R13: branch=main with origin/main integration creates phronia/<slug> when isolated", () => {
+    fs.writeFileSync(
+      path.join(root, ".phronia/config.yaml"),
+      ["parallel:", "  worktree: always"].join("\n"),
+    );
+    writeTask(root, "10-28-origin-main", {
+      touches: ["src/o/**"],
+      branch: "main",
+    });
+    git(root, ["add", "-A"]);
+    git(root, ["commit", "-q", "-m", "plan origin-main task"]);
+    git(root, ["update-ref", "refs/remotes/origin/main", "HEAD"]);
+
+    const result = ensureWorkspace({
+      cwd: root,
+      taskRef: "10-28-origin-main",
+      sessionKey: "session-one",
+    });
+
+    expect(result.ok, JSON.stringify(result)).toBe(true);
+    if (!result.ok) return;
+    expect(result.decision.kind).toBe("create");
+    if (result.decision.kind !== "create") return;
+    expect(result.decision.branch).toBe("phronia/10-28-origin-main");
+    expect(result.decision.base).toBe("origin/main");
+  });
+
   it("does not write task.json worktree fields when creating a worktree", () => {
     prepareWorkspace({ cwd: root, sessionKey: "session-one" });
     const created = ensureWorkspace({
@@ -358,6 +602,31 @@ interface ClaimSeed {
 }
 
 export function writeStaleClaim(root: string, seed: ClaimSeed): void {
+  writeClaimRecord(root, seed, {
+    acquiredAt: "2020-01-01T00:00:00.000Z",
+    heartbeatAt: "2020-01-01T00:00:00.000Z",
+    ttlSeconds: 1,
+  });
+}
+
+/** A fresh claim owned by another task/session. */
+export function writeTaskClaim(
+  root: string,
+  taskRef: string,
+  sessionKey: string,
+): void {
+  writeClaimRecord(
+    root,
+    { taskRef, sessionKey },
+    { acquiredAt: new Date().toISOString(), heartbeatAt: new Date().toISOString(), ttlSeconds: 7200 },
+  );
+}
+
+function writeClaimRecord(
+  root: string,
+  seed: ClaimSeed,
+  lease: { acquiredAt: string; heartbeatAt: string; ttlSeconds: number },
+): void {
   const shared = path.join(root, ".git/phronia");
   fs.mkdirSync(shared, { recursive: true });
   fs.writeFileSync(
@@ -373,9 +642,7 @@ export function writeStaleClaim(root: string, seed: ClaimSeed): void {
       host: "test-host",
       pid: 1,
       state: "in_progress",
-      acquiredAt: "2020-01-01T00:00:00.000Z",
-      heartbeatAt: "2020-01-01T00:00:00.000Z",
-      ttlSeconds: 1,
+      ...lease,
     }),
   );
 }

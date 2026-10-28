@@ -43,6 +43,8 @@ export * from "./integration/policy.js";
 export * from "./integration/queue.js";
 export * from "./workspace/types.js";
 export * from "./workspace/policy.js";
+export * from "./dispatch/types.js";
+export * from "./dispatch/policy.js";
 export * from "./index-types.js";
 export * from "./index-policy.js";
 

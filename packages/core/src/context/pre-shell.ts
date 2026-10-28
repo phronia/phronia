@@ -22,9 +22,9 @@ import {
   type ContextResponse,
 } from "./types.js";
 import { diagnostic, type Diagnostic } from "../state/diagnostics.js";
+import { taskInvocationAt } from "../state/session/commands.js";
 
 const TICKET_TTL_SECONDS = 30;
-const SESSION_SUBCOMMANDS = new Set(["start", "current", "finish"]);
 const CONTEXT_IDENTITY_KEYS = [
   "session_id",
   "sessionId",
@@ -38,7 +38,10 @@ const CONTEXT_IDENTITY_KEYS = [
 ] as const;
 
 export interface ShellSubcommand {
+  /** `start|current|finish` for task.py, or `workspace|lease` for the CLI. */
   name: string;
+  /** The verb now running (`start`, `ensure`, `acquire`, ...). */
+  action?: string;
   task_ref?: string;
 }
 
@@ -175,18 +178,15 @@ export function extractTaskSubcommands(command: string): ShellSubcommand[] {
     return [];
   }
   const subcommands: ShellSubcommand[] = [];
-  for (let index = 0; index < tokens.length - 1; index += 1) {
-    const token = tokens[index] ?? "";
-    if (path.basename(token.replace(/^["']|["']$/g, "")) !== "task.py") {
-      continue;
-    }
-    const name = tokens[index + 1];
-    if (!name || !SESSION_SUBCOMMANDS.has(name)) {
-      continue;
-    }
-    const item: ShellSubcommand = { name };
-    if (name === "start" && index + 2 < tokens.length) {
-      item.task_ref = tokens[index + 2];
+  for (let index = 0; index < tokens.length; index += 1) {
+    const invocation = taskInvocationAt(tokens, index);
+    if (invocation === null) continue;
+    const item: ShellSubcommand = {
+      name: invocation.name,
+      action: invocation.action,
+    };
+    if (invocation.requiresRef && invocation.ref !== null) {
+      item.task_ref = invocation.ref;
     }
     subcommands.push(item);
   }

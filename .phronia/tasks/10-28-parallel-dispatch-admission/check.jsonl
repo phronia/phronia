@@ -1,0 +1,8 @@
+{"file": ".phronia/spec/cli/backend/parallel-tasks.md", "reason": "验收：错误码、判定顺序、三把互斥、coordinator 降级是否被破坏"}
+{"file": ".phronia/spec/cli/backend/workflow-state-contract.md", "reason": "验收：breadcrumb 新块不破坏现有状态键与 marker"}
+{"file": ".phronia/spec/cli/backend/quality-guidelines.md", "reason": "验收：错误处理、无静默 no-op、无平台分支泄漏"}
+{"file": ".phronia/spec/cli/unit-test/conventions.md", "reason": "验收：测试层级与覆盖要求"}
+{"file": ".phronia/tasks/10-28-parallel-dispatch-admission/research/prior-art.md", "reason": "验收：平台能力表与 ZCode/Claude/Codex 行为是否有证据"}
+{"file": ".phronia/spec/cli/backend/error-handling.md", "reason": "验收：每个失败都有可执行的 next，错误码稳定，不吞异常"}
+{"file": ".phronia/spec/cli/backend/logging-guidelines.md", "reason": "验收：诊断与日志不得泄漏路径/密钥，不得静默"}
+{"file": ".phronia/tasks/10-28-parallel-dispatch-admission/acceptance.md", "reason": "最终验收矩阵与 Definition of Done；check 必须逐项给出 verdict"}

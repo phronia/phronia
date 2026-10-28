@@ -8,10 +8,14 @@
 
 import path from "node:path";
 import { LAYOUT } from "../../layout/index.js";
+import { capabilitiesFor } from "../../platform/capabilities.js";
 import { openState } from "../../state/index.js";
 import { diagnostic, type Diagnostic } from "../../state/diagnostics.js";
+import { readRuntimeFacts } from "../../state/runtime-facts.js";
 import type { ActiveTaskState } from "../../state/session/active-task.js";
 import { normalizeTaskRef } from "../../state/tasks/refs.js";
+import { evaluateDispatch } from "../../task/dispatch/policy.js";
+import type { DispatchVerdict } from "../../task/dispatch/types.js";
 import { CORE_VERSION } from "../../version.js";
 import {
   CONTEXT_SCHEMA_VERSION,
@@ -25,6 +29,8 @@ import {
   getResearchContext,
   getSessionContext,
 } from "./materialize.js";
+import { agentMutationFor, buildDispatchFacts } from "./facts.js";
+import { applyEnforcement, renderGuard } from "./guard.js";
 import {
   HOOK_MARKER,
   buildCheckPrompt,
@@ -72,12 +78,21 @@ export function buildSubagentSpawn(request: ContextRequest): ContextResponse {
     ]);
   }
 
-  const active = state.sessions.active(request.input, {
+  const allowSingleSessionFallback = readAllowSingleSessionFallback(request);
+  const requestedRef = readTaskRef(request);
+  // Resolve the session pointer and the decision target separately: the
+  // effective task may be an explicit child, and the policy needs the session
+  // pointer to detect cross-task dispatch.
+  const sessionActive = state.sessions.active(request.input, {
     platform: request.platform.id,
-    taskRef: readTaskRef(request),
     // Python's sub-agent hook opts in; native dispatchers that own an exact
     // session id can opt out to avoid borrowing a sibling window.
-    allowSingleSessionFallback: readAllowSingleSessionFallback(request),
+    allowSingleSessionFallback,
+  });
+  const active = state.sessions.active(request.input, {
+    platform: request.platform.id,
+    taskRef: requestedRef,
+    allowSingleSessionFallback,
   });
   if (
     (agentType === "implement" || agentType === "check" || agentType === "session") &&
@@ -103,8 +118,62 @@ export function buildSubagentSpawn(request: ContextRequest): ContextResponse {
     ]);
   }
 
-  const limits = state.config().contextInjection;
+  const config = state.config();
+  const limits = config.contextInjection;
   const diagnostics: Diagnostic[] = [];
+  const dispatch = isDispatchRequest(request, agentType);
+  let guardText = "";
+  if (dispatch) {
+    const runtime = readRuntimeFacts({ root, includeMainDirty: true });
+    // Informational runtime notes (missing claim/registry) are normal; only
+    // failures need to reach the response.
+    diagnostics.push(
+      ...runtime.diagnostics.filter((item) => item.severity !== "info"),
+    );
+    const capabilities = capabilitiesFor(
+      request.platform.id,
+      request.platform.adapterId,
+    );
+    const facts = buildDispatchFacts({
+      state,
+      root,
+      runtime,
+      sessionActive,
+      effectiveActive: active,
+      requestedRef,
+      agent: agentMutationFor(agentType),
+      platform: {
+        id: request.platform.id,
+        adapterId: request.platform.adapterId ?? null,
+      },
+      enforce: config.parallel.dispatch.enforce,
+      sessionKey: sessionActive.contextKey ?? active.contextKey,
+    });
+    const verdict = evaluateDispatch(facts);
+    const enforcement = applyEnforcement(verdict, {
+      hookPolicy: capabilities.hookPolicy,
+      enforce: config.parallel.dispatch.enforce,
+      platformId: request.platform.id,
+      subagentWorkspace: capabilities.subagentWorkspace,
+    });
+    diagnostics.push(dispatchDiagnostic(verdict));
+    diagnostics.push(...enforcement.diagnostics);
+
+    if (enforcement.deny !== undefined) {
+      // A deny replaces the prompt entirely: no PRD/context is materialized,
+      // because the reason itself is the instruction to the parent model.
+      return {
+        ...baseResponse(request, root, active, diagnostics),
+        mutations: [enforcement.deny],
+        envelope: "mutation-plan",
+        degraded: false,
+      };
+    }
+    if (enforcement.guard !== undefined) {
+      guardText = renderGuard(enforcement.guard);
+    }
+  }
+
   const record = active.taskPath ? state.tasks.read(active.taskPath) : null;
   const taskRef = record
     ? record.ref
@@ -137,14 +206,35 @@ export function buildSubagentSpawn(request: ContextRequest): ContextResponse {
     prompt = buildCheckPrompt(originalPrompt, context);
   }
 
+  if (guardText !== "") {
+    // The model is most sensitive to the start of the prompt; keep the guard
+    // ahead of the hook marker and the materialized context.
+    prompt = `${guardText}\n\n${prompt}`;
+  }
+  const injectedContext =
+    guardText === "" ? context : `${guardText}\n\n${context}`;
+
+  if (dispatch && request.platform.id === "codex") {
+    // Codex `SubagentStart` runs after the child exists and can only add
+    // context. Returning a PreToolUse-shaped mutation here is the historical
+    // gap: Codex cannot consume it, so the context was silently lost.
+    return {
+      ...baseResponse(request, root, active, diagnostics),
+      blocks: injectedContext
+        ? [{ id: "subagent-context", text: injectedContext, priority: 0 }]
+        : [],
+      envelope: "codex-subagent-start",
+    };
+  }
+
   if (contextOnly) {
     // Harnesses that inject materialized context ahead of a turn (OMP session
     // start, Snow's sub-agent hook) need the source material without the
     // agent-role prompt wrapper.
     return {
       ...baseResponse(request, root, active, diagnostics),
-      blocks: context
-        ? [{ id: "subagent-context", text: context, priority: 0 }]
+      blocks: injectedContext
+        ? [{ id: "subagent-context", text: injectedContext, priority: 0 }]
         : [],
       envelope: "plain",
     };
@@ -333,11 +423,116 @@ function baseResponse(
   };
 }
 
-function toRepoRelative(root: string, taskRef: string): string {  if (!path.isAbsolute(taskRef)) {
+function toRepoRelative(root: string, taskRef: string): string {
+  if (!path.isAbsolute(taskRef)) {
     return taskRef.split(path.sep).join("/");
   }
   const relative = path.relative(root, taskRef);
   return relative.split(path.sep).join("/");
+}
+
+/**
+ * Admission applies only to a real sub-agent dispatch (design.md §7.2.1).
+ * `pre-tool-use` also reaches `buildSubagentSpawn` when the host exposes no
+ * tool name; in that case a recognizable agent type in the payload is the
+ * dispatch signal.
+ */
+function isDispatchRequest(
+  request: ContextRequest,
+  agentType: AgentType | null,
+): boolean {
+  if (request.event === "subagent-spawn") {
+    return true;
+  }
+  if (request.event !== "pre-tool-use") {
+    return false;
+  }
+  const toolName = readToolName(request);
+  if (toolName !== null) {
+    const { toolNames } = capabilitiesFor(
+      request.platform.id,
+      request.platform.adapterId,
+    );
+    if (toolNames.subagent.includes(toolName)) {
+      return true;
+    }
+  }
+  return payloadCarriesAgentType(request, agentType);
+}
+
+const AGENT_TYPE_FIELDS = [
+  "subagent_type",
+  "subagentType",
+  "subagent_type_name",
+  "subagentTypeName",
+  "subagent_name",
+  "subagentName",
+  "agent_type",
+  "agentType",
+  "agent_name",
+  "name",
+] as const;
+
+const TOOL_INPUT_AGENT_TYPE_FIELDS = [
+  "subagent_type",
+  "subagentType",
+  "agent_type",
+  "name",
+] as const;
+
+function payloadCarriesAgentType(
+  request: ContextRequest,
+  agentType: AgentType | null,
+): boolean {
+  if (agentType === null) {
+    return false;
+  }
+  if (typeof request.hints?.agentType === "string") {
+    return true;
+  }
+  const input = objectInput(request.input);
+  if (!input) {
+    return false;
+  }
+  if (hasAgentTypeField(input, AGENT_TYPE_FIELDS)) {
+    return true;
+  }
+  const toolInput =
+    objectInput(input.tool_input) ?? objectInput(input.toolInput);
+  return (
+    toolInput !== null &&
+    hasAgentTypeField(toolInput, TOOL_INPUT_AGENT_TYPE_FIELDS)
+  );
+}
+
+function hasAgentTypeField(
+  input: Record<string, unknown>,
+  keys: readonly string[],
+): boolean {
+  return keys.some(
+    (key) => normalizeAgentType(stringField(input[key])) !== null,
+  );
+}
+
+function readToolName(request: ContextRequest): string | null {
+  if (typeof request.hints?.toolName === "string" && request.hints.toolName.trim()) {
+    return request.hints.toolName.trim().toLowerCase();
+  }
+  const input = objectInput(request.input);
+  if (!input) {
+    return null;
+  }
+  const value = input.tool_name ?? input.toolName;
+  return typeof value === "string" ? value.toLowerCase() : null;
+}
+
+function dispatchDiagnostic(verdict: DispatchVerdict): Diagnostic {
+  return diagnostic(
+    `context.subagent.${verdict.code.toLowerCase()}`,
+    verdict.severity,
+    `${verdict.code}: ${verdict.reason}`,
+    { details: verdict.details },
+  );
 }
 
 function objectInput(value: unknown): Record<string, unknown> | null {

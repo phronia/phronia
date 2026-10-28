@@ -303,6 +303,40 @@ describe("parallel config", () => {
     expect(result.value.parallel.conflicts.generated).toContain("**/dist/**");
   });
 
+  it("defaults dispatch.enforce to block and falls back on invalid values", () => {
+    const defaults = readConfig("/repo", memFs({}));
+    expect(defaults.value.parallel.dispatch.enforce).toBe("block");
+    expect(defaults.diagnostics).toEqual([]);
+
+    const invalid = readConfig(
+      "/repo",
+      memFs({
+        ".phronia/config.yaml": [
+          "parallel:",
+          "  dispatch:",
+          "    enforce: sometimes",
+        ].join("\n"),
+      }),
+    );
+    expect(invalid.value.parallel.dispatch.enforce).toBe("block");
+    expect(invalid.diagnostics.map((item) => item.code)).toContain(
+      "state.config.invalid_value",
+    );
+
+    const warn = readConfig(
+      "/repo",
+      memFs({
+        ".phronia/config.yaml": [
+          "parallel:",
+          "  dispatch:",
+          "    enforce: warn",
+        ].join("\n"),
+      }),
+    );
+    expect(warn.value.parallel.dispatch.enforce).toBe("warn");
+    expect(warn.diagnostics).toEqual([]);
+  });
+
   it("accepts a scalar worktree mode and a top-level worktree_dir", () => {
     const result = readConfig(
       "/repo",

@@ -63,6 +63,7 @@ export * from "./workflow/phase.js";
 export * from "./spec/index.js";
 export * from "./identity.js";
 export * from "./git.js";
+export * from "./runtime-facts.js";
 
 export interface StateReaderOptions {
   /** Explicit project root. The state layer never infers it from cwd. */

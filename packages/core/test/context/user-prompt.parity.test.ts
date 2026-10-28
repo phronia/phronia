@@ -4,7 +4,7 @@ import os from "node:os";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
-import { handleContext, renderContext } from "../../src/context/index.js";
+import { handleContext } from "../../src/context/index.js";
 import type { ContextRequest } from "../../src/context/types.js";
 
 const REPO_ROOT = path.resolve(
@@ -156,16 +156,17 @@ function runCase(
     env,
   };
   const response = handleContext(request);
-  const actual = renderContext(response);
-  if (platform === "kiro" || actual.trim().length === 0) {
-    expect(actual).toBe(expected);
-    return actual;
-  }
-  const rendered = JSON.parse(actual) as {
-    hookSpecificOutput: { additionalContext: string };
-  };
-  expect(rendered.hookSpecificOutput.additionalContext).toBe(expected);
-  return rendered.hookSpecificOutput.additionalContext;
+  // S1 appends a separate `runtime-state` block. The standalone Python scripts
+  // are retained only as a legacy-migration guard; every platform hook config
+  // calls `phronia-hook.py` → TS core. Parity here therefore covers the
+  // workflow breadcrumb body only, not the new facts block.
+  const workflow = response.blocks.find((block) => block.id === "workflow-state");
+  const actual = workflow?.text ?? "";
+  // The legacy Kiro shim writes a trailing newline; the other envelopes do not.
+  expect(platform === "kiro" && actual.length > 0 ? `${actual}\n` : actual).toBe(
+    expected,
+  );
+  return actual;
 }
 
 function writeTask(root: string, status: string): void {

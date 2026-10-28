@@ -25,6 +25,15 @@ export interface TaskSnapshot {
   readonly dependsOn: readonly string[];
   readonly exclusive: boolean;
   readonly workspace: string | null;
+  /**
+   * Parent tasks are coordination containers, not execution units. A container
+   * never enters a wave; it is reported as a diagnostic so `--explain` can name
+   * the children to start instead.
+   */
+  readonly container?: boolean;
+  readonly childCount?: number;
+  /** Direct child refs, used to render executable `task.py start` commands. */
+  readonly children?: readonly string[];
 }
 
 /**
@@ -83,6 +92,11 @@ export interface PlannerOptions extends FootprintSources {
   readonly allowUnknown?: boolean;
   /** Mirrors `parallel.conflicts.always_serial`. */
   readonly alwaysSerial?: readonly string[];
+  /**
+   * Refs the caller explicitly asked for (`--refs`). A container selected this
+   * way is reported as a warning: the user picked the wrong execution unit.
+   */
+  readonly requestedRefs?: readonly string[];
 }
 
 export type OverlapKind =

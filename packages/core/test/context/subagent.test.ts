@@ -245,7 +245,13 @@ describe.skipIf(!pythonAvailable)("subagent prompt parity", () => {
       const mutation = response.mutations[0];
       expect(mutation?.op).toBe("set-prompt");
       if (mutation?.op !== "set-prompt") return;
-      expect(mutation.value).toBe(expected);
+      // Dispatch admission may prepend a `<workspace-guard>` block before the
+      // materialized prompt; parity is about the context body and wrapper.
+      const injected = mutation.value.replace(
+        /^<workspace-guard[\s\S]*?<\/workspace-guard>\n\n/,
+        "",
+      );
+      expect(injected).toBe(expected);
     });
   }
 });

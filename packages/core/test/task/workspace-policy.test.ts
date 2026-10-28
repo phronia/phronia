@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 
 import {
   decideWorkspace,
+  isDedicatedFeatureBranch,
   worktreeSlug,
 } from "../../src/task/workspace/policy.js";
 import type {
@@ -421,6 +422,48 @@ describe("decideWorkspace", () => {
     });
   });
 
+  it("R13: a task branch equal to the integration branch does not become the worktree branch", () => {
+    const serial = decideWorkspace(
+      context({ task: { ref: ".phronia/tasks/A", branch: "main" } }),
+    );
+    expect(serial).toMatchObject({ kind: "reuse-current" });
+
+    const isolated = decideWorkspace(
+      context({
+        task: { ref: ".phronia/tasks/A", branch: "main" },
+        parallelBatchSize: 2,
+      }),
+    );
+    expect(isolated).toMatchObject({
+      kind: "create",
+      branch: "phronia/A",
+      base: "main",
+    });
+  });
+
+  it("R13: origin/main integration still treats a recorded main branch as non-dedicated", () => {
+    const serial = decideWorkspace(
+      context({
+        integrationBranch: "origin/main",
+        task: { ref: ".phronia/tasks/A", branch: "main" },
+      }),
+    );
+    expect(serial).toMatchObject({ kind: "reuse-current" });
+
+    const isolated = decideWorkspace(
+      context({
+        integrationBranch: "origin/main",
+        task: { ref: ".phronia/tasks/A", branch: "main" },
+        parallelBatchSize: 2,
+      }),
+    );
+    expect(isolated).toMatchObject({
+      kind: "create",
+      branch: "phronia/A",
+      base: "origin/main",
+    });
+  });
+
   it("forces a worktree when the task owns main but joins a parallel batch", () => {
     const decision = decideWorkspace(
       context({
@@ -524,5 +567,32 @@ describe("worktreeSlug", () => {
     });
     expect(slug).toBe(`a-b-${"x".repeat(56)}`);
     expect(slug.length).toBe(60);
+  });
+});
+
+describe("isDedicatedFeatureBranch", () => {
+  it.each([
+    ["main", "origin/main", "main", false],
+    ["master", "origin/main", "master", false],
+    ["origin/main", "main", "main", false],
+    ["origin/master", "main", "master", false],
+    ["refs/heads/main", "origin/main", "main", false],
+    ["release/1.0", "release/1.0", "main", false],
+    ["main", "origin/main", "feature/current", false],
+    ["feat/x", "main", "main", true],
+    ["phronia/10-28-a", "origin/main", "main", true],
+    ["", "main", "main", false],
+  ])(
+    "branch %s with integration %s and main %s -> %s",
+    (branch, integration, currentMain, expected) => {
+      expect(isDedicatedFeatureBranch(branch, integration, currentMain)).toBe(
+        expected,
+      );
+    },
+  );
+
+  it("treats a missing branch as non-dedicated", () => {
+    expect(isDedicatedFeatureBranch(null, "main", "main")).toBe(false);
+    expect(isDedicatedFeatureBranch(undefined, "main", "main")).toBe(false);
   });
 });

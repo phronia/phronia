@@ -556,4 +556,61 @@ describe("planParallel", () => {
       result.diagnostics.some((item) => item.code === "PARALLEL_SERIAL_ONLY"),
     ).toBe(true);
   });
+
+  it("PLAN-05: a container task never enters a wave", () => {
+    const result = plan([
+      task(".phronia/tasks/parent", declared("src/all/**"), {
+        container: true,
+        childCount: 2,
+        children: [".phronia/tasks/a", ".phronia/tasks/b"],
+      }),
+    ]);
+    expect(result.waves).toEqual([]);
+    const diagnostic = result.diagnostics.find(
+      (item) => item.code === "PARALLEL_CONTAINER_TASK",
+    );
+    expect(diagnostic?.severity).toBe("info");
+    expect(diagnostic?.details?.taskRef).toBe(".phronia/tasks/parent");
+    expect(diagnostic?.details?.next).toEqual([
+      "python3 ./.phronia/scripts/task.py start .phronia/tasks/a",
+      "python3 ./.phronia/scripts/task.py start .phronia/tasks/b",
+    ]);
+  });
+
+  it("PLAN-06: a parent/leaf mix plans only the leaf", () => {
+    const result = plan([
+      task(".phronia/tasks/parent", declared("src/all/**"), {
+        container: true,
+        childCount: 1,
+        children: [".phronia/tasks/leaf"],
+      }),
+      task(".phronia/tasks/leaf", declared("src/leaf/**")),
+    ]);
+    expect(result.waves).toHaveLength(1);
+    expect(result.waves[0]?.tasks).toEqual([".phronia/tasks/leaf"]);
+    expect(
+      result.diagnostics.some((item) => item.code === "PARALLEL_CONTAINER_TASK"),
+    ).toBe(true);
+  });
+
+  it("PLAN-07: an explicit --refs container warns instead of scheduling", () => {
+    const result = plan(
+      [
+        task(".phronia/tasks/parent", declared("src/all/**"), {
+          container: true,
+          childCount: 2,
+          children: [".phronia/tasks/a", ".phronia/tasks/b"],
+        }),
+        task(".phronia/tasks/a", declared("src/a/**")),
+      ],
+      { requestedRefs: [".phronia/tasks/parent"] },
+    );
+    expect(result.waves).toHaveLength(1);
+    expect(result.waves[0]?.tasks).toEqual([".phronia/tasks/a"]);
+    const diagnostic = result.diagnostics.find(
+      (item) => item.code === "PARALLEL_CONTAINER_TASK",
+    );
+    expect(diagnostic?.severity).toBe("warn");
+    expect(diagnostic?.message).toContain("Start a child instead");
+  });
 });

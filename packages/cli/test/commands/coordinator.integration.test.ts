@@ -13,7 +13,9 @@ import {
   releaseTaskLease,
 } from "../../src/services/lease.js";
 
-describe("coordinator status integration (COORD-04)", () => {
+// Git-heavy cases run in ~4s alone; the full `pnpm verify` run adds enough
+// parallel load to cross the 10s default. Keep headroom for the suite.
+describe("coordinator status integration (COORD-04)", { timeout: 60_000 }, () => {
   let root: string;
 
   beforeEach(() => {

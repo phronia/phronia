@@ -69,6 +69,13 @@ function normalizeAgent(agent) {
   return match ? match[0].replace(/^(?:phronia|trellis)-/i, "").toLowerCase() : null
 }
 
+function denyError(mutation) {
+  const next = Array.isArray(mutation.next) ? mutation.next.join("\n") : ""
+  const error = new Error(`[${mutation.code}] ${mutation.reason}\n${next}`)
+  error.name = "PhroniaDispatchDenied"
+  return error
+}
+
 function messageText(message) {
   if (!message) return ""
   if (typeof message.content === "string") return message.content
@@ -206,11 +213,15 @@ async function onToolBefore(ctx, event) {
       },
     })
     const mutation = Array.isArray(response?.mutations) ? response.mutations[0] : null
+    // Deny must abort the dispatch. `execute.before` stops on a thrown error;
+    // the catch below only swallows transport failures.
+    if (mutation?.op === "deny") throw denyError(mutation)
     if (mutation?.op === "set-prompt" && typeof mutation.value === "string" && mutation.value) {
       // In-place mutation: the v2 tool executes the same input object.
       input.prompt = mutation.value
     }
   } catch (error) {
+    if (error?.name === "PhroniaDispatchDenied") throw error
     debugLog("v2-tool", "subagent context failed:", error.message)
   }
 }

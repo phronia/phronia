@@ -85,21 +85,37 @@ export function planParallel(
     };
   }
 
+  const requested = new Set(options.requestedRefs ?? []);
+  const containers = tasks.filter((task) => task.container === true);
+  const containerRefs = new Set(containers.map((task) => task.ref));
+  const diagnostics: Diagnostic[] = containers.map((task) =>
+    containerDiagnostic(task, requested.has(task.ref)),
+  );
+
   const graphResult = buildDependencyGraph(tasks);
   if (!graphResult.ok) {
-    return { waves: [], diagnostics: graphResult.diagnostics };
+    return { waves: [], diagnostics: [...diagnostics, ...graphResult.diagnostics] };
   }
 
   const maxConcurrent = resolveMaxConcurrent(options.maxConcurrent);
   const allowUnknown = options.allowUnknown === true;
   const alwaysSerial = options.alwaysSerial ?? DEFAULT_ALWAYS_SERIAL;
-  const diagnostics: Diagnostic[] = [];
   const waves: Wave[] = [];
+
+  // A plan made only of containers has no execution units. Return the
+  // container diagnostics rather than a bare PARALLEL_NO_TASKS, so the caller
+  // can still print the children to start.
+  if (tasks.length === containers.length) {
+    return { waves: [], diagnostics };
+  }
+
   const groups = groupByLevel(tasks, graphResult.graph);
   const levels = [...groups.keys()].sort((a, b) => a - b);
 
   for (const level of levels) {
-    const sorted = [...(groups.get(level) ?? [])].sort(compareTasks);
+    const sorted = [...(groups.get(level) ?? [])]
+      .filter((task) => !containerRefs.has(task.ref))
+      .sort(compareTasks);
     const pending: PendingWave[] = [];
 
     for (const task of sorted) {
@@ -170,6 +186,40 @@ export function planParallel(
   }
 
   return { waves, diagnostics };
+}
+
+/**
+ * Parent tasks coordinate children; they are never execution units.
+ *
+ * A container selected explicitly via `--refs` is a warning (the caller picked
+ * the wrong unit) while one merely present in the backlog is informational.
+ */
+function containerDiagnostic(
+  task: PlannerTask,
+  explicit: boolean,
+): Diagnostic {
+  const children = task.children ?? [];
+  const childCount = task.childCount ?? children.length;
+  const next = children.map(
+    (child) => `python3 ./.phronia/scripts/task.py start ${child}`,
+  );
+  const noun = childCount === 1 ? "child" : "children";
+  return diagnostic(
+    "PARALLEL_CONTAINER_TASK",
+    explicit ? "warn" : "info",
+    explicit
+      ? `task ${task.ref} is a parent/coordinator container (${childCount} ${noun}); it cannot be scheduled. Start a child instead`
+      : `task ${task.ref} is a parent/coordinator container (${childCount} ${noun}); excluded from waves`,
+    {
+      details: {
+        taskRef: task.ref,
+        childCount,
+        children,
+        next,
+        explicit,
+      },
+    },
+  );
 }
 
 function tryPack(

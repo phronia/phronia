@@ -75,10 +75,24 @@ export interface ContextBlock {
   source?: { kind: "spec" | "task" | "workflow" | "system"; ref?: string };
 }
 
+/**
+ * A neutral refusal. It is deliberately not an envelope: each shim translates
+ * it into the host's deny shape (permission decision, thrown error, or — for
+ * harnesses that cannot block — an injected guard instead).
+ */
+export interface DenyMutation {
+  op: "deny";
+  code: string;
+  /** Plain reason; shims add the code prefix, next steps, and terminator. */
+  reason: string;
+  next: readonly string[];
+}
+
 export type Mutation =
   | { op: "set-prompt"; value: string; marker: string }
   | { op: "prepend-prompt"; value: string; marker: string }
-  | { op: "set-env"; name: string; value: string };
+  | { op: "set-env"; name: string; value: string }
+  | DenyMutation;
 
 export type Effect =
   | { type: "marker"; path: string; content: string; ifAbsent: boolean }

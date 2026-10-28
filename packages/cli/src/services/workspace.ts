@@ -16,6 +16,7 @@ import os from "node:os";
 import path from "node:path";
 import {
   decideWorkspace,
+  isDedicatedFeatureBranch,
   readParallelMeta,
   worktreeSlug,
   type TaskLease,
@@ -24,6 +25,7 @@ import {
   type WorkspaceWorktree,
 } from "@phronia/core/task";
 import {
+  findSoleSessionKey,
   openState,
   type ConfigView,
   type TaskRecordView,
@@ -89,6 +91,12 @@ export interface WorkspaceDependencies {
   readonly host?: string;
   readonly pid?: number;
   readonly env?: Readonly<Record<string, string | undefined>>;
+  /**
+   * Process argv used by the shell-ticket bridge. Defaults to
+   * `process.argv.slice(2)` so `phronia task workspace ...` can resolve the
+   * identity its pre-shell hook wrote a moment ago.
+   */
+  readonly argv?: readonly string[];
   /** Defaults to true; `prepare` with `--dry-run` is not implemented, so tests
    * mostly use this for status-style reads. */
   readonly writeRegistry?: boolean;
@@ -221,6 +229,7 @@ interface WorkspaceContext {
   readonly host: string;
   readonly pid: number;
   readonly env: Readonly<Record<string, string | undefined>>;
+  readonly argv: readonly string[];
   readonly writeRegistry: boolean;
 }
 
@@ -239,7 +248,9 @@ export function prepareWorkspace(
   }
 
   const sessionKey = sessionKeyFor(context, options.sessionKey);
-  if (sessionKey === null) return sessionUnknown("prepare a workspace");
+  if (sessionKey === null) {
+    return sessionUnknown(context, "prepare a workspace", "phronia task workspace prepare");
+  }
   const ownerRef = options.ownerId ?? `session:${sessionKey}`;
   const dirty = isMainDirty(context);
   const current = readClaim(context);
@@ -461,7 +472,13 @@ export function ensureWorkspace(
   }
 
   const sessionKey = sessionKeyFor(context, options.sessionKey);
-  if (sessionKey === null) return sessionUnknown("ensure a workspace");
+  if (sessionKey === null) {
+    return sessionUnknown(
+      context,
+      "ensure a workspace",
+      `phronia task workspace ensure ${options.taskRef}`,
+    );
+  }
   const view = readTaskRecord(context, options.taskRef);
   if (view === null) {
     return workspaceFailure(
@@ -478,14 +495,29 @@ export function ensureWorkspace(
   const registryEntries = context.registryLoad.registry.worktrees;
   const existingEntries = enrichWithLegacy(context, registryEntries, view, ref);
   const existing = existingEntries.find((entry) => canonicalRef(entry.taskRef) === ref);
-  const taskBranch = existing?.branch ?? view.branch ?? `phronia/${worktreeSlug({ ref, id: view.id })}`;
+  const integration = integrationBase(context, view);
+  const slug = worktreeSlug({ ref, id: view.id });
+  // R13: `task.json.branch` may be the integration branch (`main`/`origin/main`)
+  // because `task.py start` used to record whatever was checked out. That value
+  // is not a worktree branch: passing it through made `decideWorkspace` refuse
+  // with `branch main is already checked out` before the reuse-current path.
+  // Only a real feature branch is dedicated; everything else falls back to the
+  // conventional `phronia/<slug>` worktree branch.
+  const dedicatedBranch = isDedicatedFeatureBranch(
+    view.branch,
+    integration,
+    safeBranch(context, context.mainRoot),
+  )
+    ? view.branch
+    : null;
+  const taskBranch = existing?.branch ?? dedicatedBranch ?? `phronia/${slug}`;
   const targetPath = hardenedPath(
     worktreeDirectory(context),
-    worktreeSlug({ ref, id: view.id }),
-    `${worktreeSlug({ ref, id: view.id })}-${shortHash(ref)}`,
+    slug,
+    `${slug}-${shortHash(ref)}`,
     context,
   );
-  const targetBranch = existing?.branch ?? taskBranch;
+  const targetBranch = taskBranch;
 
   let explicitWorktree: WorkspaceWorktree | null = null;
   if (options.path !== undefined) {
@@ -494,7 +526,7 @@ export function ensureWorkspace(
       return workspaceFailure(attached.code, attached.message, attached.next);
     }
     explicitWorktree = attached.worktree;
-  } else if (path.resolve(context.cwd) !== path.resolve(context.mainRoot)) {
+  } else if (comparablePath(context.cwd) !== comparablePath(context.mainRoot)) {
     // Running inside a linked worktree: if it already carries this task's
     // branch, attach instead of creating a second workspace (WS-03).
     const cwdBranch = safeBranch(context, context.cwd);
@@ -509,7 +541,7 @@ export function ensureWorkspace(
 
   const decision = decideWorkspace({
     currentCheckout: context.mainRoot,
-    integrationBranch: integrationBase(context, view),
+    integrationBranch: integration,
     task: {
       ref,
       id: view.id,
@@ -571,7 +603,7 @@ function guardLinkedCheckout(
   existing: WorktreeRegistryEntry | undefined,
   options: EnsureWorkspaceOptions,
 ): LinkedGuard | { ok: false; failure: WorkspaceFailure } | null {
-  if (path.resolve(context.cwd) === path.resolve(context.mainRoot)) return null;
+  if (comparablePath(context.cwd) === comparablePath(context.mainRoot)) return null;
   if (existing !== undefined) return null;
   // Running inside a linked worktree. Only the task that owns that checkout may
   // reuse it; everything else needs its own workspace.
@@ -803,7 +835,13 @@ export function releaseWorkspace(options: ReleaseWorkspaceOptions): WorkspaceRes
     return gitFailure(error);
   }
   const sessionKey = sessionKeyFor(context, options.sessionKey);
-  if (sessionKey === null) return sessionUnknown("release a workspace claim");
+  if (sessionKey === null) {
+    return sessionUnknown(
+      context,
+      "release a workspace claim",
+      "phronia task workspace release",
+    );
+  }
   const current = readClaim(context);
   if (current === null) {
     return {
@@ -864,7 +902,13 @@ export function reclaimWorkspace(options: ReclaimWorkspaceOptions): WorkspaceRes
     return gitFailure(error);
   }
   const sessionKey = sessionKeyFor(context, options.sessionKey);
-  if (sessionKey === null) return sessionUnknown("reclaim the workspace claim");
+  if (sessionKey === null) {
+    return sessionUnknown(
+      context,
+      "reclaim the workspace claim",
+      "phronia task workspace reclaim",
+    );
+  }
   const current = readClaim(context);
   if (current === null) {
     return {
@@ -1560,6 +1604,7 @@ function loadContext(
     host: options.host ?? hostname(),
     pid: options.pid ?? process.pid,
     env: options.env ?? process.env,
+    argv: options.argv ?? process.argv.slice(2),
     writeRegistry,
   };
 }
@@ -2186,7 +2231,14 @@ function sessionKeyFor(
 
 function resolveSessionKey(context: WorkspaceContext): string | null {
   try {
-    const state = openState({ root: context.mainRoot, env: context.env });
+    // `argv` is what makes the pre-shell ticket reachable: without it the
+    // ticket channel is never consulted and `workspace ensure` fails on every
+    // platform that does not export a session variable into shell children.
+    const state = openState({
+      root: context.mainRoot,
+      env: context.env,
+      argv: context.argv,
+    });
     const resolved = state.sessions.resolveKey(undefined, {
       allowEnvironmentContext: true,
     });
@@ -2200,11 +2252,33 @@ function resolveSessionKey(context: WorkspaceContext): string | null {
   return null;
 }
 
-function sessionUnknown(operation: string): WorkspaceFailure {
+function sessionUnknown(
+  context: WorkspaceContext,
+  operation: string,
+  command: string,
+): WorkspaceFailure {
+  const hint = findSoleSessionKey(context.mainRoot);
+  if (hint.key !== null) {
+    return workspaceFailure(
+      "WORKSPACE_SESSION_UNKNOWN",
+      `no session identity was found; refusing to ${operation} without one. ` +
+        `This checkout has exactly one session (${hint.key}).`,
+      `${command} --session-key ${hint.key}`,
+      {
+        sessionKey: hint.key,
+        hint: `set PHRONIA_CONTEXT_ID=${hint.key} for non-hook shells`,
+      },
+    );
+  }
+  const ambiguity =
+    hint.candidates.length > 1
+      ? ` ${hint.candidates.length} session files exist in this checkout; refusing to choose one.`
+      : "";
   return workspaceFailure(
     "WORKSPACE_SESSION_UNKNOWN",
-    `no session identity was found; refusing to ${operation} without one`,
+    `no session identity was found; refusing to ${operation} without one.${ambiguity}`,
     "pass --session-key <key> or set PHRONIA_CONTEXT_ID",
+    hint.candidates.length > 0 ? { candidates: hint.candidates } : undefined,
   );
 }
 

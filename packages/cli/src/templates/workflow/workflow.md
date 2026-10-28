@@ -475,6 +475,8 @@ After artifact review, flip the task status to `in_progress`:
 python3 ./.phronia/scripts/task.py start <task-dir>
 ```
 
+If `<task-dir>` is a parent task (`task.json.children` is non-empty), `start` refuses by default and prints one `start` command per child: a parent is a coordination container, not an implementation target. Start a child instead. When the session should coordinate from the parent, run `python3 ./.phronia/scripts/task.py start <task-dir> --coordinator`; that skips the implement/check manifest gate and still does not make the parent a valid dispatch target.
+
 For lightweight tasks, `prd.md` can be enough. For complex tasks, `prd.md`, `design.md`, and `implement.md` must exist and be reviewed before start. On sub-agent-dispatch platforms, `implement.jsonl` and `check.jsonl` must both have real curated entries before start. Runtime consumers tolerate missing or seed-only manifests for compatibility, but that tolerance is not a planning-ready state.
 
 After this command succeeds, the breadcrumb auto-switches to `[workflow-state:in_progress]`, and the rest of Phase 2 / 3 follows.
@@ -528,6 +530,8 @@ phronia task commit <task-ref>
 `phronia task commit` refuses to run in the main checkout for a worktree task (`COMMIT_WRONG_WORKSPACE`). The orchestrator never commits a worktree task on `main`.
 
 #### 2.1 Implement `[required · repeatable]`
+
+**Never dispatch a parent task.** The `Active task:` line must name an executable unit: a leaf task or an `in_progress` child. Dispatch admission rejects a parent (`DISPATCH_PARENT_TASK`) and a task whose status is not `in_progress` (`DISPATCH_TASK_NOT_IN_PROGRESS`); start the child first (Phase 1.4) and dispatch it.
 
 [Claude Code, Cursor, OpenCode, codex-sub-agent, CodeBuddy, Droid, Pi, ZCode, Snow, Oh My Pi]
 

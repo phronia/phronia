@@ -9,7 +9,14 @@
 import path from "node:path";
 import { LAYOUT } from "../../layout/index.js";
 import { diagnostic, type Diagnostic } from "../diagnostics.js";
-import { isDirectory, listDir, readJson, type FsLike } from "../fs.js";
+import {
+  isDirectory,
+  listDir,
+  nodeFs,
+  readJson,
+  realPath,
+  type FsLike,
+} from "../fs.js";
 import { resolveTaskRef } from "../tasks/refs.js";
 import {
   asObject,
@@ -197,6 +204,51 @@ export function listSessionFiles(
     }
   }
   return files.sort((left, right) => left.key.localeCompare(right.key));
+}
+
+export interface SoleSessionHint {
+  /** The only session key for this checkout, or null when 0 or >= 2 match. */
+  readonly key: string | null;
+  /** Every matching session key, sorted. */
+  readonly candidates: readonly string[];
+}
+
+/**
+ * Read-only identity hint for a CLI invocation that has no hook key.
+ *
+ * Session files live under this checkout's `.phronia/.runtime/sessions`, so a
+ * file without an explicit `cwd` belongs to this checkout. A file that does
+ * carry `cwd` must resolve inside it. Never guesses: exactly one match yields
+ * a key; zero or several yield null so the caller can print `--session-key`.
+ */
+export function findSoleSessionKey(
+  root: string,
+  io: FsLike = nodeFs,
+): SoleSessionHint {
+  const sessions = listSessionFiles(root, io).filter((session) =>
+    sessionBelongsToCheckout(session, root, io),
+  );
+  return {
+    key: sessions.length === 1 ? (sessions[0]?.key ?? null) : null,
+    candidates: sessions.map((session) => session.key),
+  };
+}
+
+function sessionBelongsToCheckout(
+  session: RawSessionFile,
+  root: string,
+  io: FsLike,
+): boolean {
+  const cwd = stringValue(session.raw.cwd);
+  if (cwd === null) return true;
+  const rootReal = realPath(io, path.resolve(root)) ?? path.resolve(root);
+  const cwdReal = realPath(io, path.resolve(cwd)) ?? path.resolve(cwd);
+  const relative = path.relative(rootReal, cwdReal);
+  return (
+    !relative.startsWith(`..${path.sep}`) &&
+    relative !== ".." &&
+    !path.isAbsolute(relative)
+  );
 }
 
 function resolveSingleSessionFallback(

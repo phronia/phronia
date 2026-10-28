@@ -111,8 +111,51 @@ describe("doctor report", () => {
     }
   });
 
-  it("writes a degraded adapter record when probing is disabled", () => {
-    const root = fs.mkdtempSync(path.join(os.tmpdir(), "phronia-doctor-manifest-"));
+  it("reports dispatch admission capability, enforce mode, and degrade reason", () => {
+    const root = fs.mkdtempSync(path.join(os.tmpdir(), "phronia-doctor-admission-"));
+    try {
+      fs.mkdirSync(path.join(root, ".phronia"), { recursive: true });
+      fs.writeFileSync(
+        path.join(root, ".phronia", "config.yaml"),
+        "parallel:\n  dispatch:\n    enforce: warn\n",
+      );
+
+      const claude = collectDoctorReport({
+        cwd: root,
+        platform: "claude-code",
+        probe: false,
+      }).platforms[0];
+      expect(claude?.dispatchAdmission).toEqual({
+        hookPolicy: "block",
+        enforce: "warn",
+        canBlock: true,
+        available: true,
+      });
+      expect(
+        claude?.features.find((feature) => feature.id === "task.dispatchAdmission"),
+      ).toMatchObject({ available: true });
+
+      const codex = collectDoctorReport({
+        cwd: root,
+        platform: "codex",
+        probe: false,
+      }).platforms[0];
+      expect(codex?.dispatchAdmission).toMatchObject({
+        hookPolicy: "inject",
+        enforce: "warn",
+        canBlock: false,
+        available: false,
+      });
+      expect(codex?.dispatchAdmission.reason).toContain("cannot block");
+      expect(
+        codex?.features.find((feature) => feature.id === "task.dispatchAdmission"),
+      ).toMatchObject({ available: false });
+    } finally {
+      fs.rmSync(root, { recursive: true, force: true });
+    }
+  });
+
+  it("writes a degraded adapter record when probing is disabled", () => {    const root = fs.mkdtempSync(path.join(os.tmpdir(), "phronia-doctor-manifest-"));
     try {
       const result = refreshAdapterManifest(root, {
         platforms: ["claude-code"],

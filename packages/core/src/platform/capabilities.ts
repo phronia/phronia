@@ -54,6 +54,15 @@ export type SubagentWorkspace = "unknown" | "none" | "inherited" | "per-task";
 
 export type SubagentIdentity = "unknown" | "none" | "shared" | "isolated";
 
+/**
+ * Whether a pre-tool-use-equivalent hook can prevent the tool call.
+ *
+ * - `block`: verified to stop the action (deny/throw);
+ * - `inject`: the harness can only add context, never stop the action;
+ * - `unknown`: unverified; callers must fail closed (treat like `inject`).
+ */
+export type HookPolicy = "block" | "inject" | "unknown";
+
 export interface SubagentCapabilities {
   readonly execution: SubagentExecution;
   readonly workspace: SubagentWorkspace;
@@ -70,6 +79,8 @@ export interface PlatformCapabilities {
   subagentWorkspace: SubagentWorkspace;
   /** Whether sub-agents share the parent session identity (W0). */
   subagentIdentity: SubagentIdentity;
+  /** Whether a dispatch hook can block the tool call (dispatch admission). */
+  hookPolicy: HookPolicy;
   evidence: {
     verifiedAt: string;
     verifiedBy: string;
@@ -79,7 +90,10 @@ export interface PlatformCapabilities {
 
 type BasePlatformCapabilities = Omit<
   PlatformCapabilities,
-  "subagentExecution" | "subagentWorkspace" | "subagentIdentity"
+  | "subagentExecution"
+  | "subagentWorkspace"
+  | "subagentIdentity"
+  | "hookPolicy"
 >;
 
 /**
@@ -125,6 +139,41 @@ export const SUBAGENT_CAPABILITIES: Record<PlatformId, SubagentCapabilities> = {
   grok: SUBAGENT_NONE,
   kimi: SUBAGENT_NONE,
   snow: SUBAGENT_UNKNOWN,
+};
+
+/**
+ * Verified pre-tool block capability per platform (design.md §6.1).
+ *
+ * ZCode 3.16.3 was live-verified on 2026-10-28: a `permissionDecision: "deny"`
+ * prevents the Agent call from creating a child session, and the deny is
+ * delivered as the tool's error result. Platforms with no subagent surface at
+ * all (`subagentContext.kind === "none"`) are `inject`: the dispatch hook is
+ * unreachable, so rendering is fail-safe. Harnesses that do have a surface but
+ * are unverified stay `unknown`, which callers treat like `inject`.
+ */
+export const HOOK_POLICY: Record<PlatformId, HookPolicy> = {
+  "claude-code": "block",
+  cursor: "unknown",
+  opencode: "block",
+  codex: "inject",
+  kilo: "inject",
+  kiro: "unknown",
+  gemini: "inject",
+  antigravity: "inject",
+  devin: "inject",
+  qoder: "inject",
+  codebuddy: "unknown",
+  copilot: "inject",
+  droid: "unknown",
+  dsh: "inject",
+  pi: "unknown",
+  reasonix: "inject",
+  zcode: "block",
+  trae: "inject",
+  omp: "unknown",
+  grok: "inject",
+  kimi: "inject",
+  snow: "unknown",
 };
 
 const hook = (event: string, detail?: string): Mechanism => ({ kind: "hook", event, detail });
@@ -421,8 +470,9 @@ const BASE_CAPABILITIES = {
 
 /**
  * The public matrix: every platform entry carries both the historical
- * behaviour bindings and the W0 sub-agent dimensions. Keeping the merge in one
- * place makes "new platform forgot the coordinator fields" a type error.
+ * behaviour bindings, the W0 sub-agent dimensions, and the dispatch-admission
+ * hook policy. Keeping the merge in one place makes "new platform forgot a
+ * dimension" a type error.
  */
 export const CAPABILITIES: Record<PlatformId, PlatformCapabilities> = Object.fromEntries(
   PLATFORM_IDS.map((id) => {
@@ -434,6 +484,7 @@ export const CAPABILITIES: Record<PlatformId, PlatformCapabilities> = Object.fro
         subagentExecution: subagent.execution,
         subagentWorkspace: subagent.workspace,
         subagentIdentity: subagent.identity,
+        hookPolicy: HOOK_POLICY[id],
       },
     ];
   }),
@@ -540,6 +591,15 @@ export function validateCapabilities(): MatrixViolation[] {
           message: `${name}: none requires a reason of at least 10 characters`,
         });
       }
+    }
+    const hookPolicies: readonly string[] = ["block", "inject", "unknown"];
+    if (!hookPolicies.includes(capabilities.hookPolicy)) {
+      violations.push({
+        platform: id,
+        message: `hookPolicy must be block, inject, or unknown; got ${String(
+          capabilities.hookPolicy,
+        )}`,
+      });
     }
   }
   return violations;

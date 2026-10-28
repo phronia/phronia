@@ -53,7 +53,7 @@ describe("trellis platforms (#396)", () => {
     fs.rmSync(tmpDir, { recursive: true, force: true });
   });
 
-  it("--json reports configured platforms with id, displayName, configDir", () => {
+  it("--json reports configured platforms with id, displayName, configDir, hookPolicy", () => {
     fs.mkdirSync(path.join(tmpDir, ".claude"), { recursive: true });
     fs.mkdirSync(path.join(tmpDir, ".cursor"), { recursive: true });
     writeTrackedPlatforms(tmpDir, [
@@ -65,7 +65,13 @@ describe("trellis platforms (#396)", () => {
 
     expect(result.status).toBe(0);
     const parsed = JSON.parse(result.stdout) as {
-      platforms: { id: string; displayName: string; configDir: string }[];
+      platforms: {
+        id: string;
+        displayName: string;
+        configDir: string;
+        hookPolicy: string;
+        subagentWorkspace: string;
+      }[];
     };
     const ids = parsed.platforms.map((p) => p.id).sort();
     expect(ids).toEqual(["claude-code", "cursor"]);
@@ -75,6 +81,13 @@ describe("trellis platforms (#396)", () => {
       id: "claude-code",
       displayName: "Claude Code",
       configDir: ".claude",
+      hookPolicy: "block",
+      subagentWorkspace: "per-task",
+    });
+    const cursor = parsed.platforms.find((p) => p.id === "cursor");
+    expect(cursor).toMatchObject({
+      hookPolicy: "unknown",
+      subagentWorkspace: "unknown",
     });
   });
 

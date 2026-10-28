@@ -1205,6 +1205,8 @@ program
         id,
         displayName: AI_TOOLS[id].name,
         configDir: AI_TOOLS[id].configDir,
+        hookPolicy: CAPABILITIES[id].hookPolicy,
+        subagentWorkspace: CAPABILITIES[id].subagentWorkspace,
       }));
 
       if (options.json) {

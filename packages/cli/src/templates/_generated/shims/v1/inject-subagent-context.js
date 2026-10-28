@@ -1,7 +1,7 @@
 // phronia-shim: opencode@v1
 // shim-version: 2610.28.6
-// build-id: b24e83f91aff
-// content-hash: d625a25b85592370915fe09b91adfdcadeaf70984297a67d1ba91628c0e15968
+// build-id: c063d288c48b
+// content-hash: 330f2120f36b93f719b603889d76baf3a0274ff38141c4775a9cc30feb3f8276
 // DO NOT EDIT. Regenerate with: pnpm build:shims
 
 import { createRequire as __phroniaCreateRequire } from "node:module"; const require = __phroniaCreateRequire(import.meta.url);
@@ -160,6 +160,13 @@ function normalizeAgentType(value) {
   const name = String(value || "").replace(/^phronia-/, "").toLowerCase();
   return AGENTS_ALL.includes(name) ? name : null;
 }
+function denyError(mutation) {
+  const next = Array.isArray(mutation.next) ? mutation.next.join("\n") : "";
+  const error = new Error(`[${mutation.code}] ${mutation.reason}
+${next}`);
+  error.name = "PhroniaDispatchDenied";
+  return error;
+}
 var inject_subagent_context_default = async ({ directory, platform: hostPlatform = process.platform, env = process.env }) => {
   debugLog("inject", "Plugin loaded, directory:", directory);
   const hook = async (input, output) => {
@@ -197,6 +204,7 @@ var inject_subagent_context_default = async ({ directory, platform: hostPlatform
         }
       });
       const mutation = Array.isArray(response?.mutations) ? response.mutations[0] : null;
+      if (mutation?.op === "deny") throw denyError(mutation);
       if (!mutation || typeof mutation.value !== "string" || !mutation.value) {
         debugLog("inject", "No context to inject");
         return;
@@ -204,6 +212,7 @@ var inject_subagent_context_default = async ({ directory, platform: hostPlatform
       args.prompt = mutation.value;
       debugLog("inject", "Injected context for", agentType, "length:", mutation.value.length);
     } catch (error) {
+      if (error?.name === "PhroniaDispatchDenied") throw error;
       debugLog("inject", "Error in tool.execute.before:", error.message, error.stack);
     }
   };

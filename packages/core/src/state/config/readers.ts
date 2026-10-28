@@ -31,6 +31,7 @@ export const DEFAULT_PARALLEL_INTEGRATION_TIMEOUT = "30m";
 export const DEFAULT_PARALLEL_LOCK_TTL = "30m";
 export const DEFAULT_PARALLEL_MAX_ATTEMPTS = 3;
 export const DEFAULT_PARALLEL_MECHANICAL_MAX_FILES = 5;
+export const DEFAULT_PARALLEL_DISPATCH_ENFORCE: DispatchEnforce = "block";
 
 /**
  * Shared files that must never be changed in parallel (design.md §5.5).
@@ -72,6 +73,12 @@ export type ParallelWorktreeMode = "auto" | "always" | "never";
 export type ParallelWorktreeCleanup = "on-archive" | "on-integrate" | "manual";
 export type ParallelWorktreeLocation = "persistent" | "ephemeral";
 
+/**
+ * `parallel.dispatch.enforce` values. Owned by the config layer because it
+ * describes a configuration value; the dispatch policy consumes it.
+ */
+export type DispatchEnforce = "block" | "warn" | "off";
+
 export interface ParallelIntegrationConfig {
   mode: ParallelIntegrationMode;
   confirm: ParallelIntegrationConfirm;
@@ -92,6 +99,15 @@ export interface ParallelConflictsConfig {
   mechanicalMaxFiles: number;
 }
 
+export interface ParallelDispatchConfig {
+  /**
+   * Whether dispatch admission may block (`block`), downgrade to a guard
+   * (`warn`), or stay silent (`off`). S2 only reads this; S3 surfaces it in
+   * doctor/platforms.
+   */
+  enforce: DispatchEnforce;
+}
+
 export interface ParallelConfig {
   enabled: boolean;
   maxConcurrent: number;
@@ -106,6 +122,7 @@ export interface ParallelConfig {
   postCreate: readonly string[];
   integration: ParallelIntegrationConfig;
   conflicts: ParallelConflictsConfig;
+  dispatch: ParallelDispatchConfig;
 }
 
 export const DEFAULT_PARALLEL_CONFIG: ParallelConfig = Object.freeze({
@@ -131,6 +148,9 @@ export const DEFAULT_PARALLEL_CONFIG: ParallelConfig = Object.freeze({
     generated: DEFAULT_PARALLEL_GENERATED,
     regenerate: Object.freeze([]),
     mechanicalMaxFiles: DEFAULT_PARALLEL_MECHANICAL_MAX_FILES,
+  }),
+  dispatch: Object.freeze({
+    enforce: DEFAULT_PARALLEL_DISPATCH_ENFORCE,
   }),
 });
 
@@ -390,6 +410,7 @@ function readParallel(
     ),
     integration: readParallelIntegration(raw.integration, diagnostics, configPath),
     conflicts: readParallelConflicts(raw.conflicts, diagnostics, configPath),
+    dispatch: readParallelDispatch(raw.dispatch, diagnostics, configPath),
   };
 }
 
@@ -633,6 +654,38 @@ function readParallelConflicts(
       raw.mechanical_max_files ?? raw.mechanicalMaxFiles,
       defaults.mechanicalMaxFiles,
       "parallel.conflicts.mechanical_max_files",
+      diagnostics,
+      configPath,
+    ),
+  };
+}
+
+function readParallelDispatch(
+  raw: YamlValue | undefined,
+  diagnostics: Diagnostic[],
+  configPath: string,
+): ParallelDispatchConfig {
+  const defaults = DEFAULT_PARALLEL_CONFIG.dispatch;
+  if (raw === undefined) {
+    return defaults;
+  }
+  if (!isObject(raw)) {
+    diagnostics.push(
+      diagnostic(
+        "state.config.invalid_value",
+        "warn",
+        `invalid parallel.dispatch config: ${JSON.stringify(raw)}; using ${defaults.enforce}`,
+        { path: configPath },
+      ),
+    );
+    return defaults;
+  }
+  return {
+    enforce: readEnum(
+      raw.enforce,
+      ["block", "warn", "off"] as const,
+      defaults.enforce,
+      "parallel.dispatch.enforce",
       diagnostics,
       configPath,
     ),

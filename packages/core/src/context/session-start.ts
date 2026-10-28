@@ -21,6 +21,7 @@ import {
   SESSION_CONTEXT,
   buildFirstReplyNotice,
 } from "./constants.js";
+import { buildRuntimeStateLines } from "./runtime-state.js";
 import {
   CONTEXT_SCHEMA_VERSION,
   type ContextBlock,
@@ -47,6 +48,13 @@ export function buildSessionStart(request: ContextRequest): ContextResponse {
 
   const specIndexPaths = state.spec.indexPaths(task?.package ?? null);
   const legacyWarning = state.spec.legacyWarning();
+  const runtimeState = buildRuntimeStateLines({
+    state,
+    active,
+    task,
+    includeNext: false,
+    ...(request.options?.now === undefined ? {} : { now: request.options.now }),
+  });
   const blocks: ContextBlock[] = [];
 
   blocks.push({ id: "session-context", text: SESSION_CONTEXT, priority: 0 });
@@ -66,7 +74,13 @@ export function buildSessionStart(request: ContextRequest): ContextResponse {
 
   blocks.push({
     id: "current-state",
-    text: `<current-state>\n${buildCurrentState(state, active, task, specIndexPaths.length)}\n</current-state>`,
+    text: `<current-state>\n${buildCurrentState(
+      state,
+      active,
+      task,
+      specIndexPaths.length,
+      runtimeState.lines,
+    )}\n</current-state>`,
     priority: 0,
   });
   blocks.push({
@@ -89,7 +103,7 @@ export function buildSessionStart(request: ContextRequest): ContextResponse {
 
   const disabled = new Set(request.options?.disableBlocks ?? []);
   const enabledBlocks = blocks.filter((block) => !disabled.has(block.id));
-  const diagnostics = state.diagnostics();
+  const diagnostics = [...state.diagnostics(), ...runtimeState.diagnostics];
   const env = request.env ?? process.env;
   const effects: Effect[] = [];
   if (env.CLAUDE_ENV_FILE && active.contextKey) {
@@ -127,6 +141,7 @@ function buildCurrentState(
   active: ActiveTaskState,
   task: TaskRecordView | null,
   specIndexCount: number,
+  runtimeLines: readonly string[],
 ): string {
   const developer = state.developer().name;
   const git = state.git();
@@ -145,6 +160,8 @@ function buildCurrentState(
   } else {
     lines.push("Current task: none.");
   }
+
+  lines.push(...runtimeLines);
 
   lines.push(
     `Active tasks: ${state.tasks.list().length} total. Use \`python3 ./${LAYOUT.paths.scripts}/task.py list --mine\` only if needed.`,

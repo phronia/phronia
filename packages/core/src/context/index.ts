@@ -122,6 +122,16 @@ export function renderContext(
       return JSON.stringify({ permission: "allow" });
     case "mutation-plan":
       return JSON.stringify({ mutations: response.mutations });
+    case "codex-subagent-start":
+      if (text.length === 0) {
+        return "";
+      }
+      return JSON.stringify({
+        hookSpecificOutput: {
+          hookEventName: "SubagentStart",
+          additionalContext: text,
+        },
+      });
     case "zcode-hook-v1":
       return JSON.stringify({
         hookSpecificOutput: {
@@ -162,6 +172,12 @@ export function renderContext(
       });
     case "none":
     default:
+      // A deny has no text body. Emitting the mutation plan keeps `--render`
+      // honest for callers that did not request the `mutation-plan` envelope;
+      // silently returning an empty string would look like an allow.
+      if (response.mutations.some((mutation) => mutation.op === "deny")) {
+        return JSON.stringify({ mutations: response.mutations });
+      }
       return text;
   }
 }

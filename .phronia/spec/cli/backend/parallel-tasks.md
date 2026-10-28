@@ -100,6 +100,18 @@ Rules:
 
 - The isolation unit is the **task**, not the session. One task = one branch =
   at most one worktree. Two sessions on the same task share it.
+- `task.json.branch` names the task's **feature branch only**. It is never the
+  integration branch: `task.py start` leaves it empty when the checked-out
+  branch is the integration/base branch (or detached HEAD).
+- `ensure` resolves the candidate worktree branch in this order: the branch of
+  an existing registry entry → a real `task.branch` (different from the
+  integration branch) → `phronia/<slug>`. A `task.branch` equal to the
+  integration branch is treated as "no dedicated branch"; it never becomes the
+  worktree branch (that would always fail with "already checked out").
+- A task that does not require isolation reuses a clean, unclaimed main
+  checkout (`reuse-current`) and records a task claim there. Only
+  `parallel.worktree=always`, an `exclusive` task, a parallel batch, or a main
+  checkout claimed by another task creates a worktree.
 - Default location is `.phronia/worktrees/<task-id>` (persistent). `/tmp` is
   only for explicit `ephemeral`.
 - Task artifacts must be visible in the worktree: either
@@ -133,6 +145,13 @@ Footprint priority: `meta.parallel.touches` → `relatedFiles` → `scope` mappi
 single-task waves. `depends_on` is the only dependency source; parent/child
 tasks are not dependencies. Missing dependencies and cycles are errors
 (`DEPENDENCY_MISSING`, `DEPENDENCY_CYCLE`), never silently dropped.
+
+Parent tasks (`children.length > 0`) are **containers**, not execution units:
+they never enter a wave. The planner emits `PARALLEL_CONTAINER_TASK` with the
+child `task.py start` commands (`warn` when the parent was explicitly selected
+via `--refs`, `info` otherwise). A container with included `planning` children
+also produces `PARENT_HAS_PLANNING_CHILDREN`. `--explain` prints
+`container (children: N): coordinator only; start a child to execute`.
 
 `--explain` must state, for every task, the footprint source, the wave, and the
 overlap (if any). `parallel.enabled: false` must print a reason, not an empty
@@ -243,7 +262,66 @@ Contract:
 - Rollback: delete the new commands and set `parallel.enabled: false`.
   Already-landed commits remain; locks/leases can be removed.
 
-## 10. Related contracts
+## 10. 派发准入 (Dispatch admission)
+
+`evaluateDispatch(facts)` in `packages/core/src/task/dispatch/` answers one
+question: **may this implement/check dispatch happen now?** It is a pure
+function (no IO, no platform branches). The read-only fact layer lives in
+`packages/core/src/state/runtime-facts.ts`; the shim renders the verdict.
+
+Only structural violations block. Rules are evaluated in order and the first
+match wins; the order and codes are a public contract:
+
+| # | Code | Decision | Condition |
+|---|---|---|---|
+| 1 | `DISPATCH_OUTSIDE_CONTRACT` | allow | agent is not mutating (`research`/read-only or unknown) |
+| 2 | `DISPATCH_OK` | allow | `parallel.dispatch.enforce: off` (diagnostic only) |
+| 3 | `DISPATCH_NO_ACTIVE_TASK` | allow | no task resolves; pull-based behaviour is preserved |
+| 4 | `DISPATCH_TASK_NOT_CHILD` | block | explicit `Active task:` is neither the active task nor its child |
+| 5 | `DISPATCH_PARENT_TASK` | block | effective task has `children` (a parent is a container) |
+| 6 | `DISPATCH_TASK_NOT_IN_PROGRESS` | block | effective status is `planning`/`blocked`/`completed` |
+| 7a | `DISPATCH_CHECKOUT_OWNED_BY_OTHER` | block | cwd is a linked worktree registered to another task |
+| 7b | `DISPATCH_WRONG_CHECKOUT` | block | the task has a worktree and cwd is not it |
+| 7c | `DISPATCH_CHECKOUT_UNREGISTERED` | allow + guard | cwd is a linked worktree with no registry entry |
+| 8a | `DISPATCH_WRONG_CHECKOUT` | block | cwd is main but the task has a worktree |
+| 8b | `DISPATCH_ISOLATION_DISABLED` | allow + guard | isolation is required but `parallel.worktree=never` |
+| 8c | `DISPATCH_ISOLATION_REQUIRED` | block | isolation is required and cwd is main |
+| 8d | `DISPATCH_MAIN_CLAIMED` | block | main is claimed by another task/fresh session |
+| 8e | `DISPATCH_STALE_CLAIM_DIRTY` | block | stale claim + main has uncommitted changes |
+| 8f | `DISPATCH_NO_CLAIM` | allow + guard | main is unclaimed or the claim is stale |
+| 9 | `DISPATCH_LEASE_OTHER_OWNER` | allow + guard | the task lease belongs to another live session |
+| — | `DISPATCH_PLATFORM_CANNOT_BLOCK` | allow + guard | a block was downgraded by capability or `enforce` |
+| — | `DISPATCH_FACTS_UNRELIABLE` | allow + guard | the fact layer could not read git/runtime state |
+
+`requiresIsolation` = `parallel.worktree=always` OR `exclusive` OR at least two
+`in_progress` siblings. It never looks at `touches`: a footprint says a task
+*can* run in parallel, not that it *is* running in parallel.
+
+Capability degradation (`platform.hookPolicy`):
+
+| `hookPolicy` | block verdict | guard |
+|---|---|---|
+| `block` (Claude Code, ZCode, OpenCode) | deny the tool call | allow + guard for `DISPATCH_NO_CLAIM` and friends |
+| `inject` (Codex) | never deny; prepend `WORKSPACE_GUARD` (`STOP:` first line) | same |
+| `unknown` (Cursor, unverified) | treated like `inject` (fail closed) | same |
+
+`parallel.dispatch.enforce` (default `block`) applies on top:
+
+| `enforce` | block verdict | allow + guard |
+|---|---|---|
+| `block` | deny when the platform can block | guard |
+| `warn` | allow + guard (guard severity `error`) | guard |
+| `off` | allow, no guard; breadcrumb still shows facts | allow, no guard |
+
+Invalid values fall back to `block` with a `state.config.invalid_value`
+diagnostic. The setting affects dispatch admission only — never
+`parallel plan`, `workspace ensure`, or `integrate`.
+
+`phronia doctor` reports `task.dispatchAdmission` /
+`platforms[].dispatchAdmission` with `hookPolicy`, `enforce`, and whether the
+harness can block.
+
+## 11. Related contracts
 
 - `.phronia/spec/cli/backend/workflow-state-contract.md` — per-turn breadcrumb
   and `task.json.status` writers.

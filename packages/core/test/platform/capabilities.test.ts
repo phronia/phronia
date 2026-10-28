@@ -150,4 +150,48 @@ describe("capability matrix", () => {
     const codex = capabilitiesFor("codex");
     expect(codex.toolNames.shell).toContain("bash");
   });
+
+  it("declares a hookPolicy for every platform", () => {
+    for (const id of PLATFORM_IDS) {
+      expect(
+        ["block", "inject", "unknown"],
+        `${id}.hookPolicy`,
+      ).toContain(CAPABILITIES[id].hookPolicy);
+    }
+  });
+
+  it("uses verified hook policies for the four characterized harnesses", () => {
+    expect(CAPABILITIES["claude-code"].hookPolicy).toBe("block");
+    expect(CAPABILITIES.zcode.hookPolicy).toBe("block");
+    expect(CAPABILITIES.opencode.hookPolicy).toBe("block");
+    expect(CAPABILITIES.codex.hookPolicy).toBe("inject");
+  });
+
+  it("derives hookPolicy from the subagent surface", () => {
+    for (const id of PLATFORM_IDS) {
+      const capabilities = CAPABILITIES[id];
+      const hasSurface = capabilities.behavior.subagentContext.kind !== "none";
+      if (!hasSurface) {
+        // No subagent surface: the dispatch hook is unreachable, so the
+        // fail-safe rendering is inject (never a fake block).
+        expect(capabilities.hookPolicy, `${id} (no subagent surface)`).toBe(
+          "inject",
+        );
+        continue;
+      }
+      if (id === "claude-code" || id === "zcode" || id === "opencode") {
+        expect(capabilities.hookPolicy, id).toBe("block");
+      } else {
+        // codex is verified inject; every other surface is unverified.
+        expect(capabilities.hookPolicy, id).toBe(
+          id === "codex" ? "inject" : "unknown",
+        );
+      }
+    }
+  });
+
+  it("carries hookPolicy through adapter profiles", () => {
+    expect(capabilitiesFor("opencode", "opencode@v2").hookPolicy).toBe("block");
+    expect(capabilitiesFor("codex", "unknown-adapter").hookPolicy).toBe("inject");
+  });
 });

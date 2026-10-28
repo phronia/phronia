@@ -17,9 +17,15 @@ import { diagnostic, type Diagnostic } from "../diagnostics.js";
 import { listDir, readJson, realPath, type FsLike } from "../fs.js";
 import { taskRefsMatch } from "../tasks/refs.js";
 import { asObject, stringValue } from "./key.js";
+import { parseTaskInvocation } from "./commands.js";
+
+export {
+  LEASE_ACTIONS,
+  TASK_SESSION_COMMANDS,
+  WORKSPACE_ACTIONS,
+} from "./commands.js";
 
 export const SHELL_TICKET_TTL_SECONDS = 30;
-export const TASK_SESSION_COMMANDS = new Set(["start", "current", "finish"]);
 const LEGACY_CURSOR_SHELL = "cursor-shell";
 
 export interface ShellTicket {
@@ -28,7 +34,7 @@ export interface ShellTicket {
   cwd?: string;
   host_cwd?: string;
   command?: string;
-  subcommands?: { name?: string; task_ref?: string }[];
+  subcommands?: { name?: string; action?: string; task_ref?: string }[];
   created_at_epoch?: number;
   expires_at_epoch?: number;
 }
@@ -163,29 +169,27 @@ function pendingTicketMatchesArgs(
   argv: readonly string[],
   io: FsLike,
 ): boolean {
-  const executable = path.basename(argv[0] ?? "");
-  if (executable !== "task.py") {
-    return false;
-  }
-  const args = argv.slice(1);
-  const commandName = args[0];
-  if (!commandName || !TASK_SESSION_COMMANDS.has(commandName)) {
-    return false;
-  }
   if (!Array.isArray(ticket.subcommands)) {
+    return false;
+  }
+  const invocation = parseTaskInvocation(argv);
+  if (invocation === null) {
     return false;
   }
   for (const subcommand of ticket.subcommands) {
     const entry = asObject(subcommand);
-    if (!entry || stringValue(entry.name) !== commandName) {
+    if (!entry || stringValue(entry.name) !== invocation.name) {
       continue;
     }
-    if (commandName !== "start") {
+    // Old tickets predate `action`; only a present action constrains the match.
+    const ticketAction = stringValue(entry.action);
+    if (ticketAction !== null && ticketAction !== invocation.action) {
+      continue;
+    }
+    if (!invocation.requiresRef) {
       return true;
     }
-    const ticketRef = stringValue(entry.task_ref);
-    const requestedRef = args[1] ?? null;
-    if (taskRefsMatch(ticketRef, requestedRef, root, io)) {
+    if (taskRefsMatch(stringValue(entry.task_ref), invocation.ref, root, io)) {
       return true;
     }
   }

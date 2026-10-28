@@ -299,6 +299,116 @@ describe("shell tickets", () => {
       }).key,
     ).toBeNull();
   });
+
+  it("matches old tickets that predate the action field", () => {
+    const now = 1000;
+    writeTicket(root, "t1.json", {
+      context_key: "legacy",
+      cwd: root,
+      created_at_epoch: now,
+      subcommands: [{ name: "workspace", task_ref: ".phronia/tasks/01-01-one" }],
+    });
+    expect(
+      lookupShellTicketContextKey({
+        root,
+        argv: ["task", "workspace", "ensure", ".phronia/tasks/01-01-one"],
+        now,
+        io: nodeFs,
+      }).key,
+    ).toBe("legacy");
+  });
+
+  it.each([
+    {
+      name: "phronia workspace ensure (slice(2) argv)",
+      argv: ["task", "workspace", "ensure", ".phronia/tasks/01-01-one"],
+      subcommand: {
+        name: "workspace",
+        action: "ensure",
+        task_ref: ".phronia/tasks/01-01-one",
+      },
+    },
+    {
+      name: "trellis task lease acquire (executable argv)",
+      argv: ["trellis", "task", "lease", "acquire", ".phronia/tasks/01-01-one"],
+      subcommand: {
+        name: "lease",
+        action: "acquire",
+        task_ref: ".phronia/tasks/01-01-one",
+      },
+    },
+    {
+      name: "phronia.js task workspace reclaim (no ref)",
+      argv: ["phronia.js", "task", "workspace", "reclaim"],
+      subcommand: { name: "workspace", action: "reclaim" },
+    },
+  ])("matches $name", ({ argv, subcommand }) => {
+    const now = 1000;
+    writeTicket(root, "t1.json", {
+      context_key: "claude_match",
+      cwd: root,
+      created_at_epoch: now,
+      subcommands: [subcommand],
+    });
+    expect(
+      lookupShellTicketContextKey({ root, argv, now, io: nodeFs }).key,
+    ).toBe("claude_match");
+  });
+
+  it("refuses a ticket whose action differs from the running verb", () => {
+    const now = 1000;
+    writeTicket(root, "t1.json", {
+      context_key: "wrong-verb",
+      cwd: root,
+      created_at_epoch: now,
+      subcommands: [
+        {
+          name: "workspace",
+          action: "reclaim",
+          task_ref: ".phronia/tasks/01-01-one",
+        },
+      ],
+    });
+    expect(
+      lookupShellTicketContextKey({
+        root,
+        argv: ["task", "workspace", "ensure", ".phronia/tasks/01-01-one"],
+        now,
+        io: nodeFs,
+      }).key,
+    ).toBeNull();
+  });
+
+  it("refuses two fresh workspace tickets for the same task", () => {
+    const now = 1000;
+    for (const [name, key] of [
+      ["t1.json", "a"],
+      ["t2.json", "b"],
+    ] as const) {
+      writeTicket(root, name, {
+        context_key: key,
+        cwd: root,
+        created_at_epoch: now,
+        subcommands: [
+          {
+            name: "workspace",
+            action: "ensure",
+            task_ref: ".phronia/tasks/01-01-one",
+          },
+        ],
+      });
+    }
+    const result = lookupShellTicketContextKey({
+      root,
+      argv: ["task", "workspace", "ensure", ".phronia/tasks/01-01-one"],
+      now,
+      io: nodeFs,
+    });
+    expect(result.key).toBeNull();
+    expect(result.diagnostics.map((item) => item.code)).toContain(
+      "state.session.ticket_ambiguous",
+    );
+  });
 });
 
 const PYTHON_PROBE = [

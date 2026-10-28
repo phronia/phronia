@@ -8,6 +8,7 @@
 
 import { spawnSync } from "node:child_process";
 import path from "node:path";
+import { resolveCommonDir } from "./shared-runtime.js";
 
 export interface GitResult {
   status: number | null;
@@ -55,6 +56,35 @@ export function readGitState(root: string, exec: GitExec = defaultGitExec): GitS
 }
 
 const worktreeCache = new Map<string, string | null>();
+
+/**
+ * `git rev-parse --git-common-dir` resolved against `root`.
+ *
+ * The common dir is the same from every worktree of one repository, so it is
+ * the root of cross-worktree coordination state. Returns null when git is
+ * missing, the directory is not a repository, or the command fails/times out.
+ *
+ * Deliberately uncached: hooks are one-shot processes, and a stale common dir
+ * would point at the wrong repository after a checkout move.
+ */
+export function gitCommonDir(
+  root: string,
+  exec: GitExec = defaultGitExec,
+): string | null {
+  const result = exec(["rev-parse", "--git-common-dir"], root);
+  if (result.status !== 0) {
+    return null;
+  }
+  const raw = result.stdout.trim();
+  if (raw === "") {
+    return null;
+  }
+  try {
+    return resolveCommonDir(raw, path.resolve(root));
+  } catch {
+    return null;
+  }
+}
 
 /**
  * Root of the main working tree when `root` is a linked worktree.

@@ -212,6 +212,17 @@ function printPlan(result: Extract<PlanServiceResult, { ok: true }>, explain: bo
       }
     }
   }
+  const containers = result.tasks.filter((task) => task.container);
+  if (explain) {
+    for (const container of containers) {
+      process.stdout.write(
+        `\nContainer ${container.ref}${container.title === "" ? "" : ` — ${container.title}`}\n`,
+      );
+      process.stdout.write(
+        `  container (children: ${container.childCount}): coordinator only; start a child to execute\n`,
+      );
+    }
+  }
   printDiagnostics(result.diagnostics);
 }
 
@@ -286,12 +297,31 @@ function printWorkspace(
 }
 
 function printDiagnostics(
-  diagnostics: readonly { severity: string; code: string; message: string }[],
+  diagnostics: readonly {
+    severity: string;
+    code: string;
+    message: string;
+    details?: Readonly<Record<string, unknown>>;
+  }[],
 ): void {
   for (const diagnostic of diagnostics) {
     const stream = diagnostic.severity === "error" ? process.stderr : process.stdout;
     stream.write(`[${diagnostic.severity}] ${diagnostic.code}: ${diagnostic.message}\n`);
+    for (const step of diagnosticNext(diagnostic.details)) {
+      stream.write(`  next: ${step}\n`);
+    }
   }
+}
+
+function diagnosticNext(
+  details: Readonly<Record<string, unknown>> | undefined,
+): readonly string[] {
+  const next = details?.next;
+  if (typeof next === "string" && next !== "") return [next];
+  if (Array.isArray(next)) {
+    return next.filter((item): item is string => typeof item === "string" && item !== "");
+  }
+  return [];
 }
 
 function printFailure(failure: PlanFailure): void {
@@ -322,6 +352,8 @@ function toPlanJson(result: PlanServiceResult): unknown {
       dependsOn: task.dependsOn,
       exclusive: task.exclusive,
       workspace: task.workspace,
+      container: task.container,
+      childCount: task.childCount,
     })),
   };
 }

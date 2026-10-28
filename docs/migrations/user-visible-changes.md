@@ -238,3 +238,52 @@ Batches that must update this file:
     mode detection; `--no-verify` when no verification command exists (the
     result is reported as unverified); `phronia task worktree remove` for an
     explicit cleanup that archive would otherwise refuse.
+
+## Unreleased (dispatch admission)
+
+- **All platforms**: a `phronia-implement` / `phronia-check` dispatch is now
+  evaluated before the sub-agent starts. A structurally invalid dispatch is
+  denied with a stable `DISPATCH_*` code and an executable `next` list:
+  parent task, task not `in_progress`, wrong/other-owner checkout, required
+  isolation, or a main checkout claimed by another task.
+  - **Platforms that can block** (Claude Code, ZCode, OpenCode): the tool call
+    is denied and the parent model sees the reason as the tool error. Do not
+    retry; follow the printed `next`.
+  - **Platforms that can only inject** (Codex) or are unverified (Cursor):
+    dispatch is not blocked; the sub-agent prompt starts with a
+    `WORKSPACE_GUARD ... STOP:` block instead.
+  - Why: the constraints were pull-based and could be bypassed by calling the
+    harness's native sub-agent tool directly.
+  - Migration: none. The common single-task path still allows dispatch.
+  - Escape hatch: `parallel.dispatch.enforce: warn` (deny → guard) or `off`
+    (no guard). `phronia doctor` shows the mode and whether the harness can
+    block.
+- **All platforms**: each prompt now carries a `<runtime-state>` block with
+  `workspace / claim / lease / parallel` (and `next` for a parent task).
+  Read failures render `unknown (read failed)` rather than disappearing.
+- **`task.py start`**: a parent task (`children.length > 0`) is refused by
+  default. The error lists the children with statuses and one executable
+  `task.py start <child>` per child. `--coordinator` allows the parent to
+  become the active task and skips the implement/check context-manifest gate.
+  Starting a child is unchanged. Dispatch admission still rejects implement
+  dispatches against a parent.
+- **`task.py start` branch recording**: the checked-out integration/base
+  branch (e.g. `main`) is no longer written to `task.json.branch`; only a real
+  feature branch is recorded. Detached HEAD still records nothing.
+  - Why: `workspace ensure` treated the recorded integration branch as a
+    worktree branch and failed with `WORKSPACE_TARGET_EXISTS: branch main is
+    already checked out`.
+  - Migration: none. Tasks that already carry `branch: main` are handled by
+    `ensure` as if the branch were empty.
+- **`phronia task workspace ensure`**: a serial task on a clean, unclaimed main
+  checkout now returns `reuse-current` and claims it. A worktree (on
+  `phronia/<slug>`) is created only when isolation is required
+  (`parallel.worktree=always`, `exclusive`, a parallel batch, or main claimed
+  by another task).
+- **Session identity**: `phronia task workspace ...` and
+  `phronia task lease ...` resolve the session key from the same pre-shell
+  ticket bridge as `task.py`. When no key resolves and this checkout has
+  exactly one session file, the error prints that key and a copy-paste
+  `--session-key` command; multiple sessions still degrade instead of guessing.
+- **`phronia platforms --json`**: each configured platform now includes
+  `hookPolicy` and `subagentWorkspace` (existing fields unchanged).

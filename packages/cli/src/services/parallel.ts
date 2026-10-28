@@ -68,6 +68,8 @@ export interface PlanTaskSummary {
   readonly dependsOn: readonly string[];
   readonly exclusive: boolean;
   readonly workspace: string | null;
+  readonly container: boolean;
+  readonly childCount: number;
   readonly createdAt?: string;
 }
 
@@ -219,6 +221,8 @@ export function planTasks(options: PlanOptions): PlanServiceResult {
       dependsOn: task.dependsOn,
       exclusive: task.exclusive,
       workspace: task.workspace,
+      container: task.container === true,
+      childCount: task.childCount ?? task.children?.length ?? 0,
       ...(task.createdAt === undefined ? {} : { createdAt: task.createdAt }),
     });
   }
@@ -229,7 +233,15 @@ export function planTasks(options: PlanOptions): PlanServiceResult {
     allowUnknown: options.allowUnknown === true,
     alwaysSerial: config.conflicts.alwaysSerial,
     packagePaths,
+    requestedRefs: [...requested],
   });
+
+  const planningChildren = planningChildDiagnostics(
+    state,
+    plannerTasks,
+    new Set(plannerTasks.map((task) => task.ref)),
+  );
+  const diagnostics = [...plan.diagnostics, ...planningChildren];
 
   const error = plan.diagnostics.find((item) => item.severity === "error");
   if (error !== undefined) {
@@ -244,10 +256,51 @@ export function planTasks(options: PlanOptions): PlanServiceResult {
   return {
     ok: true,
     waves: plan.waves,
-    diagnostics: plan.diagnostics,
+    diagnostics,
     tasks: summaries,
     config,
   };
+}
+
+/**
+ * A container's planning children cannot be scheduled. Report it only when
+ * those children are part of this plan (`--include-planning` or explicit
+ * `--refs`), so the default in-progress plan stays quiet.
+ */
+function planningChildDiagnostics(
+  state: ReturnType<typeof openState>,
+  tasks: readonly PlannerTask[],
+  included: ReadonlySet<string>,
+): Diagnostic[] {
+  const diagnostics: Diagnostic[] = [];
+  for (const task of tasks) {
+    if (task.container !== true) continue;
+    const planning = (task.children ?? [])
+      .map((child) => canonicalChildRef(child))
+      .filter((child) => included.has(child))
+      .map((child) => ({
+        ref: child,
+        status: state.tasks.read(child)?.status ?? "unknown",
+      }))
+      .filter((child) => child.status === PLANNING_STATUS);
+    if (planning.length === 0) continue;
+    const next = planning.map(
+      (child) => `python3 ./.phronia/scripts/task.py start ${child.ref}`,
+    );
+    diagnostics.push({
+      code: "PARENT_HAS_PLANNING_CHILDREN",
+      severity: "warn",
+      message: `parent ${task.ref} has ${planning.length} planning child${
+        planning.length === 1 ? "" : "ren"
+      }; they cannot be scheduled until started`,
+      details: {
+        taskRef: task.ref,
+        children: planning,
+        next,
+      },
+    });
+  }
+  return diagnostics;
 }
 
 export function parallelStatus(options: StatusOptions): StatusServiceResult {
@@ -439,6 +492,7 @@ function toPlannerTask(
       : typeof raw.createdAt === "string"
         ? raw.createdAt
         : undefined;
+  const children = (view?.children ?? []).map(canonicalChildRef);
   return {
     ref: canonicalRef(ref),
     id,
@@ -457,8 +511,20 @@ function toPlannerTask(
     dependsOn: parallel.dependsOn,
     exclusive: parallel.exclusive,
     workspace: workspaceByRef.get(canonicalRef(ref)) ?? null,
+    container: children.length > 0,
+    childCount: children.length,
+    children,
     ...(createdAt === undefined ? {} : { createdAt }),
   };
+}
+
+/** Normalize a `children` entry (bare name, relative or absolute ref). */
+function canonicalChildRef(child: string): string {
+  const canonical = canonicalRef(child);
+  if (canonical.startsWith(".phronia/") || path.isAbsolute(canonical)) {
+    return canonical;
+  }
+  return canonicalRef(`.phronia/tasks/${canonical}`);
 }
 
 interface StatusTaskInput {

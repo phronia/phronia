@@ -131,6 +131,13 @@ function normalizeAgentType(value) {
   return AGENTS_ALL.includes(name) ? name : null
 }
 
+function denyError(mutation) {
+  const next = Array.isArray(mutation.next) ? mutation.next.join("\n") : ""
+  const error = new Error(`[${mutation.code}] ${mutation.reason}\n${next}`)
+  error.name = "PhroniaDispatchDenied"
+  return error
+}
+
 // OpenCode plugin factory: `export default async (input) => hooks`.
 // OpenCode 1.2.x iterates every module export and invokes it as a function;
 // the old `{ id, server }` object shape failed with `fn is not a function`.
@@ -176,6 +183,9 @@ export default async ({ directory, platform: hostPlatform = process.platform, en
       })
 
       const mutation = Array.isArray(response?.mutations) ? response.mutations[0] : null
+      // A deny must abort the tool call: the outer catch only reports and
+      // swallows transport errors, so use a named error and rethrow it below.
+      if (mutation?.op === "deny") throw denyError(mutation)
       if (!mutation || typeof mutation.value !== "string" || !mutation.value) {
         debugLog("inject", "No context to inject")
         return
@@ -185,6 +195,7 @@ export default async ({ directory, platform: hostPlatform = process.platform, en
       args.prompt = mutation.value
       debugLog("inject", "Injected context for", agentType, "length:", mutation.value.length)
     } catch (error) {
+      if (error?.name === "PhroniaDispatchDenied") throw error
       debugLog("inject", "Error in tool.execute.before:", error.message, error.stack)
     }
   }

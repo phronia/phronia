@@ -20,7 +20,7 @@ import {
   type LeaseRequest,
   type TaskLease,
 } from "@phronia/core/task";
-import { openState } from "@phronia/core/state";
+import { findSoleSessionKey, openState } from "@phronia/core/state";
 import { taskLeasePath } from "@phronia/core/state";
 import {
   createGitPort,
@@ -69,6 +69,8 @@ export interface LeaseDependencies {
   readonly host?: string;
   readonly pid?: number;
   readonly env?: Readonly<Record<string, string | undefined>>;
+  /** Process argv for the shell-ticket bridge (defaults to `slice(2)`). */
+  readonly argv?: readonly string[];
 }
 
 export interface AcquireLeaseOptions extends LeaseDependencies {
@@ -119,6 +121,7 @@ interface LeaseContext {
   readonly host: string;
   readonly pid: number;
   readonly env: Readonly<Record<string, string | undefined>>;
+  readonly argv: readonly string[];
 }
 
 export function acquireTaskLease(
@@ -137,11 +140,7 @@ export function acquireTaskLease(
     });
     const identity = ownerIdentity(context, options);
     if (identity === null) {
-      return failure(
-        "LEASE_OWNER_UNKNOWN",
-        "no owner identity was found; refusing to create a lease without one",
-        "pass --owner-id <id> or set PHRONIA_CONTEXT_ID (or --session-key <key>)",
-      );
+      return ownerUnknown(context, taskRef);
     }
     const request: LeaseRequest = {
       taskRef,
@@ -331,6 +330,7 @@ function leaseContext(options: LeaseDependencies): LeaseContext {
     host: options.host ?? hostname(),
     pid: options.pid ?? process.pid,
     env: options.env ?? process.env,
+    argv: options.argv ?? process.argv.slice(2),
   };
 }
 
@@ -375,7 +375,13 @@ function sessionKeyFor(
 
 function resolveSessionKey(context: LeaseContext): string | null {
   try {
-    const state = openState({ root: context.mainRoot, env: context.env });
+    // `argv` enables the pre-shell ticket bridge; without it every ZCode-style
+    // shell command fails with LEASE_OWNER_UNKNOWN.
+    const state = openState({
+      root: context.mainRoot,
+      env: context.env,
+      argv: context.argv,
+    });
     const resolved = state.sessions.resolveKey(undefined, {
       allowEnvironmentContext: true,
     });
@@ -387,6 +393,32 @@ function resolveSessionKey(context: LeaseContext): string | null {
     // every command is a new process, so the pid is never a stable owner.
   }
   return null;
+}
+
+function ownerUnknown(context: LeaseContext, taskRef: string): LeaseFailure {
+  const hint = findSoleSessionKey(context.mainRoot);
+  if (hint.key !== null) {
+    return failure(
+      "LEASE_OWNER_UNKNOWN",
+      `no owner identity was found; refusing to create a lease for ${taskRef} without one. ` +
+        `This checkout has exactly one session (${hint.key}).`,
+      `phronia task lease acquire ${taskRef} --session-key ${hint.key}`,
+      {
+        sessionKey: hint.key,
+        hint: `set PHRONIA_CONTEXT_ID=${hint.key} for non-hook shells`,
+      },
+    );
+  }
+  const ambiguity =
+    hint.candidates.length > 1
+      ? ` ${hint.candidates.length} session files exist in this checkout; refusing to choose one.`
+      : "";
+  return failure(
+    "LEASE_OWNER_UNKNOWN",
+    `no owner identity was found; refusing to create a lease without one.${ambiguity}`,
+    "pass --owner-id <id> or set PHRONIA_CONTEXT_ID (or --session-key <key>)",
+    hint.candidates.length > 0 ? { candidates: hint.candidates } : undefined,
+  );
 }
 
 function resolveTaskWorkspace(context: LeaseContext, taskRef: string): string {

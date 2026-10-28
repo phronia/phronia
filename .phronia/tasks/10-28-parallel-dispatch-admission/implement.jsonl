@@ -1,0 +1,9 @@
+{"file": ".phronia/spec/cli/backend/parallel-tasks.md", "reason": "运行契约：三个平面、三把互斥、planner、coordinator 门控；新增准入章节必须与它一致"}
+{"file": ".phronia/spec/cli/backend/workflow-state-contract.md", "reason": "per-turn breadcrumb 与 task.json 状态写入者契约；新增 runtime-state 块必须遵守"}
+{"file": ".phronia/spec/cli/backend/adapter-generations.md", "reason": "harness 能力轴与 shim 选择优先级；新增 hookPolicy 维度必须沿用它"}
+{"file": ".phronia/spec/cli/backend/trellis-core-sdk.md", "reason": "core/cli 包边界；判定纯函数与事实读取必须放在正确层"}
+{"file": ".phronia/spec/cli/backend/filesystem-safety.md", "reason": "共享运行时文件读写与原子写规则；事实层只读、CLI 写入"}
+{"file": ".phronia/spec/core/backend/index.md", "reason": "core 不打印、不 process.exit、不读 process.cwd 的边界"}
+{"file": ".phronia/spec/cli/unit-test/conventions.md", "reason": "测试分层与命名；单元/集成/基准的放置"}
+{"file": ".phronia/tasks/10-28-parallel-dispatch-admission/research/prior-art.md", "reason": "外部先例与平台阻断能力证据；错误码与能力表的事实来源"}
+{"file": ".phronia/tasks/10-28-parallel-dispatch-admission/acceptance.md", "reason": "子代理执行编排 + S1-S5 逐项验收标准；阶段门禁以此为准"}

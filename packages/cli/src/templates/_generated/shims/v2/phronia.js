@@ -1,7 +1,7 @@
 // phronia-shim: opencode@v2
 // shim-version: 2610.28.6
-// build-id: b24e83f91aff
-// content-hash: 09d45b72538b748c677b8fb17ae4ad6a6c6cdf764053992ded2d5fa0771812be
+// build-id: c063d288c48b
+// content-hash: 3846b2d12c3b04e46b9bdd5b2389a5e3c38ec4dbd8a50f022056ad9daa468a7a
 // DO NOT EDIT. Regenerate with: pnpm build:shims
 
 import { createRequire as __phroniaCreateRequire } from "node:module"; const require = __phroniaCreateRequire(import.meta.url);
@@ -171,6 +171,13 @@ function normalizeAgent(agent) {
   const match = PHRONIA_SUBAGENT_RE.exec(agent.trim());
   return match ? match[0].replace(/^(?:phronia|trellis)-/i, "").toLowerCase() : null;
 }
+function denyError(mutation) {
+  const next = Array.isArray(mutation.next) ? mutation.next.join("\n") : "";
+  const error = new Error(`[${mutation.code}] ${mutation.reason}
+${next}`);
+  error.name = "PhroniaDispatchDenied";
+  return error;
+}
 function messageText(message) {
   if (!message) return "";
   if (typeof message.content === "string") return message.content;
@@ -295,10 +302,12 @@ async function onToolBefore(ctx, event) {
       }
     });
     const mutation = Array.isArray(response?.mutations) ? response.mutations[0] : null;
+    if (mutation?.op === "deny") throw denyError(mutation);
     if (mutation?.op === "set-prompt" && typeof mutation.value === "string" && mutation.value) {
       input.prompt = mutation.value;
     }
   } catch (error) {
+    if (error?.name === "PhroniaDispatchDenied") throw error;
     debugLog("v2-tool", "subagent context failed:", error.message);
   }
 }

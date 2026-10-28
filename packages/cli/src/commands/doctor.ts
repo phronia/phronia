@@ -28,7 +28,9 @@ import {
   type AdapterSelection,
   type AdapterStatus,
   type FeatureId,
+  type HookPolicy,
   type PlatformId,
+  type ParallelConfig,
 } from "@phronia/core";
 import { getConfiguredPlatforms } from "../configurators/index.js";
 import { ensureZcodePlugin } from "../configurators/zcode-plugin.js";
@@ -76,6 +78,14 @@ export interface DoctorPlatformReport {
     reason: string;
   };
   features: DoctorFeature[];
+  /** Dispatch admission: can this harness block a sub-agent dispatch? */
+  dispatchAdmission: {
+    hookPolicy: HookPolicy;
+    enforce: ParallelConfig["dispatch"]["enforce"];
+    canBlock: boolean;
+    available: boolean;
+    reason?: string;
+  };
 }
 
 export interface DoctorReport {
@@ -96,6 +106,7 @@ const FEATURES: readonly FeatureId[] = [
   "context.workflowState",
   "task.branch",
   "task.worktree",
+  "task.dispatchAdmission",
   "crossRepo.task",
   "rules.gate",
 ];
@@ -130,6 +141,7 @@ export function collectDoctorReport(options: DoctorOptions): DoctorReport {
     ids = configured.length > 0 ? (configured as PlatformId[]) : [];
   }
 
+  const config = readConfig(projectRoot, nodeFs).value;
   return {
     projectRoot,
     environment,
@@ -152,8 +164,37 @@ export function collectDoctorReport(options: DoctorOptions): DoctorReport {
           ? { zcode: zcodeReport(projectRoot, selection, handshake) }
           : {}),
         features: FEATURES.map((feature) => doctorFeature(id, feature, environment)),
+        dispatchAdmission: dispatchAdmissionReport(
+          CAPABILITIES[id].hookPolicy,
+          config.parallel,
+        ),
       };
     }),
+  };
+}
+
+function dispatchAdmissionReport(
+  hookPolicy: HookPolicy,
+  parallel: ParallelConfig,
+): DoctorPlatformReport["dispatchAdmission"] {
+  const canBlock = hookPolicy === "block";
+  if (canBlock) {
+    return {
+      hookPolicy,
+      enforce: parallel.dispatch.enforce,
+      canBlock,
+      available: true,
+    };
+  }
+  return {
+    hookPolicy,
+    enforce: parallel.dispatch.enforce,
+    canBlock,
+    available: false,
+    reason:
+      hookPolicy === "inject"
+        ? "harness can inject context but cannot block a dispatch (guard only)"
+        : "hook enforcement is unverified; treated as inject (fail closed)",
   };
 }
 
@@ -234,6 +275,12 @@ export function runDoctorCommand(options: DoctorOptions): number {
         `  zcode path ${platform.zcode.path} (${platform.zcode.buildClass}, trust ${platform.zcode.trust}): ${platform.zcode.reason}`,
       );
     }
+    const admission = platform.dispatchAdmission;
+    lines.push(
+      `  dispatch admission hookPolicy=${admission.hookPolicy} enforce=${admission.enforce} canBlock=${admission.canBlock ? "yes" : "no"}${
+        admission.reason === undefined ? "" : ` (${admission.reason})`
+      }`,
+    );
     for (const feature of platform.features) {
       lines.push(
         `  ${feature.id.padEnd(24)} ${feature.available ? "ok" : `unavailable: ${feature.reason ?? "unknown"}`}`,

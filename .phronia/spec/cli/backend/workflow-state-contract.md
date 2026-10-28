@@ -248,6 +248,38 @@ the current packaged template so `--platform codex` can resolve to
 
 ---
 
+## Runtime-state block
+
+Every user prompt also carries a separate `<runtime-state>` block. It is not
+part of `workflow.md` (users edit the breadcrumb body there), and it exists so
+the model can see the live workspace contract before it dispatches an
+implement/check sub-agent:
+
+```text
+<runtime-state>
+workspace: main (unclaimed) | main (claimed by task <ref>) | main (claim stale: <owner>) | worktree <path> | unknown (read failed)
+claim: <task|session> <owner> | stale (<owner>) | none | unknown (read failed)
+lease: session <owner> | subagent <owner> | task <owner> | stale (<owner>) | none | unknown (read failed)
+parallel: serial | N in_progress children (planning M; total K) | none | unknown
+next: start a child before dispatching implement/check (children: K)
+</runtime-state>
+```
+
+- `workspace` describes **this checkout**: main (claimed/unclaimed/stale) or a
+  linked worktree.
+- `claim` is `<git-common-dir>/phronia/workspace.claim.json`; `lease` is the
+  active task's lease.
+- `parallel` is `serial` for a leaf task and the child census for a parent.
+- `next` appears only for a parent task (`children.length > 0`).
+- `buildSessionStart`'s `<current-state>` includes the same four fact lines
+  (without `next`).
+- The block is computed from `state/runtime-facts.ts` (read-only). A read
+  failure renders `unknown (read failed)`; it is never silently omitted.
+  Breadcrumb reads skip `git status`, so the common per-turn cost is zero git
+  processes.
+
+---
+
 ## Status writer table
 
 The table below enumerates every code path that writes `task.json.status` —

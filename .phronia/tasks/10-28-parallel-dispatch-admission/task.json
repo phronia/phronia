@@ -1,0 +1,44 @@
+{
+  "id": "parallel-dispatch-admission",
+  "name": "parallel-dispatch-admission",
+  "title": "并行执行准入控制：子代理派发前的工作区、租约与父子任务守卫",
+  "description": "在子代理派发边界引入统一的准入判定：父任务不可作为实现目标、实现任务必须先 in_progress、隔离任务必须在自己的 worktree、main checkout 不能被跨任务占用；补齐 breadcrumb 实时工作区状态、planner 容器语义、task.py start 父任务门禁、workspace ensure 的 session key 解析。目标不是 hook 补丁，而是补齐并行执行缺失的决策层与能力降级。",
+  "status": "in_progress",
+  "dev_type": null,
+  "scope": null,
+  "package": "cli",
+  "priority": "P0",
+  "creator": "jingd2",
+  "assignee": "jingd2",
+  "createdAt": "2026-10-28",
+  "completedAt": null,
+  "branch": null,
+  "base_branch": "main",
+  "worktree_path": null,
+  "commit": null,
+  "pr_url": null,
+  "subtasks": [],
+  "children": [],
+  "parent": null,
+  "relatedFiles": [],
+  "notes": "",
+  "meta": {
+    "parallel": {
+      "touches": [
+        "packages/core/src/task/dispatch/**",
+        "packages/core/src/state/runtime-facts.ts",
+        "packages/core/src/state/session/tickets.ts",
+        "packages/core/src/context/subagent/**",
+        "packages/core/src/context/types.ts",
+        "packages/core/src/platform/capabilities.ts",
+        "packages/core/src/task/parallel/**",
+        "packages/cli/src/services/workspace.ts",
+        "packages/cli/src/services/lease.ts",
+        "packages/cli/src/services/parallel.ts",
+        "packages/cli/src/templates/shared-hooks/**",
+        "packages/cli/src/templates/opencode/**",
+        ".phronia/scripts/task.py"
+      ]
+    }
+  }
+}

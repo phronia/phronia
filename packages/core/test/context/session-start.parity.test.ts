@@ -4,8 +4,10 @@ import os from "node:os";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
-import { handleContext, renderContext } from "../../src/context/index.js";
+import { handleContext } from "../../src/context/index.js";
 import { CORE_VERSION } from "../../src/version.js";
+
+const RUNTIME_LINE = /^(workspace|claim|lease|parallel): /;
 
 const REPO_ROOT = path.resolve(
   path.dirname(fileURLToPath(import.meta.url)),
@@ -54,9 +56,20 @@ describe.skipIf(!pythonAvailable)("session-start parity", () => {
       input: { session_id: "abc" },
       env: { CLAUDE_PROJECT_DIR: root },
     });
-    const actual = renderContext(response).length > 0
-      ? response.blocks.map((block) => block.text).join("\n\n")
-      : "";
+    // S1 adds workspace/claim/lease/parallel to `<current-state>`. The
+    // standalone Python scripts are retained only as a legacy-migration guard;
+    // every platform hook config calls `phronia-hook.py` → TS core. Parity
+    // therefore covers the rest of the block, not the new facts lines.
+    const actual = response.blocks
+      .map((block) =>
+        block.id === "current-state"
+          ? block.text
+              .split("\n")
+              .filter((line) => !RUNTIME_LINE.test(line))
+              .join("\n")
+          : block.text,
+      )
+      .join("\n\n");
 
     expect(actual).toBe(expected);
   });

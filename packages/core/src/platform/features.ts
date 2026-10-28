@@ -14,6 +14,7 @@ export type FeatureId =
   | "context.workflowState"
   | "task.branch"
   | "task.worktree"
+  | "task.dispatchAdmission"
   | "crossRepo.task"
   | "rules.gate"
   | "coordinator.mode";
@@ -68,6 +69,15 @@ function missingRequirement(
     case "crossRepo.task":
       return environment.gitRemote === "unsupported"
         ? "gitRemote is unsupported for this environment"
+        : null;
+    case "task.dispatchAdmission":
+      if (capabilities.hookPolicy !== "block") {
+        return capabilities.hookPolicy === "inject"
+          ? "hookPolicy: inject; the harness can add context but cannot block a dispatch (guard only)"
+          : "hookPolicy: unknown; blocking is unverified and treated as inject (fail closed)";
+      }
+      return behavior.subagentContext.kind === "none"
+        ? `subagentContext: ${behavior.subagentContext.reason}`
         : null;
     case "rules.gate":
       return capabilities.loopControl === "full"

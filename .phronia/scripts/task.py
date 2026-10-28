@@ -8,7 +8,7 @@ Usage:
     python3 task.py add-context <dir> <file> <path> [reason] # Add jsonl entry
     python3 task.py validate <dir>              # Validate jsonl files
     python3 task.py list-context <dir>          # List jsonl entries
-    python3 task.py start <dir>                 # Set active task, record current branch
+    python3 task.py start <dir>                 # Set active task, record current feature branch (--coordinator for a parent task)
     python3 task.py current [--source] [--json] # Show active task
     python3 task.py finish                      # Clear active task
     python3 task.py set-branch <dir> <branch>   # Set git branch
@@ -47,7 +47,7 @@ from common.active_task import (
     resolve_context_key,
     set_active_task,
 )
-from common.git import current_branch_name
+from common.git import current_branch_name, resolve_default_branch
 from common.io import (
     describe_json_read_failure,
     read_json_checked,
@@ -85,12 +85,19 @@ def _record_start_state(
     repo_root: Path,
     label: str = "",
 ) -> None:
-    """Move a freshly started task to in_progress and record its branch.
+    """Move a freshly started task to in_progress and record its feature branch.
 
     Both updates share one read/write: the status flip from planning, and the
     checked-out branch when `branch` is still empty. Recording at start is what
     keeps `branch` trustworthy at archive time — a task whose branch is only
     ever set by hand tends to reach archive with `branch: null`.
+
+    The integration/base branch is deliberately NOT recorded. `branch` means
+    "this task's dedicated feature branch"; recording `main` makes
+    `phronia task workspace ensure` treat the integration branch as a worktree
+    branch and fail with `WORKSPACE_TARGET_EXISTS: branch main is already
+    checked out`. Leaving it empty lets `ensure` reuse the main checkout for a
+    serial task, or create `phronia/<slug>` when isolation is required.
 
     Tolerant on purpose — a broken task.json does not fail `start`, because the
     session pointer is the point of the command. But the read overwrites the
@@ -115,15 +122,9 @@ def _record_start_state(
 
     # Only fill an empty field: an explicit `set-branch` must survive a later
     # `start` (re-starting a task after a checkout is a normal thing to do).
-    base_branch_conflict: str | None = None
     if not data.get("branch"):
         branch = current_branch_name(repo_root)
-        if branch:
-            data["branch"] = branch
-            applied.append(f"✓ Branch recorded: {branch}{label}")
-            if branch == data.get("base_branch"):
-                base_branch_conflict = branch
-        else:
+        if not branch:
             print(
                 colored(
                     "Note: no checked-out branch (detached HEAD, or not a git "
@@ -132,6 +133,19 @@ def _record_start_state(
                 ),
                 file=sys.stderr,
             )
+        elif _is_integration_branch(branch, data, repo_root):
+            print(
+                colored(
+                    f"Note: '{branch}' is the integration/base branch; task "
+                    "branch left empty. `workspace ensure` will reuse the main "
+                    "checkout or create phronia/<slug> when isolation is needed.",
+                    Colors.YELLOW,
+                ),
+                file=sys.stderr,
+            )
+        else:
+            data["branch"] = branch
+            applied.append(f"✓ Branch recorded: {branch}{label}")
 
     if not applied:
         return
@@ -150,22 +164,65 @@ def _record_start_state(
     for line in applied:
         print(colored(line, Colors.GREEN))
 
-    if base_branch_conflict:
-        # Recorded anyway — the value is true, it just cannot describe a PR.
-        # Archive refuses this shape, so say so now rather than at the gate.
-        print(
-            colored(
-                f"Warning: '{base_branch_conflict}' is also this task's base_branch; "
-                "a PR cannot target its own branch, and archive will refuse it.",
-                Colors.YELLOW,
-            ),
-            file=sys.stderr,
-        )
-        print(
-            f"Once you branch off, run: python3 {DIR_WORKFLOW}/scripts/task.py "
-            "set-branch <task> <feature-branch>",
-            file=sys.stderr,
-        )
+
+def _is_integration_branch(
+    branch: str,
+    data: dict,
+    repo_root: Path,
+) -> bool:
+    """Whether `branch` is the integration/base branch, not a feature branch."""
+    candidates = {"main", "master"}
+    base_branch = data.get("base_branch")
+    if isinstance(base_branch, str) and base_branch.strip():
+        candidates.add(base_branch.strip())
+    default_branch = resolve_default_branch(repo_root)
+    if default_branch:
+        candidates.add(default_branch)
+    return branch in candidates
+
+
+def _task_children(
+    task_dir: Path,
+    repo_root: Path,
+) -> list[tuple[str, str]]:
+    """Return `(repo-relative ref, status)` for a parent's direct children.
+
+    Children are stored as directory names by `add-subtask`, but hand-edited
+    task.json files may use a relative or absolute path. Unknown children are
+    reported as `missing` instead of raising: the parent gate must still name
+    every child, including the broken ones.
+    """
+    data, _reason = read_json_checked(task_dir / FILE_TASK_JSON)
+    if data is None:
+        return []
+    children = data.get("children")
+    if not isinstance(children, list):
+        return []
+
+    rows: list[tuple[str, str]] = []
+    for child in children:
+        if not isinstance(child, str) or not child.strip():
+            continue
+        normalized = child.strip().replace("\\", "/")
+        while normalized.startswith("./"):
+            normalized = normalized[2:]
+        if Path(normalized).is_absolute():
+            child_dir = Path(normalized)
+        elif "/" in normalized:
+            child_dir = repo_root / normalized
+        else:
+            child_dir = repo_root / DIR_WORKFLOW / DIR_TASKS / normalized
+        try:
+            ref = child_dir.relative_to(repo_root).as_posix()
+        except ValueError:
+            ref = normalized
+
+        status = "missing"
+        child_data, _child_reason = read_json_checked(child_dir / FILE_TASK_JSON)
+        if child_data is not None and isinstance(child_data.get("status"), str):
+            status = child_data["status"]
+        rows.append((ref, status))
+    return rows
 
 
 def cmd_start(args: argparse.Namespace) -> int:
@@ -191,12 +248,39 @@ def cmd_start(args: argparse.Namespace) -> int:
         print("Hint: Use task name (e.g., 'my-task') or full path (e.g., '.phronia/tasks/01-31-my-task')")
         return 1
 
+    # Parent/coordinator gate: a parent task is a container, not an execution
+    # unit. Starting it as the implementation target is what let a coordinator
+    # session dispatch `phronia-implement` against a PRD that describes several
+    # children. Refuse by default; `--coordinator` makes the intent explicit.
+    children = _task_children(full_path, repo_root)
+    if children and not getattr(args, "coordinator", False):
+        print(colored(
+            f"Error: this is a parent/coordinator task ({len(children)} "
+            f"{'child' if len(children) == 1 else 'children'}); "
+            "it cannot be an implementation target.",
+            Colors.RED,
+        ))
+        print("Children:")
+        for child_ref, status in children:
+            print(f"  - {child_ref}  [{status}]")
+        print("Next:")
+        for child_ref, _status in children:
+            print(
+                "  python3 ./.phronia/scripts/task.py start "
+                f"{child_ref}"
+            )
+        print("Coordination only? Re-run with --coordinator.")
+        return 1
+
     # Context-manifest gate (#573): a seeded-but-uncurated implement/check
     # manifest means every sub-agent dispatched for this task runs with zero
     # spec context, and nothing downstream surfaces that to the main session.
     # An absent manifest is not gated — create seeds the files only on
     # sub-agent-capable platforms, so absence means no sub-agent reads them.
-    if not getattr(args, "allow_empty_context", False):
+    # A coordinator start is exempt: a parent has no sub-agent consumers.
+    if not getattr(args, "allow_empty_context", False) and not getattr(
+        args, "coordinator", False
+    ):
         empty_manifests = [
             name
             for name in ("implement.jsonl", "check.jsonl")
@@ -688,6 +772,14 @@ def main() -> int:
         "--allow-empty-context",
         action="store_true",
         help="Start even when implement.jsonl / check.jsonl have no curated entries",
+    )
+    p_start.add_argument(
+        "--coordinator",
+        action="store_true",
+        help=(
+            "Allow a parent/coordinator task to become the active task and skip "
+            "the implement/check context-manifest gate"
+        ),
     )
 
     # current

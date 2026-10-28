@@ -45,6 +45,49 @@ When the gate is unavailable:
 3. Do not run two tasks in the same checkout. If the harness inherits cwd, that is the whole reason to use separate sessions.
 4. Serial alternative: dispatch one task at a time in the same session.
 
+### ZCode / Codex: the multi-session four steps
+
+Neither harness can move a sub-agent into another `cwd`, so dispatch admission
+will refuse an isolated task in the main checkout. Do this instead:
+
+1. `phronia task workspace ensure <task-ref> --json` — creates the worktree on
+   `phronia/<slug>` or reuses an existing one.
+2. Open a new window/session in the printed path (`codex`: `codex exec -C <path>`).
+3. Make the first prompt line `Active task: <task-ref>`; do not rely on the
+   ambient task pointer inherited from the coordinator session.
+4. When the work is committed in that worktree, run
+   `phronia task integrate <task-ref>` in the coordinator session.
+
+Run at most one task per checkout. The task lease and workspace claim are what
+make a second writer visible.
+
+### Pre-dispatch checklist (maps to `DISPATCH_*`)
+
+Before dispatching `phronia-implement` / `phronia-check`, verify:
+
+- [ ] the task is not a parent (`task.json.children` is empty) — otherwise
+      `DISPATCH_PARENT_TASK`;
+- [ ] `task.json.status == "in_progress"` — otherwise
+      `DISPATCH_TASK_NOT_IN_PROGRESS`;
+- [ ] an explicit `Active task:` names the active task or one of its children —
+      otherwise `DISPATCH_TASK_NOT_CHILD`;
+- [ ] the session cwd is the task's worktree when it has one — otherwise
+      `DISPATCH_WRONG_CHECKOUT`;
+- [ ] a linked worktree is registered to this task, not another —
+      otherwise `DISPATCH_CHECKOUT_OWNED_BY_OTHER`;
+- [ ] a task that needs isolation (`parallel.worktree=always`, `exclusive`, or
+      ≥2 `in_progress` siblings) is dispatched from its worktree — otherwise
+      `DISPATCH_ISOLATION_REQUIRED`;
+- [ ] main is unclaimed or claimed by this task — otherwise
+      `DISPATCH_MAIN_CLAIMED`;
+- [ ] a stale claim over a dirty main is resolved explicitly — otherwise
+      `DISPATCH_STALE_CLAIM_DIRTY`.
+
+`DISPATCH_NO_CLAIM`, `DISPATCH_LEASE_OTHER_OWNER`, and
+`DISPATCH_PLATFORM_CANNOT_BLOCK` are allow-with-guard: dispatch may proceed,
+but the sub-agent prompt starts with `WORKSPACE_GUARD` (and, on inject-only
+harnesses, `STOP:`) telling it to get a workspace first.
+
 ## Flow
 
 ### 1. Read the backlog
