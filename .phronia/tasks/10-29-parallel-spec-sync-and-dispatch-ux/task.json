@@ -1,0 +1,50 @@
+{
+  "id": "parallel-spec-sync-and-dispatch-ux",
+  "name": "parallel-spec-sync-and-dispatch-ux",
+  "title": "并行执行二期：spec 后置同步、派发 UX 与 worktree 运维补齐",
+  "description": "基于 bedrock 2610.29.2 的真实反馈，补齐并行执行的长期终态：把 .phronia/spec 从任务 footprint 中移出，改为 integrate 后的串行 spec-sync（选项 C）；修复 archive 的 branch 元数据回退、DISPATCH_WRONG_CHECKOUT/TASK_NOT_CHILD 的 next 文案、worktree add 与 ensure 的入口一致性；为 gitignored 构建输入、worktree 依赖、构建缓存提供显式配置与可执行提示；保留多会话核心，不做 ZCode 单会话 mutating 子代理并行。",
+  "status": "in_progress",
+  "dev_type": null,
+  "scope": null,
+  "package": "cli",
+  "priority": "P1",
+  "creator": "jingd2",
+  "assignee": "jingd2",
+  "createdAt": "2026-10-29",
+  "completedAt": null,
+  "branch": null,
+  "base_branch": "main",
+  "worktree_path": null,
+  "commit": null,
+  "pr_url": null,
+  "subtasks": [],
+  "children": [],
+  "parent": null,
+  "relatedFiles": [],
+  "notes": "",
+  "meta": {
+    "parallel": {
+      "touches": [
+        "packages/core/src/task/spec/**",
+        "packages/core/src/task/parallel/**",
+        "packages/core/src/task/integration/**",
+        "packages/core/src/task/dispatch/policy.ts",
+        "packages/core/src/state/tasks/artifacts.ts",
+        "packages/core/src/state/config/readers.ts",
+        "packages/core/src/context/user-prompt.ts",
+        "packages/core/src/context/session-start.ts",
+        "packages/cli/src/services/spec-sync.ts",
+        "packages/cli/src/services/integrate.ts",
+        "packages/cli/src/services/workspace.ts",
+        "packages/cli/src/services/parallel.ts",
+        "packages/cli/src/commands/spec.ts",
+        "packages/cli/src/commands/parallel.ts",
+        "packages/cli/src/cli/index.ts",
+        ".phronia/scripts/task.py",
+        ".phronia/scripts/common/task_store.py",
+        ".phronia/spec/cli/backend/parallel-tasks.md",
+        ".phronia/workflow.md"
+      ]
+    }
+  }
+}

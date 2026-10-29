@@ -24,6 +24,13 @@ You are already the `phronia-check` sub-agent that the main session dispatched. 
 4. Fix issues directly when they are within scope.
 5. Run the relevant lint, typecheck, and focused tests available for the touched code.
 
+## Spec Control Plane
+
+A code task must not change `.phronia/spec/**`. Verify the task's `spec-delta.md`
+targets (repo-relative under `.phronia/spec/`) and intent instead. A spec file in
+the diff is `SPEC_IN_CODE_TASK`; report it rather than rewriting spec in the task
+branch.
+
 ## Review Priorities
 
 - Behavioral regressions and missing requirements.

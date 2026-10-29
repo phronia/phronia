@@ -162,6 +162,10 @@ export function evaluateDispatch(facts: DispatchFacts): DispatchVerdict {
  * Rule 3: an explicit `Active task:` may only select the active task itself or
  * one of its direct children. Comparing raw strings is wrong: task.json may
  * store directory names, repo-relative refs, or absolute paths.
+ *
+ * The denial explains the relationship instead of only naming the next
+ * command: a session is bound to one task, and a mutating sibling needs its
+ * own session in its own worktree.
  */
 function checkTaskLineage(
   facts: DispatchFacts,
@@ -178,15 +182,65 @@ function checkTaskLineage(
   if (task.parent !== null && refsEqual(task.parent, active)) {
     return null;
   }
+  const relation = lineageRelation(facts, task);
+  const article = relation === "other" ? "an" : "a";
+  const requestedWorkspace = facts.workspace?.taskWorktree ?? null;
+  const worktreeLabel = requestedWorkspace ?? "run workspace ensure first";
   return block(
     "DISPATCH_TASK_NOT_CHILD",
-    `requested task ${requested} is neither the active task ${active} nor one of its children`,
+    `session is bound to ${active}; ${requested} is ${article} ${relation} task, not its child`,
     [
-      `${TASK_SCRIPT} start ${requested}`,
-      `re-dispatch implement with Active task: ${requested}`,
+      `open a separate session for ${requested} (worktree: ${worktreeLabel})`,
+      `first line: Active task: ${requested}`,
+      "do not dispatch mutating siblings from this session",
+      `platform ${facts.platform.id} subagentWorkspace=${facts.platform.subagentWorkspace}: use one session per worktree; coordinator mode requires per-task and is not enabled here`,
     ],
     facts,
+    {
+      activeTask: active,
+      requestedTask: requested,
+      requestedWorkspace,
+      relation,
+      platform: facts.platform,
+    },
   );
+}
+
+type LineageRelation = "self" | "child" | "sibling" | "other";
+
+/**
+ * Classify the requested task relative to the session's active task.
+ *
+ * `self` and `child` never reach the denial (they are allowed above); they are
+ * still returned so the helper is total and a future rule can reuse it.
+ */
+function lineageRelation(
+  facts: DispatchFacts,
+  task: TaskFacts,
+): LineageRelation {
+  const active = facts.activeTaskRef;
+  const requested = facts.requestedTaskRef;
+  if (active !== null && requested !== null && refsEqual(requested, active)) {
+    return "self";
+  }
+  if (active !== null && task.parent !== null && refsEqual(task.parent, active)) {
+    return "child";
+  }
+  const activeTask =
+    facts.activeTask ??
+    (facts.effectiveTask !== null &&
+    active !== null &&
+    refsEqual(facts.effectiveTask.ref, active)
+      ? facts.effectiveTask
+      : null);
+  if (
+    task.parent !== null &&
+    activeTask?.parent != null &&
+    refsEqual(task.parent, activeTask.parent)
+  ) {
+    return "sibling";
+  }
+  return "other";
 }
 
 /** Rules 6–7: current checkout must be the task's registered workspace. */
@@ -261,6 +315,7 @@ function checkCheckout(
         ensureCommand(task.ref),
         "open a new session in the printed task worktree (Phronia cannot move this session)",
         `Active task: ${task.ref}`,
+        "do not run multiple mutating sub-agents in the main session; ZCode/Codex inherit the parent cwd",
         `phronia task integrate ${task.ref}`,
       ],
       facts,
@@ -365,10 +420,16 @@ function wrongCheckout(
   task: TaskFacts,
   worktree: string,
 ): DispatchVerdict {
+  // `cd` does not move an agent session's file tools, so a shell `cd` is only a
+  // fallback hint. The executable path is a new session in the worktree.
   return block(
     "DISPATCH_WRONG_CHECKOUT",
     `task ${task.ref} has a worktree at ${worktree}, but the current checkout is ${facts.checkout.root}`,
-    [`cd ${worktree}`, "re-dispatch implement from that checkout"],
+    [
+      `open a new session/window in ${worktree}`,
+      `first line: Active task: ${task.ref}`,
+      `cd ${worktree}   # only if your harness can move this session`,
+    ],
     facts,
   );
 }
@@ -409,6 +470,7 @@ function block(
   reason: string,
   next: readonly string[],
   facts: DispatchFacts,
+  extraDetails?: Readonly<Record<string, unknown>>,
 ): DispatchVerdict {
   return {
     decision: "block",
@@ -416,7 +478,10 @@ function block(
     severity: "error",
     reason,
     next,
-    details: detailsFor(facts),
+    details:
+      extraDetails === undefined
+        ? detailsFor(facts)
+        : { ...detailsFor(facts), ...extraDetails },
     guard: null,
   };
 }

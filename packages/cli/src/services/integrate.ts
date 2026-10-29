@@ -23,6 +23,7 @@ import {
   emptyTaskRecord,
   enqueueTask,
   footprintsOverlap,
+  isSpecOnly,
   normalizeFootprint,
   outcomeForConflict,
   peekQueue,
@@ -60,7 +61,6 @@ import {
   createLeaseStore,
   isLeaseBusy,
   isLeaseStale,
-  LeaseError,
   type LeaseHandle,
   type LeaseRecord,
   type LeaseStore,
@@ -74,6 +74,11 @@ import {
   type WorktreeRegistryEntry,
 } from "../adapters/shared-runtime.js";
 import { acquireTaskLease, releaseTaskLease } from "./lease.js";
+import { readDirtyPaths } from "./dirty-check.js";
+import {
+  acquireIntegrationLock,
+  type IntegrationLockRecord,
+} from "./integration-lock.js";
 import { tokenize } from "./workspace.js";
 
 const DEFAULT_VERIFY_TIMEOUT_MS = 30 * 60 * 1000;
@@ -249,21 +254,6 @@ interface WorkspaceClaimRecord extends LeaseRecord {
   host: string;
   pid: number;
   state: string;
-  acquiredAt: string;
-  heartbeatAt: string;
-  ttlSeconds: number;
-}
-
-interface IntegrationLockRecord extends LeaseRecord {
-  schemaVersion: number;
-  owner: string;
-  taskRef: string;
-  host: string;
-  pid: number;
-  phase: "acquiring" | "rebasing" | "verifying" | "merging" | "done";
-  baseBranch: string;
-  preLandSha: string;
-  postLandSha: string | null;
   acquiredAt: string;
   heartbeatAt: string;
   ttlSeconds: number;
@@ -754,13 +744,24 @@ function localPreconditions(
       `git -C ${context.mainRoot} checkout ${context.baseBranch}, or pass --base ${mainBranch}`,
     );
   }
-  const mainStatus = git.status(context.mainRoot);
-  if (!mainStatus.clean) {
+  const mainStatus = readDirtyPaths(
+    git,
+    context.mainRoot,
+    context.config.parallel.integration.ignoredInputs,
+    context.mainRoot,
+  );
+  if (mainStatus.dirtyPaths.length > 0) {
     return failure(
       "INTEGRATE_DIRTY_CHECKOUT",
-      `the main checkout has ${mainStatus.dirtyPaths} uncommitted path(s)`,
+      `the main checkout has ${mainStatus.dirtyPaths.length} uncommitted path(s)`,
       "commit or stash them in the main checkout, then retry",
-      { dirtyPaths: mainStatus.dirtyPaths },
+      {
+        dirtyPaths: mainStatus.dirtyPaths.length,
+        ...(mainStatus.ignoredPaths.length === 0
+          ? {}
+          : { ignoredPaths: mainStatus.ignoredPaths }),
+        ...(mainStatus.warning === null ? {} : { warning: mainStatus.warning }),
+      },
     );
   }
 
@@ -794,13 +795,27 @@ function localPreconditions(
         { workspace: context.workspace, branch: worktreeBranch },
       );
     }
-    const worktreeStatus = git.status(context.workspace);
-    if (!worktreeStatus.clean) {
+    const worktreeStatus = readDirtyPaths(
+      git,
+      context.workspace,
+      context.config.parallel.integration.ignoredInputs,
+      context.mainRoot,
+    );
+    if (worktreeStatus.dirtyPaths.length > 0) {
       return failure(
         "INTEGRATE_DIRTY_CHECKOUT",
-        `the task worktree has ${worktreeStatus.dirtyPaths} uncommitted path(s)`,
+        `the task worktree has ${worktreeStatus.dirtyPaths.length} uncommitted path(s)`,
         `cd ${context.workspace} && phronia task commit ${context.ref}`,
-        { workspace: context.workspace, dirtyPaths: worktreeStatus.dirtyPaths },
+        {
+          workspace: context.workspace,
+          dirtyPaths: worktreeStatus.dirtyPaths.length,
+          ...(worktreeStatus.ignoredPaths.length === 0
+            ? {}
+            : { ignoredPaths: worktreeStatus.ignoredPaths }),
+          ...(worktreeStatus.warning === null
+            ? {}
+            : { warning: worktreeStatus.warning }),
+        },
       );
     }
     const artifacts = taskArtifactsCommitted(context, worktreeBranch);
@@ -812,6 +827,8 @@ function localPreconditions(
         { workspace: context.workspace, branch: worktreeBranch },
       );
     }
+    const specGate = specInCodeTask(context);
+    if (specGate !== null) return specGate;
   } else {
     const artifacts = taskArtifactsCommitted(context, context.baseBranch);
     if (!artifacts) {
@@ -922,7 +939,7 @@ function runLocalAttempt(
         resolution.reason,
       );
     }
-    const lock = acquireIntegrationLock(context, options, baseSha);
+    const lock = acquireTaskIntegrationLock(context, options, baseSha);
     if (!lock.ok) {
       return withMode(lock, mode, resolution.reason);
     }
@@ -1122,69 +1139,27 @@ function tryAcquireClaim(
   }
 }
 
-type LockResult =
-  | {
-      readonly ok: true;
-      readonly handle: LeaseHandle<IntegrationLockRecord>;
-      readonly store: LeaseStore<IntegrationLockRecord>;
-    }
-  | IntegrateFailure;
+type LockResult = ReturnType<typeof acquireIntegrationLock>;
 
-function acquireIntegrationLock(
+function acquireTaskIntegrationLock(
   context: IntegrationContext,
   options: IntegrateOptions,
   preLandSha: string,
 ): LockResult {
-  const ttl = lockTtlSeconds(context, options);
-  const store = createLeaseStore<IntegrationLockRecord>({
-    path: context.paths.integrationLock,
+  return acquireIntegrationLock({
+    cwd: context.mainRoot,
+    git: context.git,
+    taskRef: context.ref,
+    baseBranch: context.baseBranch,
+    phase: "acquiring",
+    preLandSha,
+    ttlSeconds: lockTtlSeconds(context, options),
     now: context.now,
     host: context.host,
     pid: context.pid,
-    defaultTtlSeconds: ttl,
-    liveness: "ttl",
+    paths: context.paths,
+    ...(options.sessionKey === undefined ? {} : { sessionKey: options.sessionKey }),
   });
-  const nowIso = context.now().toISOString();
-  const record: IntegrationLockRecord = {
-    schemaVersion: 1,
-    owner: context.ref,
-    taskRef: context.ref,
-    host: context.host,
-    pid: context.pid,
-    phase: "acquiring",
-    baseBranch: context.baseBranch,
-    preLandSha,
-    postLandSha: null,
-    acquiredAt: nowIso,
-    heartbeatAt: nowIso,
-    ttlSeconds: ttl,
-  };
-  try {
-    const acquired = store.acquire(record);
-    if (isLeaseBusy(acquired)) {
-      return failure(
-        "INTEGRATE_LOCK_BUSY",
-        `another integration is in progress: ${String(acquired.busy.owner ?? acquired.busy.taskRef ?? "unknown")} (${String(acquired.busy.phase ?? "acquiring")})`,
-        "use --queue, --wait, or retry after the current integration finishes",
-        {
-          owner: acquired.busy.owner ?? null,
-          phase: acquired.busy.phase ?? null,
-          baseBranch: acquired.busy.baseBranch ?? null,
-          preLandSha: acquired.busy.preLandSha ?? null,
-        },
-      );
-    }
-    return { ok: true, handle: acquired, store };
-  } catch (error) {
-    if (error instanceof LeaseError) {
-      return failure(error.code, error.message, "inspect the shared runtime and retry");
-    }
-    return failure(
-      "INTEGRATE_LOCK_BUSY",
-      `cannot acquire the integration lock: ${errorMessage(error)}`,
-      "inspect the shared runtime permissions and retry",
-    );
-  }
 }
 
 function executeLocal(
@@ -1861,18 +1836,33 @@ function runRemote(
       resolution.reason,
     );
   }
-  const status = context.git.status(context.workspace);
-  if (!status.clean) {
+  const status = readDirtyPaths(
+    context.git,
+    context.workspace,
+    context.config.parallel.integration.ignoredInputs,
+    context.mainRoot,
+  );
+  if (status.dirtyPaths.length > 0) {
     return withMode(
       failure(
         "INTEGRATE_DIRTY_CHECKOUT",
-        `the task worktree has ${status.dirtyPaths} uncommitted path(s); remote mode only pushes committed work`,
+        `the task worktree has ${status.dirtyPaths.length} uncommitted path(s); remote mode only pushes committed work`,
         `cd ${context.workspace} && phronia task commit ${context.ref}`,
-        { dirtyPaths: status.dirtyPaths },
+        {
+          dirtyPaths: status.dirtyPaths.length,
+          ...(status.ignoredPaths.length === 0
+            ? {}
+            : { ignoredPaths: status.ignoredPaths }),
+          ...(status.warning === null ? {} : { warning: status.warning }),
+        },
       ),
       mode,
       resolution.reason,
     );
+  }
+  const specGate = specInCodeTask(context);
+  if (specGate !== null) {
+    return withMode(specGate, mode, resolution.reason);
   }
 
   const lease = acquireIntegratorLease(context, options);
@@ -3159,6 +3149,40 @@ function taskArtifactsCommitted(
   } catch {
     return false;
   }
+}
+
+const SPEC_PATH_PREFIX = ".phronia/spec/";
+
+/**
+ * Spec is post-integration control-plane state. A code task that committed
+ * `.phronia/spec/**` on its branch must move the intent into `spec-delta.md`
+ * instead; spec-only tasks (`meta.kind=spec`) bypass the gate.
+ */
+function specInCodeTask(context: IntegrationContext): IntegrateFailure | null {
+  if (isSpecOnly(context.view)) return null;
+  const files = specFilesChangedOnBranch(context);
+  if (files.length === 0) return null;
+  return failure(
+    "SPEC_IN_CODE_TASK",
+    `task ${context.ref} changes .phronia/spec/** on its branch (${files.join(", ")}); spec is applied after integration, not in a code task`,
+    `in ${context.workspace} run \`git restore --staged --worktree .phronia/spec\`, write the intent to spec-delta.md, then re-commit`,
+    { files, workspace: context.workspace, branch: context.taskBranch },
+  );
+}
+
+function specFilesChangedOnBranch(context: IntegrationContext): readonly string[] {
+  if (context.taskUsesMain) return [];
+  if (context.taskBranch === null || context.taskBranch === "") return [];
+  const result = runGit(context.mainRoot, [
+    "diff",
+    "--name-only",
+    `${context.baseBranch}...${context.taskBranch}`,
+  ]);
+  if (!result.ok) return [];
+  return result.output
+    .split(/\r?\n/)
+    .map((line) => line.trim())
+    .filter((line) => line.startsWith(SPEC_PATH_PREFIX));
 }
 
 function taskStatus(state: StateReader, taskRef: string | null): string | null {

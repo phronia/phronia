@@ -261,6 +261,7 @@ workspace: main (unclaimed) | main (claimed by task <ref>) | main (claim stale: 
 claim: <task|session> <owner> | stale (<owner>) | none | unknown (read failed)
 lease: session <owner> | subagent <owner> | task <owner> | stale (<owner>) | none | unknown (read failed)
 parallel: serial | N in_progress children (planning M; total K) | none | unknown
+spec: none | pending | synced
 next: start a child before dispatching implement/check (children: K)
 </runtime-state>
 ```
@@ -270,8 +271,14 @@ next: start a child before dispatching implement/check (children: K)
 - `claim` is `<git-common-dir>/phronia/workspace.claim.json`; `lease` is the
   active task's lease.
 - `parallel` is `serial` for a leaf task and the child census for a parent.
+- `spec` is the task's post-integration spec state. `pending` means
+  `spec-delta.md` exists and `meta.spec_sync.status` is not `synced` (a
+  `failed` sync also reads as `pending`); `none` means no delta; `synced`
+  means the control plane recorded `meta.spec_sync.status = "synced"`. The
+  sources are `spec-delta.md` and `task.json.meta.spec_sync`, never git or
+  code.
 - `next` appears only for a parent task (`children.length > 0`).
-- `buildSessionStart`'s `<current-state>` includes the same four fact lines
+- `buildSessionStart`'s `<current-state>` includes the same five fact lines
   (without `next`).
 - The block is computed from `state/runtime-facts.ts` (read-only). A read
   failure renders `unknown (read failed)`; it is never silently omitted.

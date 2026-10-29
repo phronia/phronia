@@ -8735,6 +8735,143 @@ print(len(entries))
       fs.existsSync(path.join(tmpDir, ".phronia", "tasks", "issue-106")),
     ).toBe(false);
   });
+
+  // --- S2: branch resolution from the shared worktree registry ------------
+
+  function writeWorktreeRegistry(
+    entries: readonly Record<string, unknown>[],
+  ): void {
+    const shared = path.join(tmpDir, ".git", "phronia");
+    fs.mkdirSync(shared, { recursive: true });
+    fs.writeFileSync(
+      path.join(shared, "worktrees.json"),
+      JSON.stringify({ schemaVersion: 1, worktrees: entries }, null, 2),
+    );
+  }
+
+  function headSha(): string {
+    return execSync("git rev-parse HEAD", { cwd: tmpDir, encoding: "utf-8" }).trim();
+  }
+
+  function archiveIssue106(extraArgs: readonly string[] = []) {
+    const taskScriptPath = path.join(tmpDir, ".phronia", "scripts", "task.py");
+    return spawnSync(
+      pythonCmd,
+      [
+        taskScriptPath,
+        "archive",
+        ".phronia/tasks/issue-106",
+        "--no-commit",
+        ...extraArgs,
+      ],
+      { cwd: tmpDir, encoding: "utf-8", env: sessionEnv() },
+    );
+  }
+
+  it("[issue-399.3] archive reads the branch from the worktree registry", () => {
+    setupTaskRepo();
+    initTaskGitRepo("main");
+    execSync("git checkout -q -b phronia/issue-106", { cwd: tmpDir });
+    fs.writeFileSync(path.join(tmpDir, "feature.txt"), "landed\n");
+    execSync("git add -A", { cwd: tmpDir });
+    execSync("git commit -q -m feature", { cwd: tmpDir });
+    const featureSha = headSha();
+    execSync("git checkout -q main", { cwd: tmpDir });
+    execSync("git merge -q --ff-only phronia/issue-106", { cwd: tmpDir });
+
+    const worktree = path.join(tmpDir, ".phronia", "worktrees", "issue-106");
+    execSync(`git worktree add -q -b worktree/issue-106 ${JSON.stringify(worktree)} main`, {
+      cwd: tmpDir,
+    });
+    writeWorktreeRegistry([
+      {
+        taskRef: ".phronia/tasks/issue-106",
+        path: worktree,
+        branch: "worktree/issue-106",
+        kind: "phronia",
+        provisional: false,
+      },
+    ]);
+    patchIssue106Task({
+      branch: null,
+      base_branch: "main",
+      meta: { integration: { outcome: "landed", commit: featureSha } },
+    });
+
+    const result = archiveIssue106();
+    expect(result.stderr).not.toContain("no branch is recorded");
+    expect(result.status).toBe(0);
+    expect(
+      fs.existsSync(path.join(tmpDir, ".phronia", "tasks", "issue-106")),
+    ).toBe(false);
+    // The branch is kept; only the worktree is removed.
+    expect(
+      execSync("git branch --list worktree/issue-106", {
+        cwd: tmpDir,
+        encoding: "utf-8",
+      }).trim(),
+    ).toContain("worktree/issue-106");
+  });
+
+  it("[issue-399.3] archive accepts a removed worktree whose landed commit is on the base", () => {
+    setupTaskRepo();
+    initTaskGitRepo("main");
+    execSync("git checkout -q -b phronia/issue-106", { cwd: tmpDir });
+    fs.writeFileSync(path.join(tmpDir, "feature.txt"), "landed\n");
+    execSync("git add -A", { cwd: tmpDir });
+    execSync("git commit -q -m feature", { cwd: tmpDir });
+    const featureSha = headSha();
+    execSync("git checkout -q main", { cwd: tmpDir });
+    execSync("git merge -q --ff-only phronia/issue-106", { cwd: tmpDir });
+    execSync("git branch -q -D phronia/issue-106", { cwd: tmpDir });
+
+    patchIssue106Task({
+      branch: null,
+      base_branch: "main",
+      meta: { integration: { outcome: "landed", commit: featureSha } },
+    });
+
+    const result = archiveIssue106();
+    expect(result.status).toBe(0);
+    expect(result.stderr).toContain(
+      "landed without a dedicated branch (verified by integration metadata)",
+    );
+    expect(
+      fs.existsSync(path.join(tmpDir, ".phronia", "tasks", "issue-106")),
+    ).toBe(false);
+  });
+
+  it("[issue-399.3] archive still refuses a removed, unlanded worktree with no branch", () => {
+    setupTaskRepo();
+    initTaskGitRepo("main", true);
+    patchIssue106Task({
+      branch: null,
+      base_branch: "main",
+      meta: { integration: { outcome: "pushed", commit: "deadbeef" } },
+    });
+
+    const result = archiveIssue106();
+    expect(result.status).toBe(1);
+    expect(result.stderr).toContain("no branch is recorded");
+    expect(result.stderr).toContain("task.py set-branch");
+    expect(result.stderr).toContain("--skip-branch-validation");
+    expect(
+      fs.existsSync(path.join(tmpDir, ".phronia", "tasks", "issue-106")),
+    ).toBe(true);
+  });
+
+  it("[issue-399.3] archive without a base branch or remote keeps the previous behavior", () => {
+    setupTaskRepo();
+    initTaskGitRepo("main");
+    patchIssue106Task({ branch: null, base_branch: null });
+
+    const result = archiveIssue106();
+    expect(result.status).toBe(0);
+    expect(result.stderr).not.toContain("no branch is recorded");
+    expect(
+      fs.existsSync(path.join(tmpDir, ".phronia", "tasks", "issue-106")),
+    ).toBe(false);
+  });
 });
 
 describe("regression: backslash in markdown templates (beta.12)", () => {
@@ -9668,7 +9805,7 @@ describe("regression: parse_simple_yaml uses _unquote not greedy strip (0.3.8)",
     // The bug: .strip('"').strip("'") greedily eats nested quotes
     // e.g. "echo 'hello'" -> strip("'") -> echo 'hello (broken!)
     expect(commonTrellisConfig).not.toContain(".strip('\"').strip(\"'\")");
-    expect(commonTrellisConfig).toContain("_unquote(stripped[2:].strip())");
+    expect(commonTrellisConfig).toContain("_unquote(content)");
   });
 
   it("trellis_config.py uses _unquote for key-value, not .strip('\"')", () => {
@@ -9772,14 +9909,16 @@ describe("regression: parse_simple_yaml Python execution (0.3.8)", () => {
 
   it("a mapping inside a list is not hoisted into the parent dict", () => {
     // Was: {"packages": ["name: cli"], "path": "packages/cli"} — the nested
-    // `path` key silently became a top-level config key.
+    // `path` key silently became a top-level config key. Flat mappings are now
+    // parsed as list items, so the nested key stays inside its item.
     const { result, stderr } = runPythonYamlFull(
       "packages:\n  - name: cli\n    path: packages/cli\n",
     );
     expect(result).not.toHaveProperty("path");
-    expect(result).toEqual({ packages: ["name: cli"] });
-    expect(stderr).toContain("mappings inside a list are not supported");
-    expect(stderr).toContain("path: packages/cli");
+    expect(result).toEqual({
+      packages: [{ name: "cli", path: "packages/cli" }],
+    });
+    expect(stderr).not.toContain("mappings inside a list are not supported");
   });
 
   it("block scalars are reported and their body is not leaked", () => {

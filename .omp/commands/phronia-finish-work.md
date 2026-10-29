@@ -1,11 +1,11 @@
 ---
-description: "Wrap up: integrate the task, archive it, refresh docs, and record the journal."
+description: "Wrap up: integrate the task, sync spec deltas, archive it, refresh docs, and record the journal."
 argument-hint: "[task-name]"
 ---
 
-Wrap up the current session in this order: **integrate → archive → docs/journal**. Code commits are NOT done here — those happen in workflow Phase 3.4 before you invoke this command.
+Wrap up the current session in this order: **integrate → spec sync → archive → docs/journal**. Code commits are NOT done here — those happen in workflow Phase 3.4 before you invoke this command.
 
-`integrate` and `archive` are different steps. Integrate lands the work and records the outcome; archive moves the task directory and cleans up a landed worktree. Never archive a task whose integrate failed, is dirty, or has not landed.
+`integrate`, `spec sync`, and `archive` are different steps. Integrate lands the work and records the outcome; spec sync applies the task's `spec-delta.md` in the main checkout; archive moves the task directory and cleans up a landed worktree. Never archive a task whose integrate failed, is dirty, has not landed, or has an unsynced spec delta.
 
 ## Preconditions
 
@@ -16,7 +16,7 @@ Before integrating, confirm all of these:
    git -C <worktree-path> status --porcelain
    ```
    Non-empty means uncommitted work. Return to Phase 3.4 or run `phronia task commit <ref>` inside the task worktree. Do not archive to "clean it up".
-2. **Task artifacts are committed.** `prd.md` / `design.md` / `implement.md` and any spec changes belong in the work commits, not in the archive commit.
+2. **Task artifacts are committed.** `prd.md` / `design.md` / `implement.md`, the task's `spec-delta.md`, and any code changes belong in the work commits, not in the archive commit. A code task must not commit `.phronia/spec/**`; if it did, `integrate` fails with `SPEC_IN_CODE_TASK`.
 3. **Verification is configured, or `--no-verify` is explicit.** If the project has no verification command, integrate refuses; pass `--no-verify` only when the user accepts an unverified landing. The outcome is then reported as unverified.
 
 If the task has no worktree, integrate operates on the current checkout; the same preconditions apply to the main checkout.
@@ -31,7 +31,7 @@ This prints:
 
 - **My active tasks** — review whether any besides the current one are actually done (code merged, AC met) and should be archived this round.
 - **Git status** — quick visual on what's dirty.
-- **Recent commits** — you'll need their hashes in Step 5 for `--commit`.
+- **Recent commits** — you'll need their hashes in Step 6 for `--commit`.
 
 If `--mode record` surfaces other completed tasks not tied to the current session, surface them to the user with a one-shot confirmation: "These N tasks look done — integrate and archive them too in this round? [y/N]". Default is no; the current active task is always handled regardless.
 
@@ -86,7 +86,24 @@ If `integrate` exits non-zero, **stop this skill immediately**. Do not run `task
 
 Never archive a task whose integrate failed, whose worktree is dirty, or whose `meta.integration.outcome` is not `landed`.
 
-## Step 4: Archive task(s)
+## Step 4: Sync spec deltas
+
+A code task records spec intent in `.phronia/tasks/<ref>/spec-delta.md`; the task branch must not contain `.phronia/spec/**` changes. After the code has landed, the main checkout applies the delta.
+
+```bash
+phronia task spec plan <task-ref>
+# Apply the delta to .phronia/spec/** in the main checkout, using the landed diff
+# and the current spec text. Keep the delta's target list authoritative.
+phronia task spec commit <task-ref>
+```
+
+- `spec plan` is read-only and requires `meta.integration.outcome=landed`.
+- `spec commit` holds the same integration lock as `integrate`, refuses a dirty non-spec main checkout, commits only `.phronia/spec/**` as `chore(spec): sync <refs>`, then records `meta.spec_sync={status:"synced",commit,synced_at,refs}` in a metadata-only commit.
+- A task without `spec-delta.md` reports `none`; skip it.
+- If the plan or commit fails (not landed, target missing, lock busy, no spec change), **stop**. Do not archive.
+- `--skip-spec-sync` is only for an explicit user decision. It records the reason in the task's `notes`, and archive then proceeds.
+
+## Step 5: Archive task(s)
 
 ```bash
 python3 ./.phronia/scripts/task.py archive <task-name>
@@ -96,10 +113,12 @@ At minimum: the current active task (if any). Plus any extra tasks the user conf
 
 Archive enforces the lifecycle guard:
 
+- **pending spec delta** (`SPEC_SYNC_PENDING`) → refused; run Step 4 first, or use `--skip-spec-sync` only with explicit user consent.
 - **dirty worktree** → refused; commit in the worktree or explicitly remove it.
 - **clean worktree + outcome `landed`** → the worktree is removed automatically (the branch is kept), then the task is archived.
 - **clean worktree + not landed** (including `pushed`, `blocked`, `none`) → refused; integrate first, or explicitly `phronia task worktree remove <ref>`.
 - **no worktree** → the pre-existing archive behavior is unchanged.
+- **branch metadata** is resolved from `task.json.branch` → the shared worktree registry → `landed` + an integration commit reachable from the base. The normal path no longer needs `--skip-branch-validation`.
 
 `phronia task worktree prune` is a separate maintenance command, not part of archive. Use it to clean up already-archived / landed / clean worktrees; it never deletes dirty or unlanded ones.
 
@@ -115,7 +134,7 @@ If the change introduced a new module, data flow, or architectural decision,
 also update `docs/architecture.md`; if it changed capabilities or user-facing
 behavior, update `docs/product.md`. Both are narrative and reviewed like code.
 
-## Step 5: Record session journal
+## Step 6: Record session journal
 
 ```bash
 python3 ./.phronia/scripts/add_session.py \
@@ -124,6 +143,6 @@ python3 ./.phronia/scripts/add_session.py \
   --summary "Brief summary"
 ```
 
-Use the work-commit hashes produced in Phase 3.4 (visible in Step 1's `Recent commits` list, or via `git log --oneline`) for `--commit`. Do not include the archive commit hashes from Step 4. This produces a `chore: record journal` commit.
+Use the work-commit hashes produced in Phase 3.4 (visible in Step 1's `Recent commits` list, or via `git log --oneline`) for `--commit`. Do not include the spec-sync or archive commit hashes from Steps 4–5. This produces a `chore: record journal` commit.
 
-Final git log order: `<work commits from 3.4>` → `<integrate metadata-only commit, if any>` → `chore(task): archive ...` (one or more) → `chore: record journal`.
+Final git log order: `<work commits from 3.4>` → `<integrate metadata-only commit, if any>` → `chore(spec): sync ...` → `chore(task): record spec sync ...` → `chore(task): archive ...` (one or more) → `chore: record journal`.

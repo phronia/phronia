@@ -26,6 +26,7 @@ import {
   runWorktreePrune,
 } from "../commands/worktree.js";
 import {
+  runParallelLaunch,
   runParallelPlan,
   runParallelStatus,
   runWorkspacePrepare,
@@ -44,6 +45,11 @@ import { runTaskIntegrate } from "../commands/integrate.js";
 import { runTaskDispatch } from "../commands/dispatch.js";
 import { runCoordinatorStatus } from "../commands/coordinator.js";
 import { runTaskFootprintSet } from "../commands/footprint.js";
+import {
+  runTaskSpecCommit,
+  runTaskSpecPlan,
+  runTaskSpecStatus,
+} from "../commands/task-spec.js";
 import {
   runSpecBootstrap,
   runSpecSetStatus,
@@ -636,6 +642,7 @@ worktreeCommand
   .option("--base <ref>", "Base revision for a new branch")
   .option("--copy <path>", "Copy a path into the worktree (repeatable)", collect, [])
   .option("--post-create <cmd>", "Run a command in the worktree (repeatable)", collect, [])
+  .option("--copy-task", "Copy the task directory instead of requiring a scoped commit")
   .option("--force", "Allow a dirty main checkout")
   .option("--json", "Output machine-readable JSON")
   .action((taskRef: string, options: Record<string, unknown>) => {
@@ -645,6 +652,7 @@ worktreeCommand
       branch: options.branch as string | undefined,
       base: options.base as string | undefined,
       force: Boolean(options.force),
+      copyTask: Boolean(options.copyTask),
       copy: options.copy as string[],
       postCreate: options.postCreate as string[],
       json: Boolean(options.json),
@@ -763,6 +771,32 @@ parallelCommand
     const code = runParallelStatus({
       cwd,
       platform: options.platform as string | undefined,
+      json: Boolean(options.json),
+    });
+    if (code !== 0) process.exitCode = code;
+  });
+
+parallelCommand
+  .command("launch [refs...]")
+  .description(
+    "Emit a multi-session launch plan (never starts a session or process)",
+  )
+  .option("--wave <n>", "1-based wave to launch", (value) => Number(value))
+  .option(
+    "--prepare",
+    "Create/attach workspaces with `workspace ensure` (has side effects)",
+  )
+  .option("--platform <id>", "Harness id for open instructions")
+  .option("--session-key <key>", "Session identity used only for --prepare")
+  .option("--json", "Output machine-readable JSON")
+  .action((refs: string[], options: Record<string, unknown>) => {
+    const code = runParallelLaunch({
+      cwd,
+      refs,
+      wave: options.wave as number | undefined,
+      prepare: Boolean(options.prepare),
+      platform: options.platform as string | undefined,
+      sessionKey: options.sessionKey as string | undefined,
       json: Boolean(options.json),
     });
     if (code !== 0) process.exitCode = code;
@@ -950,6 +984,49 @@ footprintCommand
       cwd,
       paths,
       clear: Boolean(options.clear),
+      json: Boolean(options.json),
+    });
+    if (code !== 0) process.exitCode = code;
+  });
+
+const specSyncCommand = taskCommand
+  .command("spec")
+  .description("Plan, commit, and inspect post-integration spec sync");
+
+specSyncCommand
+  .command("plan <refs...>")
+  .option("--session-key <key>", "Session identity recorded for diagnostics")
+  .option("--json", "Output machine-readable JSON")
+  .action((refs: string[], options: Record<string, unknown>) => {
+    const code = runTaskSpecPlan(refs, {
+      cwd,
+      json: Boolean(options.json),
+      sessionKey: options.sessionKey as string | undefined,
+    });
+    if (code !== 0) process.exitCode = code;
+  });
+
+specSyncCommand
+  .command("commit <refs...>")
+  .option("--allow-missing", "Allow declared targets that did not change")
+  .option("--session-key <key>", "Session identity recorded on the integration lock")
+  .option("--json", "Output machine-readable JSON")
+  .action((refs: string[], options: Record<string, unknown>) => {
+    const code = runTaskSpecCommit(refs, {
+      cwd,
+      json: Boolean(options.json),
+      allowMissing: Boolean(options.allowMissing),
+      sessionKey: options.sessionKey as string | undefined,
+    });
+    if (code !== 0) process.exitCode = code;
+  });
+
+specSyncCommand
+  .command("status [refs...]")
+  .option("--json", "Output machine-readable JSON")
+  .action((refs: string[], options: Record<string, unknown>) => {
+    const code = runTaskSpecStatus(refs, {
+      cwd,
       json: Boolean(options.json),
     });
     if (code !== 0) process.exitCode = code;

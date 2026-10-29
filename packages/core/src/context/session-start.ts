@@ -280,6 +280,7 @@ function presentArtifacts(artifacts: TaskArtifacts): string {
   if (artifacts.implement) present.push("implement.md");
   if (artifacts.implementJsonl) present.push("implement.jsonl");
   if (artifacts.checkJsonl) present.push("check.jsonl");
+  if (artifacts.specDelta) present.push("spec-delta.md");
   if (artifacts.research) present.push("research/");
   return present.length > 0 ? present.join(", ") : "(none)";
 }
@@ -292,6 +293,7 @@ function emptyArtifacts(): TaskArtifacts {
     implementJsonl: false,
     checkJsonl: false,
     research: false,
+    specDelta: false,
     sizes: {},
   };
 }

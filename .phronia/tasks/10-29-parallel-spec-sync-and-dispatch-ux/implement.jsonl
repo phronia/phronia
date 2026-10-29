@@ -1,0 +1,6 @@
+{"file": ".phronia/spec/cli/backend/parallel-tasks.md", "reason": "运行契约：三平面、串行 integrate、coordinator；spec 控制平面与 launch 必须与它一致"}
+{"file": ".phronia/spec/cli/backend/workflow-state-contract.md", "reason": "breadcrumb spec 状态必须遵守状态键与 lifecycle 契约"}
+{"file": ".phronia/spec/cli/backend/filesystem-safety.md", "reason": "spec/inputs/ignored_inputs 的路径安全、原子写、越界拒绝"}
+{"file": ".phronia/spec/cli/backend/trellis-core-sdk.md", "reason": "core/cli 边界；spec policy 纯函数、IO 在 services"}
+{"file": ".phronia/spec/cli/unit-test/conventions.md", "reason": "单元/集成/e2e 分层与命名"}
+{"file": ".phronia/spec/core/backend/index.md", "reason": "core 不打印、不 process.exit、不读 process.cwd"}

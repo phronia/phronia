@@ -1,0 +1,4 @@
+{"file": ".phronia/spec/cli/backend/parallel-tasks.md", "reason": "验收：spec 控制平面、锁顺序、launch 不启动进程"}
+{"file": ".phronia/spec/cli/backend/workflow-state-contract.md", "reason": "验收：breadcrumb spec 状态不破坏现有键"}
+{"file": ".phronia/spec/cli/backend/filesystem-safety.md", "reason": "验收：inputs/ignored_inputs 不越界、不 blanket ignore"}
+{"file": ".phronia/spec/cli/backend/quality-guidelines.md", "reason": "验收：无静默 no-op、错误有 next"}

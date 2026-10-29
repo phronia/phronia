@@ -2314,14 +2314,33 @@ regression, and `regression.test.ts` asserts `config.py` has none.
 Every parsed value is a **string** — the parser does no type coercion, so
 `false` arrives as `"false"` and `2000` as `"2000"`. Accessors coerce (see
 below). Supported: `key: value`, nested mappings by indentation, `- ` lists of
-scalars, whole-line and inline `#` comments, one layer of matching quotes.
+scalars **or flat mappings**, whole-line and inline `#` comments, one layer of
+matching quotes.
+
+Flat mappings inside a `- ` item are parsed as one object per item, including
+continuation keys indented past the dash:
+
+```yaml
+parallel:
+  inputs:
+    - path: rust/web/node_modules   # item 1: {path: ..., mode: ...}
+      mode: symlink
+    - path: .env.local
+      mode: copy
+```
+
+This is the form `parallel.inputs` documents. **Nested lists inside a
+list-item mapping are still unsupported** (`- path: x` followed by a deeper
+`- item`); they are never flattened into the parent (the parser warns when the
+nested list sits where a mapping value is expected).
 
 Anything outside that subset is **named on stderr against the file and line,
 and skipped** — it is never parsed into a plausible-looking wrong value:
 
 | Construct | Was | Is |
 |-----------|-----|-----|
-| Mapping inside a list (`- name: cli` / `  path: x`) | `path` hoisted to a **top-level** key — a nested key silently becoming a root key | Warned, skipped; the parent dict is untouched |
+| Flat mapping inside a list (`- path: x` / `  mode: symlink`) | `mode` hoisted to a **top-level** key — a nested key silently becoming a root key | Parsed as one item object (`{path, mode}`) |
+| Nested list inside a list-item mapping (`- path: x` then a deeper `- y`) | `y` hoisted / flattened | Unsupported; warned/skipped, never flattened |
 | Block scalar (`notes: \|`) | `{"notes": "\|"}` — marker stored as the value, body dropped | Warned, key and body skipped |
 | Anchor / alias / merge key / flow collection | stored as the literal string `&b`, `*b`, `[a, b]` … | Warned, skipped |
 

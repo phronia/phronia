@@ -1,4 +1,6 @@
 import { afterEach, describe, expect, it } from "vitest";
+import fs from "node:fs";
+import path from "node:path";
 import { handleContext } from "../../src/context/index.js";
 import type { ContextResponse } from "../../src/context/types.js";
 import {
@@ -127,6 +129,32 @@ describe.skipIf(!GIT_AVAILABLE)("user-prompt runtime-state", () => {
     expect(blockText(response, "workflow-state")).toContain("No task yet.");
     expect(response.blocks.some((block) => block.id === "runtime-state")).toBe(
       false,
+    );
+  });
+
+  it("renders spec: none, pending, and synced from the task record", () => {
+    const rootProject = project();
+    rootProject.writeTask(LEAF, { status: "in_progress" });
+    rootProject.writeSession("claude_abc", LEAF);
+
+    expect(blockText(run(rootProject.root), "runtime-state")).toContain(
+      "spec: none",
+    );
+
+    fs.writeFileSync(
+      path.join(rootProject.root, LEAF, "spec-delta.md"),
+      "# Spec Delta\n\n## Target files\n- .phronia/spec/a.md\n",
+    );
+    expect(blockText(run(rootProject.root), "runtime-state")).toContain(
+      "spec: pending",
+    );
+
+    rootProject.writeTask(LEAF, {
+      status: "in_progress",
+      meta: { spec_sync: { status: "synced", commit: "abc123" } },
+    });
+    expect(blockText(run(rootProject.root), "runtime-state")).toContain(
+      "spec: synced",
     );
   });
 });

@@ -31,6 +31,12 @@ import type {
 
 export const DEFAULT_MAX_CONCURRENT = 3;
 
+/**
+ * Spec is post-integration control-plane state, not an execution footprint.
+ * Tasks that list it get a warning instead of being serialized.
+ */
+export const SPEC_FOOTPRINT_PATTERN = ".phronia/spec/**";
+
 /** Mirrors `parallel.conflicts.always_serial` defaults in design.md §5.5. */
 export const DEFAULT_ALWAYS_SERIAL: readonly string[] = [
   "pnpm-lock.yaml",
@@ -43,7 +49,6 @@ export const DEFAULT_ALWAYS_SERIAL: readonly string[] = [
   "docs/requirements.md",
   ".phronia/config.yaml",
   ".phronia/workflow.md",
-  ".phronia/spec/**",
   ".phronia/gate.yaml",
 ];
 
@@ -88,9 +93,17 @@ export function planParallel(
   const requested = new Set(options.requestedRefs ?? []);
   const containers = tasks.filter((task) => task.container === true);
   const containerRefs = new Set(containers.map((task) => task.ref));
-  const diagnostics: Diagnostic[] = containers.map((task) =>
-    containerDiagnostic(task, requested.has(task.ref)),
-  );
+  const specOnly = tasks.filter((task) => isSpecOnlyPlannerTask(task));
+  const specOnlyRefs = new Set(specOnly.map((task) => task.ref));
+  const excludedRefs = new Set([...containerRefs, ...specOnlyRefs]);
+  const diagnostics: Diagnostic[] = [
+    ...containers.map((task) => containerDiagnostic(task, requested.has(task.ref))),
+    ...specOnly.map((task) => specOnlyDiagnostic(task)),
+    ...tasks
+      .filter((task) => !isSpecOnlyPlannerTask(task))
+      .map((task) => specFootprintDiagnostic(task))
+      .filter((item): item is Diagnostic => item !== null),
+  ];
 
   const graphResult = buildDependencyGraph(tasks);
   if (!graphResult.ok) {
@@ -102,10 +115,10 @@ export function planParallel(
   const alwaysSerial = options.alwaysSerial ?? DEFAULT_ALWAYS_SERIAL;
   const waves: Wave[] = [];
 
-  // A plan made only of containers has no execution units. Return the
-  // container diagnostics rather than a bare PARALLEL_NO_TASKS, so the caller
-  // can still print the children to start.
-  if (tasks.length === containers.length) {
+  // A plan made only of containers/spec-only tasks has no execution units.
+  // Return the diagnostics rather than a bare PARALLEL_NO_TASKS, so the caller
+  // can still print the children to start or the control-plane tasks.
+  if (tasks.length === excludedRefs.size) {
     return { waves: [], diagnostics };
   }
 
@@ -114,7 +127,7 @@ export function planParallel(
 
   for (const level of levels) {
     const sorted = [...(groups.get(level) ?? [])]
-      .filter((task) => !containerRefs.has(task.ref))
+      .filter((task) => !excludedRefs.has(task.ref))
       .sort(compareTasks);
     const pending: PendingWave[] = [];
 
@@ -217,6 +230,59 @@ function containerDiagnostic(
         children,
         next,
         explicit,
+      },
+    },
+  );
+}
+
+/**
+ * `meta.kind=spec` marks a control-plane task: it produces spec intent and
+ * runs after integration, so it is not an execution unit.
+ */
+function isSpecOnlyPlannerTask(task: PlannerTask): boolean {
+  return task.kind === "spec";
+}
+
+function specOnlyDiagnostic(task: PlannerTask): Diagnostic {
+  return diagnostic(
+    "PARALLEL_SPEC_ONLY",
+    "info",
+    `task ${task.ref} is spec-only (meta.kind=spec); excluded from waves`,
+    {
+      details: {
+        taskRef: task.ref,
+        next: [
+          "run it in the main checkout after the code lands",
+          "record intent in spec-delta.md, then `phronia task spec commit <ref>`",
+        ],
+      },
+    },
+  );
+}
+
+/**
+ * Spec must not appear in an execution footprint. The warning does not force
+ * a serial wave: the planner simply ignores the spec pattern.
+ */
+function specFootprintDiagnostic(task: PlannerTask): Diagnostic | null {
+  if (isUnknown(task.footprint)) return null;
+  const overlap = footprintOverlap(task.footprint, {
+    raw: [SPEC_FOOTPRINT_PATTERN],
+    kind: "declared",
+  });
+  if (!overlap.overlap) return null;
+  return diagnostic(
+    "SPEC_IS_POST_INTEGRATION",
+    "warn",
+    `task ${task.ref} lists .phronia/spec/** in its footprint; spec is post-integration control-plane state`,
+    {
+      details: {
+        taskRef: task.ref,
+        matched: overlap.path,
+        next: [
+          "write the intent to spec-delta.md",
+          "remove .phronia/spec/** from meta.parallel.touches",
+        ],
       },
     },
   );

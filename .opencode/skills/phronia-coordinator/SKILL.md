@@ -40,7 +40,7 @@ If the platform is unknown, the gate fails closed with `COORDINATOR_UNSUPPORTED`
 
 When the gate is unavailable:
 
-1. For each task: `phronia task workspace ensure <ref> --json` (or `workspace prepare --for-new-task "<title>"` before the task exists).
+1. For each task: `phronia task workspace ensure <ref> --json` (or `workspace prepare --for-new-task "<title>"` before the task exists), or let `phronia task parallel launch --prepare` do it for a whole wave.
 2. Start one agent session per worktree, with the prompt prefix:
    ```
    Active task: <task-ref>
@@ -49,6 +49,18 @@ When the gate is unavailable:
    ```
 3. Do not run two tasks in the same checkout. If the harness inherits cwd, that is the whole reason to use separate sessions.
 4. Serial alternative: dispatch one task at a time in the same session.
+
+**Only one mutating agent per session.** Do not run `phronia-implement` / `phronia-check` concurrently in the main session. ZCode and Codex sub-agents inherit the parent cwd and there is no per-subagent `cwd`/isolation field; two writers in one checkout recreate the collision this model exists to prevent. Read-only `phronia-research` sub-agents may run in parallel inside one session.
+
+### Multi-session launch plan
+
+For ZCode, Codex, and any harness without per-task sub-agent workspaces, the orchestration surface is:
+
+```bash
+phronia task parallel launch --wave <n> --prepare --platform <id> --json
+```
+
+It returns one entry per mutating task with `workspace`, `branch`, `activeTaskLine`, `openInstructions`, missing build inputs, and a `next` when the workspace is absent. It never starts a process or session. Open one window/session per entry, send its `Active task:` line first, and keep this orchestrator session free of mutating work.
 
 ### ZCode / Codex: the multi-session four steps
 
@@ -124,7 +136,8 @@ Then declare the parallel metadata in each task's `task.json`:
 - Unknown footprint → the task is scheduled alone. Do not guess.
 - `depends_on` is the only dependency source; parent/child structure is not a dependency.
 - Dependency cycles are refused (`DEPENDENCY_CYCLE`).
-- Shared/generated files (`pnpm-lock.yaml`, `.phronia/config.yaml`, `.phronia/spec/**`, `docs/requirements.md`, migrations) are always-serial.
+- Shared/generated files (`pnpm-lock.yaml`, `.phronia/config.yaml`, `docs/requirements.md`, migrations) are always-serial.
+- `.phronia/spec/**` is **not** a task footprint. A code task records spec intent in `spec-delta.md`; the main checkout applies it after integration. A task that still lists spec in `touches` gets `SPEC_IS_POST_INTEGRATION` (warning, not serialization). `meta.kind: spec` tasks are control-plane only (`PARALLEL_SPEC_ONLY`) and never enter a wave.
 
 Tasks created in a linked worktree are branch-local until integrated; create/plan coordinator tasks in the main checkout.
 
@@ -135,6 +148,16 @@ phronia task parallel plan --explain --json
 ```
 
 Use the waves and the per-task reasons. If the plan reports `unknown_footprint`, declare the surface and re-run. If it refuses a cycle, print the cycle path and ask the user to break it — do not silently drop tasks.
+
+### 3.5 Launch the wave (multi-session)
+
+When the harness cannot give a sub-agent an explicit `cwd` (ZCode, Codex, and every unverified platform), do not dispatch mutating sub-agents from this session. Prepare and open sessions instead:
+
+```bash
+phronia task parallel launch --wave <n> --prepare --platform <id> --json
+```
+
+For each returned task: open a new window/session at `workspace`, make the first line `activeTaskLine`, and keep all edits/commits inside that worktree. Containers and spec-only tasks come back in `skipped`; do not invent a session for them. This command starts no process and creates no session itself.
 
 ### 4. Dispatch
 
@@ -193,13 +216,25 @@ phronia task integrate --drain          # FIFO over queued tasks
 phronia task integrate <ref>
 ```
 
-Integration is serial by design: one shared lock per repository. `integrate` is not archive — it records `meta.integration.outcome` (`landed` / `pushed` / `blocked` / `needs_human`). Once landed, run `/phronia:finish-work` per task to archive and clean up the landed worktree.
+Integration is serial by design: one shared lock per repository. `integrate` is not archive — it records `meta.integration.outcome` (`landed` / `pushed` / `blocked` / `needs_human`).
+
+After each local landing, sync spec before archiving:
+
+```bash
+phronia task spec plan <ref...>     # read-only; requires outcome=landed
+# main session applies each delta to .phronia/spec/**
+phronia task spec commit <ref...>   # one chore(spec): sync commit + meta.spec_sync
+```
+
+`spec commit` takes the same integration lock and commits only `.phronia/spec/**`. A failure (not landed, target invalid, no change, lock busy) stops the flow. Then run `/phronia:finish-work` per task to archive and clean up the landed worktree; archive refuses an unsynced delta (`SPEC_SYNC_PENDING`) unless the user explicitly chooses `--skip-spec-sync`.
 
 For remote-mode batches, Phronia pushes and opens PRs but never merges; the forge's merge queue owns ordering.
 
 ## Hard Rules
 
 - Never start an agent process from Phronia. `dispatch` only emits a manifest.
+- Never run two mutating agents in one session; ZCode/Codex sub-agents inherit cwd. Mutating parallelism is one session per worktree.
+- Never treat `.phronia/spec/**` as a task footprint or commit it from a code task; use `spec-delta.md` and post-integration `spec plan/commit`.
 - Never dispatch a task whose workspace or lease is missing (`COORDINATOR_DISPATCH_INVALID`).
 - Never assume an unverified harness is supported. Fail closed and print the fallback.
 - Never rely on the ambient active-task pointer in coordinator mode; pass `--task` explicitly.

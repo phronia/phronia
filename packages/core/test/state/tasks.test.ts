@@ -87,6 +87,22 @@ describe("task state", () => {
     expect(diagnostics.map((item) => item.code)).toContain("state.task.jsonl_malformed");
   });
 
+  it("detects spec-delta.md as a task artifact", () => {
+    const taskDir = writeTask(root, "01-01-one", { id: "one", title: "First" });
+    expect(
+      inspectTaskArtifacts(root, ".phronia/tasks/01-01-one", nodeFs),
+    ).toMatchObject({ specDelta: false, sizes: {} });
+
+    fs.writeFileSync(path.join(taskDir, "spec-delta.md"), "# Spec Delta\n");
+    const artifacts = inspectTaskArtifacts(
+      root,
+      ".phronia/tasks/01-01-one",
+      nodeFs,
+    );
+    expect(artifacts.specDelta).toBe(true);
+    expect(artifacts.sizes["spec-delta.md"]).toBe(Buffer.byteLength("# Spec Delta\n"));
+  });
+
   it("lists active and archived tasks in ref order", () => {
     writeTask(root, "01-01-a", { id: "a", title: "A" });
     writeTask(root, "02-02-b", { id: "b", title: "B" });

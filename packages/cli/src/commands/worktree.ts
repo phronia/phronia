@@ -35,6 +35,8 @@ export interface WorktreeOptions {
   copy?: readonly string[];
   /** `--post-create <cmd>` (repeatable); defaults to `parallel.post_create`. */
   postCreate?: readonly string[];
+  /** `--copy-task`: copy `.phronia/tasks/<ref>` when it is not committed. */
+  copyTask?: boolean;
 }
 
 
@@ -148,6 +150,12 @@ function renderWorktree(result: WorktreeResult, json: boolean): number {
     process.stdout.write(`${JSON.stringify(result, null, 2)}\n`);
   } else if (result.ok) {
     process.stdout.write(`${result.message}\n`);
+    for (const warning of result.warnings ?? []) {
+      process.stderr.write(`warning: ${warning}\n`);
+    }
+    for (const step of result.inputs?.next ?? []) {
+      process.stdout.write(`next: ${step}\n`);
+    }
   } else {
     process.stderr.write(`${result.code ?? "WORKTREE_FAILED"}: ${result.message}\n`);
     if (result.next !== undefined && result.next !== "") {
@@ -161,6 +169,7 @@ function toServiceOptions(options: WorktreeOptions): ServiceWorktreeOptions {
   return {
     cwd: options.cwd,
     ...(options.force === true ? { force: true } : {}),
+    ...(options.copyTask === true ? { copyTask: true } : {}),
     ...(options.path === undefined ? {} : { path: options.path }),
     ...(options.branch === undefined ? {} : { branch: options.branch }),
     ...(options.base === undefined ? {} : { base: options.base }),

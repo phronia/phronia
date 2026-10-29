@@ -207,6 +207,17 @@ export interface GitStatus {
 
 export interface GitPort {
   status(cwd: string): GitStatus;
+  /** Raw `git status --porcelain` lines (tracked and untracked). */
+  statusPorcelain(cwd: string): readonly string[];
+  /**
+   * True when `git check-ignore --no-index` matches the path. Used as the
+   * safety check before an explicitly configured input may be ignored.
+   */
+  checkIgnore(cwd: string, path: string): boolean;
+  /** Repo-relative paths changed between two refs (`from..to`). */
+  diffNames(cwd: string, from: string, to: string): readonly string[];
+  add(cwd: string, paths: readonly string[]): GitOpResult;
+  commit(cwd: string, message: string, paths: readonly string[]): GitOpResult;
   branch(cwd: string): string;
   head(cwd: string): string;
   resolveRef(cwd: string, ref: string): string;
@@ -244,6 +255,45 @@ export function createGitPort(exec: GitExec = defaultGitExec): GitPort {
         .split(/\r?\n/)
         .filter((line) => line.trim().length > 0).length;
       return { clean: dirtyPaths === 0, dirtyPaths };
+    },
+
+    statusPorcelain(cwd: string): readonly string[] {
+      return probeOk(["status", "--porcelain"], cwd)
+        .split(/\r?\n/)
+        .map((line) => line.trimEnd())
+        .filter((line) => line.trim().length > 0);
+    },
+
+    checkIgnore(cwd: string, target: string): boolean {
+      // Exit 0 = ignored, 1 = not ignored; any other failure is "not ignored"
+      // so a broken git invocation can never weaken the dirty check.
+      const result = probe(
+        ["check-ignore", "--no-index", "--quiet", "--", target],
+        cwd,
+      );
+      if (result.spawnError !== null || result.timedOut) {
+        return false;
+      }
+      return result.exitCode === 0;
+    },
+
+    diffNames(cwd: string, from: string, to: string): readonly string[] {
+      return probeOk(["diff", "--name-only", `${from}..${to}`], cwd)
+        .split(/\r?\n/)
+        .map((line) => line.trim())
+        .filter((line) => line.length > 0);
+    },
+
+    add(cwd: string, paths: readonly string[]): GitOpResult {
+      return operation(["add", "--", ...paths], cwd, GIT_WORKTREE_TIMEOUT_MS);
+    },
+
+    commit(cwd: string, message: string, paths: readonly string[]): GitOpResult {
+      return operation(
+        ["commit", "-m", message, "--", ...paths],
+        cwd,
+        GIT_WORKTREE_TIMEOUT_MS,
+      );
     },
 
     branch(cwd: string): string {

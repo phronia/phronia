@@ -3,13 +3,18 @@ import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
+import { DEFAULT_PARALLEL_CONFIG } from "@phronia/core/state";
 import {
+  addWorktree,
+  applyWorktreeInputs,
   attachWorktree,
   bindWorkspace,
+  detectWorktreeInputs,
   ensureWorkspace,
   prepareWorkspace,
   reclaimWorkspace,
   releaseWorkspace,
+  removeWorktree,
 } from "../../src/services/workspace.js";
 
 describe("workspace integration (WS-01..WS-05)", () => {
@@ -551,6 +556,340 @@ describe("workspace integration (WS-01..WS-05)", () => {
     expect(taskJson.branch).toBeUndefined();
   });
 });
+
+describe("worktree inputs, hints, and cleanup (S3/R6-R8)", () => {
+  let root: string;
+
+  beforeEach(() => {
+    root = initRepo();
+    writeTask(root, "10-28-alpha", { touches: ["src/a/**"] });
+    fs.writeFileSync(path.join(root, ".phronia/tasks/10-28-alpha/prd.md"), "# Alpha\n");
+    git(root, ["add", "-A"]);
+    git(root, ["commit", "-q", "-m", "plan alpha"]);
+  });
+
+  afterEach(() => {
+    fs.rmSync(root, { recursive: true, force: true });
+  });
+
+  it("symlinks parallel.inputs into a created worktree", () => {
+    fs.writeFileSync(path.join(root, ".gitignore"), "shared-cache/\n");
+    fs.mkdirSync(path.join(root, "shared-cache"), { recursive: true });
+    fs.writeFileSync(path.join(root, "shared-cache/sdk.txt"), "sdk\n");
+    writeConfig(root, [
+      "parallel:",
+      "  worktree: always",
+      "  inputs:",
+      "    - path: shared-cache",
+      "      mode: symlink",
+    ]);
+    commitAll(root, "plan alpha + config");
+
+    const result = ensureWorkspace({
+      cwd: root,
+      taskRef: "10-28-alpha",
+      sessionKey: "session-one",
+    });
+
+    expect(result.ok, JSON.stringify(result)).toBe(true);
+    if (!result.ok || result.workspace === null) return;
+    const link = path.join(result.workspace, "shared-cache");
+    expect(fs.lstatSync(link).isSymbolicLink()).toBe(true);
+    expect(fs.readFileSync(path.join(link, "sdk.txt"), "utf8")).toBe("sdk\n");
+  });
+
+  it("copies parallel.inputs into a created worktree", () => {
+    fs.writeFileSync(path.join(root, ".gitignore"), ".env.local\n");
+    fs.writeFileSync(path.join(root, ".env.local"), "SECRET=1\n");
+    writeConfig(root, [
+      "parallel:",
+      "  worktree: always",
+      "  inputs:",
+      "    - path: .env.local",
+      "      mode: copy",
+    ]);
+    commitAll(root, "plan alpha + config");
+
+    const result = ensureWorkspace({
+      cwd: root,
+      taskRef: "10-28-alpha",
+      sessionKey: "session-one",
+    });
+
+    expect(result.ok, JSON.stringify(result)).toBe(true);
+    if (!result.ok || result.workspace === null) return;
+    const copied = path.join(result.workspace, ".env.local");
+    expect(fs.lstatSync(copied).isSymbolicLink()).toBe(false);
+    expect(fs.readFileSync(copied, "utf8")).toBe("SECRET=1\n");
+  });
+
+  it("warns and continues when an input source is missing", () => {
+    writeConfig(root, [
+      "parallel:",
+      "  worktree: always",
+      "  inputs:",
+      "    - path: missing-dir",
+      "      mode: symlink",
+    ]);
+    commitAll(root, "plan alpha + config");
+
+    const result = ensureWorkspace({
+      cwd: root,
+      taskRef: "10-28-alpha",
+      sessionKey: "session-one",
+    });
+
+    expect(result.ok, JSON.stringify(result)).toBe(true);
+    if (!result.ok || result.workspace === null) return;
+    expect(result.warnings.join(" ")).toContain("source is missing");
+    expect(fs.existsSync(path.join(result.workspace, "missing-dir"))).toBe(false);
+    expect(result.inputs?.missing).toContain("missing-dir");
+  });
+
+  it("skips an input whose destination already exists", () => {
+    writeConfig(root, [
+      "parallel:",
+      "  worktree: always",
+      "  inputs:",
+      "    - path: README.md",
+      "      mode: symlink",
+    ]);
+    commitAll(root, "plan alpha + config");
+
+    const result = ensureWorkspace({
+      cwd: root,
+      taskRef: "10-28-alpha",
+      sessionKey: "session-one",
+    });
+
+    expect(result.ok, JSON.stringify(result)).toBe(true);
+    if (!result.ok || result.workspace === null) return;
+    expect(result.warnings.join(" ")).toContain("already exists");
+    expect(fs.readFileSync(path.join(result.workspace, "README.md"), "utf8")).toBe(
+      "# repo\n",
+    );
+  });
+
+  it("rejects an input path that escapes either root", () => {
+    const mainRoot = path.join(root, "main-root");
+    const worktree = path.join(root, "worktree");
+    fs.mkdirSync(mainRoot, { recursive: true });
+    fs.mkdirSync(worktree, { recursive: true });
+
+    const escaped = applyWorktreeInputs({
+      mainRoot,
+      worktree,
+      inputs: [{ path: "../escape", mode: "symlink" }],
+    });
+    expect(escaped.ok).toBe(false);
+    if (escaped.ok) return;
+    expect(escaped.code).toBe("WORKTREE_INPUT_FAILED");
+
+    const absolute = applyWorktreeInputs({
+      mainRoot,
+      worktree,
+      inputs: [{ path: "/etc/passwd", mode: "copy" }],
+    });
+    expect(absolute.ok).toBe(false);
+  });
+
+  it("falls back to copy when a Windows symlink fails", () => {
+    const mainRoot = path.join(root, "main-root");
+    const worktree = path.join(root, "worktree");
+    fs.mkdirSync(path.join(mainRoot, "dep"), { recursive: true });
+    fs.writeFileSync(path.join(mainRoot, "dep", "file.txt"), "dep\n");
+    fs.mkdirSync(worktree, { recursive: true });
+
+    const result = applyWorktreeInputs({
+      mainRoot,
+      worktree,
+      inputs: [{ path: "dep", mode: "symlink" }],
+      platform: "win32",
+      symlink: () => {
+        throw new Error("EPERM: operation not permitted");
+      },
+    });
+
+    expect(result.ok, JSON.stringify(result)).toBe(true);
+    if (!result.ok) return;
+    expect(result.warnings.join(" ")).toContain("copied instead");
+    const copied = path.join(worktree, "dep");
+    expect(fs.lstatSync(copied).isSymbolicLink()).toBe(false);
+    expect(fs.readFileSync(path.join(copied, "file.txt"), "utf8")).toBe("dep\n");
+  });
+
+  it("emits executable hints for conventional missing inputs", () => {
+    fs.writeFileSync(
+      path.join(root, ".gitignore"),
+      ["node_modules/", "rust/target/"].join("\n"),
+    );
+    fs.mkdirSync(path.join(root, "node_modules/dep"), { recursive: true });
+    fs.mkdirSync(path.join(root, "rust/target"), { recursive: true });
+    writeConfig(root, ["parallel:", "  worktree: always"]);
+    commitAll(root, "plan alpha + config");
+
+    const result = ensureWorkspace({
+      cwd: root,
+      taskRef: "10-28-alpha",
+      sessionKey: "session-one",
+    });
+
+    expect(result.ok, JSON.stringify(result)).toBe(true);
+    if (!result.ok) return;
+    expect(result.inputs?.missing).toEqual(
+      expect.arrayContaining(["node_modules", "rust/target"]),
+    );
+    const next = result.inputs?.next.join("\n") ?? "";
+    expect(next).toContain("ln -s");
+    expect(next).toContain("CARGO_TARGET_DIR");
+  });
+
+  it("emits shared-target and sccache hints without setting anything globally", () => {
+    writeConfig(root, [
+      "parallel:",
+      "  worktree: always",
+      "  build:",
+      "    cargo_target_dir: shared",
+      "    sccache: true",
+    ]);
+    commitAll(root, "plan alpha + config");
+
+    const result = ensureWorkspace({
+      cwd: root,
+      taskRef: "10-28-alpha",
+      sessionKey: "session-one",
+    });
+
+    expect(result.ok, JSON.stringify(result)).toBe(true);
+    if (!result.ok) return;
+    const next = result.inputs?.next.join("\n") ?? "";
+    expect(next).toContain(".phronia/cache/cargo-target");
+    expect(next).toContain("serializes concurrent builds");
+    expect(next).toContain("sccache");
+  });
+
+  it("rejects a source that resolves outside the repository", () => {
+    const mainRoot = path.join(root, "main-root");
+    const worktree = path.join(root, "worktree");
+    fs.mkdirSync(mainRoot, { recursive: true });
+    fs.mkdirSync(worktree, { recursive: true });
+    const outside = fs.mkdtempSync(path.join(os.tmpdir(), "phronia-input-outside-"));
+    try {
+      fs.writeFileSync(path.join(outside, "payload"), "x\n");
+      fs.symlinkSync(outside, path.join(mainRoot, "escape"), "dir");
+
+      for (const mode of ["symlink", "copy"] as const) {
+        const result = applyWorktreeInputs({
+          mainRoot,
+          worktree,
+          inputs: [{ path: "escape", mode }],
+        });
+        expect(result.ok).toBe(false);
+        if (result.ok) continue;
+        expect(result.code).toBe("WORKTREE_INPUT_FAILED");
+        expect(result.message).toContain("escape");
+      }
+    } finally {
+      fs.rmSync(outside, { recursive: true, force: true });
+    }
+  });
+
+  it("quotes paths with spaces in the symlink hint", () => {
+    const mainRoot = path.join(root, "main dir");
+    const worktree = path.join(root, "wt dir");
+    fs.mkdirSync(path.join(mainRoot, "node_modules"), { recursive: true });
+    fs.mkdirSync(worktree, { recursive: true });
+
+    const hints = detectWorktreeInputs({
+      mainRoot,
+      worktree,
+      parallel: DEFAULT_PARALLEL_CONFIG,
+    });
+    const next = hints.next.join("\n");
+    expect(next).toContain("ln -s");
+    expect(next).toContain(`'${path.join(mainRoot, "node_modules")}'`);
+    expect(next).toContain(`'${path.join(worktree, "node_modules")}'`);
+  });
+
+  it("worktree add --force warns when task artifacts may be missing", () => {
+    writeTask(root, "10-28-dirty", { touches: ["src/d/**"] });
+
+    const forced = addWorktree("10-28-dirty", { cwd: root, force: true });
+    expect(forced.ok, JSON.stringify(forced)).toBe(true);
+    expect(forced.warnings?.join(" ")).toContain(
+      "worktree created with --force; task artifacts may be missing",
+    );
+    expect(forced.warnings?.join(" ")).toContain("--copy-task");
+  });
+
+  it("worktree add --force --copy-task does not warn about missing artifacts", () => {
+    writeTask(root, "10-28-dirty", { touches: ["src/d/**"] });
+
+    const copied = addWorktree("10-28-dirty", {
+      cwd: root,
+      force: true,
+      copyTask: true,
+    });
+    expect(copied.ok, JSON.stringify(copied)).toBe(true);
+    expect(copied.warnings?.join(" ") ?? "").not.toContain("may be missing");
+  });
+
+  it("worktree add: only task-artifact dirt gives scoped commit / --copy-task guidance", () => {
+    writeTask(root, "10-28-dirty", { touches: ["src/d/**"] });
+
+    const refused = addWorktree("10-28-dirty", { cwd: root });
+    expect(refused.ok).toBe(false);
+    expect(refused.code).toBe("TASK_ARTIFACTS_UNCOMMITTED");
+    expect(refused.next).toContain("git add .phronia/tasks/10-28-dirty");
+    expect(refused.next).toContain("--copy-task");
+
+    const copied = addWorktree("10-28-dirty", { cwd: root, copyTask: true });
+    expect(copied.ok, JSON.stringify(copied)).toBe(true);
+    if (!copied.ok || copied.record === undefined) return;
+    expect(
+      fs.existsSync(
+        path.join(copied.record.path, ".phronia/tasks/10-28-dirty/task.json"),
+      ),
+    ).toBe(true);
+  });
+
+  it("worktree add: other dirty paths keep the dirty-checkout refusal", () => {
+    writeTask(root, "10-28-dirty", { touches: ["src/d/**"] });
+    fs.writeFileSync(path.join(root, "unrelated.txt"), "x\n");
+
+    const refused = addWorktree("10-28-dirty", { cwd: root });
+    expect(refused.ok).toBe(false);
+    expect(refused.code).toBe("WORKSPACE_DIRTY_UNCLAIMED");
+  });
+
+  it("reports the bytes freed by worktree removal", () => {
+    const added = addWorktree("10-28-alpha", { cwd: root });
+    expect(added.ok, JSON.stringify(added)).toBe(true);
+    if (!added.ok || added.record === undefined) return;
+    fs.writeFileSync(
+      path.join(added.record.path, "large.bin"),
+      Buffer.alloc(8192, 1),
+    );
+
+    const removed = removeWorktree("10-28-alpha", { cwd: root, force: true });
+    expect(removed.ok, JSON.stringify(removed)).toBe(true);
+    if (!removed.ok) return;
+    expect(removed.freedBytes).toBeGreaterThanOrEqual(8192);
+    expect(removed.message).toContain("freed ~");
+  });
+});
+
+function writeConfig(root: string, lines: readonly string[]): void {
+  fs.writeFileSync(
+    path.join(root, ".phronia/config.yaml"),
+    `${lines.join("\n")}\n`,
+  );
+}
+
+function commitAll(root: string, message: string): void {
+  git(root, ["add", "-A"]);
+  git(root, ["commit", "-q", "-m", message]);
+}
 
 export function initRepo(): string {
   const root = fs.mkdtempSync(path.join(os.tmpdir(), "phronia-workspace-"));

@@ -78,12 +78,27 @@ describe("simple YAML subset", () => {
     );
   });
 
-  it("warns on a mapping nested inside a list instead of hoisting it", () => {
+  it("parses mappings inside a list without hoisting their keys", () => {
     const { value, warnings } = parseSimpleYaml(
-      ["list:", "  - name: a", "    path: b"].join("\n"),
+      [
+        "list:",
+        "  - name: a",
+        "    path: b",
+        "  - name: c",
+        "    path: d",
+        "scalar:",
+        "  - plain",
+        '  - "quoted: scalar"',
+      ].join("\n"),
     );
-    expect(value).toEqual({ list: ["name: a"] });
-    expect(warnings[0]?.reason).toMatch(/mappings inside a list/);
+    expect(value).toEqual({
+      list: [
+        { name: "a", path: "b" },
+        { name: "c", path: "d" },
+      ],
+      scalar: ["plain", "quoted: scalar"],
+    });
+    expect(warnings).toEqual([]);
   });
 
   it("handles CRLF input", () => {
@@ -301,6 +316,121 @@ describe("parallel config", () => {
     );
     expect(result.value.parallel.conflicts.generated).toContain("**/out/**");
     expect(result.value.parallel.conflicts.generated).toContain("**/dist/**");
+  });
+
+  it("reads worktree inputs, ignored inputs, and build hints", () => {
+    const result = readConfig(
+      "/repo",
+      memFs({
+        ".phronia/config.yaml": [
+          "parallel:",
+          "  inputs:",
+          "    - path: rust/web/node_modules",
+          "      mode: symlink",
+          "    - path: .env.local",
+          "      mode: copy",
+          "  integration:",
+          "    ignored_inputs:",
+          "      - rust/xsdk-pin-v1202",
+          "  build:",
+          "    cargo_target_dir: shared",
+          "    sccache: true",
+        ].join("\n"),
+      }),
+    );
+    expect(result.diagnostics).toEqual([]);
+    expect(result.value.parallel.inputs).toEqual([
+      { path: "rust/web/node_modules", mode: "symlink" },
+      { path: ".env.local", mode: "copy" },
+    ]);
+    expect(result.value.parallel.integration.ignoredInputs).toEqual([
+      "rust/xsdk-pin-v1202",
+    ]);
+    expect(result.value.parallel.build).toEqual({
+      cargoTargetDir: "shared",
+      sccache: true,
+    });
+  });
+
+  it("accepts bare input paths and the mapping form, defaulting to symlink", () => {
+    const result = readConfig(
+      "/repo",
+      memFs({
+        ".phronia/config.yaml": [
+          "parallel:",
+          "  inputs:",
+          "    - rust/web/node_modules",
+          "    - path: .env.local",
+          "      mode: copy",
+        ].join("\n"),
+      }),
+    );
+    expect(result.diagnostics).toEqual([]);
+    expect(result.value.parallel.inputs).toEqual([
+      { path: "rust/web/node_modules", mode: "symlink" },
+      { path: ".env.local", mode: "copy" },
+    ]);
+
+    const mapped = readConfig(
+      "/repo",
+      memFs({
+        ".phronia/config.yaml": [
+          "parallel:",
+          "  inputs:",
+          "    rust/web/node_modules: symlink",
+          "    .env.local: copy",
+        ].join("\n"),
+      }),
+    );
+    expect(mapped.diagnostics).toEqual([]);
+    expect(mapped.value.parallel.inputs).toEqual([
+      { path: "rust/web/node_modules", mode: "symlink" },
+      { path: ".env.local", mode: "copy" },
+    ]);
+  });
+
+  it("drops invalid inputs and ignored inputs with diagnostics", () => {
+    const result = readConfig(
+      "/repo",
+      memFs({
+        ".phronia/config.yaml": [
+          "parallel:",
+          "  inputs:",
+          "    - path: /etc/passwd",
+          "      mode: symlink",
+          "    - path: ../outside",
+          "      mode: copy",
+          "    - path: rust/ok",
+          "      mode: hardlink",
+          "    - path: rust/valid",
+          "      mode: symlink",
+          "  integration:",
+          "    ignored_inputs:",
+          "      - /absolute",
+          "      - nested/../escape",
+          "      - rust/xsdk-pin-v1202",
+          "  build:",
+          "    cargo_target_dir: sometimes",
+          "    sccache: perhaps",
+        ].join("\n"),
+      }),
+    );
+    expect(result.value.parallel.inputs).toEqual([
+      { path: "rust/valid", mode: "symlink" },
+    ]);
+    expect(result.value.parallel.integration.ignoredInputs).toEqual([
+      "rust/xsdk-pin-v1202",
+    ]);
+    expect(result.value.parallel.build).toEqual({
+      cargoTargetDir: "per-worktree",
+      sccache: false,
+    });
+    expect(result.diagnostics).toHaveLength(7);
+    expect(
+      result.diagnostics.every(
+        (item) => item.code === "state.config.invalid_value",
+      ),
+    ).toBe(true);
   });
 
   it("defaults dispatch.enforce to block and falls back on invalid values", () => {

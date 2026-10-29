@@ -34,6 +34,10 @@ import {
 } from "@phronia/core";
 import { getConfiguredPlatforms } from "../configurators/index.js";
 import { ensureZcodePlugin } from "../configurators/zcode-plugin.js";
+import {
+  readSpecStates,
+  summarizeSpecStates,
+} from "../services/spec-status.js";
 import { AI_TOOLS } from "../types/ai-tools.js";
 import { refreshAdapterManifest } from "./adapter-manifest.js";
 
@@ -92,11 +96,43 @@ export interface DoctorReport {
   projectRoot: string;
   environment: DoctorEnvironment;
   platforms: DoctorPlatformReport[];
+  /** Read-only task-side worktree input configuration (S3/R6-R7). */
+  task: DoctorTaskConfigReport;
+  /** Build-cache configuration hints (S3/R8). */
+  parallel: DoctorParallelReport;
   /** Present when doctor checked/repaired the project-local ZCode plugin. */
   zcodePlugin?: {
     changed: boolean;
     pluginDir: string;
     warnings: string[];
+  };
+}
+
+export interface DoctorTaskInputReport {
+  count: number;
+  paths: string[];
+  available: boolean;
+  reason?: string;
+}
+
+export interface DoctorTaskConfigReport {
+  worktreeInputs: DoctorTaskInputReport;
+  ignoredInputs: DoctorTaskInputReport;
+  /** Post-integration spec sync visibility (R10). */
+  specSync: {
+    pending: string[];
+    failed: string[];
+    synced: number;
+    available: boolean;
+    reason?: string;
+  };
+}
+
+export interface DoctorParallelReport {
+  build: {
+    cargoTargetDir: ParallelConfig["build"]["cargoTargetDir"];
+    sccache: boolean;
+    hints: string[];
   };
 }
 
@@ -145,6 +181,8 @@ export function collectDoctorReport(options: DoctorOptions): DoctorReport {
   return {
     projectRoot,
     environment,
+    task: taskConfigReport(projectRoot, environment, config.parallel),
+    parallel: parallelBuildReport(projectRoot, config.parallel),
     platforms: ids.map((id) => {
       const selection = detectAdapter(
         projectRoot,
@@ -170,6 +208,93 @@ export function collectDoctorReport(options: DoctorOptions): DoctorReport {
         ),
       };
     }),
+  };
+}
+
+function taskConfigReport(
+  projectRoot: string,
+  environment: DoctorEnvironment,
+  parallel: ParallelConfig,
+): DoctorTaskConfigReport {
+  const usable = environment.gitRepo;
+  const unavailability = usable
+    ? undefined
+    : "not a git repository; worktrees cannot be created";
+
+  return {
+    worktreeInputs: {
+      count: parallel.inputs.length,
+      paths: parallel.inputs.map((input) => `${input.path} (${input.mode})`),
+      available: usable,
+      ...(unavailability !== undefined
+        ? { reason: unavailability }
+        : parallel.inputs.length === 0
+          ? {
+              reason:
+                "no parallel.inputs configured; worktrees get no extra build inputs",
+            }
+          : {}),
+    },
+    ignoredInputs: {
+      count: parallel.integration.ignoredInputs.length,
+      paths: [...parallel.integration.ignoredInputs],
+      available: usable,
+      ...(unavailability !== undefined
+        ? { reason: unavailability }
+        : parallel.integration.ignoredInputs.length === 0
+          ? {
+              reason:
+                "no ignored inputs; every uncommitted path still blocks integrate",
+            }
+          : {}),
+    },
+    specSync: specSyncReport(projectRoot),
+  };
+}
+
+function specSyncReport(
+  projectRoot: string,
+): DoctorTaskConfigReport["specSync"] {
+  const tasksDir = path.join(projectRoot, ".phronia", "tasks");
+  if (!fs.existsSync(tasksDir)) {
+    return {
+      pending: [],
+      failed: [],
+      synced: 0,
+      available: false,
+      reason: "no .phronia/tasks directory; nothing to sync",
+    };
+  }
+  const summary = summarizeSpecStates(readSpecStates(projectRoot));
+  return {
+    pending: [...summary.pending],
+    failed: [...summary.failed],
+    synced: summary.synced,
+    available: true,
+  };
+}
+
+function parallelBuildReport(
+  projectRoot: string,
+  parallel: ParallelConfig,
+): DoctorParallelReport {
+  const hints: string[] = [];
+  if (parallel.build.cargoTargetDir === "shared") {
+    hints.push(
+      `export CARGO_TARGET_DIR=${path.join(projectRoot, ".phronia", "cache", "cargo-target")}  # Cargo's target lock serializes concurrent builds`,
+    );
+  }
+  if (parallel.build.sccache) {
+    hints.push(
+      "cargo install sccache && export RUSTC_WRAPPER=sccache  # optional shared compilation cache",
+    );
+  }
+  return {
+    build: {
+      cargoTargetDir: parallel.build.cargoTargetDir,
+      sccache: parallel.build.sccache,
+      hints,
+    },
   };
 }
 
@@ -243,6 +368,42 @@ export function runDoctorCommand(options: DoctorOptions): number {
     `Project: ${report.projectRoot}`,
     `Environment: gitRepo=${report.environment.gitRepo ? "yes" : "no"} gitRemote=${report.environment.gitRemote ? "yes" : "no"}`,
   ];
+  const taskConfig = report.task;
+  const parallel = report.parallel;
+  lines.push(
+    `Worktree inputs: ${taskConfig.worktreeInputs.count} (${taskConfig.worktreeInputs.available ? "available" : `unavailable: ${taskConfig.worktreeInputs.reason ?? "unknown"}`})`,
+    `Ignored inputs: ${taskConfig.ignoredInputs.count} (${taskConfig.ignoredInputs.available ? "available" : `unavailable: ${taskConfig.ignoredInputs.reason ?? "unknown"}`})`,
+    `Build: cargo_target_dir=${parallel.build.cargoTargetDir} sccache=${parallel.build.sccache ? "yes" : "no"}`,
+  );
+  if (
+    taskConfig.worktreeInputs.available &&
+    taskConfig.worktreeInputs.reason !== undefined
+  ) {
+    lines.push(`  ${taskConfig.worktreeInputs.reason}`);
+  }
+  if (
+    taskConfig.ignoredInputs.available &&
+    taskConfig.ignoredInputs.reason !== undefined
+  ) {
+    lines.push(`  ${taskConfig.ignoredInputs.reason}`);
+  }
+  for (const hint of parallel.build.hints) {
+    lines.push(`  hint: ${hint}`);
+  }
+  const specSync = taskConfig.specSync;
+  if (!specSync.available) {
+    lines.push(`Spec sync: unavailable${specSync.reason === undefined ? "" : `: ${specSync.reason}`}`);
+  } else {
+    if (specSync.pending.length > 0) {
+      lines.push(`spec sync pending: ${specSync.pending.join(", ")}`);
+    }
+    if (specSync.failed.length > 0) {
+      lines.push(`spec sync failed: ${specSync.failed.join(", ")}`);
+    }
+    if (specSync.pending.length === 0 && specSync.failed.length === 0) {
+      lines.push(`spec sync ok (${specSync.synced} synced)`);
+    }
+  }
   if (report.zcodePlugin) {
     lines.push(
       `ZCode plugin: ${report.zcodePlugin.changed ? "installed/updated" : "ok"} (${report.zcodePlugin.pluginDir})`,

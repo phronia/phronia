@@ -250,7 +250,7 @@ const SKILL_DESCRIPTIONS: Record<string, string> = {
   continue:
     "Resume work on a task. Finds or asks for the task to continue, resolves its workspace (current checkout or worktree), then loads the workflow Phase Index and step-level detail. Use when coming back to a task and you need to know what to do next.",
   "finish-work":
-    "Wrap up the session: integrate the task (local fast-forward or remote PR/MR), stop on integration failure, archive completed tasks, then regenerate docs and record the session journal. Use when done coding and ready to end the session.",
+    "Wrap up the session: integrate the task (local fast-forward or remote PR/MR), stop on failure, sync spec deltas, archive completed tasks, then regenerate docs and record the session journal. Use when done coding and ready to end the session.",
   coordinator:
     "Single-session multi-task orchestration: read a backlog, create tasks with footprints/dependencies, plan waves, dispatch a manifest through the harness's native sub-agents, monitor status, and integrate serially. Use for parallel task execution or coordinator-mode questions. Phronia never spawns agents itself.",
   "before-dev": `Discovers and injects project-specific coding guidelines from ${DIR_NAMES.WORKFLOW}/spec/ before implementation begins. Reads spec indexes, pre-development checklists, and shared thinking guides for the target package. Use when starting a new coding task, before writing any code, switching to a different package, or needing to refresh project conventions and standards.`,
@@ -290,7 +290,7 @@ const COMMAND_DESCRIPTIONS: Record<string, string> = {
   start: "Initialize a Phronia development session.",
   continue: "Resume work on a task: choose it, resolve its workspace, then continue.",
   "finish-work":
-    "Wrap up: integrate the task, archive it, refresh docs, and record the journal.",
+    "Wrap up: integrate the task, sync spec deltas, archive it, refresh docs, and record the journal.",
 };
 
 /** Wrap resolved command content with YAML frontmatter (name + description). */

@@ -1456,8 +1456,62 @@ def _task_branch_field(data: dict, key: str) -> str:
     return strip_blank(value) if isinstance(value, str) else ""
 
 
+def _resolve_task_branch(data: dict, task_dir: Path, repo_root: Path) -> str:
+    """Resolve the task's feature branch without writing it back.
+
+    Order (design.md §6): the explicit `task.json.branch`, then the shared
+    worktree registry entry for this task, then no branch. `task.json.branch`
+    and `task.json.worktree_path` are legacy fields; the registry is the
+    runtime source, so a worktree created by `ensure` exposes its branch here
+    even though `task.py start` no longer records one.
+    """
+    explicit = _task_branch_field(data, "branch")
+    if explicit:
+        return explicit
+
+    available, entries = _load_worktree_registry(repo_root)
+    if not available:
+        return ""
+    for entry in entries:
+        ref = entry.get("taskRef")
+        if not isinstance(ref, str) or not ref.strip():
+            continue
+        if not _ref_matches_task(ref, task_dir):
+            continue
+        branch = entry.get("branch")
+        if isinstance(branch, str) and strip_blank(branch):
+            return strip_blank(branch)
+    return ""
+
+
+def _landed_integration_commit(data: dict) -> str:
+    """Return `meta.integration.commit` only when the task landed.
+
+    `pushed` deliberately does not qualify: a PR is still open, so the commit
+    is not on the base branch yet and archive must keep refusing.
+    """
+    meta = data.get("meta")
+    integration = meta.get("integration") if isinstance(meta, dict) else None
+    if not isinstance(integration, dict):
+        return ""
+    if integration.get("outcome") != "landed":
+        return ""
+    commit = integration.get("commit")
+    return strip_blank(commit) if isinstance(commit, str) else ""
+
+
+def _resolve_archive_base_branch(data: dict, repo_root: Path) -> str:
+    """Base branch for the landed fallback: explicit value, else repo default."""
+    explicit = _task_branch_field(data, "base_branch")
+    if explicit:
+        return explicit
+    default = resolve_default_branch(repo_root)
+    return strip_blank(default) if isinstance(default, str) else ""
+
+
 def _validate_branch_metadata(
     data: dict,
+    task_dir: Path,
     task_name: str,
     repo_root: Path,
     skip: bool,
@@ -1476,8 +1530,14 @@ def _validate_branch_metadata(
     A recorded branch that no longer exists locally stays a warning: after a
     merge the feature branch is normally deleted, and refusing to archive then
     would be backwards.
+
+    The branch is resolved from `task.json.branch` and then from the shared
+    worktree registry (design.md §6). When neither has one, an integration
+    outcome of `landed` plus an ancestor reachable from the base branch proves
+    the work is in the base history, so a dedicated branch is no longer
+    required. `task.json.branch` is never written back.
     """
-    branch = _task_branch_field(data, "branch")
+    branch = _resolve_task_branch(data, task_dir, repo_root)
     base_branch = _task_branch_field(data, "base_branch")
     task_py = f"python3 {DIR_WORKFLOW}/scripts/task.py"
 
@@ -1514,26 +1574,113 @@ def _validate_branch_metadata(
         )
         return False
 
-    if not branch and base_branch and has_git_remote(repo_root):
+    if not branch:
+        # Landed tasks whose worktree was removed may no longer have a branch
+        # anywhere. Trust git ancestry over absent metadata: if the recorded
+        # integration commit is reachable from the base branch, the work is
+        # already in the base history.
+        landed_commit = _landed_integration_commit(data)
+        base = _resolve_archive_base_branch(data, repo_root)
+        if (
+            landed_commit
+            and base
+            and run_git(
+                ["merge-base", "--is-ancestor", landed_commit, base],
+                cwd=repo_root,
+            )[0]
+            == 0
+        ):
+            print(
+                colored(
+                    "Info: landed without a dedicated branch (verified by "
+                    "integration metadata).",
+                    Colors.GREEN,
+                ),
+                file=sys.stderr,
+            )
+            return True
+
+        if base_branch and has_git_remote(repo_root):
+            print(
+                colored(
+                    f"Error: refusing to archive '{task_name}': no branch is recorded, "
+                    f"but the task targets base_branch '{base_branch}' in a repo with a "
+                    "remote — the branch it was built on was never written down.",
+                    Colors.RED,
+                ),
+                file=sys.stderr,
+            )
+            print("Repair with:", file=sys.stderr)
+            print(f"  {task_py} set-branch {task_name} <branch>", file=sys.stderr)
+            print(
+                f"  {task_py} archive {task_name} --skip-branch-validation"
+                "   # only if the work landed without a branch of its own",
+                file=sys.stderr,
+            )
+            return False
+
+    return True
+
+
+def _validate_spec_sync(
+    task_dir: Path,
+    data: dict,
+    skip: bool,
+) -> bool:
+    """Refuse an archive while a spec delta has not been synced.
+
+    A task with `spec-delta.md` carries intent that the control plane has not
+    applied yet. Archiving it loses the only pointer to that work, so the gate
+    is explicit: run `phronia task spec commit`, or pass `--skip-spec-sync`
+    (recorded in the task notes) for a delta that should be dropped.
+    """
+    delta = task_dir / "spec-delta.md"
+    if not delta.is_file():
+        return True
+
+    meta = data.get("meta")
+    spec_sync = meta.get("spec_sync") if isinstance(meta, dict) else None
+    status = spec_sync.get("status") if isinstance(spec_sync, dict) else None
+    if status == "synced":
+        return True
+
+    task_label = task_dir.name
+    if skip:
+        reason = "spec sync skipped at archive (--skip-spec-sync)"
+        existing = data.get("notes")
+        data["notes"] = (
+            f"{existing.rstrip()}\n{reason}" if isinstance(existing, str) and existing.strip() else reason
+        )
         print(
             colored(
-                f"Error: refusing to archive '{task_name}': no branch is recorded, "
-                f"but the task targets base_branch '{base_branch}' in a repo with a "
-                "remote — the branch it was built on was never written down.",
-                Colors.RED,
+                f"Warning: archiving '{task_label}' without spec sync (--skip-spec-sync).",
+                Colors.YELLOW,
             ),
             file=sys.stderr,
         )
-        print("Repair with:", file=sys.stderr)
-        print(f"  {task_py} set-branch {task_name} <branch>", file=sys.stderr)
-        print(
-            f"  {task_py} archive {task_name} --skip-branch-validation"
-            "   # only if the work landed without a branch of its own",
-            file=sys.stderr,
-        )
-        return False
+        return True
 
-    return True
+    rendered_status = status if isinstance(status, str) and status else "none"
+    print(
+        colored(
+            f"Error: refusing to archive '{task_label}': SPEC_SYNC_PENDING — "
+            f"spec-delta.md exists but meta.spec_sync.status={rendered_status}.",
+            Colors.RED,
+        ),
+        file=sys.stderr,
+    )
+    print(
+        "Apply the delta in the main checkout, then retry the archive:",
+        file=sys.stderr,
+    )
+    print(f"  phronia task spec plan {task_label}", file=sys.stderr)
+    print(f"  phronia task spec commit {task_label}", file=sys.stderr)
+    print(
+        f"  python3 {DIR_WORKFLOW}/scripts/task.py archive {task_label} --skip-spec-sync"
+        "   # only if the delta should be dropped",
+        file=sys.stderr,
+    )
+    return False
 
 
 def cmd_archive(args: argparse.Namespace) -> int:
@@ -1631,9 +1778,21 @@ def cmd_archive(args: argparse.Namespace) -> int:
             # task leaves the active tree. Stale branches only warn.
             if not _validate_branch_metadata(
                 data,
+                task_dir,
                 task_name,
                 repo_root,
                 getattr(args, "skip_branch_validation", False),
+            ):
+                print(
+                    f"Not archived: {_repo_relative_path(task_dir, repo_root)} is unchanged.",
+                    file=sys.stderr,
+                )
+                return 1
+
+            if not _validate_spec_sync(
+                task_dir,
+                data,
+                bool(getattr(args, "skip_spec_sync", False)),
             ):
                 print(
                     f"Not archived: {_repo_relative_path(task_dir, repo_root)} is unchanged.",

@@ -26,8 +26,10 @@ import {
 } from "@phronia/core/task";
 import {
   findSoleSessionKey,
+  normalizeRepoRelativePath,
   openState,
   type ConfigView,
+  type ParallelInput,
   type TaskRecordView,
 } from "@phronia/core/state";
 import {
@@ -54,6 +56,7 @@ import {
   type WorktreeRegistryLoadResult,
 } from "../adapters/shared-runtime.js";
 import { listTaskLeases } from "./lease.js";
+import { readDirtyPaths } from "./dirty-check.js";
 
 const DEFAULT_CLAIM_TTL_SECONDS = 7200;
 const COMMAND_TIMEOUT_MS = 10 * 60 * 1000;
@@ -145,6 +148,8 @@ export interface WorkspaceSuccess {
   readonly claim: WorkspaceClaimRecord | null;
   readonly lease: TaskLease | null;
   readonly warnings: readonly string[];
+  /** Missing build inputs + executable next steps (create only). */
+  readonly inputs?: WorktreeInputHints;
   readonly provisional?: {
     readonly title: string;
     readonly path: string;
@@ -162,6 +167,8 @@ export interface WorktreeRecord {
   createdAt: string;
   kind?: "phronia" | "platform";
   provisional?: boolean;
+  /** Best-effort recursive size measured before removal (bytes). */
+  freedBytes?: number;
 }
 
 export interface WorktreeOptions {
@@ -175,6 +182,8 @@ export interface WorktreeOptions {
   readonly deleteBranch?: boolean;
   readonly copy?: readonly string[];
   readonly postCreate?: readonly string[];
+  /** Add without requiring the task artifacts to be committed on the base. */
+  readonly copyTask?: boolean;
 }
 
 export interface WorktreeResult {
@@ -184,6 +193,11 @@ export interface WorktreeResult {
   readonly code?: string;
   readonly next?: string;
   readonly details?: Readonly<Record<string, unknown>>;
+  readonly warnings?: readonly string[];
+  /** Missing build inputs + executable next steps. */
+  readonly inputs?: WorktreeInputHints;
+  /** Best-effort bytes freed by `remove`/`prune`. */
+  readonly freedBytes?: number;
 }
 
 export interface AttachWorktreeOptions {
@@ -686,16 +700,8 @@ function executeWorkspaceDecision(
   }
 
   if (options.copyTask !== true) {
-    const visible = taskArtifactsVisible(context, ref, decision.base);
-    if (!visible) {
-      const id = view.id;
-      return workspaceFailure(
-        "TASK_ARTIFACTS_UNCOMMITTED",
-        `task artifacts for ${ref} are not on ${decision.base}; a new worktree would not see prd/design/implement`,
-        `commit them first: git add .phronia/tasks/${id} && git commit -m "chore(task): plan ${id}"; or re-run with --copy-task`,
-        { taskRef: ref, base: decision.base },
-      );
-    }
+    const visible = assertTaskArtifactsVisible(context, ref, decision.base, view);
+    if (visible !== null) return visible;
   }
 
   try {
@@ -747,14 +753,30 @@ function executeWorkspaceDecision(
       workspace: decision.path,
     });
   }
+  const hints = detectWorktreeInputs({
+    mainRoot: context.mainRoot,
+    worktree: decision.path,
+    parallel: context.config.parallel,
+  });
 
   // A task that works in its own worktree must not hold the main checkout
   // claim; keeping the session's existing claim unchanged preserves the
   // workspace claim -> integration lock ordering in W4.
-  return success(decision, decision.path, current, findLease(context, ref), [
-    `worktree ready: ${decision.path}`,
-    "start a new agent session in that directory (or use your platform's worktree launch)",
-  ]);
+  return {
+    ...success(decision, decision.path, current, findLease(context, ref), [
+      `worktree ready: ${decision.path}`,
+      "start a new agent session in that directory (or use your platform's worktree launch)",
+      ...post.warnings,
+      ...hintWarnings(hints),
+    ]),
+    inputs: hints,
+  };
+}
+
+function hintWarnings(hints: WorktreeInputHints): string[] {
+  return hints.missing.map(
+    (missing) => `missing worktree input: ${missing} (see inputs.next)`,
+  );
 }
 
 export function bindWorkspace(options: BindWorkspaceOptions): WorkspaceResult {
@@ -1008,12 +1030,30 @@ export function addWorktree(taskRef: string, options: WorktreeOptions): Worktree
       "use `phronia task worktree remove` first, or run `phronia task worktree attach`",
     );
   }
-  if (!options.force && isMainDirty(context)) {
-    return worktreeFailure(
-      "WORKSPACE_DIRTY_UNCLAIMED",
-      "main checkout has uncommitted changes; commit them or pass --force",
-      "commit/stash the changes, or re-run with --force",
+  const dirtyPaths = mainDirtyPaths(context);
+  if (!options.force && dirtyPaths.length > 0) {
+    const taskDirectory = ref.replace(/\\/g, "/");
+    const onlyTaskArtifacts = dirtyPaths.every(
+      (dirty) =>
+        dirty === taskDirectory || dirty.startsWith(`${taskDirectory}/`),
     );
+    if (onlyTaskArtifacts) {
+      if (options.copyTask !== true) {
+        return worktreeFailure(
+          "TASK_ARTIFACTS_UNCOMMITTED",
+          `task artifacts for ${ref} are uncommitted in the main checkout`,
+          scopedTaskCommitNext(view),
+          { details: { dirtyPaths } },
+        );
+      }
+    } else {
+      return worktreeFailure(
+        "WORKSPACE_DIRTY_UNCLAIMED",
+        "main checkout has uncommitted changes; commit them or pass --force",
+        "commit/stash the changes, or re-run with --force",
+        { details: { dirtyPaths } },
+      );
+    }
   }
   if (isBare(context)) {
     return worktreeFailure(
@@ -1053,6 +1093,21 @@ export function addWorktree(taskRef: string, options: WorktreeOptions): Worktree
   if (!base.ok) return worktreeFailure(base.code, base.message, base.next);
 
   const branchExists = refExists(context, `refs/heads/${branch}`);
+  // `--force` keeps its legacy "I know the main checkout is dirty" meaning;
+  // otherwise a worktree created from `base` must see the task artifacts.
+  const forcedDirty = options.force === true && dirtyPaths.length > 0;
+  let forceWarning: string | null = null;
+  if (options.copyTask !== true && !branchExists && !forcedDirty) {
+    const visible = assertTaskArtifactsVisible(context, ref, base.base, view);
+    if (visible !== null) return visible;
+  } else if (
+    forcedDirty &&
+    options.copyTask !== true &&
+    !taskArtifactsVisible(context, ref, base.base)
+  ) {
+    forceWarning = `worktree created with --force; task artifacts may be missing — commit ${ref} or re-run with --copy-task`;
+  }
+
   try {
     context.git.worktreeAdd({
       cwd: context.mainRoot,
@@ -1086,6 +1141,21 @@ export function addWorktree(taskRef: string, options: WorktreeOptions): Worktree
   });
   fs.mkdirSync(path.join(target, ".phronia", ".runtime"), { recursive: true });
 
+  if (options.copyTask === true) {
+    const copied = copyPath(
+      path.join(context.mainRoot, ref),
+      path.join(target, ref),
+    );
+    if (!copied) {
+      return worktreeFailure(
+        "WORKTREE_COPY_FAILED",
+        `worktree created but the task directory could not be copied to ${target}`,
+        `copy it manually: cp -R ${ref} ${path.join(target, ref)}`,
+        { record },
+      );
+    }
+  }
+
   const post = applyCopyAndPostCreate(context, target, {
     copy: options.copy,
     postCreate: options.postCreate,
@@ -1093,10 +1163,22 @@ export function addWorktree(taskRef: string, options: WorktreeOptions): Worktree
   if (!post.ok) {
     return worktreeFailure(post.code, post.message, post.next, { record });
   }
+  const hints = detectWorktreeInputs({
+    mainRoot: context.mainRoot,
+    worktree: target,
+    parallel: context.config.parallel,
+  });
+  const warnings = [
+    ...post.warnings,
+    ...hintWarnings(hints),
+    ...(forceWarning === null ? [] : [forceWarning]),
+  ];
   return {
     ok: true,
     message: `worktree ready: ${target} (${branch})`,
     record,
+    ...(warnings.length === 0 ? {} : { warnings }),
+    inputs: hints,
   };
 }
 
@@ -1203,6 +1285,7 @@ export function removeWorktree(
       "commit/stash the changes, or re-run with --force",
     );
   }
+  const freed = measureDirectorySize(target);
   try {
     context.git.worktreeRemove({
       cwd: context.mainRoot,
@@ -1228,7 +1311,15 @@ export function removeWorktree(
     }
   }
   removeRegistryEntry(context, ref, target);
-  return { ok: true, message: `worktree removed: ${target}` };
+  const freedNote =
+    freed === null || freed.bytes === 0
+      ? ""
+      : ` (freed ~${formatBytes(freed.bytes)}${freed.truncated ? "+" : ""})`;
+  return {
+    ok: true,
+    message: `worktree removed: ${target}${freedNote}`,
+    ...(freed === null ? {} : { freedBytes: freed.bytes }),
+  };
 }
 
 export function pruneWorktrees(options: PruneOptions): PruneResult {
@@ -1321,6 +1412,7 @@ export function pruneWorktrees(options: PruneOptions): PruneResult {
     }
 
     if (options.dryRun !== true) {
+      const freed = measureDirectorySize(entry.path);
       try {
         context.git.worktreeRemove({
           cwd: context.mainRoot,
@@ -1339,6 +1431,12 @@ export function pruneWorktrees(options: PruneOptions): PruneResult {
         deleteBranch(context, entry.branch, false);
       }
       removeRegistryEntry(context, entry.taskRef, entry.path);
+      removed.push(
+        freed === null || freed.bytes === 0
+          ? record
+          : { ...record, freedBytes: freed.bytes },
+      );
+      continue;
     }
     removed.push(record);
   }
@@ -1355,6 +1453,10 @@ export function pruneWorktrees(options: PruneOptions): PruneResult {
     }
   }
 
+  const freedTotal = removed.reduce(
+    (sum, record) => sum + (record.freedBytes ?? 0),
+    0,
+  );
   return {
     ok: true,
     dryRun: options.dryRun === true,
@@ -1362,7 +1464,7 @@ export function pruneWorktrees(options: PruneOptions): PruneResult {
     kept,
     message: `${options.dryRun === true ? "would remove" : "removed"} ${
       removed.length
-    } worktree(s); kept ${kept.length}`,
+    } worktree(s)${freedTotal === 0 ? "" : `; freed ~${formatBytes(freedTotal)}`}; kept ${kept.length}`,
   };
 }
 
@@ -2017,11 +2119,299 @@ function taskArtifactsVisible(
   }
 }
 
+function scopedTaskCommitNext(view: TaskRecordView): string {
+  return `commit them first: git add .phronia/tasks/${view.id} && git commit -m "chore(task): plan ${view.id}"; or re-run with --copy-task`;
+}
+
+/**
+ * Shared entry-point guard: a worktree created from `base` must see the task
+ * artifacts. `ensure` and `worktree add` use the same message and next.
+ */
+function assertTaskArtifactsVisible(
+  context: WorkspaceContext,
+  ref: string,
+  base: string,
+  view: TaskRecordView,
+): WorkspaceFailure | null {
+  if (taskArtifactsVisible(context, ref, base)) {
+    return null;
+  }
+  return workspaceFailure(
+    "TASK_ARTIFACTS_UNCOMMITTED",
+    `task artifacts for ${ref} are not on ${base}; a new worktree would not see prd/design/implement`,
+    scopedTaskCommitNext(view),
+    { taskRef: ref, base },
+  );
+}
+
+function mainDirtyPaths(context: WorkspaceContext): readonly string[] {
+  try {
+    return readDirtyPaths(
+      context.git,
+      context.mainRoot,
+      context.config.parallel.integration.ignoredInputs,
+      context.mainRoot,
+    ).dirtyPaths;
+  } catch {
+    return [];
+  }
+}
+
 function integrationOutcome(context: WorkspaceContext, ref: string): string {
   const view = openState({ root: context.mainRoot }).tasks.read(ref);
   const meta = view?.meta ?? {};
   const integration = isRecord(meta.integration) ? meta.integration : {};
   return typeof integration.outcome === "string" ? integration.outcome : "none";
+}
+
+// ---------------------------------------------------------------------------
+// worktree inputs / hints
+// ---------------------------------------------------------------------------
+
+export interface WorktreeInputHints {
+  /** Configured or conventional inputs that are absent from the worktree. */
+  readonly missing: readonly string[];
+  /** Executable follow-ups (symlink commands, config examples, build hints). */
+  readonly next: readonly string[];
+}
+
+export interface ApplyWorktreeInputsOptions {
+  readonly mainRoot: string;
+  readonly worktree: string;
+  readonly inputs: readonly ParallelInput[];
+  /** Injectable for the Windows fallback test. */
+  readonly platform?: NodeJS.Platform;
+  readonly symlink?: (
+    target: string,
+    path: string,
+    type?: "dir" | "junction",
+  ) => void;
+  readonly copy?: (source: string, destination: string) => void;
+}
+
+export type WorktreeInputsOutcome =
+  | { readonly ok: true; readonly warnings: readonly string[] }
+  | {
+      readonly ok: false;
+      readonly code: string;
+      readonly message: string;
+      readonly next: string;
+      readonly warnings: readonly string[];
+    };
+
+/**
+ * Materialize `parallel.inputs` (`symlink` or `copy`) inside a fresh worktree.
+ * Failures never roll the worktree back: the user can fix the input or remove
+ * the worktree, and the task artifacts are already committed.
+ */
+export function applyWorktreeInputs(
+  options: ApplyWorktreeInputsOptions,
+): WorktreeInputsOutcome {
+  const warnings: string[] = [];
+  const platform = options.platform ?? process.platform;
+  const symlink =
+    options.symlink ??
+    ((target: string, linkPath: string, type?: "dir" | "junction") =>
+      fs.symlinkSync(target, linkPath, type));
+  const copy =
+    options.copy ??
+    ((source: string, destination: string) => {
+      fs.mkdirSync(path.dirname(destination), { recursive: true });
+      fs.cpSync(source, destination, { recursive: true, force: true });
+    });
+
+  for (const input of options.inputs) {
+    // Second gate: config validation already rejected `..`/absolute paths.
+    const relative = normalizeRepoRelativePath(input.path);
+    const source =
+      relative === null ? null : path.resolve(options.mainRoot, relative);
+    const destination =
+      relative === null ? null : path.resolve(options.worktree, relative);
+    if (
+      relative === null ||
+      source === null ||
+      destination === null ||
+      !isWithin(options.mainRoot, source) ||
+      !isWithin(options.worktree, destination)
+    ) {
+      return inputFailure(
+        relative ?? input.path,
+        `refusing to materialize an input outside the repository: ${input.path}`,
+      );
+    }
+
+    if (lstatOrNull(destination) !== null) {
+      warnings.push(`input already exists in the worktree; skipped: ${relative}`);
+      continue;
+    }
+    if (fs.existsSync(source) === false) {
+      warnings.push(
+        `parallel.inputs source is missing in the main checkout; skipped: ${relative}`,
+      );
+      continue;
+    }
+    // Resolve symlinks before materializing: a lexical check alone lets a
+    // symlinked parent or a source that links to /etc escape the repository.
+    const realMainRoot = realpathOrNull(options.mainRoot);
+    const realSource = realpathOrNull(source);
+    if (
+      realMainRoot === null ||
+      realSource === null ||
+      !isWithin(realMainRoot, realSource)
+    ) {
+      return inputFailure(
+        relative,
+        `resolved source escapes the repository: ${realSource ?? source}`,
+      );
+    }
+
+    try {
+      if (input.mode === "copy") {
+        copy(source, destination);
+      } else {
+        fs.mkdirSync(path.dirname(destination), { recursive: true });
+        const relativeTarget = path.relative(
+          path.dirname(destination),
+          source,
+        ) || ".";
+        if (platform === "win32") {
+          try {
+            // Junction targets are absolute; Node resolves them itself.
+            symlink(source, destination, "junction");
+          } catch (error) {
+            try {
+              copy(source, destination);
+              warnings.push(
+                `symlink not permitted for ${relative}; copied instead (${errorMessage(error)})`,
+              );
+            } catch (copyError) {
+              return inputFailure(
+                relative,
+                `cannot link or copy ${relative}: ${errorMessage(copyError)}`,
+              );
+            }
+          }
+        } else {
+          symlink(relativeTarget, destination, "dir");
+        }
+      }
+    } catch (error) {
+      return inputFailure(relative, errorMessage(error));
+    }
+  }
+
+  return { ok: true, warnings };
+}
+
+function inputFailure(relativePath: string, detail: string): WorktreeInputsOutcome {
+  return {
+    ok: false,
+    code: "WORKTREE_INPUT_FAILED",
+    message: `cannot materialize worktree input ${relativePath}: ${detail}`,
+    next: `fix parallel.inputs (or its permissions) and re-run \`phronia task workspace ensure\`, or remove the worktree with \`phronia task worktree remove\``,
+    warnings: [],
+  };
+}
+
+/**
+ * Detect missing build inputs after a worktree is created. Hints only: Phronia
+ * never installs dependencies, creates unknown symlinks, or edits `.gitignore`.
+ */
+export function detectWorktreeInputs(options: {
+  readonly mainRoot: string;
+  readonly worktree: string;
+  readonly parallel: ConfigView["parallel"];
+}): WorktreeInputHints {
+  const missing: string[] = [];
+  const next: string[] = [];
+  const seen = new Set<string>();
+
+  const addMissing = (relative: string): void => {
+    if (seen.has(relative)) return;
+    seen.add(relative);
+    missing.push(relative);
+  };
+  const linkCommand = (relative: string): string =>
+    `ln -s ${shellQuote(path.join(options.mainRoot, relative))} ${shellQuote(path.join(options.worktree, relative))}`;
+
+  for (const input of options.parallel.inputs) {
+    const relative = normalizeRepoRelativePath(input.path);
+    if (relative === null) continue;
+    if (lstatOrNull(path.join(options.worktree, relative)) !== null) continue;
+    addMissing(relative);
+    if (fs.existsSync(path.join(options.mainRoot, relative))) {
+      next.push(
+        input.mode === "copy"
+          ? `cp -R ${path.join(options.mainRoot, relative)} ${path.join(options.worktree, relative)}`
+          : linkCommand(relative),
+      );
+    } else {
+      next.push(
+        `create ${path.join(options.mainRoot, relative)} in the main checkout, or remove it from parallel.inputs`,
+      );
+    }
+  }
+
+  for (const conventional of ["node_modules", "rust/target"]) {
+    if (lstatOrNull(path.join(options.worktree, conventional)) !== null) continue;
+    if (lstatOrNull(path.join(options.mainRoot, conventional)) === null) continue;
+    addMissing(conventional);
+    if (conventional === "node_modules") {
+      next.push(
+        `${linkCommand(conventional)}  # or declare it under parallel.inputs with mode: symlink`,
+      );
+    } else {
+      next.push(
+        `export CARGO_TARGET_DIR=${path.join(options.mainRoot, conventional)}  # per worktree; or set parallel.build.cargo_target_dir: shared`,
+      );
+    }
+  }
+
+  if (options.parallel.build.cargoTargetDir === "shared") {
+    next.push(
+      `export CARGO_TARGET_DIR=${path.join(options.mainRoot, ".phronia", "cache", "cargo-target")}  # shared cache; Cargo's target lock serializes concurrent builds`,
+    );
+  }
+  if (options.parallel.build.sccache) {
+    next.push(
+      "cargo install sccache && export RUSTC_WRAPPER=sccache  # optional shared compilation cache",
+    );
+  }
+
+  return { missing, next };
+}
+
+/** Single-quote a path so hints stay copy-pasteable (spaces, `$`, quotes). */
+function shellQuote(value: string): string {
+  if (/^[A-Za-z0-9_./:@%+=,-]+$/.test(value)) {
+    return value;
+  }
+  return `'${value.replace(/'/g, `'\\''`)}'`;
+}
+
+function isWithin(root: string, target: string): boolean {  const relative = path.relative(path.resolve(root), path.resolve(target));
+  return (
+    relative === "" ||
+    (!relative.startsWith(`..${path.sep}`) &&
+      relative !== ".." &&
+      !path.isAbsolute(relative))
+  );
+}
+
+function lstatOrNull(file: string): fs.Stats | null {
+  try {
+    return fs.lstatSync(file);
+  } catch {
+    return null;
+  }
+}
+
+function realpathOrNull(file: string): string | null {
+  try {
+    return fs.realpathSync(file);
+  } catch {
+    return null;
+  }
 }
 
 // ---------------------------------------------------------------------------
@@ -2032,9 +2422,27 @@ function applyCopyAndPostCreate(
   context: WorkspaceContext,
   target: string,
   options: { copy?: readonly string[]; postCreate?: readonly string[] },
-): { ok: true } | { ok: false; code: string; message: string; next: string } {
+):
+  | { ok: true; warnings: readonly string[] }
+  | { ok: false; code: string; message: string; next: string } {
   const copy = options.copy ?? context.config.parallel.copy;
   const postCreate = options.postCreate ?? context.config.parallel.postCreate;
+  const warnings: string[] = [];
+
+  const inputs = applyWorktreeInputs({
+    mainRoot: context.mainRoot,
+    worktree: target,
+    inputs: context.config.parallel.inputs,
+  });
+  if (!inputs.ok) {
+    return {
+      ok: false,
+      code: inputs.code,
+      message: inputs.message,
+      next: inputs.next,
+    };
+  }
+  warnings.push(...inputs.warnings);
 
   for (const relative of copy) {
     const source = path.resolve(context.mainRoot, relative);
@@ -2071,7 +2479,7 @@ function applyCopyAndPostCreate(
       };
     }
   }
-  return { ok: true };
+  return { ok: true, warnings };
 }
 
 /** Minimal quote-aware tokenizer; no shell expansion is performed. */
@@ -2112,8 +2520,74 @@ export function tokenize(command: string): string[] {
   return tokens;
 }
 
-function copyPath(source: string, destination: string): boolean {
+const SIZE_MAX_DEPTH = 12;
+const SIZE_MAX_ENTRIES = 200_000;
+
+/**
+ * Best-effort recursive size used only for cleanup messages. Symlinks are not
+ * followed and both depth and entry count are capped, so a pathological tree
+ * can never turn removal into an unbounded scan.
+ */
+function measureDirectorySize(
+  root: string,
+): { bytes: number; truncated: boolean } | null {
+  let bytes = 0;
+  let entries = 0;
+  let truncated = false;
+  const stack: { dir: string; depth: number }[] = [{ dir: root, depth: 0 }];
   try {
+    while (stack.length > 0) {
+      const current = stack.pop();
+      if (current === undefined) break;
+      if (current.depth > SIZE_MAX_DEPTH) {
+        truncated = true;
+        continue;
+      }
+      let children: fs.Dirent[];
+      try {
+        children = fs.readdirSync(current.dir, { withFileTypes: true });
+      } catch {
+        truncated = true;
+        continue;
+      }
+      for (const child of children) {
+        entries += 1;
+        if (entries > SIZE_MAX_ENTRIES) {
+          return { bytes, truncated: true };
+        }
+        if (child.isSymbolicLink()) continue;
+        const full = path.join(current.dir, child.name);
+        if (child.isDirectory()) {
+          stack.push({ dir: full, depth: current.depth + 1 });
+          continue;
+        }
+        try {
+          const stat = fs.lstatSync(full);
+          if (stat.isFile()) bytes += stat.size;
+        } catch {
+          truncated = true;
+        }
+      }
+    }
+  } catch {
+    return { bytes, truncated: true };
+  }
+  return { bytes, truncated };
+}
+
+function formatBytes(bytes: number): string {
+  if (!Number.isFinite(bytes) || bytes <= 0) return "0 B";
+  const units = ["B", "KB", "MB", "GB", "TB"];
+  let value = bytes;
+  let unit = 0;
+  while (value >= 1024 && unit < units.length - 1) {
+    value /= 1024;
+    unit += 1;
+  }
+  return unit === 0 ? `${Math.round(value)} B` : `${value.toFixed(1)} ${units[unit]}`;
+}
+
+function copyPath(source: string, destination: string): boolean {  try {
     fs.cpSync(source, destination, { recursive: true, force: true });
     return true;
   } catch {

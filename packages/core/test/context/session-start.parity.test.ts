@@ -7,7 +7,7 @@ import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import { handleContext } from "../../src/context/index.js";
 import { CORE_VERSION } from "../../src/version.js";
 
-const RUNTIME_LINE = /^(workspace|claim|lease|parallel): /;
+const RUNTIME_LINE = /^(workspace|claim|lease|parallel|spec): /;
 
 const REPO_ROOT = path.resolve(
   path.dirname(fileURLToPath(import.meta.url)),

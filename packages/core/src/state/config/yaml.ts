@@ -2,12 +2,13 @@
  * Dependency-free YAML subset parser, ported from
  * `templates/workflow/scripts/common/trellis_config.py`.
  *
- * Supported: `key: value` scalars (all strings), indented mappings,
- * `- ` scalar lists, whole-line and inline `#` comments outside quotes, and
- * one layer of matching quotes.
+ * Supported: `key: value` scalars (all strings), indented mappings, `- `
+ * lists of scalars **or flat mappings** (`- path: x` / `  mode: symlink`),
+ * whole-line and inline `#` comments outside quotes, and one layer of matching
+ * quotes.
  *
  * Unsupported (reported, skipped): block scalars, anchors, aliases, merge
- * keys, flow collections, mappings nested inside a list.
+ * keys, flow collections, nested lists inside a list-item mapping.
  */
 
 export type YamlValue = string | YamlValue[] | YamlObject;
@@ -62,7 +63,24 @@ function parseBlock(
 
     if (stripped.startsWith("- ")) {
       if (currentList !== null) {
-        currentList.push(unquote(stripped.slice(2).trim()));
+        const content = stripped.slice(2).trim();
+        const mappingKey = listItemMappingKey(content);
+        if (mappingKey === null) {
+          currentList.push(unquote(content));
+          index += 1;
+          continue;
+        }
+        const item: YamlObject = {};
+        currentList.push(item);
+        index = parseListItem(
+          lines,
+          index,
+          indent,
+          content,
+          item,
+          warnings,
+        );
+        continue;
       }
       index += 1;
       continue;
@@ -136,6 +154,96 @@ function parseBlock(
   }
 
   return index;
+}
+
+/**
+ * Detect `key: value` on a `- ` list item. A quoted scalar (`- "a: b"`) and a
+ * bare `a:b` scalar stay scalars, matching YAML's `: ` requirement.
+ */
+function listItemMappingKey(content: string): string | null {
+  if (content === "" || content.startsWith('"') || content.startsWith("'")) {
+    return null;
+  }
+  const separator = content.indexOf(":");
+  if (separator <= 0) {
+    return null;
+  }
+  const key = content.slice(0, separator).trim();
+  if (!/^[A-Za-z0-9_.\-/ ]+$/.test(key)) {
+    return null;
+  }
+  const after = content.slice(separator + 1);
+  if (after !== "" && !after.startsWith(" ")) {
+    return null;
+  }
+  return key;
+}
+
+/**
+ * Parse one `- key: value` item and its continuation lines into `item`.
+ * The first pair lives on the dash line; the body is parsed by `parseBlock`
+ * with the item as its target so nested mappings keep working.
+ */
+function parseListItem(
+  lines: readonly string[],
+  index: number,
+  dashIndent: number,
+  content: string,
+  item: YamlObject,
+  warnings: YamlWarning[],
+): number {
+  const separator = content.indexOf(":");
+  const key = content.slice(0, separator).trim();
+  const rawValue = content.slice(separator + 1);
+  let value = stripInlineComment(rawValue).trim();
+  const wasQuoted =
+    value.length >= 2 &&
+    value[0] === value[value.length - 1] &&
+    (value[0] === '"' || value[0] === "'");
+
+  if (!wasQuoted) {
+    const reason = unsupportedValue(key, value);
+    if (reason !== null) {
+      warnings.push({ line: index + 1, reason, text: lines[index] ?? "" });
+      return skipIndentedBody(lines, index + 1, dashIndent);
+    }
+  }
+
+  value = unquote(value);
+  let next = index + 1;
+  if (value.length > 0 || wasQuoted) {
+    item[key] = value;
+  } else {
+    const followed = nextContentLine(lines, next);
+    if (followed.index >= lines.length) {
+      item[key] = {};
+      return followed.index;
+    }
+    const contentIndent = dashIndent + 2;
+    const followedIndent = indentOf(followed.line);
+    if (followedIndent > contentIndent) {
+      if (followed.line.trim().startsWith("- ")) {
+        warnings.push({
+          line: followed.index + 1,
+          reason: "nested lists inside a list item are not supported",
+          text: followed.line,
+        });
+        item[key] = {};
+        return skipIndentedBody(lines, followed.index, contentIndent);
+      }
+      const nested: YamlObject = {};
+      item[key] = nested;
+      next = parseBlock(lines, followed.index, followedIndent, nested, warnings);
+    } else {
+      item[key] = {};
+    }
+  }
+
+  return parseBlock(lines, next, dashIndent + 1, item, warnings);
+}
+
+function indentOf(line: string): number {
+  return line.length - line.trimStart().length;
 }
 
 function unquote(value: string): string {

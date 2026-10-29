@@ -49,7 +49,6 @@ export const DEFAULT_PARALLEL_ALWAYS_SERIAL: readonly string[] = Object.freeze([
   "docs/requirements.md",
   ".phronia/config.yaml",
   ".phronia/workflow.md",
-  ".phronia/spec/**",
   ".phronia/gate.yaml",
 ]);
 
@@ -72,6 +71,24 @@ export type ParallelIntegrationConfirm = "auto" | "always" | "never";
 export type ParallelWorktreeMode = "auto" | "always" | "never";
 export type ParallelWorktreeCleanup = "on-archive" | "on-integrate" | "manual";
 export type ParallelWorktreeLocation = "persistent" | "ephemeral";
+export type ParallelInputMode = "symlink" | "copy";
+export type ParallelCargoTargetDir = "per-worktree" | "shared";
+
+/**
+ * A gitignored build input materialized in each worktree (`parallel.inputs`).
+ * `path` is repo-relative; the source always lives in the main checkout.
+ */
+export interface ParallelInput {
+  path: string;
+  mode: ParallelInputMode;
+}
+
+export interface ParallelBuildConfig {
+  /** `shared` only produces a recommendation; nothing is set globally. */
+  cargoTargetDir: ParallelCargoTargetDir;
+  /** Generate sccache setup hints; never installs anything. */
+  sccache: boolean;
+}
 
 /**
  * `parallel.dispatch.enforce` values. Owned by the config layer because it
@@ -90,6 +107,11 @@ export interface ParallelIntegrationConfig {
   /** Integration lock TTL, e.g. `30m`. */
   lockTtl: string;
   maxAttempts: number;
+  /**
+   * Explicit paths `integrate` may ignore in `git status` when they are
+   * symlinks or git-ignored. Never a blanket untracked allow-list.
+   */
+  ignoredInputs: readonly string[];
 }
 
 export interface ParallelConflictsConfig {
@@ -120,9 +142,12 @@ export interface ParallelConfig {
   location: ParallelWorktreeLocation;
   copy: readonly string[];
   postCreate: readonly string[];
+  /** Declarative gitignored build inputs (`symlink` or `copy`). */
+  inputs: readonly ParallelInput[];
   integration: ParallelIntegrationConfig;
   conflicts: ParallelConflictsConfig;
   dispatch: ParallelDispatchConfig;
+  build: ParallelBuildConfig;
 }
 
 export const DEFAULT_PARALLEL_CONFIG: ParallelConfig = Object.freeze({
@@ -134,6 +159,7 @@ export const DEFAULT_PARALLEL_CONFIG: ParallelConfig = Object.freeze({
   location: DEFAULT_PARALLEL_WORKTREE_LOCATION,
   copy: Object.freeze([]),
   postCreate: Object.freeze([]),
+  inputs: Object.freeze([]) as readonly ParallelInput[],
   integration: Object.freeze({
     mode: "auto",
     confirm: "auto",
@@ -142,6 +168,7 @@ export const DEFAULT_PARALLEL_CONFIG: ParallelConfig = Object.freeze({
     timeout: DEFAULT_PARALLEL_INTEGRATION_TIMEOUT,
     lockTtl: DEFAULT_PARALLEL_LOCK_TTL,
     maxAttempts: DEFAULT_PARALLEL_MAX_ATTEMPTS,
+    ignoredInputs: Object.freeze([]) as readonly string[],
   }),
   conflicts: Object.freeze({
     alwaysSerial: DEFAULT_PARALLEL_ALWAYS_SERIAL,
@@ -151,6 +178,10 @@ export const DEFAULT_PARALLEL_CONFIG: ParallelConfig = Object.freeze({
   }),
   dispatch: Object.freeze({
     enforce: DEFAULT_PARALLEL_DISPATCH_ENFORCE,
+  }),
+  build: Object.freeze({
+    cargoTargetDir: "per-worktree" as const,
+    sccache: false,
   }),
 });
 
@@ -408,9 +439,11 @@ function readParallel(
       diagnostics,
       configPath,
     ),
+    inputs: readParallelInputs(raw.inputs, diagnostics, configPath),
     integration: readParallelIntegration(raw.integration, diagnostics, configPath),
     conflicts: readParallelConflicts(raw.conflicts, diagnostics, configPath),
     dispatch: readParallelDispatch(raw.dispatch, diagnostics, configPath),
+    build: readParallelBuild(raw.build, diagnostics, configPath),
   };
 }
 
@@ -598,6 +631,11 @@ function readParallelIntegration(
       diagnostics,
       configPath,
     ),
+    ignoredInputs: readIgnoredInputs(
+      raw.ignored_inputs ?? raw.ignoredInputs,
+      diagnostics,
+      configPath,
+    ),
   };
 }
 
@@ -686,6 +724,225 @@ function readParallelDispatch(
       ["block", "warn", "off"] as const,
       defaults.enforce,
       "parallel.dispatch.enforce",
+      diagnostics,
+      configPath,
+    ),
+  };
+}
+
+/**
+ * Validate a repo-relative config path. Returns the normalized POSIX form, or
+ * null for absolute paths, Windows drive paths, empty values, and any `..`.
+ * Exported so the CLI can re-check at the IO chokepoint (second gate).
+ */
+export function normalizeRepoRelativePath(value: unknown): string | null {
+  if (typeof value !== "string") {
+    return null;
+  }
+  const trimmed = value.trim();
+  if (trimmed === "" || trimmed.includes("\0")) {
+    return null;
+  }
+  const normalized = trimmed.replace(/\\/g, "/");
+  if (normalized.startsWith("/") || /^[A-Za-z]:\//.test(normalized)) {
+    return null;
+  }
+  const segments: string[] = [];
+  for (const segment of normalized.split("/")) {
+    if (segment === "" || segment === ".") {
+      continue;
+    }
+    if (segment === "..") {
+      return null;
+    }
+    segments.push(segment);
+  }
+  return segments.length === 0 ? null : segments.join("/");
+}
+
+/**
+ * `parallel.inputs` accepts the documented list of mappings
+ * (`- path: x` / `  mode: symlink`), a path→mode mapping, or a plain list of
+ * repo-relative paths (mode defaults to `symlink`). Invalid entries are
+ * dropped with a diagnostic so one typo cannot block every worktree.
+ */
+function readParallelInputs(
+  raw: YamlValue | undefined,
+  diagnostics: Diagnostic[],
+  configPath: string,
+): readonly ParallelInput[] {
+  if (raw === undefined) {
+    return DEFAULT_PARALLEL_CONFIG.inputs;
+  }
+  const entries: {
+    rawPath: YamlValue | undefined;
+    rawMode: YamlValue | undefined;
+    label: string;
+  }[] = [];
+
+  if (Array.isArray(raw)) {
+    for (const item of raw) {
+      if (typeof item === "string") {
+        entries.push({ rawPath: item, rawMode: undefined, label: "parallel.inputs" });
+      } else if (isObject(item)) {
+        entries.push({
+          rawPath: item.path,
+          rawMode: item.mode,
+          label: "parallel.inputs",
+        });
+      } else {
+        diagnostics.push(
+          diagnostic(
+            "state.config.invalid_value",
+            "warn",
+            `invalid parallel.inputs entry: ${JSON.stringify(item)}; ignoring`,
+            { path: configPath },
+          ),
+        );
+      }
+    }
+  } else if (isObject(raw)) {
+    if (typeof raw.path === "string") {
+      // A single `{ path, mode }` mapping is accepted as a one-entry list.
+      entries.push({ rawPath: raw.path, rawMode: raw.mode, label: "parallel.inputs" });
+    } else {
+      // `inputs: { rust/web/node_modules: symlink }` is the parser-friendly form.
+      for (const [key, value] of Object.entries(raw)) {
+        entries.push({ rawPath: key, rawMode: value, label: "parallel.inputs" });
+      }
+    }
+  } else {
+    diagnostics.push(
+      diagnostic(
+        "state.config.invalid_value",
+        "warn",
+        `invalid parallel.inputs value: ${JSON.stringify(raw)}; ignoring`,
+        { path: configPath },
+      ),
+    );
+    return DEFAULT_PARALLEL_CONFIG.inputs;
+  }
+
+  const out: ParallelInput[] = [];
+  const seen = new Set<string>();
+  for (const entry of entries) {
+    const inputPath = normalizeRepoRelativePath(entry.rawPath);
+    if (inputPath === null) {
+      diagnostics.push(
+        diagnostic(
+          "state.config.invalid_value",
+          "warn",
+          `invalid ${entry.label} path: ${JSON.stringify(entry.rawPath)}; expected a repo-relative path without ".."`,
+          { path: configPath },
+        ),
+      );
+      continue;
+    }
+    const mode = readInputMode(entry.rawMode, inputPath, diagnostics, configPath);
+    if (mode === null) {
+      continue;
+    }
+    if (seen.has(inputPath)) {
+      continue;
+    }
+    seen.add(inputPath);
+    out.push({ path: inputPath, mode });
+  }
+  return out;
+}
+
+function readInputMode(
+  raw: YamlValue | undefined,
+  inputPath: string,
+  diagnostics: Diagnostic[],
+  configPath: string,
+): ParallelInputMode | null {
+  if (raw === undefined || (typeof raw === "string" && raw.trim() === "")) {
+    // A bare path keeps the copy list's spirit but symlinks are the primary
+    // use case: sharing a large gitignored dependency tree.
+    return "symlink";
+  }
+  const normalized = String(raw).trim().toLowerCase();
+  if (normalized === "symlink" || normalized === "copy") {
+    return normalized;
+  }
+  diagnostics.push(
+    diagnostic(
+      "state.config.invalid_value",
+      "warn",
+      `invalid parallel.inputs mode for ${inputPath}: ${JSON.stringify(raw)}; expected symlink|copy, ignoring the entry`,
+      { path: configPath },
+    ),
+  );
+  return null;
+}
+
+function readIgnoredInputs(
+  raw: YamlValue | undefined,
+  diagnostics: Diagnostic[],
+  configPath: string,
+): readonly string[] {
+  if (raw === undefined) {
+    return DEFAULT_PARALLEL_CONFIG.integration.ignoredInputs;
+  }
+  const values = Array.isArray(raw) ? raw : [raw];
+  const out: string[] = [];
+  const seen = new Set<string>();
+  for (const item of values) {
+    const inputPath = normalizeRepoRelativePath(item);
+    if (inputPath === null) {
+      diagnostics.push(
+        diagnostic(
+          "state.config.invalid_value",
+          "warn",
+          `invalid parallel.integration.ignored_inputs entry: ${JSON.stringify(item)}; expected a repo-relative path without ".."`,
+          { path: configPath },
+        ),
+      );
+      continue;
+    }
+    if (seen.has(inputPath)) {
+      continue;
+    }
+    seen.add(inputPath);
+    out.push(inputPath);
+  }
+  return out;
+}
+
+function readParallelBuild(
+  raw: YamlValue | undefined,
+  diagnostics: Diagnostic[],
+  configPath: string,
+): ParallelBuildConfig {
+  const defaults = DEFAULT_PARALLEL_CONFIG.build;
+  if (raw === undefined) {
+    return defaults;
+  }
+  if (!isObject(raw)) {
+    diagnostics.push(
+      diagnostic(
+        "state.config.invalid_value",
+        "warn",
+        `invalid parallel.build config: ${JSON.stringify(raw)}; using defaults`,
+        { path: configPath },
+      ),
+    );
+    return defaults;
+  }
+  return {
+    cargoTargetDir: readEnum(
+      raw.cargo_target_dir ?? raw.cargoTargetDir,
+      ["per-worktree", "shared"] as const,
+      defaults.cargoTargetDir,
+      "parallel.build.cargo_target_dir",
+      diagnostics,
+      configPath,
+    ),
+    sccache: coerceBool(
+      raw.sccache,
+      defaults.sccache,
+      "parallel.build.sccache",
       diagnostics,
       configPath,
     ),

@@ -34,6 +34,11 @@ export interface TaskSnapshot {
   readonly childCount?: number;
   /** Direct child refs, used to render executable `task.py start` commands. */
   readonly children?: readonly string[];
+  /**
+   * `meta.kind`. A `spec` task is spec-only: it runs in the control plane
+   * after integration and never enters a wave.
+   */
+  readonly kind?: string | null;
 }
 
 /**

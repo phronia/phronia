@@ -97,6 +97,12 @@ export interface DispatchFacts {
 
   /** Task the session currently points at (may be null). */
   readonly activeTaskRef: string | null;
+  /**
+   * Facts for the session pointer's task, independent of the requested target.
+   * Populated from `sessionActive`; null when there is no pointer or the record
+   * cannot be read. Used to explain lineage denials.
+   */
+  readonly activeTask?: TaskFacts | null;
   /** Task explicitly named by the payload/prompt (`Active task:`). */
   readonly requestedTaskRef: string | null;
   /** Decision target: requested ?? active. */

@@ -81,6 +81,14 @@ export function buildDispatchFacts(input: BuildDispatchFactsInput): DispatchFact
   const record = effectiveRef === null ? null : readTask(effectiveRef);
   const effectiveTask = record === null ? null : toTaskFacts(record, readTask);
 
+  // The session pointer is the task this session is bound to. It differs from
+  // the effective task when the payload names a child/sibling, which is exactly
+  // the situation `DISPATCH_TASK_NOT_CHILD` has to explain.
+  const sessionRef = input.sessionActive.taskPath;
+  const sessionRecord = sessionRef === null ? null : readTask(sessionRef);
+  const activeTask =
+    sessionRecord === null ? null : toTaskFacts(sessionRecord, readTask);
+
   const checkoutRoot = input.runtime.toplevel ?? root;
   const checkoutReal = resolveReal(io, checkoutRoot);
   const registeredTaskRef =
@@ -102,6 +110,7 @@ export function buildDispatchFacts(input: BuildDispatchFactsInput): DispatchFact
     agent: input.agent,
     enforce: input.enforce,
     activeTaskRef: input.sessionActive.taskPath,
+    activeTask,
     requestedTaskRef: input.requestedRef,
     effectiveTask,
     checkout: {

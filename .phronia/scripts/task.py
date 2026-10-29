@@ -16,6 +16,7 @@ Usage:
     python3 task.py set-scope <dir> <scope>     # Set scope for PR title
     python3 task.py set-meta <dir> <key> <value>  # Set a task metadata key
     python3 task.py rename <dir> <new-slug> [--dry-run]  # Rename task + references
+    python3 task.py spec-delta <dir>            # Create a spec-delta.md template
     python3 task.py archive <task-dir> [--skip-branch-validation]  # Archive completed task
     python3 task.py list                        # List active tasks
     python3 task.py list-archive [month]        # List archived tasks
@@ -52,6 +53,7 @@ from common.io import (
     describe_json_read_failure,
     read_json_checked,
     write_json,
+    write_text_atomic,
 )
 from common.task_utils import resolve_task_dir, run_task_hooks
 from common.tasks import iter_active_tasks, children_progress
@@ -377,6 +379,57 @@ def cmd_finish(args: argparse.Namespace) -> int:
     return 0
 
 
+SPEC_DELTA_TEMPLATE = """# Spec Delta
+## Target files
+- .phronia/spec/<path>.md
+## Intended changes
+- ...
+## Rationale
+- ...
+## Verification
+- ...
+"""
+
+
+def cmd_spec_delta(args: argparse.Namespace) -> int:
+    """Create a `spec-delta.md` template for a task (never overwrites)."""
+    repo_root = get_repo_root()
+    task_dir = resolve_task_dir(args.dir, repo_root)
+    if task_dir is None or not task_dir.is_dir():
+        print(
+            colored(f"Error: Task not found: {args.dir}", Colors.RED),
+            file=sys.stderr,
+        )
+        print(
+            "Pass an existing task directory under .phronia/tasks/.",
+            file=sys.stderr,
+        )
+        return 1
+
+    target = task_dir / "spec-delta.md"
+    if target.exists():
+        print(
+            colored(
+                f"spec-delta.md already exists: {target}; leaving it untouched",
+                Colors.YELLOW,
+            ),
+            file=sys.stderr,
+        )
+        print(str(target))
+        return 0
+
+    if not write_text_atomic(target, SPEC_DELTA_TEMPLATE):
+        print(
+            colored(f"Error: could not write {target}", Colors.RED),
+            file=sys.stderr,
+        )
+        return 1
+
+    print(colored(f"Created spec-delta.md: {target}", Colors.GREEN), file=sys.stderr)
+    print(str(target))
+    return 0
+
+
 def cmd_current(args: argparse.Namespace) -> int:
     """Show active task."""
     repo_root = get_repo_root()
@@ -626,6 +679,7 @@ Usage:
   python3 task.py set-scope <dir> <scope>            Set scope for PR title
   python3 task.py set-meta <dir> <key> <value>       Set/overwrite a task metadata key
   python3 task.py rename <dir> <new-slug>            Rename task, identity fields and references
+  python3 task.py spec-delta <dir>                   Create a spec-delta.md template (never overwrites)
   python3 task.py archive <task-dir>                 Archive completed task
   python3 task.py add-subtask <parent> <child>       Link child task to parent
   python3 task.py remove-subtask <parent> <child>    Unlink child from parent
@@ -647,6 +701,8 @@ Archive options:
                              `set-base-branch` instead. Use this flag only for tasks that
                              were never PR-backed. A recorded branch that was merged and
                              deleted is only a warning and needs no flag.
+  --skip-spec-sync           Archive despite an unsynced spec-delta.md. The skip is
+                             recorded in the task notes.
 
 List options:
   --mine, -m           Show only tasks assigned to current developer
@@ -835,6 +891,20 @@ def main() -> int:
             "(for tasks that were never PR-backed)"
         ),
     )
+    p_archive.add_argument(
+        "--skip-spec-sync",
+        action="store_true",
+        help=(
+            "Archive even when spec-delta.md exists but meta.spec_sync.status "
+            "is not synced (recorded in task notes)"
+        ),
+    )
+
+    # spec-delta
+    p_spec = subparsers.add_parser(
+        "spec-delta", help="Create a spec-delta.md template for a task"
+    )
+    p_spec.add_argument("dir", help="Task directory")
 
     # list
     p_list = subparsers.add_parser("list", help="List tasks")
@@ -875,6 +945,7 @@ def main() -> int:
         "set-scope": cmd_set_scope,
         "set-meta": cmd_set_meta,
         "rename": cmd_rename,
+        "spec-delta": cmd_spec_delta,
         "archive": cmd_archive,
         "add-subtask": cmd_add_subtask,
         "remove-subtask": cmd_remove_subtask,

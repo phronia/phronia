@@ -8,7 +8,7 @@
 2. **Specs injected, not remembered** — guidelines are injected via hook/skill, not recalled from memory
 3. **Persist everything** — research, decisions, and lessons all go to files; conversations get compacted, files don't
 4. **Incremental development** — one task at a time
-5. **Capture learnings** — after each task, review and write new knowledge back to spec
+5. **Capture learnings** — after each task, record the spec intent in `spec-delta.md`; the main session applies it after integration
 
 ---
 
@@ -36,6 +36,8 @@ python3 ./.phronia/scripts/get_context.py --mode packages   # list packages / la
 ```
 
 **When to update spec**: new pattern/convention found · bug-fix prevention to codify · new technical decision.
+
+**Who writes spec**: spec is control-plane state. A code task must not commit `.phronia/spec/**` on its branch; it records the intent (targets, intended changes, rationale, verification) in `.phronia/tasks/<ref>/spec-delta.md`. After the code lands, the main checkout applies the delta and runs `phronia task spec commit <ref>`. Spec-only tasks (`meta.kind: spec`) are the exception: they run in the main checkout and may edit spec directly.
 
 ### Task System
 
@@ -249,6 +251,8 @@ Tools: `phronia-implement` / `phronia-research` are sub-agent types only (Task/A
 Flow: `phronia-implement` -> `phronia-check` -> `phronia-update-spec` -> commit (Phase 3.4) -> `phronia task integrate <ref>` -> `/phronia:finish-work`.
 Main-session default: dispatch implement/check sub-agents. Sub-agent self-exemption: if already running as `phronia-implement`, do NOT spawn another `phronia-implement` or `phronia-check`; if already running as `phronia-check`, do NOT spawn another `phronia-check` or `phronia-implement`. Dispatch is main session only.
 Dispatch prompt starts with `Active task: <task path from task.py current>`. Read context: jsonl entries -> `prd.md` -> `design.md if present` -> `implement.md if present`.
+Spec: record intent in `spec-delta.md` (Phase 3.3); never commit `.phronia/spec/**` from a code task (`SPEC_IN_CODE_TASK`). Sync after integration (`phronia task spec plan|commit`).
+Multi-session: one session per worktree; the main session orchestrates with `phronia task parallel launch`; never run concurrent mutating sub-agents (ZCode/Codex inherit cwd). Research may run in parallel.
 Workspace: after `task.py start`, run `phronia task workspace ensure <ref> --json`; if it returns `create`, start the session in the printed worktree. Use explicit `--task` / `--session-key`, never a pid fallback.
 Worktree tasks: each session owns one task and commits inside that worktree (`phronia task commit <ref>`) before integrate. `integrate` failure stops `/phronia:finish-work`; archive never runs on a dirty or unlanded worktree.
 [/workflow-state:in_progress]
@@ -262,6 +266,8 @@ Worktree tasks: each session owns one task and commits inside that worktree (`ph
 Flow: `phronia-before-dev` -> edit -> `phronia-check` -> validation -> `phronia-update-spec` -> commit (Phase 3.4) -> `phronia task integrate <ref>` -> `/phronia:finish-work`.
 Do not dispatch implement/check sub-agents in inline mode.
 Read context: `prd.md` -> `design.md if present` -> `implement.md if present`, plus relevant spec/research loaded by skills.
+Spec: write `spec-delta.md`, not `.phronia/spec/**`; sync after integration.
+Multi-session: one session per worktree; no concurrent mutating sub-agents (ZCode/Codex inherit cwd).
 Workspace: after `task.py start`, run `phronia task workspace ensure <ref> --json`; start the session in the printed worktree when it returns `create`.
 Worktree tasks: commit inside the worktree (`phronia task commit <ref>`) before integrate; integrate failure stops archive.
 [/workflow-state:in_progress-inline]
@@ -529,6 +535,10 @@ phronia task commit <task-ref>
 
 `phronia task commit` refuses to run in the main checkout for a worktree task (`COMMIT_WRONG_WORKSPACE`). The orchestrator never commits a worktree task on `main`.
 
+**Multi-session is the only mutating parallel model.** One session works in one worktree. To run independent tasks in parallel, the main session orchestrates: `phronia task parallel plan` → `phronia task parallel launch --prepare` → open one session per worktree using its `Active task:` line. Do not run multiple mutating sub-agents (implement/check) in one session: ZCode and Codex sub-agents inherit the parent cwd, so concurrent writers collide. Only read-only `phronia-research` sub-agents may run in parallel inside one session. Collect commits, integrate serially, then sync spec.
+
+**Spec is not a task footprint.** Implement/check write code and task artifacts only. Intended spec changes go into `spec-delta.md` (Phase 3.3); `.phronia/spec/**` is applied after integration.
+
 #### 2.1 Implement `[required · repeatable]`
 
 **Never dispatch a parent task.** The `Active task:` line must name an executable unit: a leaf task or an `in_progress` child. Dispatch admission rejects a parent (`DISPATCH_PARENT_TASK`) and a task whose status is not `in_progress` (`DISPATCH_TASK_NOT_IN_PROGRESS`); start the child first (Phase 1.4) and dispatch it.
@@ -638,18 +648,24 @@ If this task involved repeated debugging (the same issue was fixed multiple time
 
 The goal is to capture debugging lessons so the same class of issue doesn't recur.
 
-#### 3.3 Spec update `[required · once]`
+#### 3.3 Spec delta `[required · once]`
 
 Load the `phronia-update-spec` skill and review whether this task produced new knowledge worth recording:
 - Newly discovered patterns or conventions
 - Pitfalls you hit
 - New technical decisions
 
-Update the docs under `.phronia/spec/` accordingly. Even if the conclusion is "nothing to update", walk through the judgment.
+**Do not edit `.phronia/spec/**` in a code task.** Record the intent in `.phronia/tasks/<ref>/spec-delta.md`:
+
+```bash
+python3 ./.phronia/scripts/task.py spec-delta .phronia/tasks/<ref>
+```
+
+Fill in `## Target files` (repo-relative paths under `.phronia/spec/`), `## Intended changes`, `## Rationale`, and `## Verification`. Commit the delta with the task artifacts. If there is genuinely nothing to record, do not create the file — the task's spec state is then `none`. Spec-only tasks (`meta.kind: spec`) may update `.phronia/spec/**` directly in the main checkout.
 
 #### 3.4 Commit changes `[required · once]`
 
-**Spec-sync preamble**: before drafting commits, ask: did this task fix a bug or surface non-obvious knowledge that should land in `.phronia/spec/` so future-you (or future-AI) doesn't repeat the mistake? If yes, return to Phase 3.3 first — spec writes belong in the same task's commit batch, not as a forgotten follow-up.
+**Spec-delta preamble**: before drafting commits, ask: did this task fix a bug or surface non-obvious knowledge that should land in `.phronia/spec/` so future-you (or future-AI) doesn't repeat the mistake? If yes, record it in `spec-delta.md` (Phase 3.3) — never commit spec files from a code task. The main session applies the delta after integration.
 
 The AI drives a batched commit of this task's code changes so `/finish-work` can run cleanly afterwards. Goal: produce work commits FIRST, then bookkeeping (archive + journal) commits land after — never interleaved.
 
@@ -710,8 +726,16 @@ phronia task integrate <task-ref>
 - **Integration mode.** `--mode auto` resolves to `local` when there is no remote, and to `remote` when `origin` exists; `integrate` always prints the resolved mode and its reason. It asks at most once (when both modes are viable and materially different) and records the choice in `meta.integration.mode`.
 - **Integrate != archive.** A successful integrate records `meta.integration.outcome` (`landed` or `pushed`) and may leave a metadata-only commit. It does not move the task to `archive/`.
 - **Failure stops archive.** If integrate fails (verification, conflict, dirty checkout, mode error), stop here and follow the printed handoff. Do not archive a task whose integrate failed.
-- **Then** run `/phronia:finish-work`, which re-checks the worktree, archives the task, and refreshes `docs/requirements.md`.
+- **Sync spec after landing.** For each landed task with `spec-delta.md`:
+  ```bash
+  phronia task spec plan <task-ref>
+  # main session applies the delta to .phronia/spec/** using the landed diff
+  phronia task spec commit <task-ref>
+  ```
+  This holds the integration lock, creates one `chore(spec): sync <refs>` commit, and records `meta.spec_sync.status=synced`. A spec failure stops the flow; do not archive. Tasks without a delta report `none` and need no sync.
+- **Then** run `/phronia:finish-work`, which re-checks the worktree, archives the task (refusing `SPEC_SYNC_PENDING`), and refreshes `docs/requirements.md`. `--skip-spec-sync` is only for an explicit user decision and records the reason.
 - Tasks without a worktree can still integrate their current checkout; their worktree-free archive behavior is unchanged.
+
 
 After the above, remind the user they can run `/finish-work` to wrap up (archive the task, record the session).
 

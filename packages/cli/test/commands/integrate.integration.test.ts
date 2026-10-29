@@ -628,6 +628,66 @@ describe("integrate integration (INT-01..INT-06)", { timeout: 30_000 }, () => {
     expect(integrationOf(task).outcome).toBeUndefined();
   });
 
+  it("SPEC_IN_CODE_TASK: a code task cannot commit .phronia/spec on its branch", () => {
+    planTask(root, "10-28-alpha", ["src/a/**"]);
+    const wt = addTaskWorktree(root, "10-28-alpha");
+    commitFile(wt, "src/a.txt", "alpha\n", "alpha work");
+    commitFile(
+      wt,
+      ".phronia/spec/guides/a.md",
+      "# A\n",
+      "spec should be a delta",
+    );
+    const before = gitOut(root, ["rev-parse", "HEAD"]);
+
+    const result = integrateTask({
+      cwd: root,
+      taskRef: "10-28-alpha",
+      noVerify: true,
+      env: {},
+      ownerId: ownerFor("10-28-alpha"),
+    });
+
+    expect(result.ok).toBe(false);
+    if (result.ok) return;
+    expect(result.code).toBe("SPEC_IN_CODE_TASK");
+    expect(result.next).toContain("git restore --staged --worktree .phronia/spec");
+    expect(result.next).toContain("spec-delta.md");
+    expect(result.details?.files).toEqual([".phronia/spec/guides/a.md"]);
+    expect(gitOut(root, ["rev-parse", "HEAD"])).toBe(before);
+    expect(fs.existsSync(path.join(root, ".phronia/spec/guides/a.md"))).toBe(false);
+  });
+
+  it("SPEC_IN_CODE_TASK: a spec-only task bypasses the gate and lands", () => {
+    planTask(root, "10-28-spec", [".phronia/spec/**"]);
+    const taskJson = path.join(root, ".phronia/tasks/10-28-spec/task.json");
+    const record = JSON.parse(fs.readFileSync(taskJson, "utf8")) as {
+      meta: Record<string, unknown>;
+    };
+    record.meta.kind = "spec";
+    fs.writeFileSync(taskJson, `${JSON.stringify(record, null, 2)}\n`);
+    git(root, ["add", "-A"]);
+    git(root, ["commit", "-q", "-m", "mark spec-only"]);
+
+    const wt = addTaskWorktree(root, "10-28-spec");
+    commitFile(wt, ".phronia/spec/guides/spec.md", "# Spec\n", "spec work");
+
+    const result = integrateTask({
+      cwd: root,
+      taskRef: "10-28-spec",
+      noVerify: true,
+      env: {},
+      ownerId: ownerFor("10-28-spec"),
+    });
+
+    expect(result.ok, JSON.stringify(result)).toBe(true);
+    if (!result.ok) return;
+    expect(result.outcome).toBe("landed");
+    expect(fs.readFileSync(path.join(root, ".phronia/spec/guides/spec.md"), "utf8")).toBe(
+      "# Spec\n",
+    );
+  });
+
   it("rolls back only with explicit confirmation", () => {
     planTask(root, "10-28-alpha", ["src/a/**"]);
     const wt = addTaskWorktree(root, "10-28-alpha");
@@ -669,6 +729,87 @@ describe("integrate integration (INT-01..INT-06)", { timeout: 30_000 }, () => {
     expect(gitOut(root, ["rev-parse", "HEAD"])).toBe(preLandSha);
     expect(fs.existsSync(path.join(root, "src/a.txt"))).toBe(false);
     expect(lockExists(root)).toBe(false);
+  });
+  it("S3/R6: a configured ignored symlink does not block integration", () => {
+    planTask(root, "10-28-alpha", ["src/a/**"]);
+    const wt = addTaskWorktree(root, "10-28-alpha");
+    commitFile(wt, "src/a.txt", "alpha\n", "alpha work");
+    fs.writeFileSync(path.join(root, ".gitignore"), "sdk-cache/\n");
+    writeConfig(root, [
+      "parallel:",
+      "  integration:",
+      "    ignored_inputs:",
+      "      - sdk-pin",
+    ]);
+
+    const cache = path.join(root, "sdk-cache");
+    fs.mkdirSync(cache, { recursive: true });
+    fs.writeFileSync(path.join(cache, "payload.bin"), "cached\n");
+    fs.symlinkSync(cache, path.join(root, "sdk-pin"), "dir");
+    fs.symlinkSync(cache, path.join(wt, "sdk-pin"), "dir");
+
+    const tool = verifyTool(tempDirs, false);
+    const result = integrateTask({
+      cwd: root,
+      taskRef: "10-28-alpha",
+      verify: tool.commands,
+      env: {},
+      ownerId: ownerFor("10-28-alpha"),
+    });
+
+    expect(result.ok, JSON.stringify(result)).toBe(true);
+    if (!result.ok) return;
+    expect(result.outcome).toBe("landed");
+    expect(fs.readFileSync(path.join(root, "src/a.txt"), "utf8")).toBe("alpha\n");
+  });
+
+  it("S3/R6: the same symlink without ignored_inputs still blocks integrate", () => {
+    planTask(root, "10-28-alpha", ["src/a/**"]);
+    const wt = addTaskWorktree(root, "10-28-alpha");
+    commitFile(wt, "src/a.txt", "alpha\n", "alpha work");
+
+    const cache = path.join(root, "sdk-cache");
+    fs.mkdirSync(cache, { recursive: true });
+    fs.symlinkSync(cache, path.join(root, "sdk-pin"), "dir");
+
+    const tool = verifyTool(tempDirs, false);
+    const result = integrateTask({
+      cwd: root,
+      taskRef: "10-28-alpha",
+      verify: tool.commands,
+      env: {},
+      ownerId: ownerFor("10-28-alpha"),
+    });
+
+    expect(result.ok).toBe(false);
+    if (result.ok) return;
+    expect(result.code).toBe("INTEGRATE_DIRTY_CHECKOUT");
+    expect(fs.existsSync(wt)).toBe(true);
+  });
+
+  it("S3/R6: a real untracked file is dirty even when inputs are configured", () => {
+    planTask(root, "10-28-alpha", ["src/a/**"]);
+    addTaskWorktree(root, "10-28-alpha");
+    writeConfig(root, [
+      "parallel:",
+      "  integration:",
+      "    ignored_inputs:",
+      "      - sdk-pin",
+    ]);
+    fs.writeFileSync(path.join(root, "real.txt"), "x\n");
+
+    const result = integrateTask({
+      cwd: root,
+      taskRef: "10-28-alpha",
+      verify: ["true"],
+      env: {},
+      ownerId: ownerFor("10-28-alpha"),
+    });
+
+    expect(result.ok).toBe(false);
+    if (result.ok) return;
+    expect(result.code).toBe("INTEGRATE_DIRTY_CHECKOUT");
+    expect(result.details?.dirtyPaths).toBe(1);
   });
 });
 

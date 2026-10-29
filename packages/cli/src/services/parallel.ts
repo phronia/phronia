@@ -34,7 +34,7 @@ import {
   type SharedRuntimePaths,
   type TaskRecordView,
 } from "@phronia/core/state";
-import { CAPABILITIES, type PlatformId } from "@phronia/core";
+import { CAPABILITIES, normalizePlatformId, type PlatformId } from "@phronia/core";
 import {
   createGitPort,
   type GitPort,
@@ -46,6 +46,8 @@ import {
   type WorktreeRegistryEntry,
 } from "../adapters/shared-runtime.js";
 import { listTaskLeases } from "./lease.js";
+import { taskSpecState, type SpecDisplayState } from "./spec-status.js";
+import { detectWorktreeInputs, ensureWorkspace } from "./workspace.js";
 
 export const DEFAULT_PLAN_STATUSES = ["in_progress"] as const;
 export const PLANNING_STATUS = "planning";
@@ -70,6 +72,8 @@ export interface PlanTaskSummary {
   readonly workspace: string | null;
   readonly container: boolean;
   readonly childCount: number;
+  /** `meta.kind`; `spec` tasks are control-plane only. */
+  readonly kind: string | null;
   readonly createdAt?: string;
 }
 
@@ -106,6 +110,8 @@ export interface StatusTaskSummary {
   readonly footprint: readonly string[];
   readonly dependsOn: readonly string[];
   readonly updatedAt: string | null;
+  /** Post-integration spec state (`spec-delta.md` + `meta.spec_sync`). */
+  readonly specSync: SpecDisplayState;
 }
 
 export interface ParallelStatusResult {
@@ -123,6 +129,11 @@ export interface ParallelStatusResult {
       readonly reason: string | null;
       readonly fallback: string | null;
     };
+  };
+  /** Tasks whose spec-delta still needs a `spec commit` (R10). */
+  readonly specSync: {
+    readonly pending: readonly string[];
+    readonly failed: readonly string[];
   };
   readonly diagnostics: readonly Diagnostic[];
 }
@@ -223,6 +234,7 @@ export function planTasks(options: PlanOptions): PlanServiceResult {
       workspace: task.workspace,
       container: task.container === true,
       childCount: task.childCount ?? task.children?.length ?? 0,
+      kind: task.kind ?? null,
       ...(task.createdAt === undefined ? {} : { createdAt: task.createdAt }),
     });
   }
@@ -303,8 +315,282 @@ function planningChildDiagnostics(
   return diagnostics;
 }
 
-export function parallelStatus(options: StatusOptions): StatusServiceResult {
+export interface LaunchOptions {
+  readonly cwd: string;
+  readonly git?: GitPort;
+  /** Explicit task refs; when absent, the selected wave is used. */
+  readonly refs?: readonly string[];
+  /** 1-based wave selector; defaults to the first wave. */
+  readonly wave?: number;
+  /** Create/attach workspaces. Defaults to false (read-only). */
+  readonly prepare?: boolean;
+  /** Harness id for platform-specific open instructions. */
+  readonly platform?: string;
+  /** Session identity used only for `--prepare`; never printed. */
+  readonly sessionKey?: string;
+  readonly env?: Readonly<Record<string, string | undefined>>;
+  readonly includePlanning?: boolean;
+}
+
+export interface LaunchTask {
+  readonly taskRef: string;
+  readonly title: string;
+  readonly workspace: string | null;
+  readonly branch: string | null;
+  readonly activeTaskLine: string;
+  readonly prepareCommand: string;
+  readonly leaseCommand: string;
+  readonly openInstructions: string;
+  /** Missing build inputs and executable next steps for this workspace. */
+  readonly inputs: {
+    readonly missing: readonly string[];
+    readonly next: readonly string[];
+  };
+  /** Set only when the workspace is missing and no `--prepare` ran. */
+  readonly next: string | null;
+}
+
+export interface LaunchSkipped {
+  readonly taskRef: string;
+  readonly code: string;
+  readonly message: string;
+  readonly next?: string;
+}
+
+export interface ParallelLaunchResult {
+  readonly ok: true;
+  /** Null when explicit refs selected the tasks. */
+  readonly wave: number | null;
+  readonly prepare: boolean;
+  readonly platform: string | null;
+  readonly tasks: readonly LaunchTask[];
+  readonly skipped: readonly LaunchSkipped[];
+  readonly diagnostics: readonly Diagnostic[];
+}
+
+export type LaunchServiceResult = ParallelLaunchResult | PlanFailure;
+
+/**
+ * Multi-session launch plan (`design.md` §8). The main session orchestrates;
+ * Phronia never spawns a process or creates a session. The returned manifest
+ * tells the user which workspace to open and which `Active task:` line to
+ * send first.
+ */
+export function launchPlan(options: LaunchOptions): LaunchServiceResult {
+  const plan = planTasks({
+    cwd: options.cwd,
+    ...(options.git === undefined ? {} : { git: options.git }),
+    ...(options.refs === undefined ? {} : { refs: options.refs }),
+    ...(options.includePlanning === true ? { includePlanning: true } : {}),
+  });
+  if (!plan.ok) return plan;
+
   let context: MainContext;
+  try {
+    context = mainContext(options.cwd, options.git);
+  } catch (error) {
+    return failure(
+      "GIT_UNAVAILABLE",
+      `cannot resolve a git worktree: ${errorMessage(error)}`,
+      "run this command inside the repository or check that git is installed",
+    );
+  }
+
+  const registry = loadWorktreeRegistry({
+    projectRoot: context.mainRoot,
+    paths: sharedPaths(context),
+    git: context.git,
+    write: false,
+  });
+
+  const explicitRefs =
+    options.refs !== undefined && options.refs.length > 0;
+  let waveNumber: number | null = null;
+  let selectedRefs: readonly string[];
+  if (explicitRefs) {
+    selectedRefs = [...new Set((options.refs ?? []).map(canonicalRef))];
+  } else {
+    const requested = normalizeWave(options.wave);
+    const wave = plan.waves[requested - 1];
+    if (wave === undefined) {
+      return failure(
+        "PARALLEL_WAVE_NOT_FOUND",
+        `wave ${requested} does not exist (plan has ${plan.waves.length} wave(s))`,
+        "run `phronia task parallel plan --json` and choose an existing wave",
+      );
+    }
+    selectedRefs = wave.tasks.map(canonicalRef);
+    waveNumber = requested;
+  }
+
+  const summaryByRef = new Map(
+    plan.tasks.map((task) => [canonicalRef(task.ref), task]),
+  );
+  const state = openState({
+    root: context.mainRoot,
+    ...(options.env === undefined ? {} : { env: options.env }),
+  });
+  const platform = resolveLaunchPlatform(options.platform);
+  const tasks: LaunchTask[] = [];
+  const skipped: LaunchSkipped[] = [];
+
+  for (const taskRef of selectedRefs) {
+    const summary = summaryByRef.get(taskRef);
+    if (summary === undefined) {
+      skipped.push({
+        taskRef,
+        code: "TASK_NOT_FOUND",
+        message: `task not found in the plan: ${taskRef}`,
+        next: "create or start the task in the main checkout first",
+      });
+      continue;
+    }
+    if (summary.container) {
+      skipped.push({
+        taskRef,
+        code: "PARALLEL_CONTAINER_TASK",
+        message: `container (${summary.childCount} child${
+          summary.childCount === 1 ? "" : "ren"
+        }): coordinator only; start a child to execute`,
+      });
+      continue;
+    }
+    if (summary.kind === "spec") {
+      skipped.push({
+        taskRef,
+        code: "PARALLEL_SPEC_ONLY",
+        message:
+          "spec-only (meta.kind=spec): control plane; excluded from waves",
+      });
+      continue;
+    }
+
+    const entry = registry.registry.worktrees.find(
+      (candidate) =>
+        candidate.path !== "" && canonicalRef(candidate.taskRef) === taskRef,
+    );
+    let workspace: string | null = entry?.path ?? null;
+    let branch: string | null =
+      entry?.branch !== undefined && entry.branch !== ""
+        ? entry.branch
+        : launchBranch(state.tasks.read(taskRef)?.branch ?? null);
+
+    if (options.prepare === true) {
+      const ensured = ensureWorkspace({
+        cwd: options.cwd,
+        taskRef,
+        ...(options.git === undefined ? {} : { git: options.git }),
+        ...(options.sessionKey === undefined
+          ? {}
+          : { sessionKey: options.sessionKey }),
+        ...(options.env === undefined ? {} : { env: options.env }),
+      });
+      if (!ensured.ok) {
+        skipped.push({
+          taskRef,
+          code: ensured.code,
+          message: ensured.message,
+          next: ensured.next,
+        });
+        continue;
+      }
+      workspace = ensured.workspace;
+      if (
+        ensured.decision.kind === "attach" ||
+        ensured.decision.kind === "create"
+      ) {
+        branch = ensured.decision.branch;
+      }
+    }
+
+    const prepareCommand = `phronia task workspace ensure ${taskRef}`;
+    const inputs =
+      workspace === null
+        ? { missing: [], next: [] }
+        : detectWorktreeInputs({
+            mainRoot: context.mainRoot,
+            worktree: workspace,
+            parallel: context.config.parallel,
+          });
+    tasks.push({
+      taskRef,
+      title: summary.title,
+      workspace,
+      branch,
+      activeTaskLine: `Active task: ${taskRef}`,
+      prepareCommand,
+      leaseCommand: `phronia task lease acquire ${taskRef}`,
+      openInstructions: openInstructionsFor(
+        platform,
+        taskRef,
+        workspace,
+      ),
+      inputs: { missing: inputs.missing, next: inputs.next },
+      next:
+        workspace === null && options.prepare !== true ? prepareCommand : null,
+    });
+  }
+
+  return {
+    ok: true,
+    wave: waveNumber,
+    prepare: options.prepare === true,
+    platform,
+    tasks,
+    skipped,
+    diagnostics: plan.diagnostics,
+  };
+}
+
+const NON_LAUNCH_BRANCHES = new Set([
+  "main",
+  "master",
+  "origin/main",
+  "origin/master",
+  "origin/HEAD",
+]);
+
+/**
+ * `task.json.branch` can be the checked-out integration branch on legacy
+ * tasks. Launch must not present that as a task branch to open.
+ */
+function launchBranch(value: string | null | undefined): string | null {
+  if (typeof value !== "string") return null;
+  const branch = value.trim().replace(/^refs\/heads\//, "");
+  if (branch === "" || NON_LAUNCH_BRANCHES.has(branch)) return null;
+  return branch;
+}
+
+function resolveLaunchPlatform(value: string | undefined): string | null {
+  const trimmed = value?.trim() ?? "";
+  if (trimmed === "") return null;
+  return normalizePlatformId(trimmed) ?? trimmed;
+}
+
+function openInstructionsFor(
+  platform: string | null,
+  taskRef: string,
+  workspace: string | null,
+): string {
+  const where =
+    workspace ?? `the workspace printed by \`phronia task workspace ensure ${taskRef}\``;
+  const firstLine = `first line: Active task: ${taskRef}`;
+  if (platform === "zcode" || platform === "codex") {
+    return `Open a new ZCode/Codex window with working directory ${where}; ${firstLine}. Mutating sub-agents inherit this session's cwd; do not dispatch them from another session.`;
+  }
+  if (platform === "claude-code") {
+    return `Open a separate Claude Code session in ${where}; ${firstLine} (per-task workspace capability exists; coordinator rollout is a separate task)`;
+  }
+  return `Open a new session/window in ${where}; ${firstLine}`;
+}
+
+/** 1-based wave selector; mirrors `parallel dispatch --wave`. */
+function normalizeWave(value: number | undefined): number {
+  if (value === undefined || !Number.isFinite(value) || value < 1) return 1;
+  return Math.floor(value);
+}
+
+export function parallelStatus(options: StatusOptions): StatusServiceResult {  let context: MainContext;
   try {
     context = mainContext(options.cwd, options.git);
   } catch (error) {
@@ -363,6 +649,11 @@ export function parallelStatus(options: StatusOptions): StatusServiceResult {
         claim,
         queue,
         mainRoot: context.mainRoot,
+        specSync: taskSpecState(
+          ref,
+          view,
+          state.tasks.artifacts(ref).specDelta,
+        ).state,
       }),
     );
   }
@@ -395,6 +686,14 @@ export function parallelStatus(options: StatusOptions): StatusServiceResult {
         claim,
         queue,
         mainRoot: context.mainRoot,
+        specSync:
+          local?.view === undefined
+            ? "none"
+            : taskSpecState(
+                ref,
+                local.view,
+                fs.existsSync(path.join(local.view.dir, "spec-delta.md")),
+              ).state,
       }),
     );
   }
@@ -417,13 +716,17 @@ export function parallelStatus(options: StatusOptions): StatusServiceResult {
         claim,
         queue,
         mainRoot: context.mainRoot,
+        specSync: "none",
       }),
     );
   }
 
+  const statusTasks = [...tasks.values()].sort((left, right) =>
+    left.ref.localeCompare(right.ref),
+  );
   return {
     ok: true,
-    tasks: [...tasks.values()].sort((left, right) => left.ref.localeCompare(right.ref)),
+    tasks: statusTasks,
     runtime: {
       sharedRoot: resolution.paths.root,
       claim,
@@ -432,6 +735,18 @@ export function parallelStatus(options: StatusOptions): StatusServiceResult {
     },
     capabilities: {
       coordinator: resolveCoordinatorCapability(options.platform),
+    },
+    specSync: {
+      // `failed` is also outstanding work, so it appears in both lists.
+      pending: statusTasks
+        .filter(
+          (task) =>
+            task.specSync === "pending" || task.specSync === "failed",
+        )
+        .map((task) => task.ref),
+      failed: statusTasks
+        .filter((task) => task.specSync === "failed")
+        .map((task) => task.ref),
     },
     diagnostics,
   };
@@ -493,6 +808,10 @@ function toPlannerTask(
         ? raw.createdAt
         : undefined;
   const children = (view?.children ?? []).map(canonicalChildRef);
+  const kind =
+    typeof meta.kind === "string" && meta.kind.trim() !== ""
+      ? meta.kind.trim()
+      : null;
   return {
     ref: canonicalRef(ref),
     id,
@@ -514,6 +833,7 @@ function toPlannerTask(
     container: children.length > 0,
     childCount: children.length,
     children,
+    kind,
     ...(createdAt === undefined ? {} : { createdAt }),
   };
 }
@@ -540,6 +860,7 @@ interface StatusTaskInput {
   readonly claim: Record<string, unknown> | null;
   readonly queue: readonly QueueEntry[];
   readonly mainRoot: string;
+  readonly specSync: SpecDisplayState;
 }
 
 function buildStatusTask(input: StatusTaskInput): StatusTaskSummary {
@@ -563,6 +884,7 @@ function buildStatusTask(input: StatusTaskInput): StatusTaskSummary {
     footprint: input.index?.footprint ?? parallel.touches,
     dependsOn: input.index?.dependsOn ?? parallel.dependsOn,
     updatedAt: input.index?.updatedAt ?? null,
+    specSync: input.specSync,
   };
 }
 

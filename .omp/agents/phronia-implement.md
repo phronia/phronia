@@ -29,6 +29,13 @@ Do the implementation work directly.
 4. Run the relevant lint, typecheck, and focused tests for the touched code.
 5. Report files changed and verification results.
 
+## Spec Control Plane
+
+Do not edit `.phronia/spec/**` in a code task. Record the intended change (target
+files, intended changes, rationale, verification) in `<task-path>/spec-delta.md`;
+the main session applies it after integration. `integrate` rejects a task branch
+that commits `.phronia/spec/**` with `SPEC_IN_CODE_TASK`.
+
 ## Forbidden Operations
 
 Do not run:

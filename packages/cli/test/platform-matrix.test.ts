@@ -175,6 +175,86 @@ describe("doctor report", () => {
     }
   });
 
+  it("reports worktree inputs, ignored inputs, and build hints", () => {
+    const root = fs.mkdtempSync(path.join(os.tmpdir(), "phronia-doctor-inputs-"));
+    try {
+      execFileSync("git", ["init", "-q", "-b", "main"], { cwd: root });
+      fs.mkdirSync(path.join(root, ".phronia"), { recursive: true });
+      fs.writeFileSync(
+        path.join(root, ".phronia", "config.yaml"),
+        [
+          "parallel:",
+          "  inputs:",
+          "    - path: node_modules",
+          "      mode: symlink",
+          "  integration:",
+          "    ignored_inputs:",
+          "      - sdk-pin",
+          "  build:",
+          "    cargo_target_dir: shared",
+          "    sccache: true",
+        ].join("\n"),
+      );
+
+      const report = collectDoctorReport({
+        cwd: root,
+        platform: "claude-code",
+        probe: false,
+      });
+
+      expect(report.task.worktreeInputs).toMatchObject({
+        count: 1,
+        paths: ["node_modules (symlink)"],
+        available: true,
+      });
+      expect(report.task.ignoredInputs).toMatchObject({
+        count: 1,
+        paths: ["sdk-pin"],
+        available: true,
+      });
+      expect(report.parallel.build.cargoTargetDir).toBe("shared");
+      expect(report.parallel.build.sccache).toBe(true);
+      const hints = report.parallel.build.hints.join("\n");
+      expect(hints).toContain("CARGO_TARGET_DIR");
+      expect(hints).toContain("sccache");
+    } finally {
+      fs.rmSync(root, { recursive: true, force: true });
+    }
+  });
+
+  it("reports pending, synced, and failed spec-delta tasks", () => {
+    const root = fs.mkdtempSync(path.join(os.tmpdir(), "phronia-doctor-spec-"));
+    try {
+      writeDoctorTask(root, "10-29-pending", { delta: true });
+      writeDoctorTask(root, "10-29-synced", { delta: true, specSync: "synced" });
+      writeDoctorTask(root, "10-29-failed", { delta: true, specSync: "failed" });
+      writeDoctorTask(root, "10-29-none", {});
+
+      const report = collectDoctorReport({
+        cwd: root,
+        platform: "claude-code",
+        probe: false,
+      });
+
+      expect(report.task.specSync.available).toBe(true);
+      expect(report.task.specSync.pending).toContain(
+        ".phronia/tasks/10-29-pending",
+      );
+      expect(report.task.specSync.pending).not.toContain(
+        ".phronia/tasks/10-29-synced",
+      );
+      expect(report.task.specSync.failed).toEqual([
+        ".phronia/tasks/10-29-failed",
+      ]);
+      expect(report.task.specSync.pending).not.toContain(
+        ".phronia/tasks/10-29-none",
+      );
+      expect(report.task.specSync.synced).toBe(1);
+    } finally {
+      fs.rmSync(root, { recursive: true, force: true });
+    }
+  });
+
   it("explains platform-level unavailability", () => {
     const root = fs.mkdtempSync(path.join(os.tmpdir(), "phronia-doctor-kilo-"));
     try {
@@ -254,3 +334,31 @@ describe("doctor report", () => {
     }
   });
 });
+
+function writeDoctorTask(
+  root: string,
+  id: string,
+  options: { delta?: boolean; specSync?: "synced" | "failed" },
+): void {
+  const dir = path.join(root, ".phronia", "tasks", id);
+  fs.mkdirSync(dir, { recursive: true });
+  fs.writeFileSync(
+    path.join(dir, "task.json"),
+    JSON.stringify({
+      id,
+      title: `Task ${id}`,
+      status: "in_progress",
+      meta: {
+        ...(options.specSync === undefined
+          ? {}
+          : { spec_sync: { status: options.specSync } }),
+      },
+    }),
+  );
+  if (options.delta === true) {
+    fs.writeFileSync(
+      path.join(dir, "spec-delta.md"),
+      "# Spec Delta\n\n## Target files\n- .phronia/spec/guides/a.md\n",
+    );
+  }
+}

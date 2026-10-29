@@ -38,6 +38,13 @@ const OTHER: TaskFacts = {
   parent: ".phronia/tasks/10-28-other-parent",
 };
 
+const SIBLING: TaskFacts = {
+  ...LEAF,
+  ref: ".phronia/tasks/10-28-sibling",
+  id: "10-28-sibling",
+  parent: ".phronia/tasks/10-28-parent",
+};
+
 function facts(overrides: Partial<DispatchFacts> = {}): DispatchFacts {
   const claim = {
     taskRef: LEAF.ref,
@@ -468,8 +475,83 @@ describe("evaluateDispatch", () => {
     }
   });
 
-  it("prefers WRONG_CHECKOUT over CHECKOUT_UNREGISTERED when the task has a worktree", () => {
+  it("WRONG_CHECKOUT opens a new session and keeps cd as a shell-only hint", () => {
+    const worktree = "/repo/.phronia/worktrees/10-28-leaf";
     const verdict = evaluateDispatch(
+      facts({
+        workspace: { taskWorktree: worktree, taskBranch: "phronia/10-28-leaf" },
+      }),
+    );
+    expect(verdict.code).toBe("DISPATCH_WRONG_CHECKOUT");
+    expect(verdict.next).toEqual([
+      `open a new session/window in ${worktree}`,
+      `first line: Active task: ${LEAF.ref}`,
+      `cd ${worktree}   # only if your harness can move this session`,
+    ]);
+  });
+
+  it("TASK_NOT_CHILD explains a sibling relationship and its own workspace", () => {
+    const worktree = "/repo/.phronia/worktrees/10-28-sibling";
+    const verdict = evaluateDispatch(
+      facts({
+        activeTaskRef: CHILD.ref,
+        activeTask: CHILD,
+        requestedTaskRef: SIBLING.ref,
+        effectiveTask: SIBLING,
+        workspace: { taskWorktree: worktree, taskBranch: "phronia/10-28-sibling" },
+      }),
+    );
+    expect(verdict.code).toBe("DISPATCH_TASK_NOT_CHILD");
+    expect(verdict.reason).toContain(`session is bound to ${CHILD.ref}`);
+    expect(verdict.reason).toContain(`${SIBLING.ref} is a sibling task`);
+    expect(verdict.next).toEqual([
+      `open a separate session for ${SIBLING.ref} (worktree: ${worktree})`,
+      `first line: Active task: ${SIBLING.ref}`,
+      "do not dispatch mutating siblings from this session",
+      "platform claude-code subagentWorkspace=per-task: use one session per worktree; coordinator mode requires per-task and is not enabled here",
+    ]);
+    expect(verdict.details.activeTask).toBe(CHILD.ref);
+    expect(verdict.details.requestedTask).toBe(SIBLING.ref);
+    expect(verdict.details.requestedWorkspace).toBe(worktree);
+    expect(verdict.details.relation).toBe("sibling");
+    expect(verdict.details.platform).toEqual({
+      id: "claude-code",
+      hookPolicy: "block",
+      subagentWorkspace: "per-task",
+    });
+  });
+
+  it("TASK_NOT_CHILD reports an unrelated task and points at workspace ensure", () => {
+    const verdict = evaluateDispatch(
+      facts({
+        activeTaskRef: CHILD.ref,
+        activeTask: CHILD,
+        requestedTaskRef: OTHER.ref,
+        effectiveTask: OTHER,
+      }),
+    );
+    expect(verdict.code).toBe("DISPATCH_TASK_NOT_CHILD");
+    expect(verdict.reason).toContain("is an other task");
+    expect(verdict.next[0]).toBe(
+      `open a separate session for ${OTHER.ref} (worktree: run workspace ensure first)`,
+    );
+    expect(verdict.details.relation).toBe("other");
+    expect(verdict.details.requestedWorkspace).toBeNull();
+  });
+
+  it("ISOLATION_REQUIRED forbids concurrent mutating sub-agents in one session", () => {
+    const verdict = evaluateDispatch(
+      facts({
+        siblings: { total: 3, inProgress: 2, planning: 1 },
+      }),
+    );
+    expect(verdict.code).toBe("DISPATCH_ISOLATION_REQUIRED");
+    expect(verdict.next).toContain(
+      "do not run multiple mutating sub-agents in the main session; ZCode/Codex inherit the parent cwd",
+    );
+  });
+
+  it("prefers WRONG_CHECKOUT over CHECKOUT_UNREGISTERED when the task has a worktree", () => {    const verdict = evaluateDispatch(
       linkedFacts({
         checkout: {
           root: "/repo/.phronia/worktrees/unregistered",

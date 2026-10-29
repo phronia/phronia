@@ -6,8 +6,10 @@
  */
 
 import {
+  launchPlan,
   parallelStatus,
   planTasks,
+  type LaunchServiceResult,
   type PlanFailure,
   type PlanServiceResult,
   type ParallelStatusResult,
@@ -32,6 +34,17 @@ export interface ParallelCommandOptions {
   readonly refs?: readonly string[];
   /** Optional harness id for the coordinator capability gate. */
   readonly platform?: string;
+}
+
+export interface LaunchCommandOptions {
+  readonly cwd: string;
+  readonly json?: boolean;
+  readonly refs?: readonly string[];
+  /** 1-based wave selector; defaults to the first wave. */
+  readonly wave?: number;
+  readonly prepare?: boolean;
+  readonly platform?: string;
+  readonly sessionKey?: string;
 }
 
 export interface WorkspaceCommandOptions {
@@ -77,8 +90,66 @@ export function runParallelPlan(options: ParallelCommandOptions): number {
   return result.ok ? 0 : exitCodeFor(result.code);
 }
 
-export function runParallelStatus(options: ParallelCommandOptions): number {
-  const result = parallelStatus({
+export function runParallelLaunch(options: LaunchCommandOptions): number {
+  const result = launchPlan({
+    cwd: options.cwd,
+    ...(options.refs === undefined ? {} : { refs: options.refs }),
+    ...(options.wave === undefined ? {} : { wave: options.wave }),
+    ...(options.prepare === true ? { prepare: true } : {}),
+    ...(options.platform === undefined ? {} : { platform: options.platform }),
+    ...(options.sessionKey === undefined ? {} : { sessionKey: options.sessionKey }),
+  });
+
+  if (options.json === true) {
+    process.stdout.write(`${JSON.stringify(result, null, 2)}\n`);
+  } else if (!result.ok) {
+    printFailure(result);
+  } else {
+    printLaunch(result);
+  }
+  return result.ok ? 0 : exitCodeFor(result.code);
+}
+
+function printLaunch(result: Extract<LaunchServiceResult, { ok: true }>): void {
+  const scope =
+    result.wave === null ? "explicit refs" : `wave ${result.wave}`;
+  process.stdout.write(
+    `Parallel launch (${scope}): ${result.tasks.length} task(s)${
+      result.prepare ? " (prepared)" : " (read-only; pass --prepare to create workspaces)"
+    }\n`,
+  );
+  for (const task of result.tasks) {
+    process.stdout.write(`\n${task.taskRef}${task.title === "" ? "" : ` — ${task.title}`}\n`);
+    process.stdout.write(`  workspace: ${task.workspace ?? "none"}\n`);
+    process.stdout.write(`  branch: ${task.branch ?? "none"}\n`);
+    process.stdout.write(`  ${task.activeTaskLine}\n`);
+    process.stdout.write(`  prepare: ${task.prepareCommand}\n`);
+    process.stdout.write(`  lease: ${task.leaseCommand}\n`);
+    process.stdout.write(`  open: ${task.openInstructions}\n`);
+    if (task.inputs.missing.length > 0) {
+      process.stdout.write(`  missing inputs: ${task.inputs.missing.join(", ")}\n`);
+    }
+    for (const step of task.inputs.next) {
+      process.stdout.write(`  input next: ${step}\n`);
+    }
+    if (task.next !== null) {
+      process.stdout.write(`  next: ${task.next}\n`);
+    }
+  }
+  for (const skipped of result.skipped) {
+    process.stderr.write(
+      `skipped ${skipped.taskRef}: ${skipped.code} ${skipped.message}\n`,
+    );
+    if (skipped.next !== undefined) {
+      process.stderr.write(`  next: ${skipped.next}\n`);
+    }
+  }
+  process.stdout.write(
+    "\nPhronia did not start any session or process; open one session per workspace with the instructions above.\n",
+  );
+}
+
+export function runParallelStatus(options: ParallelCommandOptions): number {  const result = parallelStatus({
     cwd: options.cwd,
     ...(options.platform === undefined ? {} : { platform: options.platform }),
   });
@@ -168,6 +239,7 @@ function renderWorkspace(
               claim: result.claim,
               lease: result.lease,
               warnings: result.warnings,
+              ...(result.inputs === undefined ? {} : { inputs: result.inputs }),
               ...(result.provisional === undefined
                 ? {}
                 : { provisional: result.provisional }),
@@ -222,6 +294,14 @@ function printPlan(result: Extract<PlanServiceResult, { ok: true }>, explain: bo
         `  container (children: ${container.childCount}): coordinator only; start a child to execute\n`,
       );
     }
+    for (const task of result.tasks.filter((item) => item.kind === "spec")) {
+      process.stdout.write(
+        `\nSpec-only ${task.ref}${task.title === "" ? "" : ` — ${task.title}`}\n`,
+      );
+      process.stdout.write(
+        "  spec-only (meta.kind=spec): control plane; excluded from waves\n",
+      );
+    }
   }
   printDiagnostics(result.diagnostics);
 }
@@ -249,6 +329,16 @@ function printStatus(result: ParallelStatusResult): void {
 
   printStatusGroup("Control-plane tasks", control);
   printStatusGroup("Branch-local tasks", local);
+  const specSync = result.specSync;
+  process.stdout.write(
+    `\nSpec sync: ${specSync.pending.length} pending, ${specSync.failed.length} failed\n`,
+  );
+  if (specSync.pending.length > 0) {
+    process.stdout.write(`  pending: ${specSync.pending.join(", ")}\n`);
+  }
+  if (specSync.failed.length > 0) {
+    process.stdout.write(`  failed: ${specSync.failed.join(", ")}\n`);
+  }
   printDiagnostics(result.diagnostics);
 }
 
@@ -263,7 +353,7 @@ function printStatusGroup(
       task.queuePosition === null ? "" : ` queue=${task.queuePosition}`;
     const owner = task.owner === null ? "" : ` owner=${task.owner}`;
     process.stdout.write(
-      `  ${task.ref} [${task.status}] integration=${task.integration.outcome}${queue}${owner}\n`,
+      `  ${task.ref} [${task.status}] integration=${task.integration.outcome} spec=${task.specSync}${queue}${owner}\n`,
     );
     process.stdout.write(`    workspace: ${task.workspace ?? "none"}\n`);
     if (task.branch !== null) process.stdout.write(`    branch: ${task.branch}\n`);
@@ -288,6 +378,9 @@ function printWorkspace(
   }
   for (const warning of result.warnings) {
     process.stderr.write(`warning: ${warning}\n`);
+  }
+  for (const step of result.inputs?.next ?? []) {
+    process.stdout.write(`  next: ${step}\n`);
   }
   if (result.claim !== null) {
     process.stdout.write(
@@ -354,6 +447,7 @@ function toPlanJson(result: PlanServiceResult): unknown {
       workspace: task.workspace,
       container: task.container,
       childCount: task.childCount,
+      kind: task.kind,
     })),
   };
 }
@@ -365,6 +459,7 @@ function toStatusJson(result: StatusServiceResult): unknown {
     tasks: result.tasks,
     runtime: result.runtime,
     capabilities: result.capabilities,
+    specSync: result.specSync,
     diagnostics: result.diagnostics,
   };
 }

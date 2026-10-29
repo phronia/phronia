@@ -1,4 +1,6 @@
 import { afterEach, describe, expect, it } from "vitest";
+import fs from "node:fs";
+import path from "node:path";
 import { handleContext } from "../../src/context/index.js";
 import type { ContextResponse } from "../../src/context/types.js";
 import {
@@ -74,6 +76,28 @@ describe.skipIf(!GIT_AVAILABLE)("session-start runtime-state", () => {
     expect(state).toContain("claim: none");
     expect(state).toContain("lease: none");
     expect(state).toContain("parallel: none");
+    expect(state).toContain("spec: none");
+  });
+
+  it("reports spec pending until meta.spec_sync.status=synced", () => {
+    const rootProject = project();
+    const leaf = ".phronia/tasks/10-28-leaf";
+    rootProject.writeTask(leaf, { status: "in_progress" });
+    rootProject.writeSession("claude_abc", leaf);
+
+    expect(currentState(run(rootProject.root))).toContain("spec: none");
+
+    fs.writeFileSync(
+      path.join(rootProject.root, leaf, "spec-delta.md"),
+      "# Spec Delta\n",
+    );
+    expect(currentState(run(rootProject.root))).toContain("spec: pending");
+
+    rootProject.writeTask(leaf, {
+      status: "in_progress",
+      meta: { spec_sync: { status: "synced" } },
+    });
+    expect(currentState(run(rootProject.root))).toContain("spec: synced");
   });
 });
 

@@ -2,11 +2,13 @@ import { execFileSync } from "node:child_process";
 import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
-import { afterEach, beforeEach, describe, expect, it } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import {
+  launchPlan,
   parallelStatus,
   planTasks,
 } from "../../src/services/parallel.js";
+import { runParallelStatus } from "../../src/commands/parallel.js";
 
 describe("parallel plan/status integration (PLAN-01..04, WS-06)", () => {
   let root: string;
@@ -251,7 +253,259 @@ describe("parallel plan/status integration (PLAN-01..04, WS-06)", () => {
     expect(result.runtime.sharedRoot).toBe(fs.realpathSync(shared));
     expect(result.runtime.fallback).toBe(false);
   });
+
+  it("R10: projects spec sync state per task and in the summary", () => {
+    writeTask(root, "10-29-pending", { touches: ["src/p/**"] });
+    writeSpecDelta(root, "10-29-pending");
+    writeTask(root, "10-29-synced", { touches: ["src/s/**"] });
+    writeSpecDelta(root, "10-29-synced");
+    setSpecSync(root, "10-29-synced", "synced");
+    writeTask(root, "10-29-failed", { touches: ["src/f/**"] });
+    writeSpecDelta(root, "10-29-failed");
+    setSpecSync(root, "10-29-failed", "failed");
+    writeTask(root, "10-29-none", { touches: ["src/n/**"] });
+
+    const result = parallelStatus({ cwd: root });
+    expect(result.ok, JSON.stringify(result)).toBe(true);
+    if (!result.ok) return;
+    const byRef = new Map(result.tasks.map((task) => [task.ref, task]));
+    expect(byRef.get(".phronia/tasks/10-29-pending")?.specSync).toBe("pending");
+    expect(byRef.get(".phronia/tasks/10-29-synced")?.specSync).toBe("synced");
+    expect(byRef.get(".phronia/tasks/10-29-failed")?.specSync).toBe("failed");
+    expect(byRef.get(".phronia/tasks/10-29-none")?.specSync).toBe("none");
+    expect(result.specSync.pending).toContain(".phronia/tasks/10-29-pending");
+    expect(result.specSync.pending).toContain(".phronia/tasks/10-29-failed");
+    expect(result.specSync.pending).not.toContain(".phronia/tasks/10-29-synced");
+    expect(result.specSync.failed).toEqual([".phronia/tasks/10-29-failed"]);
+
+    const writes: string[] = [];
+    const spy = vi
+      .spyOn(process.stdout, "write")
+      .mockImplementation((chunk: string | Uint8Array) => {
+        writes.push(String(chunk));
+        return true;
+      });
+    try {
+      expect(runParallelStatus({ cwd: root, json: true })).toBe(0);
+    } finally {
+      spy.mockRestore();
+    }
+    const payload = JSON.parse(writes.join("")) as {
+      tasks: { ref: string; specSync: string }[];
+      specSync: { pending: string[]; failed: string[] };
+    };
+    expect(payload.specSync.pending).toContain(".phronia/tasks/10-29-pending");
+    expect(
+      payload.tasks.find((task) => task.ref === ".phronia/tasks/10-29-synced")
+        ?.specSync,
+    ).toBe("synced");
+  });
 });
+
+describe("parallel launch (multi-session manifest, design.md §8)", () => {
+  let root: string;
+
+  beforeEach(() => {
+    root = initRepo();
+  });
+
+  afterEach(() => {
+    fs.rmSync(root, { recursive: true, force: true });
+  });
+
+  it("is read-only without --prepare and lists prepare/lease commands", () => {
+    writeTask(root, "10-28-alpha", { touches: ["src/a/**"] });
+    writeTask(root, "10-28-beta", { touches: ["src/b/**"] });
+    const before = worktreeListing(root);
+
+    const result = launchPlan({ cwd: root });
+    expect(result.ok, JSON.stringify(result)).toBe(true);
+    if (!result.ok) return;
+
+    expect(result.wave).toBe(1);
+    expect(result.prepare).toBe(false);
+    expect(result.tasks.map((task) => task.taskRef)).toEqual([
+      ".phronia/tasks/10-28-alpha",
+      ".phronia/tasks/10-28-beta",
+    ]);
+    for (const task of result.tasks) {
+      expect(task.workspace).toBeNull();
+      expect(task.branch).toBeNull();
+      expect(task.activeTaskLine).toBe(`Active task: ${task.taskRef}`);
+      expect(task.prepareCommand).toBe(
+        `phronia task workspace ensure ${task.taskRef}`,
+      );
+      expect(task.leaseCommand).toBe(
+        `phronia task lease acquire ${task.taskRef}`,
+      );
+      expect(task.next).toBe(task.prepareCommand);
+      expect(task.openInstructions).toContain(
+        "Open a new session/window in the workspace printed by",
+      );
+    }
+
+    // No process, worktree, or session was created.
+    expect(worktreeListing(root)).toBe(before);
+    expect(fs.existsSync(path.join(root, ".phronia/worktrees"))).toBe(false);
+  });
+
+  it("creates and then attaches workspaces with --prepare", () => {
+    writeTask(root, "10-28-alpha", {
+      touches: ["src/a/**"],
+      exclusive: true,
+    });
+    git(root, ["add", "-A"]);
+    git(root, ["commit", "-q", "-m", "plan alpha"]);
+
+    const prepared = launchPlan({
+      cwd: root,
+      prepare: true,
+      sessionKey: "main-session",
+    });
+    expect(prepared.ok, JSON.stringify(prepared)).toBe(true);
+    if (!prepared.ok) return;
+    const created = prepared.tasks[0];
+    expect(created).toBeDefined();
+    if (created === undefined) return;
+    expect(created.workspace).toContain(path.join(".phronia", "worktrees"));
+    expect(fs.existsSync(created.workspace as string)).toBe(true);
+    expect(created.branch).toMatch(/^phronia\//);
+    expect(created.next).toBeNull();
+    expect(worktreeListing(root)).toContain(created.workspace as string);
+
+    const attached = launchPlan({
+      cwd: root,
+      prepare: true,
+      sessionKey: "main-session",
+    });
+    expect(attached.ok, JSON.stringify(attached)).toBe(true);
+    if (!attached.ok) return;
+    expect(attached.tasks[0]?.workspace).toBe(created.workspace);
+    expect(attached.tasks[0]?.branch).toBe(created.branch);
+    // Attach reuses the same worktree; it does not create a second one.
+    expect(worktreeListing(root).match(/\.phronia\/worktrees\//g)?.length).toBe(1);
+  });
+
+  it("skips containers and spec-only tasks with reasons", () => {
+    writeTask(root, "10-28-parent", {
+      touches: ["src/all/**"],
+      children: [".phronia/tasks/10-28-alpha"],
+    });
+    writeTask(root, "10-28-alpha", { touches: ["src/a/**"] });
+    writeTask(root, "10-28-spec", { touches: ["docs/**"], kind: "spec" });
+
+    const result = launchPlan({
+      cwd: root,
+      refs: [
+        ".phronia/tasks/10-28-parent",
+        ".phronia/tasks/10-28-alpha",
+        ".phronia/tasks/10-28-spec",
+      ],
+    });
+    expect(result.ok, JSON.stringify(result)).toBe(true);
+    if (!result.ok) return;
+    expect(result.wave).toBeNull();
+    expect(result.tasks.map((task) => task.taskRef)).toEqual([
+      ".phronia/tasks/10-28-alpha",
+    ]);
+    const skipped = new Map(result.skipped.map((item) => [item.taskRef, item]));
+    expect(skipped.get(".phronia/tasks/10-28-parent")?.code).toBe(
+      "PARALLEL_CONTAINER_TASK",
+    );
+    expect(skipped.get(".phronia/tasks/10-28-parent")?.message).toContain(
+      "coordinator only",
+    );
+    expect(skipped.get(".phronia/tasks/10-28-spec")?.code).toBe(
+      "PARALLEL_SPEC_ONLY",
+    );
+    expect(skipped.get(".phronia/tasks/10-28-spec")?.message).toContain(
+      "control plane",
+    );
+  });
+
+  it("emits platform-specific open instructions", () => {
+    writeTask(root, "10-28-alpha", { touches: ["src/a/**"] });
+    const refs = [".phronia/tasks/10-28-alpha"];
+
+    const zcode = launchPlan({ cwd: root, refs, platform: "zcode" });
+    const claude = launchPlan({ cwd: root, refs, platform: "claude-code" });
+    const generic = launchPlan({ cwd: root, refs });
+    expect(zcode.ok && claude.ok && generic.ok).toBe(true);
+    if (!zcode.ok || !claude.ok || !generic.ok) return;
+
+    expect(zcode.platform).toBe("zcode");
+    expect(zcode.tasks[0]?.openInstructions).toContain(
+      "Open a new ZCode/Codex window with working directory",
+    );
+    expect(zcode.tasks[0]?.openInstructions).toContain(
+      "Mutating sub-agents inherit this session's cwd",
+    );
+    expect(claude.platform).toBe("claude-code");
+    expect(claude.tasks[0]?.openInstructions).toContain(
+      "Open a separate Claude Code session",
+    );
+    expect(claude.tasks[0]?.openInstructions).toContain(
+      "per-task workspace capability exists",
+    );
+    expect(generic.platform).toBeNull();
+    expect(generic.tasks[0]?.openInstructions).toContain(
+      "Open a new session/window",
+    );
+  });
+
+  it("does not present the base branch as a launch branch", () => {
+    writeTask(root, "10-28-alpha", { touches: ["src/a/**"], branch: "main" });
+
+    const result = launchPlan({ cwd: root, refs: [".phronia/tasks/10-28-alpha"] });
+    expect(result.ok, JSON.stringify(result)).toBe(true);
+    if (!result.ok) return;
+    const task = result.tasks[0];
+    expect(task?.branch).toBeNull();
+    expect(task?.prepareCommand).toBe(
+      "phronia task workspace ensure .phronia/tasks/10-28-alpha",
+    );
+  });
+
+  it("reports missing build inputs per launched task", () => {
+    writeTask(root, "10-28-alpha", {
+      touches: ["src/a/**"],
+      exclusive: true,
+    });
+    fs.writeFileSync(path.join(root, ".gitignore"), "node_modules/\n");
+    fs.mkdirSync(path.join(root, "node_modules/dep"), { recursive: true });
+    git(root, ["add", "-A"]);
+    git(root, ["commit", "-q", "-m", "plan alpha"]);
+
+    const result = launchPlan({
+      cwd: root,
+      prepare: true,
+      sessionKey: "main-session",
+    });
+    expect(result.ok, JSON.stringify(result)).toBe(true);
+    if (!result.ok) return;
+    const task = result.tasks[0];
+    expect(task?.inputs.missing).toContain("node_modules");
+    expect(task?.inputs.next.join("\n")).toContain("ln -s");
+  });
+
+  it("rejects an out-of-range wave without creating anything", () => {
+    writeTask(root, "10-28-alpha", { touches: ["src/a/**"] });
+    const before = worktreeListing(root);
+
+    const result = launchPlan({ cwd: root, wave: 7 });
+    expect(result.ok).toBe(false);
+    if (result.ok) return;
+    expect(result.code).toBe("PARALLEL_WAVE_NOT_FOUND");
+    expect(worktreeListing(root)).toBe(before);
+  });
+});
+
+function worktreeListing(root: string): string {
+  return execFileSync("git", ["worktree", "list", "--porcelain"], {
+    cwd: root,
+    encoding: "utf-8",
+  });
+}
 
 function initRepo(): string {
   const root = fs.mkdtempSync(path.join(os.tmpdir(), "phronia-parallel-"));
@@ -278,6 +532,9 @@ function writeTask(
     status?: string;
     exclusive?: boolean;
     children?: readonly string[];
+    worktree?: "auto" | "always" | "never";
+    kind?: string;
+    branch?: string;
   },
 ): void {
   const dir = path.join(root, ".phronia/tasks", id);
@@ -289,14 +546,17 @@ function writeTask(
       title: `Task ${id}`,
       status: options.status ?? "in_progress",
       priority: "P2",
+      ...(options.branch === undefined ? {} : { branch: options.branch }),
       ...(options.children === undefined ? {} : { children: options.children }),
       meta: {
+        ...(options.kind === undefined ? {} : { kind: options.kind }),
         parallel: {
           ...(options.touches === undefined ? {} : { touches: options.touches }),
           ...(options.dependsOn === undefined
             ? {}
             : { depends_on: options.dependsOn }),
           ...(options.exclusive === true ? { exclusive: true } : {}),
+          ...(options.worktree === undefined ? {} : { worktree: options.worktree }),
         },
       },
     }),
@@ -305,4 +565,24 @@ function writeTask(
 
 function git(cwd: string, args: string[]): void {
   execFileSync("git", args, { cwd, stdio: "ignore" });
+}
+
+function writeSpecDelta(root: string, id: string): void {
+  fs.writeFileSync(
+    path.join(root, ".phronia/tasks", id, "spec-delta.md"),
+    "# Spec Delta\n\n## Target files\n- .phronia/spec/guides/a.md\n",
+  );
+}
+
+function setSpecSync(
+  root: string,
+  id: string,
+  status: "synced" | "failed",
+): void {
+  const file = path.join(root, ".phronia/tasks", id, "task.json");
+  const task = JSON.parse(fs.readFileSync(file, "utf8")) as {
+    meta?: Record<string, unknown>;
+  };
+  task.meta = { ...(task.meta ?? {}), spec_sync: { status } };
+  fs.writeFileSync(file, JSON.stringify(task));
 }

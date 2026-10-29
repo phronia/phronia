@@ -19,6 +19,10 @@ import {
 import type { ActiveTaskState } from "../state/session/active-task.js";
 import type { TaskRecordView } from "../state/tasks/record.js";
 import { taskRefsMatch } from "../state/tasks/refs.js";
+import {
+  readSpecSyncState,
+  resolveSpecDisplayState,
+} from "../task/spec/policy.js";
 import type { StateReader } from "../state/index.js";
 
 export interface RuntimeStateOptions {
@@ -44,6 +48,8 @@ export interface RuntimeStateFormatInput {
   readonly task: TaskRecordView | null;
   readonly childStatuses: readonly (string | null)[];
   readonly includeNext: boolean;
+  /** `spec-delta.md` exists for the active task. */
+  readonly hasSpecDelta?: boolean;
 }
 
 export function buildRuntimeStateLines(
@@ -81,6 +87,8 @@ export function buildRuntimeStateLines(
       : task.children.map(
           (childRef) => options.state.tasks.read(childRef)?.status ?? null,
         );
+  const hasSpecDelta =
+    task === null ? false : options.state.tasks.artifacts(task.ref).specDelta;
 
   return {
     lines: formatRuntimeStateLines({
@@ -90,12 +98,13 @@ export function buildRuntimeStateLines(
       task,
       childStatuses,
       includeNext: options.includeNext === true,
+      hasSpecDelta,
     }),
     diagnostics,
   };
 }
 
-/** Format the four fact lines (plus the parent `next` line) without IO. */
+/** Format the fact lines (plus the parent `next` line) without IO. */
 export function formatRuntimeStateLines(
   input: RuntimeStateFormatInput,
 ): readonly string[] {
@@ -108,6 +117,7 @@ export function formatRuntimeStateLines(
       input.task,
       input.childStatuses,
     )}`,
+    `spec: ${describeSpec(input.task, input.hasSpecDelta === true)}`,
   ];
   if (
     input.includeNext &&
@@ -201,6 +211,23 @@ function describeParallel(
     (status) => status === "planning",
   ).length;
   return `${inProgress} in_progress children (planning ${planning}; total ${task.children.length})`;
+}
+
+/**
+ * Spec is control-plane state: a task with `spec-delta.md` is pending until
+ * `meta.spec_sync.status=synced`. The breadcrumb never reads code or git.
+ */
+function describeSpec(
+  task: TaskRecordView | null,
+  hasSpecDelta: boolean,
+): "none" | "pending" | "synced" {
+  if (task === null) {
+    return "none";
+  }
+  return resolveSpecDisplayState({
+    hasDelta: hasSpecDelta,
+    syncState: readSpecSyncState(task.meta),
+  });
 }
 
 function errorMessage(error: unknown): string {

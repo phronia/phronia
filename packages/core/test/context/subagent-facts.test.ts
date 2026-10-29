@@ -322,6 +322,7 @@ describe("dispatch facts mapping", () => {
 
     const { facts, verdict } = step(fixture.root);
     expect(facts.effectiveTask).toBeNull();
+    expect(facts.activeTask).toBeNull();
     expect(verdict.decision).toBe("allow");
     expect(verdict.code).toBe("DISPATCH_NO_ACTIVE_TASK");
     expect(verdict.guard).toBeNull();
@@ -342,6 +343,24 @@ describe("dispatch facts mapping", () => {
     expect(facts.activeTaskRef).toBe(PARENT);
     expect(facts.requestedTaskRef).toBe(OTHER);
     expect(verdict.code).toBe("DISPATCH_TASK_NOT_CHILD");
+  });
+
+  it("maps the session pointer task to activeTask, separate from the requested task", () => {
+    const fixture = createProject();
+    roots.push(fixture.root);
+    fixture.writeTask(PARENT, {
+      status: "in_progress",
+      children: [LEAF, SIBLING],
+    });
+    fixture.writeTask(LEAF, { status: "in_progress", parent: PARENT });
+    fixture.writeTask(SIBLING, { status: "in_progress", parent: PARENT });
+    fixture.writeSession("claude_abc", LEAF);
+
+    const { facts, verdict } = step(fixture.root, { requestedRef: SIBLING });
+    expect(facts.activeTask?.ref).toBe(LEAF);
+    expect(facts.effectiveTask?.ref).toBe(SIBLING);
+    expect(verdict.code).toBe("DISPATCH_TASK_NOT_CHILD");
+    expect(verdict.details.relation).toBe("sibling");
   });
 
   it("turns unreadable runtime facts into a guard, never a block", () => {

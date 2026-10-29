@@ -287,3 +287,88 @@ Batches that must update this file:
   `--session-key` command; multiple sessions still degrade instead of guessing.
 - **`phronia platforms --json`**: each configured platform now includes
   `hookPolicy` and `subagentWorkspace` (existing fields unchanged).
+
+## Unreleased (spec control plane / dispatch UX / worktree operations)
+
+- **Spec is now a control-plane projection.** A code task writes its intended
+  spec change to `.phronia/tasks/<ref>/spec-delta.md` and must not commit
+  `.phronia/spec/**` on its branch.
+  - New: `phronia task spec plan|commit|status <ref...> [--json]` and
+    `python3 ./.phronia/scripts/task.py spec-delta <ref>` (template helper).
+  - `spec commit` runs in the main checkout, takes the integration lock, and
+    commits only the spec tree as `chore(spec): sync <refs>` (followed by a
+    metadata-only `chore(task): record spec sync for <refs>`). It records
+    `meta.spec_sync = {status, commit, synced_at, refs, mode}`.
+  - `integrate` now refuses `.phronia/spec/**` changes on a code task branch
+    with `SPEC_IN_CODE_TASK`; move the intent to `spec-delta.md`. There is no
+    `--allow-spec-in-code`.
+  - `task.py archive` refuses a task whose `spec-delta.md` is not synced with
+    `SPEC_SYNC_PENDING`; `--skip-spec-sync` is the explicit escape hatch and
+    records the reason in `notes`.
+  - Why: spec describes landed code, and writing it from several task
+    branches produced conflicts on shared files and on the git index.
+  - Migration: move in-flight spec edits out of the task branch into
+    `spec-delta.md`. Already-landed work needs no retroactive sync.
+  - Escape hatch: `--skip-spec-sync` after an explicit user decision.
+- **The planner no longer serializes spec.** `.phronia/spec/**` is removed
+  from `DEFAULT_ALWAYS_SERIAL`. A task that still lists it in
+  `meta.parallel.touches` gets a `SPEC_IS_POST_INTEGRATION` warning; it does
+  not force a serial wave. `meta.kind: spec` tasks are control-plane units
+  (`PARALLEL_SPEC_ONLY`) and never enter a wave. `docs/requirements.md`,
+  `.phronia/config.yaml`, `.phronia/workflow.md`, `.phronia/gate.yaml`, lock
+  files, and migrations remain always-serial.
+- **Archive branch resolution is wider and correct.** Archive resolves the
+  task branch from `task.json.branch`, then the shared worktree registry, then
+  `meta.integration.outcome=landed` plus a `meta.integration.commit` reachable
+  from the base branch. The normal worktree path no longer needs
+  `--skip-branch-validation`; an open PR (`pushed`) still does not qualify.
+- **Dispatch `next` is executable.** `DISPATCH_WRONG_CHECKOUT` now starts with
+  "open a new session/window in `<worktree>`" and gives
+  `first line: Active task: <ref>`; `cd` appears only as a harness-dependent
+  hint. `DISPATCH_TASK_NOT_CHILD` names the session's active task, the
+  requested task, their relation, the requested worktree (or "run workspace
+  ensure first"), and forbids mutating siblings from the same session.
+  `DISPATCH_ISOLATION_REQUIRED` explicitly forbids concurrent mutating
+  sub-agents in the main session (ZCode/Codex inherit the parent cwd). Codes
+  and block semantics are unchanged.
+- **New multi-session launch plan.**
+  `phronia task parallel launch [refs...] --wave <n> [--prepare] [--platform <id>] [--json]`
+  returns, per task, its workspace, branch, `Active task:` line, prepare/lease
+  commands, platform open instructions, and missing build inputs. It never
+  starts a process or a session; `--prepare` is the explicit switch that
+  creates/attaches workspaces. Containers and spec-only tasks are reported as
+  skipped.
+- **Declarative worktree inputs.** `parallel.inputs` (`- path:` + `mode:
+  symlink|copy`; a path→mode map and a bare path list are still accepted)
+  materializes gitignored build inputs when a worktree is created or ensured.
+  Paths must stay inside the repository; Windows symlink failures degrade to
+  a copy. `worktree add`/`workspace ensure` print executable `next` steps for
+  missing `parallel.inputs`, `node_modules`, and `rust/target`.
+  `parallel.build.cargo_target_dir: shared` and `parallel.build.sccache: true`
+  emit recommendations only; Phronia never installs or reconfigures a cache.
+- **Ignored inputs are explicit.** `parallel.integration.ignored_inputs` is an
+  allow-list for `integrate` and `spec sync` dirty checks. A configured path
+  is ignored only when it is an in-repo symlink or git itself ignores it;
+  everything else still blocks. A symlink to a gitignored directory is **not**
+  matched by git's `/dir/` pattern, so the link path must be listed. There is
+  no blanket `--allow-untracked`.
+- **`worktree add` matches `ensure`.** Dirty main with only
+  `.phronia/tasks/<ref>` returns `TASK_ARTIFACTS_UNCOMMITTED` with a scoped
+  commit command and `--copy-task`; `worktree add` now supports `--copy-task`.
+  Other dirty paths still refuse.
+- **Cleanup reports freed space.** `worktree remove` / `worktree prune`
+  best-effort print `freed ~<size>`; measurement failure never blocks.
+- **YAML subset extension.** Flat mappings inside `- ` list items
+  (`- path: x` / `  mode: symlink`) are parsed instead of being hoisted into
+  the parent map. Nested lists inside a list-item mapping remain unsupported.
+- **`phronia doctor`** reports `task.worktreeInputs`, `task.ignoredInputs`, and
+  `parallel.build` hints (read-only).
+- **Runtime-state block** gains a fifth line, `spec: none|pending|synced`,
+  derived from `spec-delta.md` and `meta.spec_sync`.
+- Why: parallel work exposed friction in spec ownership, archive metadata,
+  dispatch wording, and manual worktree setup.
+  - Migration: none required for existing tasks. Add `spec-delta.md` only when
+    a task changes spec. `parallel.inputs` / `ignored_inputs` / `build` are
+    optional; omitting them preserves the old behavior.
+  - Escape hatch: `--skip-spec-sync`, `--skip-branch-validation` (unchanged),
+    `parallel.enabled: false`, `parallel.dispatch.enforce: warn|off`.

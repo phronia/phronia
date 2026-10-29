@@ -20,6 +20,8 @@ export interface TaskArtifacts {
   implementJsonl: boolean;
   checkJsonl: boolean;
   research: boolean;
+  /** `spec-delta.md`: post-integration spec intent, not a spec write. */
+  specDelta: boolean;
   sizes: Record<string, number>;
 }
 
@@ -29,6 +31,7 @@ const ARTIFACT_FILES = [
   "implement.md",
   "implement.jsonl",
   "check.jsonl",
+  "spec-delta.md",
 ] as const;
 
 export function inspectTaskArtifacts(
@@ -46,6 +49,7 @@ export function inspectTaskArtifacts(
       implementJsonl: false,
       checkJsonl: false,
       research: false,
+      specDelta: false,
       sizes,
     };
   }
@@ -62,6 +66,7 @@ export function inspectTaskArtifacts(
     implementJsonl: "implement.jsonl" in sizes,
     checkJsonl: "check.jsonl" in sizes,
     research: isDirectory(io, path.join(resolved.real, "research")),
+    specDelta: "spec-delta.md" in sizes,
     sizes,
   };
 }

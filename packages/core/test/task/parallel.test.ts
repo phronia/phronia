@@ -613,4 +613,68 @@ describe("planParallel", () => {
     expect(diagnostic?.severity).toBe("warn");
     expect(diagnostic?.message).toContain("Start a child instead");
   });
+
+  it("PLAN-S1: spec is no longer always-serial", () => {
+    const result = plan([
+      task("spec", declared(".phronia/spec/**")),
+      task("code", declared("src/code.ts")),
+    ]);
+
+    expect(result.waves).toHaveLength(1);
+    expect(result.waves[0]?.tasks).toEqual(["code", "spec"]);
+    expect(
+      result.diagnostics.some((item) => item.code === "SPEC_IS_POST_INTEGRATION"),
+    ).toBe(true);
+  });
+
+  it("PLAN-S2: a spec footprint warns but does not force a singleton", () => {
+    const result = plan([
+      task("a", declared(".phronia/spec/cli/backend/a.md")),
+      task("b", declared("src/b.ts")),
+    ]);
+
+    expect(result.waves).toHaveLength(1);
+    const diagnostic = result.diagnostics.find(
+      (item) => item.code === "SPEC_IS_POST_INTEGRATION",
+    );
+    expect(diagnostic?.severity).toBe("warn");
+    expect(diagnostic?.details?.taskRef).toBe("a");
+    expect(diagnostic?.details?.next).toEqual([
+      "write the intent to spec-delta.md",
+      "remove .phronia/spec/** from meta.parallel.touches",
+    ]);
+  });
+
+  it("PLAN-S3: a spec-only task is excluded from waves with an info diagnostic", () => {
+    const result = plan([
+      task(".phronia/tasks/spec", declared(".phronia/spec/a.md"), {
+        kind: "spec",
+      }),
+      task(".phronia/tasks/code", declared("src/code.ts")),
+    ]);
+
+    expect(result.waves).toHaveLength(1);
+    expect(result.waves[0]?.tasks).toEqual([".phronia/tasks/code"]);
+    const diagnostic = result.diagnostics.find(
+      (item) => item.code === "PARALLEL_SPEC_ONLY",
+    );
+    expect(diagnostic?.severity).toBe("info");
+    expect(diagnostic?.details?.taskRef).toBe(".phronia/tasks/spec");
+    expect(
+      result.diagnostics.some((item) => item.code === "SPEC_IS_POST_INTEGRATION"),
+    ).toBe(false);
+  });
+
+  it("PLAN-S4: an all-spec-only plan reports the control-plane diagnostic", () => {
+    const result = plan([
+      task(".phronia/tasks/spec", declared(".phronia/spec/a.md"), {
+        kind: "spec",
+      }),
+    ]);
+
+    expect(result.waves).toEqual([]);
+    expect(result.diagnostics.map((item) => item.code)).toEqual([
+      "PARALLEL_SPEC_ONLY",
+    ]);
+  });
 });
