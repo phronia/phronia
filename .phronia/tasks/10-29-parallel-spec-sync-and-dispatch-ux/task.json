@@ -15,7 +15,7 @@
   "branch": null,
   "base_branch": "main",
   "worktree_path": null,
-  "commit": null,
+  "commit": "71d7fe76f850160c4735dbecf0e7c1cee2142f42",
   "pr_url": null,
   "subtasks": [],
   "children": [],
@@ -45,6 +45,17 @@
         ".phronia/spec/cli/backend/parallel-tasks.md",
         ".phronia/workflow.md"
       ]
+    },
+    "integration": {
+      "mode": "local",
+      "outcome": "landed",
+      "base_sha": "71d7fe76f850160c4735dbecf0e7c1cee2142f42",
+      "commit": "71d7fe76f850160c4735dbecf0e7c1cee2142f42",
+      "pr_url": null,
+      "verified": false,
+      "last_error": null,
+      "log_ref": ".phronia/.runtime/integration-logs/parallel-spec-sync-and-dispatch-ux-2026-10-29T05-18-52-005Z.log",
+      "updated_at": "2026-10-29T05:18:52.052Z"
     }
   }
 }
