@@ -1,0 +1,9 @@
+{
+  "version": "2610.29.3",
+  "description": "Post-integration spec sync and worktree ergonomics",
+  "breaking": false,
+  "recommendMigrate": false,
+  "changelog": "Move spec out of the task execution plane: code tasks emit spec-delta and cannot merge .phronia/spec; integrate refuses SPEC_IN_CODE_TASK; phronia task spec plan|commit applies the delta after landing under the integration lock. Resolve archive branches from the worktree registry or landed integration metadata. Clarify dispatch next steps for multi-session work, add parallel launch, declarative worktree inputs and explicit ignored_inputs, dependency/build hints, cleanup size, and doctor/parallel status spec visibility.",
+  "migrations": [],
+  "notes": "No migration required."
+}
