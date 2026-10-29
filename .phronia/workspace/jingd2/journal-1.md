@@ -88,3 +88,26 @@ Added dispatch admission at the subagent boundary: pure policy, zero-cost runtim
 ### Status
 
 [OK] **Completed**
+
+
+## Session 4: Spec post-integration sync and worktree ergonomics
+<!-- phronia-session: v=2 fp=8e81ee952bde309e -->
+
+**Date**: 2026-10-29
+**Task**: Spec post-integration sync and worktree ergonomics
+**Package**: cli
+**Branch**: `main`
+
+### Summary
+
+Moved spec out of the execution plane: tasks emit spec-delta, code tasks cannot merge .phronia/spec, and a serialized spec plan/commit applies it after integrate. Fixed archive branch resolution from the registry/integration landing, clarified dispatch next for multi-session work, added parallel launch, declarative worktree inputs/ignored inputs/build hints, and doctor/status spec visibility. CI e2e covers the three-task spec-delta flow.
+
+### Git Commits
+
+| Hash | Message |
+|------|---------|
+| `71d7fe76` | feat(parallel): post-integration spec sync and worktree ergonomics |
+
+### Status
+
+[OK] **Completed**
