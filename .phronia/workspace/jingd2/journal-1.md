@@ -111,3 +111,43 @@ Moved spec out of the execution plane: tasks emit spec-delta, code tasks cannot 
 ### Status
 
 [OK] **Completed**
+
+
+## Session 5: Adopt managed-path kinds and migration tail
+<!-- phronia-session: v=2 fp=bd89ee77ea059825 -->
+
+**Date**: 2026-10-30
+**Task**: Adopt managed-path kinds and migration tail
+**Package**: cli
+**Branch**: `main`
+
+### Summary
+
+Split managed roots into dirs and files so adopt never walks a file, replaced the legacy trellis-* rename with a plan/apply retirement that prunes empty trees, and made post-rename failures restore the legacy root. Released 2610.30.1 through CI.
+
+### Main Changes
+
+- Registry: extraManagedPaths split into extraManagedDirs and managedFiles; added getManagedDirs/getManagedFiles/getPlatformOwnedPaths
+- Derived sets: ALL_MANAGED_PATHS for path gates and backups, ALL_MANAGED_DIRS for directory walkers
+- adopt: plan/apply legacy retirement (prune empty, rename free targets, report collisions) with dry-run prediction
+- adopt: roll back the workflow-root rename on failure and print the backup path
+
+### Git Commits
+
+| Hash | Message |
+|------|---------|
+| `a37e7004` | fix(cli): type managed roots as dirs or files in adopt |
+| `82975c7e` | chore(release): 2610.30.1 |
+
+### Testing
+
+- [OK] pnpm verify: core 926 passed (1 skipped), cli 2138 passed, testing 23 passed
+- [OK] adboost 0.5.19 read-only copy: adopt completed, 0 leftover trellis-* dirs, 2 conservative needs-review entries
+
+### Status
+
+[OK] **Completed**
+
+### Next Steps
+
+- Run phronia upgrade locally, then remove adboost/.phronia and re-run phronia adopt
