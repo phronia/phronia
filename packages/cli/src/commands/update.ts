@@ -55,7 +55,7 @@ import {
 } from "../templates/copilot/index.js";
 
 import {
-  ALL_MANAGED_DIRS,
+  ALL_MANAGED_PATHS,
   getConfiguredPlatforms,
   collectPlatformTemplates,
 } from "../configurators/index.js";
@@ -1206,9 +1206,11 @@ function backupFile(
 }
 
 /**
- * Directories to backup as complete snapshot (derived from platform registry)
+ * Managed roots to back up as a complete snapshot (derived from the platform
+ * registry). `ALL_MANAGED_PATHS` is intentional: `collectAllFiles()` handles a
+ * file root, and a managed file must not drop out of the backup set.
  */
-const BACKUP_DIRS = ALL_MANAGED_DIRS;
+const BACKUP_DIRS = ALL_MANAGED_PATHS;
 
 /** Root-level managed files to include in update backups. */
 const BACKUP_FILES = [FILE_NAMES.AGENTS] as const;

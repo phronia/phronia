@@ -121,7 +121,173 @@ describe("adopt", () => {
     expect(fs.existsSync(path.join(tmpDir, ".trellis"))).toBe(true);
     expect(fs.existsSync(path.join(tmpDir, ".phronia"))).toBe(false);
   });
+
+  it("adopts a Copilot project whose managed set includes a file", async () => {
+    // Regression: `.github/copilot-instructions.md` is a managed *file*.
+    // Walking it as a directory threw ENOTDIR and stranded the workflow root.
+    seedManifestEntry(
+      tmpDir,
+      ".github/prompts/continue.prompt.md",
+      "# old prompt\n",
+    );
+
+    const report = await adopt({
+      cwd: tmpDir,
+      force: true,
+      backupRoot: path.join(tmpDir, "backups"),
+    });
+
+    expect(report.platforms).toContain("copilot");
+    expect(fs.existsSync(path.join(tmpDir, ".phronia/.version"))).toBe(true);
+    expect(
+      fs.existsSync(path.join(tmpDir, ".github/copilot-instructions.md")),
+    ).toBe(true);
+    expect(
+      fs.existsSync(path.join(tmpDir, ".github/skills/phronia-check/SKILL.md")),
+    ).toBe(true);
+  });
+
+  it("adopts a Snow project whose managed set includes a file", async () => {
+    seedManifestEntry(tmpDir, ".snow/skills/trellis-check/SKILL.md", "# old\n");
+
+    const report = await adopt({
+      cwd: tmpDir,
+      force: true,
+      backupRoot: path.join(tmpDir, "backups"),
+    });
+
+    expect(report.platforms).toContain("snow");
+    expect(fs.existsSync(path.join(tmpDir, ".snow/SNOW.md"))).toBe(true);
+  });
+
+  it("does not infer a platform from the shared .agents/skills root", async () => {
+    seedManifestEntry(tmpDir, ".agents/skills/trellis-check/SKILL.md", "# old\n");
+
+    const report = await adopt({
+      cwd: tmpDir,
+      force: true,
+      backupRoot: path.join(tmpDir, "backups"),
+    });
+
+    // Several platforms write `.agents/skills`; it cannot identify any of them.
+    for (const shared of ["gemini", "pi", "kimi", "dsh", "codex"]) {
+      expect(report.platforms).not.toContain(shared);
+    }
+    expect(report.platforms).toContain("claude-code");
+  });
+
+  it("prunes an empty legacy trellis-* directory instead of reporting it", async () => {
+    seedManifestEntry(tmpDir, ".cursor/skills/trellis-check/SKILL.md", "# old\n");
+
+    const report = await adopt({
+      cwd: tmpDir,
+      force: true,
+      backupRoot: path.join(tmpDir, "backups"),
+    });
+
+    expect(fs.existsSync(path.join(tmpDir, ".cursor/skills/trellis-check"))).toBe(
+      false,
+    );
+    expect(report.needsReview).not.toContain(".cursor/skills/trellis-check");
+    expect(
+      fs.existsSync(path.join(tmpDir, ".cursor/skills/phronia-check/SKILL.md")),
+    ).toBe(true);
+  });
+
+  it("renames a legacy directory that still holds user content", async () => {
+    seedManifestEntry(tmpDir, ".kiro/skills/trellis-seed/SKILL.md", "# seed\n");
+    writeFile(tmpDir, ".kiro/skills/trellis-custom/notes.md", "# notes\n");
+
+    const report = await adopt({
+      cwd: tmpDir,
+      force: true,
+      backupRoot: path.join(tmpDir, "backups"),
+    });
+
+    expect(fs.existsSync(path.join(tmpDir, ".kiro/skills/trellis-custom"))).toBe(
+      false,
+    );
+    expect(
+      fs.readFileSync(
+        path.join(tmpDir, ".kiro/skills/phronia-custom/notes.md"),
+        "utf8",
+      ),
+    ).toBe("# notes\n");
+    expect(report.regenerated).toContain(".kiro/skills/phronia-custom");
+  });
+
+  it("keeps and reports a legacy directory whose phronia-* target exists", async () => {
+    seedManifestEntry(tmpDir, ".kiro/skills/trellis-seed/SKILL.md", "# seed\n");
+    writeFile(tmpDir, ".kiro/skills/trellis-check/notes.md", "# notes\n");
+
+    const report = await adopt({
+      cwd: tmpDir,
+      force: true,
+      backupRoot: path.join(tmpDir, "backups"),
+    });
+
+    expect(
+      fs.readFileSync(
+        path.join(tmpDir, ".kiro/skills/trellis-check/notes.md"),
+        "utf8",
+      ),
+    ).toBe("# notes\n");
+    expect(report.needsReview).toContain(".kiro/skills/trellis-check");
+  });
+
+  it("predicts legacy retirement in dry-run without touching the tree", async () => {
+    seedManifestEntry(tmpDir, ".cursor/skills/trellis-check/SKILL.md", "# old\n");
+
+    const report = await adopt({ cwd: tmpDir, force: true, dryRun: true });
+
+    expect(report.dropped).toContain(".cursor/skills/trellis-check");
+    expect(
+      fs.existsSync(path.join(tmpDir, ".cursor/skills/trellis-check/SKILL.md")),
+    ).toBe(true);
+  });
+
+  it("restores the workflow root when adoption fails after the rename", async () => {
+    // A file where the regenerated tree expects a directory makes
+    // writeWorkflowFiles throw after `.trellis` was already renamed.
+    writeFile(tmpDir, ".trellis/scripts", "not a directory\n");
+
+    const backupRoot = path.join(tmpDir, "backups");
+    let message = "";
+    try {
+      await adopt({ cwd: tmpDir, force: true, backupRoot });
+    } catch (error) {
+      message = (error as Error).message;
+    }
+
+    expect(message).toContain("adopt failed after moving .trellis/ to .phronia/");
+    expect(message).toContain("restored to .trellis/");
+    expect(message).toContain(`Backup: ${path.join(backupRoot)}`);
+    expect(fs.existsSync(path.join(tmpDir, ".trellis"))).toBe(true);
+    expect(fs.existsSync(path.join(tmpDir, ".phronia"))).toBe(false);
+  });
 });
+
+function writeFile(root: string, relativePath: string, content: string): void {
+  const fullPath = path.join(root, ...relativePath.split("/"));
+  fs.mkdirSync(path.dirname(fullPath), { recursive: true });
+  fs.writeFileSync(fullPath, content);
+}
+
+/** Seed a legacy file and record it as pristine in the legacy manifest. */
+function seedManifestEntry(
+  root: string,
+  relativePath: string,
+  content: string,
+): void {
+  writeFile(root, relativePath, content);
+  const manifestPath = path.join(root, ".trellis/.template-hashes.json");
+  const manifest = JSON.parse(fs.readFileSync(manifestPath, "utf8")) as {
+    __version: number;
+    hashes: Record<string, string>;
+  };
+  manifest.hashes[relativePath] = computeHash(content);
+  fs.writeFileSync(manifestPath, JSON.stringify(manifest, null, 2));
+}
 
 function seedLegacyProject(root: string): void {
   const legacy = path.join(root, ".trellis");

@@ -136,3 +136,18 @@ pnpm lint && pnpm typecheck
 | step 3-4 之后 | 追加 `packages/cli/src/commands/adopt.ts packages/cli/src/utils/legacy-prefixed-entries.ts` |
 | step 5-6 之后 | `git checkout -- .`（测试与文档全部回退） |
 | 发布后 | `git revert <commit>`；adopt 是一次性命令，无数据迁移 |
+
+## 验证结果（完成时记录）
+
+- `pnpm verify` 通过：layout 检查、typecheck、lint、build、core 2138 测试、testing 23 测试。
+- `test/commands/adopt.test.ts` 12 个用例，新增 8 个：Copilot 文件型 managed path、Snow 文件型
+  managed path、共享 `.agents/skills` 不参与平台检测、空 legacy 目录 prune、非空 legacy 目录 rename、
+  目标已存在时保留并报告、dry-run 预测、失败回滚。
+- `test/configurators/index.test.ts` 新增 5 条注册表不变量（目录/文件视图分离、两份扁平集合的推导、
+  文件仍受路径门禁、共享根不进入检测路径）。
+- adboost 0.5.19 只读副本实测：`Platforms: claude-code, cursor, opencode, codex, kilo, kiro, qoder,
+  copilot`（与修复前一致，无共享根误检）；`Dropped 382 / kept 1 / needs review 2`；残留
+  `trellis-*` 目录 0；`.phronia/.version` = 当前版本；重跑返回 `Already adopted`。
+- 回滚实测由单测覆盖（`.trellis/scripts` 为文件使 `writeWorkflowFiles` 抛错后，`.trellis` 恢复、
+  `.phronia` 不存在、错误信息含 `Backup:`）。
+- 临时验证目录已删除；adboost 仓库未被修改。

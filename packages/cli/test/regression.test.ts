@@ -8986,7 +8986,7 @@ describe("regression: platform additions (beta.9, beta.13, beta.16)", () => {
     expect(AI_TOOLS.zcode.templateContext.agentCapable).toBe(true);
     expect(AI_TOOLS.zcode.templateContext.hasHooks).toBe(true);
     // .zcode/hooks is now a managed path (written by configureZcode).
-    expect(AI_TOOLS.zcode.extraManagedPaths).toContain(".zcode/hooks");
+    expect(AI_TOOLS.zcode.extraManagedDirs).toContain(".zcode/hooks");
   });
 
   it("[omp] Oh My Pi platform is registered", () => {

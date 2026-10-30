@@ -8,7 +8,7 @@ import {
   collectPlatformTemplates,
   PLATFORM_IDS,
 } from "../../src/configurators/index.js";
-import { AI_TOOLS } from "../../src/types/ai-tools.js";
+import { AI_TOOLS, getManagedPaths } from "../../src/types/ai-tools.js";
 import {
   setWriteMode,
   startRecordingWrites,
@@ -1033,7 +1033,7 @@ describe("configurePlatform", () => {
 
     expect(AI_TOOLS.snow.templateContext.hasHooks).toBe(true);
     expect(AI_TOOLS.snow.hasPythonHooks).toBe(true);
-    expect(AI_TOOLS.snow.extraManagedPaths ?? []).not.toContain(
+    expect(getManagedPaths("snow")).not.toContain(
       ".snow/sub-agents.phronia.json",
     );
   });

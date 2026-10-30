@@ -16,7 +16,13 @@ import os from "node:os";
 import path from "node:path";
 import chalk from "chalk";
 import { PLATFORM_IDS, getPlatformFunctions } from "../configurators/index.js";
-import { AI_TOOLS, type AITool } from "../types/ai-tools.js";
+import {
+  AI_TOOLS,
+  getManagedDirs,
+  getManagedPaths,
+  getPlatformOwnedPaths,
+  type AITool,
+} from "../types/ai-tools.js";
 import { VERSION } from "../constants/version.js";
 import { FILE_NAMES } from "../constants/paths.js";
 import { LAYOUT } from "@phronia/core/layout";
@@ -32,7 +38,11 @@ import {
 } from "../templates/workflow/index.js";
 import { buildAgentsMdTemplate } from "../utils/managed-block.js";
 import { computeHash, initializeHashes } from "../utils/template-hash.js";
-import { cleanupEmptyDirs } from "../utils/managed-paths.js";
+import {
+  applyLegacyRetirement,
+  planLegacyRetirement,
+  type LegacyRetirementPlan,
+} from "../utils/legacy-prefixed-entries.js";
 
 export interface AdoptOptions {
   cwd: string;
@@ -98,15 +108,50 @@ export async function adopt(options: AdoptOptions): Promise<AdoptReport> {
   }
 
   if (report.dryRun) {
-    planPristineDeletions(cwd, manifest, report);
+    const pristine = planPristineDeletions(cwd, manifest, report);
     planWorkflowRefresh(cwd, manifest, report);
     planConflicts(cwd, platforms, report);
+    planLegacyRetirementFor(cwd, platforms, report, pristine);
     return report;
   }
 
   report.backupDir = createBackup(cwd, platforms, legacyDir, options.backupRoot);
+  const backupDir = report.backupDir;
   fs.renameSync(legacyDir, currentDir);
 
+  // Everything below assumes the workflow root already moved. A failure here
+  // used to strand the project (new root half-written, legacy root gone), so
+  // restore the root before surfacing the error. Platform files are not rolled
+  // back: the backup above is the authoritative copy and templates regenerate
+  // them.
+  try {
+    await writeAdoptedProject({ cwd, currentDir, manifest, platforms, report });
+  } catch (error) {
+    const rollback = restoreLegacyRoot(cwd, legacyDir, currentDir);
+    throw new Error(
+      adoptFailureMessage(backupDir, error, rollback),
+      { cause: error },
+    );
+  }
+
+  return report;
+}
+
+interface AdoptedProjectInput {
+  cwd: string;
+  currentDir: string;
+  manifest: LegacyManifest;
+  platforms: AITool[];
+  report: AdoptReport;
+}
+
+async function writeAdoptedProject({
+  cwd,
+  currentDir,
+  manifest,
+  platforms,
+  report,
+}: AdoptedProjectInput): Promise<void> {
   // Remove generated files that still match the old manifest. Anything the
   // user changed is preserved and listed for review.
   for (const [relativePath, expectedHash] of Object.entries(manifest.hashes ?? {})) {
@@ -146,7 +191,7 @@ export async function adopt(options: AdoptOptions): Promise<AdoptReport> {
     }
   }
 
-  renameLegacyDirectories(cwd, report);
+  applyLegacyRetirementFor(cwd, platforms, report);
   writeVersion(currentDir);
   const tracked = new Set<string>();
   for (const platform of platforms) {
@@ -157,8 +202,109 @@ export async function adopt(options: AdoptOptions): Promise<AdoptReport> {
   }
   initializeHashes(cwd, { trackedPaths: tracked });
   writeReport(currentDir, report);
+}
 
-  return report;
+type RollbackOutcome = "restored" | "skipped" | "failed";
+
+/**
+ * Move the freshly generated workflow root back to the legacy name so the
+ * command can be re-run. Only acts when the target name is free.
+ */
+function restoreLegacyRoot(
+  cwd: string,
+  legacyDir: string,
+  currentDir: string,
+): RollbackOutcome {
+  if (!fs.existsSync(currentDir) || fs.existsSync(legacyDir)) {
+    return "skipped";
+  }
+  try {
+    if (!fs.lstatSync(currentDir).isDirectory()) {
+      return "skipped";
+    }
+    fs.renameSync(currentDir, legacyDir);
+    return "restored";
+  } catch {
+    return "failed";
+  }
+}
+
+function adoptFailureMessage(
+  backupDir: string,
+  error: unknown,
+  rollback: RollbackOutcome,
+): string {
+  const recovery =
+    rollback === "restored"
+      ? `The workflow root was restored to ${LEGACY_DIR}/; fix the reported problem and re-run \`phronia adopt\`.`
+      : rollback === "failed"
+        ? `The workflow root could not be restored automatically; move ${CURRENT_DIR}/ back to ${LEGACY_DIR}/ before retrying.`
+        : `The workflow root was left as it was; inspect both ${LEGACY_DIR}/ and ${CURRENT_DIR}/ before retrying.`;
+  return [
+    `adopt failed after moving ${LEGACY_DIR}/ to ${CURRENT_DIR}/: ${errorMessage(error)}`,
+    recovery,
+    `Backup: ${backupDir}`,
+  ].join("\n");
+}
+
+/** Managed directory roots for the detected platforms, deduplicated. */
+function managedDirsFor(platforms: readonly AITool[]): string[] {
+  return [...new Set(platforms.flatMap((platform) => getManagedDirs(platform)))];
+}
+
+function planLegacyRetirementFor(
+  cwd: string,
+  platforms: readonly AITool[],
+  report: AdoptReport,
+  removedFiles: ReadonlySet<string>,
+): void {
+  const plan = planLegacyRetirement({
+    cwd,
+    roots: managedDirsFor(platforms),
+    removedFiles,
+  });
+  recordLegacyRetirement(plan, report);
+}
+
+function applyLegacyRetirementFor(
+  cwd: string,
+  platforms: readonly AITool[],
+  report: AdoptReport,
+): void {
+  const options = { cwd, roots: managedDirsFor(platforms) };
+  const result = applyLegacyRetirement(
+    options,
+    planLegacyRetirement(options),
+  );
+  recordLegacyRetirement(
+    {
+      renames: result.renamed,
+      prunes: result.pruned,
+      conflicts: result.conflicts,
+    },
+    report,
+  );
+}
+
+function recordLegacyRetirement(
+  plan: LegacyRetirementPlan,
+  report: AdoptReport,
+): void {
+  for (const rename of plan.renames) {
+    pushUnique(report.regenerated, rename.to);
+  }
+  for (const entry of plan.prunes) {
+    pushUnique(report.dropped, entry);
+  }
+  for (const entry of plan.conflicts) {
+    pushUnique(report.needsReview, entry);
+  }
+}
+
+function pushUnique(list: string[], value: string): void {
+  if (!list.includes(value)) {
+    list.push(value);
+  }
 }
 
 function assertAdoptable(
@@ -220,8 +366,9 @@ function readVersion(legacyDir: string): string | null {
 function detectPlatforms(cwd: string, manifestKeys: readonly string[]): AITool[] {
   const detected: AITool[] = [];
   for (const id of PLATFORM_IDS) {
-    const config = AI_TOOLS[id];
-    const roots = [config.configDir, ...(config.extraManagedPaths ?? [])];
+    // Owned paths only: the shared `.agents/skills` root is written by several
+    // platforms and would otherwise detect all of them at once.
+    const roots = getPlatformOwnedPaths(id);
     const fromManifest = roots.some((root) =>
       manifestKeys.some((key) => key === root || key.startsWith(`${root}/`)),
     );
@@ -243,7 +390,8 @@ function planPristineDeletions(
   cwd: string,
   manifest: LegacyManifest,
   report: AdoptReport,
-): void {
+): Set<string> {
+  const pristine = new Set<string>();
   for (const [relativePath, expectedHash] of Object.entries(manifest.hashes ?? {})) {
     if (isWorkflowPath(relativePath)) {
       continue;
@@ -253,11 +401,13 @@ function planPristineDeletions(
       continue;
     }
     if (computeHash(fs.readFileSync(fullPath, "utf8")) === expectedHash) {
+      pristine.add(relativePath);
       report.dropped.push(relativePath);
     } else {
       report.needsReview.push(relativePath);
     }
   }
+  return pristine;
 }
 
 function planConflicts(
@@ -430,48 +580,6 @@ function preserveConflict(
   }
 }
 
-function renameLegacyDirectories(cwd: string, report: AdoptReport): void {
-  for (const id of PLATFORM_IDS) {
-    const config = AI_TOOLS[id];
-    const roots = [config.configDir, ...(config.extraManagedPaths ?? [])];
-    for (const root of roots) {
-      const absolute = path.join(cwd, root);
-      if (!fs.existsSync(absolute)) {
-        continue;
-      }
-      renamePrefixedEntries(absolute, report);
-      try {
-        cleanupEmptyDirs(cwd, root);
-      } catch {
-        // Best effort.
-      }
-    }
-  }
-}
-
-function renamePrefixedEntries(directory: string, report: AdoptReport): void {
-  if (!fs.existsSync(directory)) {
-    return;
-  }
-  for (const entry of fs.readdirSync(directory, { withFileTypes: true })) {
-    if (!entry.isDirectory() && !entry.isFile()) {
-      continue;
-    }
-    if (!entry.name.startsWith("trellis-")) {
-      continue;
-    }
-    const nextName = `phronia-${entry.name.slice("trellis-".length)}`;
-    const source = path.join(directory, entry.name);
-    const target = path.join(directory, nextName);
-    if (fs.existsSync(target)) {
-      report.needsReview.push(path.relative(process.cwd(), source));
-      continue;
-    }
-    fs.renameSync(source, target);
-    report.regenerated.push(path.relative(process.cwd(), target));
-  }
-}
-
 function createBackup(
   cwd: string,
   platforms: readonly AITool[],
@@ -485,13 +593,12 @@ function createBackup(
   fs.mkdirSync(backupDir, { recursive: true, mode: 0o700 });
 
   fs.cpSync(legacyDir, path.join(backupDir, LEGACY_DIR), { recursive: true });
-  for (const id of platforms) {
-    const config = AI_TOOLS[id];
-    for (const root of [config.configDir, ...(config.extraManagedPaths ?? [])]) {
-      const from = path.join(cwd, root);
-      if (fs.existsSync(from)) {
-        fs.cpSync(from, path.join(backupDir, root), { recursive: true });
-      }
+  // `cpSync` copies a file root as-is, so managed files are backed up too.
+  // Dedupe: `.agents/skills` is shared by several platforms.
+  for (const root of new Set(platforms.flatMap((id) => getManagedPaths(id)))) {
+    const from = path.join(cwd, root);
+    if (fs.existsSync(from)) {
+      fs.cpSync(from, path.join(backupDir, root), { recursive: true });
     }
   }
   const agents = path.join(cwd, "AGENTS.md");

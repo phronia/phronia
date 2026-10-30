@@ -118,8 +118,20 @@ export interface AIToolConfig {
    * to the platform's managed paths automatically.
    */
   supportsAgentSkills?: boolean;
-  /** Additional managed paths beyond configDir (e.g., .github/hooks for Copilot) */
-  extraManagedPaths?: string[];
+  /**
+   * Additional managed **directories** beyond `configDir` (e.g.
+   * `.github/hooks`). Directory-only: directory walkers consume this field
+   * verbatim through `getManagedDirs()`, so listing a file here makes them
+   * call `readdir` on a file.
+   */
+  extraManagedDirs?: string[];
+  /**
+   * Individual managed **files** beyond `configDir` (e.g.
+   * `.github/copilot-instructions.md`). Files stay path-gated by
+   * `isManagedPath()` and included in backups, but they never appear in the
+   * directory-only view.
+   */
+  managedFiles?: string[];
   /** CLI flag name for --flag options (e.g., "claude" for --claude) */
   cliFlag: CliFlag;
   /** Whether this tool is checked by default in interactive init prompt */
@@ -224,7 +236,7 @@ const AI_TOOL_BASES: Record<AITool, AIToolBase> = {
     name: "Kiro Code",
     templateDirs: ["common", "kiro"],
     configDir: ".kiro/skills",
-    extraManagedPaths: [".kiro/agents", ".kiro/hooks"],
+    extraManagedDirs: [".kiro/agents", ".kiro/hooks"],
     cliFlag: "kiro",
     defaultChecked: false,
     templateContext: {
@@ -252,7 +264,7 @@ const AI_TOOL_BASES: Record<AITool, AIToolBase> = {
     name: "Antigravity",
     templateDirs: ["common"],
     configDir: ".agent/workflows",
-    extraManagedPaths: [".agent/skills"],
+    extraManagedDirs: [".agent/skills"],
     cliFlag: "antigravity",
     defaultChecked: false,
     templateContext: {
@@ -266,7 +278,7 @@ const AI_TOOL_BASES: Record<AITool, AIToolBase> = {
     name: "Devin",
     templateDirs: ["common"],
     configDir: ".devin/workflows",
-    extraManagedPaths: [".devin/skills"],
+    extraManagedDirs: [".devin/skills"],
     cliFlag: "devin",
     defaultChecked: false,
     templateContext: {
@@ -306,13 +318,13 @@ const AI_TOOL_BASES: Record<AITool, AIToolBase> = {
     name: "GitHub Copilot",
     templateDirs: ["common", "copilot"],
     configDir: ".github/copilot",
-    extraManagedPaths: [
+    extraManagedDirs: [
       ".github/agents",
-      ".github/copilot-instructions.md",
       ".github/hooks",
       ".github/prompts",
       ".github/skills",
     ],
+    managedFiles: [".github/copilot-instructions.md"],
     cliFlag: "copilot",
     defaultChecked: false,
     templateContext: {
@@ -398,7 +410,7 @@ const AI_TOOL_BASES: Record<AITool, AIToolBase> = {
     // `.zcode/cli/` parent. Drop this entry once the migration has shipped and
     // no project still holds the legacy dir. Only empty dirs are ever removed,
     // so user files are never touched (see cleanupEmptyDirs in update.ts).
-    extraManagedPaths: [
+    extraManagedDirs: [
       ".zcode/cli/agents",
       ".zcode/agents",
       ".zcode/commands",
@@ -460,7 +472,7 @@ const AI_TOOL_BASES: Record<AITool, AIToolBase> = {
     name: "Grok Build",
     templateDirs: ["common", "grok"],
     configDir: ".grok",
-    extraManagedPaths: [".grok/skills", ".grok/commands", ".grok/agents"],
+    extraManagedDirs: [".grok/skills", ".grok/commands", ".grok/agents"],
     cliFlag: "grok",
     defaultChecked: false,
     templateContext: {
@@ -522,12 +534,8 @@ const AI_TOOL_BASES: Record<AITool, AIToolBase> = {
     name: "Snow CLI",
     templateDirs: ["common", "snow"],
     configDir: ".snow/skills",
-    extraManagedPaths: [
-      ".snow/commands",
-      ".snow/agents",
-      ".snow/hooks",
-      ".snow/SNOW.md",
-    ],
+    extraManagedDirs: [".snow/commands", ".snow/agents", ".snow/hooks"],
+    managedFiles: [".snow/SNOW.md"],
     cliFlag: "snow",
     defaultChecked: false,
     templateContext: {
@@ -594,18 +602,54 @@ export function getToolConfig(tool: AITool): AIToolConfig {
 }
 
 /**
- * Get all managed paths for a specific tool.
+ * Every managed root for a tool: directories first, then managed files.
+ *
+ * Path predicates (`isManagedPath`) and backups use this view because a
+ * managed file must be protected and backed up like a managed directory.
  */
 export function getManagedPaths(tool: AITool): string[] {
+  return [...getManagedDirs(tool), ...getManagedFiles(tool)];
+}
+
+/**
+ * Directory-only view of a tool's managed roots.
+ *
+ * Every consumer that walks, prunes, or renames directories must use this
+ * view. Listing a file here makes `readdir` throw ENOTDIR.
+ */
+export function getManagedDirs(tool: AITool): string[] {
   const config = AI_TOOLS[tool];
   const paths = [config.configDir];
   if (config.supportsAgentSkills) {
     paths.push(".agents/skills");
   }
-  if (config.extraManagedPaths) {
-    paths.push(...config.extraManagedPaths);
+  if (config.extraManagedDirs) {
+    paths.push(...config.extraManagedDirs);
   }
   return paths;
+}
+
+/** Individual managed files (never directories). */
+export function getManagedFiles(tool: AITool): string[] {
+  return [...(AI_TOOLS[tool].managedFiles ?? [])];
+}
+
+/**
+ * Roots this platform owns uniquely: `configDir`, extra managed directories,
+ * and managed files.
+ *
+ * Excludes `.agents/skills`, which several platforms share, so it cannot
+ * identify one platform over another. Use this for project detection; use
+ * `getManagedPaths()` when the question is "is Phronia allowed to touch this
+ * path".
+ */
+export function getPlatformOwnedPaths(tool: AITool): string[] {
+  const config = AI_TOOLS[tool];
+  return [
+    config.configDir,
+    ...(config.extraManagedDirs ?? []),
+    ...(config.managedFiles ?? []),
+  ];
 }
 
 /**

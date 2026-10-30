@@ -89,16 +89,16 @@ managed path 元数据必须显式区分**目录**与**文件**：
 
 ## Acceptance Criteria
 
-- [ ] A1：`pnpm --filter @phronia/cli test` 全绿，且新增用例覆盖 R1 / R4 / R5 / R6。
-- [ ] A2：`pnpm lint && pnpm typecheck` 通过。
-- [ ] A3：本地用 adboost 的完整副本（从 0.5.19 起）跑 `adopt` 成功，报告无 `ENOTDIR`；工作树不残留空
+- [x] A1：`pnpm --filter @phronia/cli test` 全绿，且新增用例覆盖 R1 / R4 / R5 / R6。
+- [x] A2：`pnpm lint && pnpm typecheck` 通过。
+- [x] A3：本地用 adboost 的完整副本（从 0.5.19 起）跑 `adopt` 成功，报告无 `ENOTDIR`；工作树不残留空
       `trellis-*` 目录；`needs-review` 不再包含"目录名竞争"产生的条目（协议允许的保守项——旧 manifest
       未跟踪的生成文件如 `.gitignore` 仍以 `.pre-adopt` 保留——不计入）。
-- [ ] A4：注册表不变量成立：`getManagedDirs()` 不返回文件条目，`getManagedPaths()` 仍返回文件条目，
+- [x] A4：注册表不变量成立：`getManagedDirs()` 不返回文件条目，`getManagedPaths()` 仍返回文件条目，
       `isManagedPath(".github/copilot-instructions.md")` 为真。
-- [ ] A5：回滚用例成立：configure 失败后 `.trellis` 存在、`.phronia` 不存在、错误信息含备份路径。
-- [ ] A6：R7 的两处文档已更新。
-- [ ] A7：`git diff` 不包含与任务无关的格式化/重排噪音。
+- [x] A5：回滚用例成立：configure 失败后 `.trellis` 存在、`.phronia` 不存在、错误信息含备份路径。
+- [x] A6：R7 的两处文档已更新。
+- [x] A7：`git diff` 不包含与任务无关的格式化/重排噪音。
 
 ## Notes
 

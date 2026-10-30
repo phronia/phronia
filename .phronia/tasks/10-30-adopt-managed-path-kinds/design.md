@@ -57,13 +57,16 @@ managedFiles?: string[];
 ### 3.2 访问器（`types/ai-tools.ts`）
 
 ```ts
-getManagedPaths(tool): string[]  // configDir + (.agents/skills) + extraManagedDirs + managedFiles
-getManagedDirs(tool):  string[]  // configDir + (.agents/skills) + extraManagedDirs
-getManagedFiles(tool): string[]  // managedFiles
+getManagedPaths(tool): string[]       // configDir + (.agents/skills) + extraManagedDirs + managedFiles
+getManagedDirs(tool):  string[]       // configDir + (.agents/skills) + extraManagedDirs
+getManagedFiles(tool): string[]       // managedFiles
+getPlatformOwnedPaths(tool): string[] // configDir + extraManagedDirs + managedFiles（排除共享 .agents/skills）
 ```
 
-`getManagedPaths()` 的输出顺序与改动前一致（configDir → agent-skills → extras），避免 manifest/备份
-顺序变化。`getManagedDirs()` 是新增的目录视图。
+`getManagedPaths()` 的集合内容与改动前一致，顺序为 configDir → `.agents/skills` → 目录 → 文件
+（Copilot/Snow 的文件条目由原来的 extras 位置移到末尾，只影响 `platforms --json` 的展示顺序，
+不影响 manifest key 或备份内容）。`getManagedDirs()` 是新增的目录视图；`getPlatformOwnedPaths()`
+排除共享的 `.agents/skills`，供平台检测使用。
 
 ### 3.3 派生集合（`configurators/index.ts`）
 
@@ -80,7 +83,8 @@ ALL_MANAGED_DIRS        = [".phronia", ...new Set(PLATFORM_MANAGED_DIRS)]
 | `update.ts` `BACKUP_DIRS` | `ALL_MANAGED_PATHS` | `collectAllFiles()` 已支持文件根；换成目录集合会静默漏备份两个文件 |
 | `utils/managed-removal.ts` | `ALL_MANAGED_DIRS` | 只清理空目录（已先 stat 跳过非目录，语义不变，只是不再有文件条目） |
 | `ablate.ts` `isManagedDirectoryTerritory` | `ALL_MANAGED_DIRS` | 领地判定是目录概念；`.github/*` 目录条目仍在，结果不变 |
-| `adopt.ts` 备份/平台检测 | `getManagedPaths` | 备份与 manifest key 匹配必须看见文件 |
+| `adopt.ts` 备份 | `getManagedPaths` | 备份必须看见文件 |
+| `adopt.ts` 平台检测 | `getPlatformOwnedPaths` | 共享的 `.agents/skills` 不能用来判定平台，否则所有共享平台同时命中 |
 | `adopt.ts` legacy 前缀收尾 | `getManagedDirs` | 这是本次崩溃点 |
 
 `isManagedRootDir` 的注释改为"managed root（文件或目录），整体不可删除"，名字保留（调用点都是

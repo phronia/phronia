@@ -1,9 +1,11 @@
 import { describe, expect, it } from "vitest";
 import {
   ALL_MANAGED_DIRS,
+  ALL_MANAGED_PATHS,
   CONFIG_DIRS,
   PLATFORM_IDS,
   PLATFORM_MANAGED_DIRS,
+  PLATFORM_MANAGED_PATHS,
   collectPlatformTemplates,
   getInitToolChoices,
   getPlatformManagedPaths,
@@ -12,7 +14,14 @@ import {
   isManagedRootDir,
   resolveCliFlag,
 } from "../../src/configurators/index.js";
-import { AI_TOOLS, type AITool } from "../../src/types/ai-tools.js";
+import {
+  AI_TOOLS,
+  getManagedDirs,
+  getManagedFiles,
+  getManagedPaths,
+  getPlatformOwnedPaths,
+  type AITool,
+} from "../../src/types/ai-tools.js";
 import { COPILOT_INSTRUCTIONS_PATH } from "../../src/templates/copilot/index.js";
 
 // =============================================================================
@@ -54,6 +63,58 @@ describe("ALL_MANAGED_DIRS", () => {
   it("has no duplicates", () => {
     const unique = new Set(ALL_MANAGED_DIRS);
     expect(unique.size).toBe(ALL_MANAGED_DIRS.length);
+  });
+});
+
+describe("managed path kinds", () => {
+  // A managed file must be path-gated and backed up, but it must never reach a
+  // directory walker: `readdir` on a file throws ENOTDIR (see `adopt`).
+  const FILE_ROOTS = [COPILOT_INSTRUCTIONS_PATH, ".snow/SNOW.md"];
+
+  it("keeps managed files out of the directory view", () => {
+    for (const id of PLATFORM_IDS) {
+      const dirs = getManagedDirs(id);
+      const files = getManagedFiles(id);
+      for (const file of files) {
+        expect(dirs).not.toContain(file);
+      }
+      expect(getManagedPaths(id)).toEqual([...dirs, ...files]);
+    }
+  });
+
+  it("lists every managed file in the flat directory set", () => {
+    for (const file of FILE_ROOTS) {
+      expect(PLATFORM_MANAGED_PATHS).toContain(file);
+      expect(PLATFORM_MANAGED_DIRS).not.toContain(file);
+      expect(ALL_MANAGED_PATHS).toContain(file);
+      expect(ALL_MANAGED_DIRS).not.toContain(file);
+    }
+  });
+
+  it("still path-gates managed files", () => {
+    for (const file of FILE_ROOTS) {
+      expect(isManagedPath(file)).toBe(true);
+      expect(isManagedRootDir(file)).toBe(true);
+    }
+  });
+
+  it("derives the two flat sets from the same registry", () => {
+    expect(ALL_MANAGED_PATHS).toEqual([
+      ".phronia",
+      ...new Set(PLATFORM_MANAGED_PATHS),
+    ]);
+    expect(ALL_MANAGED_DIRS).toEqual([".phronia", ...new Set(PLATFORM_MANAGED_DIRS)]);
+  });
+
+  it("keeps the shared skills root out of platform detection paths", () => {
+    for (const id of PLATFORM_IDS) {
+      const owned = getPlatformOwnedPaths(id);
+      expect(owned).toContain(AI_TOOLS[id].configDir);
+      expect(owned).not.toContain(".agents/skills");
+      for (const path of owned) {
+        expect(getManagedPaths(id)).toContain(path);
+      }
+    }
   });
 });
 

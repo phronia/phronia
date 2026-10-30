@@ -50,6 +50,32 @@ platform's file set is described exactly once and `phronia init` and `phronia
 update` cannot disagree about it. Copy `configurators/cursor.ts` (30 lines) or
 `configurators/antigravity.ts` (15 lines) as the shape.
 
+**Managed roots are typed by kind.** `AI_TOOL_BASES` carries three separate
+fields and they are not interchangeable:
+
+| Field | Kind | Consumed by |
+| ----- | ---- | ----------- |
+| `configDir` | directory | every consumer |
+| `extraManagedDirs` | directories only | `getManagedDirs()` → adopt's legacy retirement, `cleanupEmptyDirs`, uninstall cleanup, ablate territory |
+| `managedFiles` | individual files only | `getManagedPaths()` → `isManagedPath()` gates, backups; `getPlatformOwnedPaths()` → platform detection |
+
+Rules:
+
+- A file path belongs in `managedFiles`. Putting it in `extraManagedDirs` makes
+  directory walkers call `readdir` on a file, which throws `ENOTDIR` (this is
+  how `phronia adopt` broke on `.github/copilot-instructions.md`).
+- A new directory walker must take its roots from `getManagedDirs()` or the
+  flat `ALL_MANAGED_DIRS`, never from `getManagedPaths()` /
+  `ALL_MANAGED_PATHS`.
+- Anything that gates writes/deletes or backs up a path must take the full set
+  (`getManagedPaths` / `ALL_MANAGED_PATHS`); a managed file must not silently
+  drop out of the protection or backup surface.
+- `test/configurators/index.test.ts` ("managed path kinds") enforces both
+  directions; extend its `FILE_ROOTS` list when you add a managed file.
+- Platform detection uses `getPlatformOwnedPaths()`, which excludes the shared
+  `.agents/skills` root: that root is written by several platforms and cannot
+  identify one of them.
+
 ### Step 3: Static CLI surfaces
 
 | File | Change |

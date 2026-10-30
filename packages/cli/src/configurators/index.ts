@@ -14,6 +14,7 @@ import fs from "node:fs";
 import path from "node:path";
 import {
   AI_TOOLS,
+  getManagedDirs,
   getManagedPaths,
   type AITool,
   type CliFlag,
@@ -132,12 +133,30 @@ export const PLATFORM_IDS = Object.keys(AI_TOOLS) as AITool[];
 /** All platform config directory names (e.g., [".claude", ".cursor", ".opencode"]) */
 export const CONFIG_DIRS = PLATFORM_IDS.map((id) => AI_TOOLS[id].configDir);
 
-/** All managed paths for every platform (primary configDir + extra managed paths). */
-export const PLATFORM_MANAGED_DIRS = PLATFORM_IDS.flatMap((id) =>
+/** Every managed root for every platform, managed files included. */
+export const PLATFORM_MANAGED_PATHS = PLATFORM_IDS.flatMap((id) =>
   getManagedPaths(id),
 );
 
-/** All directories managed by Phronia (including .phronia itself) */
+/** Directory-only managed roots for every platform (safe to `readdir`). */
+export const PLATFORM_MANAGED_DIRS = PLATFORM_IDS.flatMap((id) =>
+  getManagedDirs(id),
+);
+
+/**
+ * Every managed root, `.phronia` included, files included.
+ *
+ * Use for path gates (`isManagedPath`) and backups: a managed file must be
+ * protected and backed up exactly like a managed directory.
+ */
+export const ALL_MANAGED_PATHS = [".phronia", ...new Set(PLATFORM_MANAGED_PATHS)];
+
+/**
+ * Directory-only managed roots, `.phronia` included.
+ *
+ * Use for anything that walks, prunes, or renames directories. A file root
+ * here would make `readdir` throw ENOTDIR.
+ */
 export const ALL_MANAGED_DIRS = [".phronia", ...new Set(PLATFORM_MANAGED_DIRS)];
 
 /**
@@ -200,21 +219,25 @@ export function getPlatformsWithPythonHooks(): AITool[] {
 }
 
 /**
- * Check if a path starts with any managed directory
+ * Check if a path starts with any managed root.
+ *
+ * Uses the full root set (files included): a managed file is owned by Phronia
+ * and must be covered by the same gates as a managed directory.
  */
 export function isManagedPath(dirPath: string): boolean {
   // Normalize Windows backslashes to forward slashes for consistent matching
   const normalized = dirPath.replace(/\\/g, "/");
-  return ALL_MANAGED_DIRS.some(
+  return ALL_MANAGED_PATHS.some(
     (d) => normalized.startsWith(d + "/") || normalized === d,
   );
 }
 
 /**
- * Check if a directory name is a managed root directory (should not be deleted)
+ * Check if a path is a managed root (file or directory). Roots are never
+ * deleted wholesale; directory cleanups stop at them.
  */
 export function isManagedRootDir(dirName: string): boolean {
-  return ALL_MANAGED_DIRS.includes(dirName);
+  return ALL_MANAGED_PATHS.includes(dirName);
 }
 
 /**

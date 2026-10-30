@@ -305,7 +305,7 @@
     ".claude/hooks/phronia-hook.py": "059fa88e4e32b3acd7c70c577549b396666101e1eadcb61bed7bd6e5c1d46407",
     ".cursor/hooks/phronia-hook.py": "059fa88e4e32b3acd7c70c577549b396666101e1eadcb61bed7bd6e5c1d46407",
     ".codex/hooks/phronia-hook.py": "059fa88e4e32b3acd7c70c577549b396666101e1eadcb61bed7bd6e5c1d46407",
-    ".opencode/plugins/phronia.js": "fc797f04e7538ad2136b0cd657df7d74508ad5620157f7e25bbb1a01a892b0e4",
+    ".opencode/plugins/phronia.js": "fba5460b82df4ef73c0a136731296e0f8d15dda63df3c661c88adc7c2b1884ee",
     ".claude/skills/phronia-coordinator/SKILL.md": "3153e6a28a0f8191eff7f47e78b6d030534d0d8dadb43f8b96a33321e539d7ac",
     ".cursor/skills/phronia-coordinator/SKILL.md": "9ab281255b4733f257174d9e8bb2e7830982a45d32e8f3ea71062bd76f56c95a",
     ".opencode/skills/phronia-coordinator/SKILL.md": "3153e6a28a0f8191eff7f47e78b6d030534d0d8dadb43f8b96a33321e539d7ac",

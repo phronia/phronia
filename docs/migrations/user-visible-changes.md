@@ -372,3 +372,25 @@ Batches that must update this file:
     optional; omitting them preserves the old behavior.
   - Escape hatch: `--skip-spec-sync`, `--skip-branch-validation` (unchanged),
     `parallel.enabled: false`, `parallel.dispatch.enforce: warn|off`.
+
+## Unreleased (adopt managed-path kinds)
+
+- **All platforms**: `phronia adopt` no longer aborts with `ENOTDIR` on
+  projects that configure GitHub Copilot (`.github/copilot-instructions.md`) or
+  Snow (`.snow/SNOW.md`). Managed roots are now typed: directories live in
+  `extraManagedDirs`, individual files in `managedFiles`, and directory walkers
+  only ever see `getManagedDirs()`.
+  - Why: the registry listed those two files among the directories, so adopt
+    called `readdir` on a file after regenerating it.
+  - Migration: none; affected projects simply re-run `phronia adopt`.
+  - Escape hatch: not needed.
+- **All platforms**: adopt's legacy-name cleanup now prunes `trellis-*`
+  directories that pristine-file removal left empty (previously they survived
+  as empty folders, or were reported as conflicts when the `phronia-*` target
+  had already been regenerated). Directories that still hold user content are
+  renamed to `phronia-*` when that name is free, and otherwise kept in place
+  and reported under "Needs review" relative to the project root.
+- **All platforms**: an adopt failure after `.trellis/` → `.phronia/` now
+  restores the legacy root automatically and prints the backup path, so the
+  command can be re-run instead of leaving a half-migrated tree that only
+  reports `Both .trellis/ and .phronia/ exist`.

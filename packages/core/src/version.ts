@@ -4,4 +4,4 @@
  * Kept in sync with packages/core/package.json by the release script; the
  * context response carries it so a shim can reject a mismatched bundle.
  */
-export const CORE_VERSION = "2610.29.3";
+export const CORE_VERSION = "2610.30.1";
