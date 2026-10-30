@@ -1,0 +1,9 @@
+{
+  "version": "2610.30.1",
+  "description": "Adopt managed-path kinds and migration tail",
+  "breaking": false,
+  "recommendMigrate": false,
+  "changelog": "fix(cli): `phronia adopt` no longer aborts with ENOTDIR on GitHub Copilot or Snow projects. Managed roots are now typed: directories live in `extraManagedDirs`, individual files in `managedFiles`, and directory walkers only see `getManagedDirs()`, so `.github/copilot-instructions.md` and `.snow/SNOW.md` are never treated as directories. Legacy `trellis-*` directories left empty by pristine-file removal are pruned instead of surviving as empty folders or being reported as conflicts; directories that still hold user content are renamed to `phronia-*` when that name is free, and otherwise kept and reported relative to the project root. An adopt failure after the workflow-root rename now restores the legacy root and prints the backup path, so the command can be re-run instead of leaving a half-migrated tree.",
+  "migrations": [],
+  "notes": "No migration required."
+}
