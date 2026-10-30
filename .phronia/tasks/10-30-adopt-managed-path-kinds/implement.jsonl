@@ -1,0 +1,6 @@
+{"file": ".phronia/spec/cli/backend/platform-integration.md", "reason": "Managed-path registry fields and how to add platform paths"}
+{"file": ".phronia/spec/cli/backend/filesystem-safety.md", "reason": "Ownership/backup gates for rename, delete, and rollback logic"}
+{"file": ".phronia/spec/cli/backend/directory-structure.md", "reason": "Where command/util modules belong"}
+{"file": ".phronia/spec/cli/backend/quality-guidelines.md", "reason": "Code standards and forbidden patterns"}
+{"file": "docs/adr/0002-naming-and-migration.md", "reason": "adopt contract this change must preserve"}
+{"file": "docs/adr/0003-layered-architecture.md", "reason": "Layering rules for registry/commands/utils"}

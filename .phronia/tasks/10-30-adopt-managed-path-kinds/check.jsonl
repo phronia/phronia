@@ -1,0 +1,3 @@
+{"file": ".phronia/spec/cli/unit-test/conventions.md", "reason": "Test layout, fixtures, and isolation rules"}
+{"file": ".phronia/spec/cli/backend/filesystem-safety.md", "reason": "Verify destructive-op guards in review"}
+{"file": ".phronia/spec/cli/backend/quality-guidelines.md", "reason": "Review gate for quality rules"}
