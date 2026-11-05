@@ -15,7 +15,7 @@
   "branch": null,
   "base_branch": "main",
   "worktree_path": null,
-  "commit": null,
+  "commit": "aadc17788dbddd43341281fe20cdd6c1c769b36e",
   "pr_url": null,
   "subtasks": [],
   "children": [],
@@ -52,6 +52,17 @@
         "packages/cli/src/templates/workflow/**"
       ],
       "depends_on": []
+    },
+    "integration": {
+      "mode": "local",
+      "outcome": "landed",
+      "base_sha": "267eb5cda6bd03c94dd6cce731b2e824c1ce6a49",
+      "commit": "aadc17788dbddd43341281fe20cdd6c1c769b36e",
+      "pr_url": null,
+      "verified": false,
+      "last_error": null,
+      "log_ref": ".phronia/.runtime/integration-logs/worktree-managed-root-2026-11-05T04-45-17-878Z.log",
+      "updated_at": "2026-11-05T04:45:18.017Z"
     }
   }
 }
