@@ -1,0 +1,4 @@
+{"file": ".phronia/tasks/11-05-worktree-managed-root/prd.md", "reason": "Acceptance criteria R1-R8 plus legacy compat requirements"}
+{"file": ".phronia/tasks/11-05-worktree-managed-root/design.md", "reason": "Architecture: single resolver, managed gitignore, compat matrix, documented tradeoffs"}
+{"file": ".phronia/tasks/11-05-worktree-managed-root/implement.md", "reason": "Ordered steps, validation commands, review gates, rollback points"}
+{"file": ".phronia/tasks/11-05-worktree-execution-model/prd.md", "reason": "Parent contract: migration contract and cross-task acceptance criteria"}

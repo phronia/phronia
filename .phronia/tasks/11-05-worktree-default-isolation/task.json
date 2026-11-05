@@ -1,0 +1,49 @@
+{
+  "id": "worktree-default-isolation",
+  "name": "worktree-default-isolation",
+  "title": "Default task isolation policy with lightweight escape hatch",
+  "description": "把单任务执行默认收敛到 worktree（isolation tier 决策矩阵），保留显式 reuse-current 轻量通道，并同步 workflow/continue/brainstorm/finish-work 文案与归档回收行为",
+  "status": "planning",
+  "dev_type": null,
+  "scope": null,
+  "package": "cli",
+  "priority": "P1",
+  "creator": "jingd2",
+  "assignee": "jingd2",
+  "createdAt": "2026-11-05",
+  "completedAt": null,
+  "branch": null,
+  "base_branch": "main",
+  "worktree_path": null,
+  "commit": null,
+  "pr_url": null,
+  "subtasks": [],
+  "children": [],
+  "parent": "11-05-worktree-execution-model",
+  "relatedFiles": [
+    "packages/core/src/task/workspace/policy.ts",
+    "packages/core/src/task/workspace/types.ts",
+    "packages/core/src/task/dispatch/policy.ts",
+    "packages/core/src/task/parallel/types.ts",
+    "packages/cli/src/services/workspace.ts",
+    "packages/cli/src/templates/workflow/workflow.md",
+    "packages/cli/src/templates/common/commands/continue.md",
+    "packages/cli/src/templates/common/commands/finish-work.md",
+    "packages/cli/src/templates/common/skills/brainstorm.md",
+    "packages/cli/src/templates/common/skills/coordinator.md"
+  ],
+  "notes": "",
+  "meta": {
+    "parallel": {
+      "touches": [
+        "packages/core/src/task/workspace/**",
+        "packages/core/src/task/dispatch/**",
+        "packages/cli/src/services/workspace.ts",
+        "packages/cli/src/templates/**"
+      ],
+      "depends_on": [
+        "11-05-worktree-managed-root"
+      ]
+    }
+  }
+}

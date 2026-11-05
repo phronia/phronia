@@ -1,0 +1,6 @@
+{"file": ".phronia/spec/cli/backend/parallel-tasks.md", "reason": "Worktree lifecycle, workspace decision contract, and the current default location this task changes"}
+{"file": ".phronia/spec/cli/backend/directory-structure.md", "reason": "On-disk layout conventions where the new managed root must be documented"}
+{"file": ".phronia/spec/cli/backend/index.md", "reason": "CLI backend layering rules (commands/services/adapters/utils) governing where the gitignore helper belongs"}
+{"file": ".phronia/spec/core/backend/index.md", "reason": "core package layering: layout as single source of path truth, policy purity"}
+{"file": ".phronia/spec/cli/unit-test/index.md", "reason": "Test placement and integration-test conventions for the new compat and gitignore tests"}
+{"file": ".phronia/spec/guides/cross-platform-thinking-guide.md", "reason": "POSIX vs Windows path separators in relativeFromRepo and gitignore patterns"}

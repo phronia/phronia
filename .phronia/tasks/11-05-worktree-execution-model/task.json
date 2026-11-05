@@ -1,0 +1,30 @@
+{
+  "id": "worktree-execution-model",
+  "name": "worktree-execution-model",
+  "title": "Worktree-centric execution model: centralized root, default isolation, conflict preflight",
+  "description": "把 worktree 从可选的并行原语提升为默认执行载体：集中根目录、任务默认隔离、创建前冲突预检、完成后自动回收，并按长期架构分层改造而非单点修补",
+  "status": "planning",
+  "dev_type": null,
+  "scope": null,
+  "package": "cli",
+  "priority": "P0",
+  "creator": "jingd2",
+  "assignee": "jingd2",
+  "createdAt": "2026-11-05",
+  "completedAt": null,
+  "branch": null,
+  "base_branch": "main",
+  "worktree_path": null,
+  "commit": null,
+  "pr_url": null,
+  "subtasks": [],
+  "children": [
+    "11-05-worktree-managed-root",
+    "11-05-worktree-default-isolation",
+    "11-05-worktree-conflict-preflight"
+  ],
+  "parent": null,
+  "relatedFiles": [],
+  "notes": "",
+  "meta": {}
+}

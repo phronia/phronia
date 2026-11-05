@@ -1,0 +1,57 @@
+{
+  "id": "worktree-managed-root",
+  "name": "worktree-managed-root",
+  "title": "Centralized worktree root with managed gitignore",
+  "description": "把 worktree 存储目录收敛为可配置的集中根（默认 .phronia-workspace/），由 init/update/doctor 幂等维护 gitignore，旧路径只读兼容，为后续默认隔离与清理提供单一位置",
+  "status": "in_progress",
+  "dev_type": null,
+  "scope": null,
+  "package": "cli",
+  "priority": "P0",
+  "creator": "jingd2",
+  "assignee": "jingd2",
+  "createdAt": "2026-11-05",
+  "completedAt": null,
+  "branch": null,
+  "base_branch": "main",
+  "worktree_path": null,
+  "commit": null,
+  "pr_url": null,
+  "subtasks": [],
+  "children": [],
+  "parent": "11-05-worktree-execution-model",
+  "relatedFiles": [
+    "packages/core/src/state/config/readers.ts",
+    "packages/core/src/task/workspace/policy.ts",
+    "packages/core/src/layout/index.ts",
+    "packages/cli/src/services/workspace.ts",
+    "packages/cli/src/services/coordinator.ts",
+    "packages/cli/src/commands/init.ts",
+    "packages/cli/src/commands/update.ts",
+    "packages/cli/src/commands/doctor.ts",
+    "packages/cli/src/configurators/workflow.ts",
+    "packages/cli/src/utils/managed-block.ts",
+    "packages/cli/src/templates/workflow/gitignore.txt",
+    "packages/cli/src/templates/workflow/scripts/common/layout.json",
+    "packages/cli/src/templates/workflow/scripts/common/safe_commit.py"
+  ],
+  "notes": "",
+  "meta": {
+    "parallel": {
+      "touches": [
+        "packages/core/src/state/config/**",
+        "packages/core/src/task/workspace/**",
+        "packages/core/src/layout/**",
+        "packages/cli/src/services/workspace.ts",
+        "packages/cli/src/services/coordinator.ts",
+        "packages/cli/src/commands/init.ts",
+        "packages/cli/src/commands/update.ts",
+        "packages/cli/src/commands/doctor.ts",
+        "packages/cli/src/configurators/workflow.ts",
+        "packages/cli/src/utils/managed-block.ts",
+        "packages/cli/src/templates/workflow/**"
+      ],
+      "depends_on": []
+    }
+  }
+}

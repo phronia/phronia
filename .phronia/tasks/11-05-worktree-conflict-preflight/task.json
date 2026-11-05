@@ -1,0 +1,49 @@
+{
+  "id": "worktree-conflict-preflight",
+  "name": "worktree-conflict-preflight",
+  "title": "Footprint conflict preflight before task start",
+  "description": "在新建/启动任务时对活跃任务做 footprint 重叠预检，区分确定的文件冲突与未知footprint，输出分级告警并接入 continue/brainstorm 流程，不阻断只提示",
+  "status": "planning",
+  "dev_type": null,
+  "scope": null,
+  "package": "cli",
+  "priority": "P1",
+  "creator": "jingd2",
+  "assignee": "jingd2",
+  "createdAt": "2026-11-05",
+  "completedAt": null,
+  "branch": null,
+  "base_branch": "main",
+  "worktree_path": null,
+  "commit": null,
+  "pr_url": null,
+  "subtasks": [],
+  "children": [],
+  "parent": "11-05-worktree-execution-model",
+  "relatedFiles": [
+    "packages/core/src/task/parallel/footprint.ts",
+    "packages/core/src/task/parallel/types.ts",
+    "packages/core/src/task/parallel/planner.ts",
+    "packages/cli/src/services/parallel.ts",
+    "packages/cli/src/services/workspace.ts",
+    "packages/cli/src/commands/parallel.ts",
+    "packages/cli/src/cli/index.ts",
+    "packages/cli/src/templates/common/commands/continue.md",
+    "packages/cli/src/templates/common/skills/brainstorm.md"
+  ],
+  "notes": "",
+  "meta": {
+    "parallel": {
+      "touches": [
+        "packages/core/src/task/parallel/**",
+        "packages/cli/src/services/parallel.ts",
+        "packages/cli/src/services/workspace.ts",
+        "packages/cli/src/commands/parallel.ts",
+        "packages/cli/src/cli/**"
+      ],
+      "depends_on": [
+        "11-05-worktree-managed-root"
+      ]
+    }
+  }
+}
