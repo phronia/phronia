@@ -14,7 +14,7 @@
 |---|---|---|
 | Control | the main worktree: `.phronia/tasks/**`, `.phronia/config.yaml`, `docs/requirements.md` | task intent, planning, local merge target, docs projection |
 | Shared runtime | `<git-common-dir>/phronia/` | locks, queue, worktree registry, workspace claim, task index, leases |
-| Execution | linked worktrees under `.phronia-workspace/<task-id>` (legacy: `.phronia/worktrees/<task-id>`) | code, tests, logs, agent sessions |
+| Execution | linked worktrees under `.phronia/worktrees/<task-id>` | code, tests, logs, agent sessions |
 
 `.phronia/spec/**` is **control-plane state, not an execution footprint**. A
 code task records intended spec changes in `spec-delta.md`; the main checkout
@@ -117,17 +117,8 @@ Rules:
   checkout (`reuse-current`) and records a task claim there. Only
   `parallel.worktree=always`, an `exclusive` task, a parallel batch, or a main
   checkout claimed by another task creates a worktree.
-- Default location is `.phronia-workspace/<task-id>` (persistent, repo root,
-  a sibling of `.phronia/`). `/tmp` is only for explicit `ephemeral`.
-  `resolveWorktreeRoot` is the single resolver; no other layer may join a
-  repository root with a directory name of its own. Tasks created before the
-  default moved keep their recorded path — only new worktrees use the new root.
-- The worktree root must be gitignored. `workspace ensure`, `worktree add`,
-  `init` and `update` all write an idempotent `# PHRONIA:START` block into the
-  repository `.gitignore` (never rewriting surrounding lines). Without it the
-  first `ensure` leaves the checkout dirty and the second one refuses with
-  `WORKSPACE_DIRTY_UNCLAIMED`. A root outside the repository cannot be
-  described by an ignore rule; those runs report `outside-repo` instead.
+- Default location is `.phronia/worktrees/<task-id>` (persistent). `/tmp` is
+  only for explicit `ephemeral`.
 - Task artifacts must be visible in the worktree: either
   `.phronia/tasks/<ref>` is already committed on the integration branch, or the
   caller explicitly scoped-commits it, or uses `--copy-task`.
