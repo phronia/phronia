@@ -63,6 +63,16 @@
       "last_error": null,
       "log_ref": ".phronia/.runtime/integration-logs/worktree-managed-root-2026-11-05T06-06-04-899Z.log",
       "updated_at": "2026-11-05T06:06:05.211Z"
+    },
+    "spec_sync": {
+      "status": "synced",
+      "commit": "b722bbdcf69a875bd298461a02bd4e00ffa4bd15",
+      "synced_at": "2026-11-05T06:09:37.153046Z",
+      "refs": [
+        ".phronia/spec/cli/backend/parallel-tasks.md",
+        ".phronia/spec/cli/backend/directory-structure.md"
+      ],
+      "mode": "agent"
     }
   }
 }
