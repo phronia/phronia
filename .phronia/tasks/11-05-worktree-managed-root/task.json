@@ -15,7 +15,7 @@
   "branch": null,
   "base_branch": "main",
   "worktree_path": null,
-  "commit": "aadc17788dbddd43341281fe20cdd6c1c769b36e",
+  "commit": "787d487a7b513f619e9bac464db4b5a521ed3f33",
   "pr_url": null,
   "subtasks": [],
   "children": [],
@@ -56,13 +56,13 @@
     "integration": {
       "mode": "local",
       "outcome": "landed",
-      "base_sha": "267eb5cda6bd03c94dd6cce731b2e824c1ce6a49",
-      "commit": "aadc17788dbddd43341281fe20cdd6c1c769b36e",
+      "base_sha": "787d487a7b513f619e9bac464db4b5a521ed3f33",
+      "commit": "787d487a7b513f619e9bac464db4b5a521ed3f33",
       "pr_url": null,
       "verified": false,
       "last_error": null,
-      "log_ref": ".phronia/.runtime/integration-logs/worktree-managed-root-2026-11-05T04-45-17-878Z.log",
-      "updated_at": "2026-11-05T04:45:18.017Z"
+      "log_ref": ".phronia/.runtime/integration-logs/worktree-managed-root-2026-11-05T06-06-04-899Z.log",
+      "updated_at": "2026-11-05T06:06:05.211Z"
     }
   }
 }
