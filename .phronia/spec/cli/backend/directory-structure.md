@@ -71,7 +71,17 @@ These directories are copied to `dist/` during build and used as templates:
 │   └── guides/          # Thinking guides
 ├── workflow.md          # Workflow documentation (dogfooded)
 └── .gitignore           # Git ignore rules (dogfooded)
+
+.phronia-workspace/      # Task worktrees (runtime, gitignored, never a template)
+└── <task-id>/           # One full checkout per task; created by workspace ensure
 ```
+
+`.phronia-workspace/` deliberately lives beside `.phronia/`, not inside it, so
+it is covered by the repository's own `.gitignore`, is obvious to delete as a
+whole, and is never mistaken for managed template content. The location is a
+default, not a rule: `parallel.worktree_dir` overrides it, and the resolved
+value comes from a single resolver (`resolveWorktreeRoot`). Worktrees created
+under the older `.phronia/worktrees/` layout stay where they are.
 
 ---
 
