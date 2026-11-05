@@ -1,0 +1,10 @@
+{"file": ".phronia/spec/cli/backend/parallel-tasks.md", "reason": "并行模型的核心不变量（隔离单位是任务、三把锁、dispatch 码与规则顺序）；fan-out 分支必须插在既有顺序里，不得改变既有语义。"}
+{"file": ".phronia/spec/core/backend/index.md", "reason": "packages/core 的领域层约束：纯函数、无 IO/进程/渲染，fanout 模块必须与 parallel/coordinator 同构。"}
+{"file": ".phronia/spec/cli/backend/trellis-core-sdk.md", "reason": "core 与 CLI 的包边界：策略放 core，编排放 cli/services，命令层不写业务规则。"}
+{"file": ".phronia/spec/cli/backend/directory-structure.md", "reason": "模块落位约定，决定 task/fanout、services/fanout、commands 的放置与再导出方式。"}
+{"file": ".phronia/spec/cli/backend/platform-integration.md", "reason": "平台能力矩阵与 hookPolicy 的来源，确认 ZCode/Codex 的 subagentWorkspace 限制，避免新增平台分支。"}
+{"file": ".phronia/spec/cli/backend/error-handling.md", "reason": "结构化错误与 next 文案契约，FANOUT_* 码必须沿用同一形状。"}
+{"file": ".phronia/spec/cli/backend/quality-guidelines.md", "reason": "代码质量与测试要求，表驱动单测与回归范围。"}
+{"file": ".phronia/spec/guides/cross-layer-thinking-guide.md", "reason": "跨层数据流检查：声明（task.json）→ facts → policy → prompt → CLI 输出的边界。"}
+{"file": ".phronia/spec/guides/code-reuse-thinking-guide.md", "reason": "复用 footprintOverlap / normalizeFootprint，禁止新增第二套 glob 与重叠判定实现。"}
+{"file": ".phronia/spec/guides/cross-platform-thinking-guide.md", "reason": "避免把 ZCode 的 cwd 继承特性写成平台分支，能力差异应走 capabilities/hookPolicy。"}

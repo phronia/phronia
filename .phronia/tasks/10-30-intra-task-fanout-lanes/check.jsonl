@@ -1,0 +1,6 @@
+{"file": ".phronia/spec/cli/backend/parallel-tasks.md", "reason": "检查 fan-out 分支是否遵守既有规则顺序、是否改变了 plan=null 时的行为、是否误用 task 级 lease/claim。"}
+{"file": ".phronia/spec/cli/backend/quality-guidelines.md", "reason": "检查纯函数约束、测试覆盖、命名与错误码一致性。"}
+{"file": ".phronia/spec/cli/backend/error-handling.md", "reason": "检查每个 FANOUT_* 拒绝都带 reason/next/details 且 next 可直接执行。"}
+{"file": ".phronia/spec/cli/backend/platform-integration.md", "reason": "检查是否引入平台分支，以及 block/inject 两种 harness 的降级是否复用 applyEnforcement。"}
+{"file": ".phronia/spec/guides/cross-layer-thinking-guide.md", "reason": "检查声明、事实、策略、渲染、CLI 输出之间没有跨层泄漏（策略不读文件，命令不写规则）。"}
+{"file": ".phronia/spec/guides/cross-platform-thinking-guide.md", "reason": "检查指导文案没有把平台限制写成通用规则，或反之。"}
