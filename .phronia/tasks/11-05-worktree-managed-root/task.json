@@ -35,7 +35,7 @@
     "packages/cli/src/templates/workflow/scripts/common/layout.json",
     "packages/cli/src/templates/workflow/scripts/common/safe_commit.py"
   ],
-  "notes": "实现完成（2026-11-05）：默认根改为 .phronia-workspace（仓库根，与 .phronia 平级）；core 新增 WORKTREE_ROOT_DIR_NAME 与 resolveWorktreeRoot 单一解析入口，policy 接受已解析根，worktreeDir 入参保留一个版本；cli 的 workspace/coordinator/doctor/init/update 统一消费；新增 utils/ensure-gitignore 以受管块幂等写入，防止根目录未被忽略导致后续 ensure 误判 dirty；旧路径 .phronia/worktrees 与外部 attach 保持原位（legacy compat 集成测试 6 例，含注册表按 git 重建不回写）；python safe_commit 排除列表保留旧根并追加新根。验证：core 940 passed/1 skipped；cli 2157 passed（117 files）；testing 23 passed；tsc 双包通过；gen:layout --check 通过。未做：不迁移/不删除旧目录；不改 git worktree add 调用方式；不让 Python 解析 config.yaml。",
+  "notes": "实现完成（2026-11-05）：默认根改为 .phronia-workspace（仓库根，与 .phronia 平级）；core 新增 WORKTREE_ROOT_DIR_NAME 与 resolveWorktreeRoot 单一解析入口，policy 接受已解析根，worktreeDir 入参保留一个版本；cli 的 workspace/coordinator/doctor/init/update 统一消费；新增 utils/ensure-gitignore 以受管块幂等写入，防止根目录未被忽略导致后续 ensure 误判 dirty；旧路径 .phronia/worktrees 与外部 attach 保持原位（legacy compat 集成测试 6 例，含注册表按 git 重建不回写）；python safe_commit 排除列表保留旧根并追加新根。验证：core 940 passed/1 skipped；cli 2157 passed（117 files）；testing 23 passed；tsc 双包通过；gen:layout --check 通过。未做：不迁移/不删除旧目录；不改 git worktree add 调用方式；不让 Python 解析 config.yaml。 质量检查后修复（commit 96d2ae56）：gitignorePendingPaths 不再把仅有 .gitignore 未跟踪误报为根待创建；bootstrap next 去掉硬编码目录名、只暂存真实脏路径；受管块保留 CRLF 并修复未终止块而非追加第二个；ensureWorktreeIgnored 拒绝忽略已存在且属用户的目录（root-occupied）；worktree list --json 暴露 worktreeRoot。复查后 core 940 passed/1 skipped，cli 2164 passed（117 files）。",
   "meta": {
     "parallel": {
       "touches": [
