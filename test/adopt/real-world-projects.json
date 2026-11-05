@@ -28,7 +28,7 @@
           "OMV-MANAGED-BEGIN:integration-project-instructions"
         ],
         "agentsMdMustNotContain": ["<!-- TRELLIS:START -->"],
-        "workflowMustContain": ["# Development Workflow", "Phronia System"],
+        "workflowMustContain": ["# Development Workflow", "Plan before code"],
         "workflowMustNotContain": [".trellis/"],
         "tasksCommand": ["list-archive"],
         "tasksCommandMustContain": ["2026-04", "2026-06"],

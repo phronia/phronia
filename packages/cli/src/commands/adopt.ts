@@ -16,6 +16,7 @@ import os from "node:os";
 import path from "node:path";
 import chalk from "chalk";
 import { PLATFORM_IDS, getPlatformFunctions } from "../configurators/index.js";
+import { resolveAdapter } from "../platform/selection.js";
 import {
   AI_TOOLS,
   getManagedDirs,
@@ -171,7 +172,7 @@ async function writeAdoptedProject({
 
   // Move local edits out of the way before regenerating their paths.
   for (const platform of platforms) {
-    const files = getPlatformFunctions()[platform].collectTemplates?.();
+    const files = collectPlatformFiles(cwd, platform);
     if (!files) {
       continue;
     }
@@ -182,7 +183,7 @@ async function writeAdoptedProject({
 
   for (const platform of platforms) {
     try {
-      await getPlatformFunctions()[platform].configure(cwd);
+      await getPlatformFunctions()[platform].configure(cwd, configureOptions(cwd, platform));
       report.regenerated.push(platform);
     } catch (error) {
       report.warnings.push(
@@ -195,7 +196,7 @@ async function writeAdoptedProject({
   writeVersion(currentDir);
   const tracked = new Set<string>();
   for (const platform of platforms) {
-    const files = getPlatformFunctions()[platform].collectTemplates?.();
+    const files = collectPlatformFiles(cwd, platform);
     for (const key of files?.keys() ?? []) {
       tracked.add(key);
     }
@@ -410,13 +411,38 @@ function planPristineDeletions(
   return pristine;
 }
 
+/**
+ * Collect a platform's template files the same way `update` does.
+ *
+ * OpenCode ships two shards and picks one from the installed harness; calling
+ * `collectTemplates()` with no adapter silently selects v1 and never writes the
+ * v2 plugin, which a later `update --dry-run` then reports as a new file.
+ */
+function collectPlatformFiles(
+  cwd: string,
+  platform: AITool,
+): Map<string, string> | undefined {
+  const collect = getPlatformFunctions()[platform].collectTemplates;
+  if (!collect) return undefined;
+  return collect(configureOptions(cwd, platform));
+}
+
+/** Adapter options shared by `collectTemplates` and `configure`. */
+function configureOptions(
+  cwd: string,
+  platform: AITool,
+): { adapterId?: string } | undefined {
+  if (platform !== "opencode") return undefined;
+  return { adapterId: resolveAdapter(cwd, platform).adapterId };
+}
+
 function planConflicts(
   cwd: string,
   platforms: readonly AITool[],
   report: AdoptReport,
 ): void {
   for (const platform of platforms) {
-    const files = getPlatformFunctions()[platform].collectTemplates?.();
+    const files = collectPlatformFiles(cwd, platform);
     for (const relativePath of files?.keys() ?? []) {
       if (!fs.existsSync(path.join(cwd, ...relativePath.split("/")))) {
         continue;
