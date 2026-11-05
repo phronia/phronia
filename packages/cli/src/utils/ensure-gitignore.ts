@@ -32,7 +32,12 @@ export interface EnsureGitignoreResult {
    * Why nothing was written: already ignored, root outside the repository, or
    * no usable file. Null when the pattern is in place.
    */
-  readonly reason: "already-ignored" | "outside-repo" | "no-usable-gitignore" | null;
+  readonly reason:
+    | "already-ignored"
+    | "outside-repo"
+    | "no-usable-gitignore"
+    | "root-occupied"
+    | null;
   /** True when git actually honours the pattern (verified, not assumed). */
   readonly ignored: boolean;
 }
@@ -74,6 +79,22 @@ export function ensureWorktreeIgnored(
   }
 
   const pattern = gitignorePatternFor(root.relativeFromRepo);
+
+  // A pre-existing directory that Phronia did not create is user data. Ignoring
+  // it would hide that data from `git status` and then invite the task to write
+  // a checkout on top of it, so the safe answer is to refuse and report.
+  if (
+    fs.existsSync(root.absolute) &&
+    !isPhroniaWorktreeRoot(root.absolute)
+  ) {
+    return {
+      changed: false,
+      path: null,
+      pattern,
+      reason: "root-occupied",
+      ignored: false,
+    };
+  }
 
   if (isIgnored(git, mainRoot, root.relativeFromRepo, pattern)) {
     return {
@@ -170,6 +191,14 @@ export function upsertManagedGitignoreBlock(
   const end =
     start === -1 ? -1 : content.indexOf(GITIGNORE_BLOCK_END, start);
 
+  // An unterminated block is repaired rather than duplicated: the marker is
+  // ours, so completing it keeps one authoritative block instead of leaving a
+  // second start marker that later runs would ignore.
+  if (start !== -1 && end === -1) {
+    const repaired = completeManagedBlock(content, start, pattern);
+    return repaired;
+  }
+
   if (start !== -1 && end !== -1) {
     const block = content.slice(start, end + GITIGNORE_BLOCK_END.length);
     if (block.split(/\r?\n/).some((line) => line.trim() === pattern)) {
@@ -177,29 +206,54 @@ export function upsertManagedGitignoreBlock(
     }
     const bodyStart = start + GITIGNORE_BLOCK_START.length;
     const body = content.slice(bodyStart, end);
-    const separator = body.endsWith("\n") || body === "" ? "" : "\n";
+    // Preserve the file's line ending so a CRLF `.gitignore` does not end up
+    // with one LF line inside a CRLF block.
+    const eol = content.includes("\r\n") ? "\r\n" : "\n";
+    const separator = body === "" || body.endsWith("\n") ? "" : eol;
     const updatedBlock =
       content.slice(start, bodyStart) +
       body +
       separator +
-      `${pattern}\n` +
+      `${pattern}${eol}` +
       GITIGNORE_BLOCK_END;
     return content.slice(0, start) + updatedBlock + content.slice(end + GITIGNORE_BLOCK_END.length);
   }
 
   const trimmed = content.replace(/\s+$/, "");
-  const prefix = trimmed === "" ? "" : `${trimmed}\n\n`;
+  const eol = content.includes("\r\n") ? "\r\n" : "\n";
+  const prefix = trimmed === "" ? "" : `${trimmed}${eol}${eol}`;
   return [
     `${prefix}${GITIGNORE_BLOCK_START}`,
     "# Task worktrees created by `phronia task workspace ensure`",
     pattern,
     GITIGNORE_BLOCK_END,
     "",
-  ].join("\n");
+  ].join(eol);
 }
 
-function canCreateFile(target: string): boolean {
-  try {
+/**
+ * Close a `# PHRONIA:START` that was never terminated, adding `pattern` inside
+ * it. Repairing in place keeps exactly one authoritative block.
+ */
+function completeManagedBlock(
+  content: string,
+  start: number,
+  pattern: string,
+): string {
+  const eol = content.includes("\r\n") ? "\r\n" : "\n";
+  const bodyStart = start + GITIGNORE_BLOCK_START.length;
+  const body = content.slice(bodyStart).replace(/\s+$/, "");
+  const separator = body === "" || body.endsWith("\n") ? "" : eol;
+  const alreadyListed = body
+    .split(/\r?\n/)
+    .some((line) => line.trim() === pattern);
+  const lines = alreadyListed
+    ? [body, GITIGNORE_BLOCK_END]
+    : [body + separator + pattern, GITIGNORE_BLOCK_END];
+  return `${content.slice(0, bodyStart)}${lines.join(eol)}${eol}`;
+}
+
+function canCreateFile(target: string): boolean {  try {
     fs.accessSync(path.dirname(target), fs.constants.W_OK);
     return true;
   } catch {
@@ -208,15 +262,17 @@ function canCreateFile(target: string): boolean {
 }
 
 /**
- * Phantom entries for paths that will be under the worktree root but are not
- * ignored yet.
+ * Pending bootstrap paths for the worktree root.
  *
- * `git status` reports an untracked directory as a single entry (`.gitignore`),
- * so writing the ignore rule inside the gate does not close the gate: the gate
- * already read status, and the next `ensure` sees the now-untracked
- * `.gitignore` and refuses with `WORKSPACE_DIRTY_UNCLAIMED`. Folding both names
- * into the dirty set keeps the gate honest without weakening it — the user is
- * still asked to commit, they just get the actionable path.
+ * Creating the root, or its ignore rule, leaves the checkout dirty for reasons
+ * that are not the user's work: `git status` collapses an untracked directory
+ * into one entry, and the freshly written `.gitignore` is itself untracked.
+ * Reporting those as plain "uncommitted changes" sends people looking in the
+ * wrong place, so callers fold them into the failure detail.
+ *
+ * Only paths that are genuinely pending are returned: an existing, already
+ * ignored root contributes nothing, and `.gitignore` is reported only when it
+ * exists and is not tracked.
  */
 export function gitignorePendingPaths(options: {
   readonly mainRoot: string;
@@ -226,7 +282,10 @@ export function gitignorePendingPaths(options: {
   const { root } = options;
   const relative = root.relativeFromRepo;
   if (root.outsideRepo || relative === null) return [];
-  if (isIgnored(options.git, options.mainRoot, relative, "")) {
+  // An existing root is reported by git status on its own; only an absent one
+  // needs the probe-based check.
+  if (fs.existsSync(path.join(options.mainRoot, relative))) return [];
+  if (isIgnored(options.git, options.mainRoot, relative, relative)) {
     return [];
   }
   const pending: string[] = [relative];
@@ -247,4 +306,23 @@ function isTracked(cwd: string, relative: string): boolean {
   } catch {
     return false;
   }
+}
+
+/**
+ * Whether an existing directory is a Phronia worktree root rather than user
+ * data. Each checkout Phronia creates carries `.phronia/.runtime`, so a root
+ * that has at least one such child is ours; an empty directory is treated as
+ * not-yet-created (nobody lost data by ignoring it).
+ */
+function isPhroniaWorktreeRoot(absolute: string): boolean {
+  let entries: string[];
+  try {
+    entries = fs.readdirSync(absolute);
+  } catch {
+    return false;
+  }
+  if (entries.length === 0) return true;
+  return entries.every((entry) =>
+    fs.existsSync(path.join(absolute, entry, ".phronia", ".runtime")),
+  );
 }

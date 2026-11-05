@@ -1267,6 +1267,18 @@ export function listWorktrees(options: {
   git?: GitPort;
   includeMissing?: boolean;
 }): WorktreeRecord[] {
+  return listWorktreesWithRoot(options).worktrees;
+}
+
+/**
+ * `worktree list` needs the resolved root as well as the records: with several
+ * worktree layouts in play, "where would a new one go" is part of the answer.
+ */
+export function listWorktreesWithRoot(options: {
+  cwd: string;
+  git?: GitPort;
+  includeMissing?: boolean;
+}): { worktrees: WorktreeRecord[]; worktreeRoot: WorktreeRootReport | null } {
   let context: WorkspaceContext;
   try {
     context = loadContext(
@@ -1277,14 +1289,19 @@ export function listWorktrees(options: {
       false,
     );
   } catch {
-    return [];
+    return { worktrees: [], worktreeRoot: null };
   }
   const records = context.registryLoad.registry.worktrees.map((entry) => toRecord(entry));
   const filtered =
     options.includeMissing === true
       ? records
       : records.filter((record) => fs.existsSync(record.path));
-  return filtered.sort((left, right) => left.taskRef.localeCompare(right.taskRef));
+  return {
+    worktrees: filtered.sort((left, right) =>
+      left.taskRef.localeCompare(right.taskRef),
+    ),
+    worktreeRoot: worktreeRootReport(context),
+  };
 }
 
 export function attachWorktree(
@@ -2217,24 +2234,33 @@ function workspaceBootstrapNext(
   dirtyPaths: readonly string[],
   context: WorkspaceContext,
 ): string {
+  const root = worktreeRootOf(context);
   const bootstrap = new Set([
     ...gitignorePendingPaths({
       mainRoot: context.mainRoot,
-      root: worktreeRootOf(context),
+      root,
       git: context.git,
     }),
     ".gitignore",
   ]);
+  const rootRelative = root.relativeFromRepo;
   const onlyBootstrap = dirtyPaths.every(
-    (path) => bootstrap.has(path) || path.startsWith(".phronia-workspace/"),
+    (path) =>
+      bootstrap.has(path) ||
+      (rootRelative !== null &&
+        (path === rootRelative || path.startsWith(`${rootRelative}/`))),
   );
   if (!onlyBootstrap) return scopedTaskCommitNext(view);
-  return `commit the task and the worktree bootstrap together: git add .phronia/tasks/${view.id} .gitignore && git commit -m "chore(task): plan ${view.id}"; or re-run with --copy-task`;
+  return `commit the task and the worktree bootstrap together: git add ${refOfView(view)} .gitignore && git commit -m "chore(task): plan ${view.id}"; or re-run with --copy-task`;
 }
 
 /**
  * Next-step text for a dirty checkout that became dirty only because worktree
  * support (the root directory and its ignore rule) is not committed yet.
+ *
+ * The emitted `git add` lists only what is actually dirty: suggesting
+ * `git add .gitignore` when that file is clean makes the instruction look
+ * copied rather than derived.
  */
 function bootstrapAwareDirtyNext(
   view: TaskRecordView,
@@ -2242,10 +2268,12 @@ function bootstrapAwareDirtyNext(
   context: WorkspaceContext,
 ): string {
   const fallback = "commit/stash the changes, or re-run with --force";
+  const root = worktreeRootOf(context);
+  const rootRelative = root.relativeFromRepo;
   const bootstrap = new Set([
     ...gitignorePendingPaths({
       mainRoot: context.mainRoot,
-      root: worktreeRootOf(context),
+      root,
       git: context.git,
     }),
     ".gitignore",
@@ -2253,21 +2281,30 @@ function bootstrapAwareDirtyNext(
   const onlyBootstrap = dirtyPaths.every(
     (path) =>
       bootstrap.has(path) ||
-      path.startsWith(".phronia-workspace/") ||
+      (rootRelative !== null &&
+        (path === rootRelative || path.startsWith(`${rootRelative}/`))) ||
       path.startsWith(".phronia/tasks/"),
   );
   if (!onlyBootstrap) return fallback;
 
-  const staged = new Set<string>([".gitignore", refOfView(view)]);
+  const staged = new Set<string>();
   for (const path of dirtyPaths) {
     if (bootstrap.has(path)) {
+      // `.gitignore` is only added when it is genuinely pending or dirty.
       staged.add(path);
-    } else if (path.startsWith(".phronia-workspace/")) {
-      staged.add(".phronia-workspace/");
+    } else if (
+      rootRelative !== null &&
+      (path === rootRelative || path.startsWith(`${rootRelative}/`))
+    ) {
+      staged.add(rootRelative);
     } else if (path.startsWith(".phronia/tasks/")) {
       staged.add(path.split("/").slice(0, 3).join("/"));
     }
   }
+  // The task directory must be committed for the worktree to see it, even when
+  // git status only reports the root.
+  staged.add(refOfView(view));
+
   const paths = [...staged].filter((path) => path !== "").join(" ");
   return `commit them together: git add ${paths} && git commit -m "chore(task): plan ${view.id}"; or re-run with --force`;
 }

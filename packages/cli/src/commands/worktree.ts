@@ -11,6 +11,7 @@ import {
   addWorktree as addWorktreeService,
   attachWorktree as attachWorktreeService,
   listWorktrees as listWorktreesService,
+  listWorktreesWithRoot,
   pruneWorktrees as pruneWorktreesService,
   removeWorktree as removeWorktreeService,
   type PruneOptions,
@@ -101,13 +102,26 @@ export function runWorktreeRemove(
 }
 
 export function runWorktreeList(options: WorktreeOptions): number {
-  const records = listWorktrees({
+  const { worktrees: records, worktreeRoot } = listWorktreesWithRoot({
     cwd: options.cwd,
     includeMissing: false,
   });
   if (options.json === true) {
-    process.stdout.write(`${JSON.stringify({ worktrees: records }, null, 2)}\n`);
+    process.stdout.write(
+      `${JSON.stringify(
+        { worktrees: records, ...(worktreeRoot === null ? {} : { worktreeRoot }) },
+        null,
+        2,
+      )}\n`,
+    );
     return 0;
+  }
+  if (worktreeRoot !== null) {
+    process.stdout.write(
+      `root: ${worktreeRoot.relativeFromRepo ?? worktreeRoot.absolute} (${
+        worktreeRoot.gitignore.ignored ? "gitignored" : "NOT gitignored"
+      })\n`,
+    );
   }
   if (records.length === 0) {
     process.stdout.write("No task worktrees.\n");

@@ -160,3 +160,63 @@ describe("ensureWorktreeIgnored", () => {
     expect(fs.readFileSync(path.join(root, ".gitignore"), "utf-8")).toBe(afterFirst);
   });
 });
+
+describe("upsertManagedGitignoreBlock edge cases", () => {
+  it("keeps CRLF files consistent instead of mixing line endings", () => {
+    const before = "# PHRONIA:START\r\n/.a/\r\n# PHRONIA:END\r\n";
+    const after = upsertManagedGitignoreBlock(before, "/.b/");
+    expect(after).toContain("/.a/\r\n");
+    expect(after).toContain("/.b/\r\n");
+    expect(after).not.toContain("/.b/\n#");
+  });
+
+  it("appends a well-formed block when the existing marker is unterminated", () => {
+    const before = "# PHRONIA:START\n/.a/\n";
+    const after = upsertManagedGitignoreBlock(before, "/.b/");
+    expect(after.match(/PHRONIA:START/g)).toHaveLength(1);
+    expect(after).toContain("/.b/");
+    expect(after).toContain(GITIGNORE_BLOCK_END);
+  });
+});
+
+describe("ensureWorktreeIgnored root ownership", () => {
+  let root: string;
+
+  beforeEach(() => {
+    root = fs.mkdtempSync(path.join(os.tmpdir(), "phronia-gitignore-owner-"));
+    execFileSync("git", ["init", "-q", "-b", "main"], { cwd: root });
+  });
+
+  afterEach(() => {
+    fs.rmSync(root, { recursive: true, force: true });
+  });
+
+  const git = createGitPort();
+
+  it("refuses to ignore a directory that holds user data", () => {
+    const occupied = path.join(root, "build");
+    fs.mkdirSync(occupied);
+    fs.writeFileSync(path.join(occupied, "real-artifact.txt"), "user data\n");
+
+    const worktreeRoot = resolveWorktreeRoot({
+      configuredDir: "build",
+      mainRoot: root,
+    });
+    const result = ensureWorktreeIgnored({ mainRoot: root, root: worktreeRoot, git });
+
+    expect(result.reason).toBe("root-occupied");
+    expect(result.changed).toBe(false);
+    expect(fs.existsSync(path.join(root, ".gitignore"))).toBe(false);
+  });
+
+  it("accepts an existing directory that already holds Phronia worktrees", () => {
+    const worktreeRoot = resolveWorktreeRoot({ mainRoot: root });
+    fs.mkdirSync(path.join(root, ".phronia-workspace", "task-a", ".phronia", ".runtime"), {
+      recursive: true,
+    });
+
+    const result = ensureWorktreeIgnored({ mainRoot: root, root: worktreeRoot, git });
+    expect(result.changed).toBe(true);
+    expect(result.ignored).toBe(true);
+  });
+});

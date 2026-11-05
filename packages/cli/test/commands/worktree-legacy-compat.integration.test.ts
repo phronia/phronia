@@ -18,6 +18,8 @@ import {
   removeWorktree,
 } from "../../src/commands/worktree.js";
 import { resolveWorktreeRoot } from "@phronia/core/task";
+import { createGitPort } from "../../src/adapters/git.js";
+import { ensureWorktreeIgnored } from "../../src/utils/ensure-gitignore.js";
 
 const LEGACY_DIR = ".phronia/worktrees";
 
@@ -214,3 +216,65 @@ function realpath(target: string): string {
     return path.resolve(target);
   }
 }
+
+describe("worktree root reporting", () => {
+  let root: string;
+
+  beforeEach(() => {
+    root = fs.mkdtempSync(path.join(os.tmpdir(), "phronia-root-report-"));
+    git(root, ["init", "-q", "-b", "main"]);
+    git(root, ["config", "user.email", "test@example.com"]);
+    git(root, ["config", "user.name", "Test"]);
+    fs.writeFileSync(path.join(root, "README.md"), "# repo\n");
+    fs.mkdirSync(path.join(root, ".phronia"), { recursive: true });
+    fs.writeFileSync(path.join(root, ".phronia/config.yaml"), "parallel:\n  enabled: true\n");
+    writeGitignore(root, ".phronia-workspace");
+    commitAll(root, "init");
+  });
+
+  afterEach(() => {
+    fs.rmSync(root, { recursive: true, force: true });
+  });
+
+  it("exposes the resolved root and its ignore state on add", () => {
+    writeTask(root, "10-28-report");
+    commitAll(root, "plan report");
+
+    const added = addWorktree("10-28-report", { cwd: root });
+    expect(added.ok, added.message).toBe(true);
+    expect(added.worktreeRoot).toMatchObject({
+      relativeFromRepo: ".phronia-workspace",
+      outsideRepo: false,
+    });
+    expect(added.worktreeRoot?.gitignore.ignored).toBe(true);
+  });
+
+  it("keeps git status clean after creating a worktree in a fresh project", () => {
+    writeTask(root, "10-28-clean");
+    commitAll(root, "plan clean");
+
+    const added = addWorktree("10-28-clean", { cwd: root });
+    expect(added.ok, added.message).toBe(true);
+    expect(git(root, ["status", "--porcelain"]).trim()).toBe("");
+  });
+
+  it("reports an unignored custom root instead of pretending it is covered", () => {
+    fs.writeFileSync(
+      path.join(root, ".phronia/config.yaml"),
+      "parallel:\n  worktree_dir: .custom-wt\n",
+    );
+    commitAll(root, "custom root");
+
+    const worktreeRoot = resolveWorktreeRoot({ configuredDir: ".custom-wt", mainRoot: root });
+    const outcome = ensureWorktreeIgnored({
+      mainRoot: root,
+      root: worktreeRoot,
+      git: createGitPort(),
+      dryRun: true,
+    });
+    // The managed block only covers the configured root after a real run; a
+    // dry run must not claim coverage it did not write.
+    expect(outcome.pattern).toBe("/.custom-wt/");
+    expect(fs.readFileSync(path.join(root, ".gitignore"), "utf-8")).not.toContain(".custom-wt");
+  });
+});
