@@ -50,7 +50,7 @@ describe("task worktree lifecycle", () => {
     if (!record) throw new Error("worktree record missing");
     expect(fs.existsSync(record.path)).toBe(true);
     expect(fs.existsSync(path.join(record.path, ".phronia/.runtime"))).toBe(true);
-    expect(record.path.endsWith(path.join(".phronia/worktrees/01-01-demo"))).toBe(
+    expect(record.path.endsWith(path.join(".phronia-workspace/01-01-demo"))).toBe(
       true,
     );
 

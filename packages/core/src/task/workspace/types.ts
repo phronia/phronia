@@ -73,8 +73,32 @@ export interface WorkspacePolicyContext {
   readonly reuseDirty?: boolean;
   /** `--force`: same as `reuseDirty` for workspace decisions. */
   readonly force?: boolean;
-  /** Relative or absolute worktree directory. Defaults to `.phronia/worktrees`. */
+  /**
+   * Relative or absolute worktree directory.
+   * @deprecated Use `worktreeRoot` (already resolved). Kept for one version so
+   * callers that pass a raw relative directory keep working.
+   */
   readonly worktreeDir?: string;
+  /**
+   * Already-resolved worktree root. When present it wins over `worktreeDir`.
+   * Derive it with `resolveWorktreeRoot` rather than joining paths by hand, so
+   * the layout default lives in exactly one place.
+   */
+  readonly worktreeRoot?: WorktreeRoot;
+}
+
+/**
+ * Resolved task-worktree root.
+ *
+ * `absolute` is what the runtime writes to; `relativeFromRepo` is the
+ * repository-relative POSIX form used for `.gitignore` patterns and JSON
+ * output, and is null when the root cannot be expressed inside the repo.
+ */
+export interface WorktreeRoot {
+  readonly absolute: string;
+  readonly relativeFromRepo: string | null;
+  readonly outsideRepo: boolean;
+  readonly source: "config" | "default" | "ephemeral";
 }
 
 export type WorkspaceDecision =

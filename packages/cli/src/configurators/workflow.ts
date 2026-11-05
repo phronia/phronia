@@ -1,8 +1,12 @@
 import fs from "node:fs";
 import path from "node:path";
 
+import { resolveWorktreeRoot } from "@phronia/core/task";
+
+import { createGitPort } from "../adapters/git.js";
 import { DIR_NAMES, PATHS } from "../constants/paths.js";
 import { copyTrellisDir } from "../templates/extract.js";
+import { ensureWorktreeIgnored } from "../utils/ensure-gitignore.js";
 
 // Import trellis templates (generic, not project-specific)
 import {
@@ -161,6 +165,21 @@ export async function createWorkflowStructure(
   // Ensure project-root .gitattributes carries the journal merge=union rule
   // (additive-only — never overwrites a user's existing file wholesale).
   ensureGitattributes(cwd);
+
+  // Ensure the default worktree root is ignored. A fresh project has no
+  // `parallel.worktree_dir` override yet, so the layout default is the root.
+  // Best-effort: a read-only checkout must not fail `init`.
+  try {
+    const git = createGitPort();
+    ensureWorktreeIgnored({
+      mainRoot: cwd,
+      root: resolveWorktreeRoot({ mainRoot: cwd }),
+      git,
+    });
+  } catch {
+    // Not a git repository yet, or no permission: the pattern is added on the
+    // first `workspace ensure` instead.
+  }
 
   // Dispatch channel runtime agent definitions. These are platform-agnostic
   // Phronia runtime files consumed by `trellis channel spawn --agent <name>`

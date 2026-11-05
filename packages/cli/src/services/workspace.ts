@@ -18,11 +18,13 @@ import {
   decideWorkspace,
   isDedicatedFeatureBranch,
   readParallelMeta,
+  resolveWorktreeRoot,
   worktreeSlug,
   type TaskLease,
   type WorkspaceClaim,
   type WorkspaceDecision,
   type WorkspaceWorktree,
+  type WorktreeRoot,
 } from "@phronia/core/task";
 import {
   findSoleSessionKey,
@@ -57,6 +59,11 @@ import {
 } from "../adapters/shared-runtime.js";
 import { listTaskLeases } from "./lease.js";
 import { readDirtyPaths } from "./dirty-check.js";
+import {
+  ensureWorktreeIgnored,
+  gitignorePendingPaths,
+  type EnsureGitignoreResult,
+} from "../utils/ensure-gitignore.js";
 
 const DEFAULT_CLAIM_TTL_SECONDS = 7200;
 const COMMAND_TIMEOUT_MS = 10 * 60 * 1000;
@@ -150,10 +157,25 @@ export interface WorkspaceSuccess {
   readonly warnings: readonly string[];
   /** Missing build inputs + executable next steps (create only). */
   readonly inputs?: WorktreeInputHints;
+  /** Resolved worktree root and its gitignore state. */
+  readonly worktreeRoot?: WorktreeRootReport;
   readonly provisional?: {
     readonly title: string;
     readonly path: string;
     readonly branch: string;
+  };
+}
+
+export interface WorktreeRootReport {
+  readonly absolute: string;
+  readonly relativeFromRepo: string | null;
+  readonly outsideRepo: boolean;
+  readonly source: "config" | "default" | "ephemeral";
+  readonly gitignore: {
+    readonly ignored: boolean;
+    readonly file: string | null;
+    readonly pattern: string | null;
+    readonly reason: EnsureGitignoreResult["reason"];
   };
 }
 
@@ -196,6 +218,8 @@ export interface WorktreeResult {
   readonly warnings?: readonly string[];
   /** Missing build inputs + executable next steps. */
   readonly inputs?: WorktreeInputHints;
+  /** Resolved worktree root and its gitignore state. */
+  readonly worktreeRoot?: WorktreeRootReport;
   /** Best-effort bytes freed by `remove`/`prune`. */
   readonly freedBytes?: number;
 }
@@ -421,6 +445,12 @@ function busyOrProvisional(
     );
   }
 
+  ensureWorktreeIgnored({
+    mainRoot: context.mainRoot,
+    root: worktreeRootOf(context),
+    git: context.git,
+  });
+
   try {
     context.git.worktreeAdd({
       cwd: context.mainRoot,
@@ -578,7 +608,7 @@ export function ensureWorkspace(
     },
     reuseDirty: options.reuseDirty === true || options.force === true,
     force: options.force === true,
-    worktreeDir: worktreeDirectory(context),
+    worktreeRoot: worktreeRootOf(context),
   });
 
   const linkedGuard = guardLinkedCheckout(context, decision, existing, options);
@@ -704,6 +734,15 @@ function executeWorkspaceDecision(
     if (visible !== null) return visible;
   }
 
+  // From here on the checkout gains a directory. If it is not ignored, the very
+  // next `ensure` reads the checkout as dirty and refuses. Best-effort: a
+  // read-only `.gitignore` must not prevent the worktree from being created.
+  const ignore = ensureWorktreeIgnored({
+    mainRoot: context.mainRoot,
+    root: worktreeRootOf(context),
+    git: context.git,
+  });
+
   try {
     context.git.worktreeAdd({
       cwd: context.mainRoot,
@@ -770,6 +809,38 @@ function executeWorkspaceDecision(
       ...hintWarnings(hints),
     ]),
     inputs: hints,
+    worktreeRoot: worktreeRootReport(context, ignore),
+  };
+}
+
+/**
+ * Report where worktrees live and whether git ignores that location, using the
+ * same `check-ignore` path the dirty check uses.
+ */
+function worktreeRootReport(
+  context: WorkspaceContext,
+  ignore?: EnsureGitignoreResult,
+): WorktreeRootReport {
+  const root = worktreeRootOf(context);
+  const outcome =
+    ignore ??
+    ensureWorktreeIgnored({
+      mainRoot: context.mainRoot,
+      root,
+      git: context.git,
+      dryRun: true,
+    });
+  return {
+    absolute: root.absolute,
+    relativeFromRepo: root.relativeFromRepo,
+    outsideRepo: root.outsideRepo,
+    source: root.source,
+    gitignore: {
+      ignored: outcome.ignored,
+      file: outcome.path,
+      pattern: outcome.pattern,
+      reason: outcome.reason,
+    },
   };
 }
 
@@ -1042,7 +1113,7 @@ export function addWorktree(taskRef: string, options: WorktreeOptions): Worktree
         return worktreeFailure(
           "TASK_ARTIFACTS_UNCOMMITTED",
           `task artifacts for ${ref} are uncommitted in the main checkout`,
-          scopedTaskCommitNext(view),
+          workspaceBootstrapNext(view, dirtyPaths, context),
           { details: { dirtyPaths } },
         );
       }
@@ -1050,7 +1121,7 @@ export function addWorktree(taskRef: string, options: WorktreeOptions): Worktree
       return worktreeFailure(
         "WORKSPACE_DIRTY_UNCLAIMED",
         "main checkout has uncommitted changes; commit them or pass --force",
-        "commit/stash the changes, or re-run with --force",
+        bootstrapAwareDirtyNext(view, dirtyPaths, context),
         { details: { dirtyPaths } },
       );
     }
@@ -1107,6 +1178,14 @@ export function addWorktree(taskRef: string, options: WorktreeOptions): Worktree
   ) {
     forceWarning = `worktree created with --force; task artifacts may be missing — commit ${ref} or re-run with --copy-task`;
   }
+
+  // Same reason as `executeWorkspaceDecision`: an unignored root turns the next
+  // dirty check into a false positive.
+  const ignore = ensureWorktreeIgnored({
+    mainRoot: context.mainRoot,
+    root: worktreeRootOf(context),
+    git: context.git,
+  });
 
   try {
     context.git.worktreeAdd({
@@ -1179,6 +1258,7 @@ export function addWorktree(taskRef: string, options: WorktreeOptions): Worktree
     record,
     ...(warnings.length === 0 ? {} : { warnings }),
     inputs: hints,
+    worktreeRoot: worktreeRootReport(context, ignore),
   };
 }
 
@@ -2124,6 +2204,79 @@ function scopedTaskCommitNext(view: TaskRecordView): string {
 }
 
 /**
+ * Turn "dirty only because worktree support is not committed yet" into one
+ * actionable instruction.
+ *
+ * Creating the root (or its ignore rule) leaves the checkout dirty for reasons
+ * that are not the user's work. Reporting them as plain uncommitted changes
+ * sends people looking in the wrong place; the scope commit is the same either
+ * way, so both paths get the same next step.
+ */
+function workspaceBootstrapNext(
+  view: TaskRecordView,
+  dirtyPaths: readonly string[],
+  context: WorkspaceContext,
+): string {
+  const bootstrap = new Set([
+    ...gitignorePendingPaths({
+      mainRoot: context.mainRoot,
+      root: worktreeRootOf(context),
+      git: context.git,
+    }),
+    ".gitignore",
+  ]);
+  const onlyBootstrap = dirtyPaths.every(
+    (path) => bootstrap.has(path) || path.startsWith(".phronia-workspace/"),
+  );
+  if (!onlyBootstrap) return scopedTaskCommitNext(view);
+  return `commit the task and the worktree bootstrap together: git add .phronia/tasks/${view.id} .gitignore && git commit -m "chore(task): plan ${view.id}"; or re-run with --copy-task`;
+}
+
+/**
+ * Next-step text for a dirty checkout that became dirty only because worktree
+ * support (the root directory and its ignore rule) is not committed yet.
+ */
+function bootstrapAwareDirtyNext(
+  view: TaskRecordView,
+  dirtyPaths: readonly string[],
+  context: WorkspaceContext,
+): string {
+  const fallback = "commit/stash the changes, or re-run with --force";
+  const bootstrap = new Set([
+    ...gitignorePendingPaths({
+      mainRoot: context.mainRoot,
+      root: worktreeRootOf(context),
+      git: context.git,
+    }),
+    ".gitignore",
+  ]);
+  const onlyBootstrap = dirtyPaths.every(
+    (path) =>
+      bootstrap.has(path) ||
+      path.startsWith(".phronia-workspace/") ||
+      path.startsWith(".phronia/tasks/"),
+  );
+  if (!onlyBootstrap) return fallback;
+
+  const staged = new Set<string>([".gitignore", refOfView(view)]);
+  for (const path of dirtyPaths) {
+    if (bootstrap.has(path)) {
+      staged.add(path);
+    } else if (path.startsWith(".phronia-workspace/")) {
+      staged.add(".phronia-workspace/");
+    } else if (path.startsWith(".phronia/tasks/")) {
+      staged.add(path.split("/").slice(0, 3).join("/"));
+    }
+  }
+  const paths = [...staged].filter((path) => path !== "").join(" ");
+  return `commit them together: git add ${paths} && git commit -m "chore(task): plan ${view.id}"; or re-run with --force`;
+}
+
+function refOfView(view: TaskRecordView): string {
+  return `.phronia/tasks/${view.id}`;
+}
+
+/**
  * Shared entry-point guard: a worktree created from `base` must see the task
  * artifacts. `ensure` and `worktree add` use the same message and next.
  */
@@ -2139,7 +2292,7 @@ function assertTaskArtifactsVisible(
   return workspaceFailure(
     "TASK_ARTIFACTS_UNCOMMITTED",
     `task artifacts for ${ref} are not on ${base}; a new worktree would not see prd/design/implement`,
-    scopedTaskCommitNext(view),
+    workspaceBootstrapNext(view, [ref], context),
     { taskRef: ref, base },
   );
 }
@@ -2617,11 +2770,21 @@ function findLease(context: WorkspaceContext, ref: string): TaskLease | null {
   );
 }
 
+/**
+ * One resolved root per context. `decideWorkspace` accepts an already-resolved
+ * absolute root, so joining `mainRoot` and a directory name must never happen
+ * outside `resolveWorktreeRoot`.
+ */
+function worktreeRootOf(context: WorkspaceContext): WorktreeRoot {
+  return resolveWorktreeRoot({
+    configuredDir: context.config.parallel.worktreeDir,
+    mainRoot: context.mainRoot,
+    location: context.config.parallel.location,
+  });
+}
+
 function worktreeDirectory(context: WorkspaceContext): string {
-  const configured = context.config.parallel.worktreeDir;
-  return path.isAbsolute(configured)
-    ? path.resolve(configured)
-    : path.join(context.mainRoot, configured);
+  return worktreeRootOf(context).absolute;
 }
 
 function hardenedPath(

@@ -36,6 +36,10 @@ import { compareVersions } from "../utils/compare-versions.js";
 import { toPosix } from "../utils/posix.js";
 import { setupProxy } from "../utils/proxy.js";
 import { emptyTaskJson } from "../utils/task-json.js";
+import { ensureWorktreeIgnored } from "../utils/ensure-gitignore.js";
+import { createGitPort } from "../adapters/git.js";
+import { resolveWorktreeRoot } from "@phronia/core/task";
+import { openState } from "@phronia/core/state";
 
 // Import templates for comparison
 import {
@@ -2417,6 +2421,27 @@ export async function update(options: UpdateOptions): Promise<void> {
   // early-return below. Never touches disk in --dry-run.
   if (!options.dryRun) {
     ensureGitattributes(cwd);
+  }
+
+  // Same boundary as .gitattributes: existing projects upgrading to the new
+  // default root must not leave it untracked. Idempotent and anchored to the
+  // configured `parallel.worktree_dir`, so a custom root is covered too.
+  if (!options.dryRun) {
+    try {
+      const config = openState({ root: cwd }).config();
+      ensureWorktreeIgnored({
+        mainRoot: cwd,
+        root: resolveWorktreeRoot({
+          configuredDir: config.parallel.worktreeDir,
+          mainRoot: cwd,
+          location: config.parallel.location,
+        }),
+        git: createGitPort(),
+      });
+    } catch {
+      // A project without a readable config or a git repo keeps working; the
+      // pattern is added on the next `workspace ensure`.
+    }
   }
 
   // Check if there's anything to do

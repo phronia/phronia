@@ -14,13 +14,15 @@
  * 5. a clean, unclaimed checkout is reused for a serial task.
  */
 
+import { WORKTREE_ROOT_DIR_NAME } from "../../layout/index.js";
 import type {
   WorkspaceClaim,
   WorkspaceDecision,
   WorkspacePolicyContext,
+  WorktreeRoot,
 } from "./types.js";
 
-const DEFAULT_WORKTREE_DIR = ".phronia/worktrees";
+const DEFAULT_WORKTREE_DIR = WORKTREE_ROOT_DIR_NAME;
 
 /**
  * Branch names that are integration refs, never a task's dedicated branch.
@@ -279,12 +281,14 @@ function resolveTarget(
   context: WorkspacePolicyContext,
 ): ResolvedTarget {
   const slug = worktreeSlug(context.task);
-  const directory = context.worktreeDir ?? DEFAULT_WORKTREE_DIR;
-  const path =
-    context.target?.path ??
-    (isAbsoluteDirectory(directory)
-      ? joinPath(directory, slug)
-      : joinPath(context.currentCheckout, directory, slug));
+  const root =
+    context.worktreeRoot ??
+    resolveWorktreeRoot({
+      configuredDir: context.worktreeDir ?? DEFAULT_WORKTREE_DIR,
+      mainRoot: context.currentCheckout,
+      location: "persistent",
+    });
+  const path = context.target?.path ?? joinPath(root.absolute, slug);
   // A task whose `branch` is the integration branch has no dedicated feature
   // branch (older `task.py start` recorded `main`). Creating a worktree on the
   // integration branch is impossible — it is already checked out — so fall
@@ -396,6 +400,70 @@ function isAbsoluteDirectory(value: string): boolean {
   );
 }
 
+/**
+ * Resolve the task-worktree root. The single entry point for "where do new
+ * worktrees live": every other layer consumes this result instead of joining
+ * `mainRoot` and a directory name itself.
+ *
+ * `relativeFromRepo` is the POSIX path from the repository root, which callers
+ * use for `.gitignore` patterns. It is null outside the repository, because an
+ * ignore rule cannot describe a path that lives beyond it.
+ */
+export function resolveWorktreeRoot(input: {
+  readonly configuredDir?: string | null;
+  readonly mainRoot: string;
+  readonly location?: "persistent" | "ephemeral";
+  /** Ephemeral root; defaults to the platform temp directory. */
+  readonly tmpDir?: string;
+}): WorktreeRoot {
+  const mainRoot = normalizeDir(input.mainRoot);
+
+  if (input.location === "ephemeral") {
+    const tmpRoot = normalizeDir(
+      input.tmpDir ?? defaultTempDir(),
+    );
+    const root = joinPath(tmpRoot, "phronia-worktrees");
+    return {
+      absolute: root,
+      relativeFromRepo: relativeInside(mainRoot, root),
+      outsideRepo: !isInside(mainRoot, root),
+      source: "ephemeral",
+    };
+  }
+
+  const configured =
+    input.configuredDir === undefined || input.configuredDir === null
+      ? ""
+      : input.configuredDir.trim();
+  if (configured === "") {
+    const root = joinPath(mainRoot, DEFAULT_WORKTREE_DIR);
+    return {
+      absolute: root,
+      relativeFromRepo: DEFAULT_WORKTREE_DIR,
+      outsideRepo: false,
+      source: "default",
+    };
+  }
+
+  if (isAbsoluteDirectory(configured)) {
+    const root = normalizeDir(configured);
+    return {
+      absolute: root,
+      relativeFromRepo: relativeInside(mainRoot, root),
+      outsideRepo: !isInside(mainRoot, root),
+      source: "config",
+    };
+  }
+
+  const root = normalizeDir(joinPath(mainRoot, configured));
+  return {
+    absolute: root,
+    relativeFromRepo: relativeInside(mainRoot, root),
+    outsideRepo: !isInside(mainRoot, root),
+    source: "config",
+  };
+}
+
 function joinPath(root: string, ...parts: readonly string[]): string {
   const normalizedRoot = root.replace(/\\/g, "/");
   const base = normalizedRoot.replace(/\/+$/, "");
@@ -409,4 +477,45 @@ function joinPath(root: string, ...parts: readonly string[]): string {
       : tail.join("/");
   }
   return [base, ...tail].join("/");
+}
+
+/** Collapse `.` segments and repeated slashes; keep the platform separator. */
+function normalizeDir(value: string): string {
+  const withSlashes = value.replace(/\\/g, "/");
+  const absolute = withSlashes.startsWith("/");
+  const drive = /^[A-Za-z]:/.test(withSlashes);
+  const segments: string[] = [];
+  for (const segment of withSlashes.split("/")) {
+    if (segment === "" || segment === ".") continue;
+    if (segment === "..") {
+      if (segments.length > 0 && segments.at(-1) !== "..") {
+        segments.pop();
+      } else if (!absolute && !drive) {
+        segments.push("..");
+      }
+      continue;
+    }
+    segments.push(segment);
+  }
+  const prefix = absolute ? "/" : "";
+  return `${prefix}${segments.join("/")}` || (absolute ? "/" : ".");
+}
+
+function isInside(parent: string, child: string): boolean {
+  if (parent === child) return false;
+  const normalizedParent = parent.replace(/\/+$/, "");
+  return child.startsWith(`${normalizedParent}/`);
+}
+
+function relativeInside(parent: string, child: string): string | null {
+  if (!isInside(parent, child)) return null;
+  const prefix = `${parent.replace(/\/+$/, "")}/`;
+  const relative = child.slice(prefix.length);
+  return relative === "" ? null : relative;
+}
+
+function defaultTempDir(): string {
+  const env = (globalThis as { process?: { env?: Record<string, string | undefined> } })
+    .process?.env;
+  return env?.TMPDIR ?? env?.TEMP ?? env?.TMP ?? "/tmp";
 }

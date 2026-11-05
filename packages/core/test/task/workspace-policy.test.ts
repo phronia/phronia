@@ -191,7 +191,7 @@ describe("decideWorkspace", () => {
     const decision = decideWorkspace(context({ claim: claim() }));
     expect(decision).toMatchObject({
       kind: "create",
-      path: "/repo/.phronia/worktrees/A",
+      path: "/repo/.phronia-workspace/A",
       branch: "phronia/A",
       base: "main",
       code: "WORKSPACE_CLAIM_BUSY",
@@ -211,7 +211,7 @@ describe("decideWorkspace", () => {
     );
     expect(decision).toMatchObject({
       kind: "create",
-      path: "/repo/.phronia/worktrees/A",
+      path: "/repo/.phronia-workspace/A",
       branch: "phronia/A",
       base: "main",
     });
@@ -249,7 +249,7 @@ describe("decideWorkspace", () => {
     expect(decision).toMatchObject({
       kind: "create",
       base: "main",
-      path: "/repo/.phronia/worktrees/A",
+      path: "/repo/.phronia-workspace/A",
       branch: "phronia/A",
     });
     if (decision.kind !== "create") return;

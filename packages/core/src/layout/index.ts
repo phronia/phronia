@@ -46,7 +46,7 @@ export interface WorkspacePaths {
   readonly rulesCompiled: string;
   /** `gate.yaml` (compiled fifth-level gate). */
   readonly gate: string;
-  /** `worktrees/` (task workspaces, gitignored). */
+  /** Default task-worktree root, e.g. `.phronia-workspace` (gitignored). */
   readonly worktrees: string;
   /** `.runtime/worktrees.json` (worktree registry). */
   readonly worktreeRegistry: string;
@@ -75,6 +75,17 @@ export interface WorkspaceLayout {
 
 const ROOT = ".phronia";
 
+/**
+ * Default directory that holds task worktrees.
+ *
+ * Deliberately a sibling of the workflow root, not a child of it: it must be
+ * covered by the repository's own `.gitignore`, be obvious to delete as a
+ * whole, and never be mistaken for Phronia-managed template content.
+ * Users override it with `parallel.worktree_dir`; this is only the default that
+ * `resolveWorktreeRoot` falls back to.
+ */
+export const WORKTREE_ROOT_DIR_NAME = ".phronia-workspace" as const;
+
 export const LAYOUT: WorkspaceLayout = Object.freeze({
   rootDirName: ROOT,
   brand: "phronia",
@@ -99,7 +110,7 @@ export const LAYOUT: WorkspaceLayout = Object.freeze({
     handshakes: `${ROOT}/.runtime/harness`,
     rulesCompiled: `${ROOT}/.runtime/rules.json`,
     gate: `${ROOT}/gate.yaml`,
-    worktrees: `${ROOT}/worktrees`,
+    worktrees: WORKTREE_ROOT_DIR_NAME,
     worktreeRegistry: `${ROOT}/.runtime/worktrees.json`,
     version: `${ROOT}/.version`,
     developer: `${ROOT}/.developer`,

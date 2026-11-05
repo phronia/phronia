@@ -10,6 +10,16 @@ export const PHRONIA_BLOCK_END = "<!-- PHRONIA:END -->";
 export const LEGACY_BLOCK_START = "<!-- TRELLIS:START -->";
 export const LEGACY_BLOCK_END = "<!-- TRELLIS:END -->";
 
+/**
+ * Managed block for `.gitignore`.
+ *
+ * HTML comment markers are wrong here: a `.gitignore` line is a pattern, so
+ * `<!-- PHRONIA:START -->` would try to ignore a file literally named that.
+ * `#` is the ignored-file comment syntax, which keeps the block inert.
+ */
+export const GITIGNORE_BLOCK_START = "# PHRONIA:START";
+export const GITIGNORE_BLOCK_END = "# PHRONIA:END";
+
 /** Remove empty managed parents without deleting a managed root directory. */
 export function cleanupEmptyDirs(cwd: string, dirPath: string): void {
   const dirPosix = dirPath.replace(/\\/g, "/");

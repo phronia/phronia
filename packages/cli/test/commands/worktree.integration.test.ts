@@ -224,6 +224,13 @@ function initRepo(): string {
     path.join(root, ".phronia/.gitignore"),
     ["worktrees/", ".runtime/"].join("\n"),
   );
+  // The default worktree root is a repo-root directory, so the fixture repo
+  // has to ignore it the way `phronia init` now does. Without this the first
+  // `addWorktree` leaves the checkout dirty by design.
+  fs.writeFileSync(
+    path.join(root, ".gitignore"),
+    ["# PHRONIA:START", "/.phronia-workspace/", "# PHRONIA:END", ""].join("\n"),
+  );
   commitAll(root, "init");
   return root;
 }

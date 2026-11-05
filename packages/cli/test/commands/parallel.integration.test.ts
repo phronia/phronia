@@ -367,7 +367,7 @@ describe("parallel launch (multi-session manifest, design.md §8)", () => {
     const created = prepared.tasks[0];
     expect(created).toBeDefined();
     if (created === undefined) return;
-    expect(created.workspace).toContain(path.join(".phronia", "worktrees"));
+    expect(created.workspace).toContain(".phronia-workspace");
     expect(fs.existsSync(created.workspace as string)).toBe(true);
     expect(created.branch).toMatch(/^phronia\//);
     expect(created.next).toBeNull();
@@ -383,7 +383,7 @@ describe("parallel launch (multi-session manifest, design.md §8)", () => {
     expect(attached.tasks[0]?.workspace).toBe(created.workspace);
     expect(attached.tasks[0]?.branch).toBe(created.branch);
     // Attach reuses the same worktree; it does not create a second one.
-    expect(worktreeListing(root).match(/\.phronia\/worktrees\//g)?.length).toBe(1);
+    expect(worktreeListing(root).match(/\.phronia-workspace\//g)?.length).toBe(1);
   });
 
   it("skips containers and spec-only tasks with reasons", () => {

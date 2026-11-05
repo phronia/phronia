@@ -7,7 +7,7 @@
  */
 
 import path from "node:path";
-import { LAYOUT } from "../../layout/index.js";
+import { LAYOUT, WORKTREE_ROOT_DIR_NAME } from "../../layout/index.js";
 import { diagnostic, type Diagnostic } from "../diagnostics.js";
 import { readText, type FsLike } from "../fs.js";
 import { parseSimpleYaml, type YamlObject, type YamlValue } from "./yaml.js";
@@ -24,7 +24,7 @@ export const DEFAULT_PROMPT_INJECTION_SKIP_KEYWORD = "no-trellis";
 export const DEFAULT_PARALLEL_ENABLED = true;
 export const DEFAULT_PARALLEL_MAX_CONCURRENT = 3;
 export const DEFAULT_PARALLEL_WORKTREE = "auto" as const;
-export const DEFAULT_PARALLEL_WORKTREE_DIR = ".phronia/worktrees";
+export const DEFAULT_PARALLEL_WORKTREE_DIR = WORKTREE_ROOT_DIR_NAME;
 export const DEFAULT_PARALLEL_WORKTREE_CLEANUP = "on-archive" as const;
 export const DEFAULT_PARALLEL_WORKTREE_LOCATION = "persistent" as const;
 export const DEFAULT_PARALLEL_INTEGRATION_TIMEOUT = "30m";

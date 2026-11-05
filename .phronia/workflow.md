@@ -502,6 +502,8 @@ phronia task workspace ensure <task-dir> --json
 
 Session identity is required: pass `--session-key <key>` or set `PHRONIA_CONTEXT_ID`. Do **not** fall back to a CLI process pid — every `phronia` invocation is a new process, so pid liveness is meaningless. If another task owns `main` and this task does not exist yet, `phronia task workspace prepare --for-new-task "<title>"` creates a provisional workspace first; `task.py create` can then bind the task to it.
 
+Worktrees live under the resolved root (`parallel.worktree_dir`, default `.phronia-workspace/` at the repository root). The JSON result carries `worktreeRoot` with the absolute root and whether git ignores it. If `gitignore.ignored` is false, add the printed pattern before starting work: an unignored root leaves the main checkout dirty and the next `ensure` refuses.
+
 #### 1.5 Completion criteria
 
 | Condition | Required |

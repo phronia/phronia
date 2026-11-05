@@ -17,6 +17,7 @@ import {
   classifyCoordinatorBatch,
   coordinatorState,
   isLeaseExpired,
+  resolveWorktreeRoot,
   worktreeSlug,
   type Batch,
   type BatchStatusSummary,
@@ -614,11 +615,10 @@ function dryRun(
   } catch {
     // Prediction only; keep cwd when git is unavailable.
   }
+  const root = resolveWorktreeRoot({ configuredDir: worktreeDir, mainRoot });
   const entries: DispatchTaskEntry[] = tasks.map((task) => {
     const slug = worktreeSlug({ ref: task.taskRef });
-    const workspace = path.isAbsolute(worktreeDir)
-      ? path.join(worktreeDir, slug)
-      : path.join(mainRoot, worktreeDir, slug);
+    const workspace = path.join(root.absolute, slug);
     return {
       taskRef: task.taskRef,
       workspace,

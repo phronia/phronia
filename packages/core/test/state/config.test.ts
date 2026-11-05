@@ -224,7 +224,7 @@ describe("parallel config", () => {
       enabled: true,
       maxConcurrent: 3,
       worktree: "auto",
-      worktreeDir: ".phronia/worktrees",
+      worktreeDir: ".phronia-workspace",
       cleanup: "on-archive",
       location: "persistent",
       copy: [],

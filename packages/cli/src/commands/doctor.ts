@@ -32,8 +32,12 @@ import {
   type PlatformId,
   type ParallelConfig,
 } from "@phronia/core";
+import { resolveWorktreeRoot } from "@phronia/core/task";
+import { createGitPort } from "../adapters/git.js";
 import { getConfiguredPlatforms } from "../configurators/index.js";
 import { ensureZcodePlugin } from "../configurators/zcode-plugin.js";
+import { listWorktrees } from "../services/workspace.js";
+import { ensureWorktreeIgnored } from "../utils/ensure-gitignore.js";
 import {
   readSpecStates,
   summarizeSpecStates,
@@ -118,6 +122,22 @@ export interface DoctorTaskInputReport {
 export interface DoctorTaskConfigReport {
   worktreeInputs: DoctorTaskInputReport;
   ignoredInputs: DoctorTaskInputReport;
+  /** Where task worktrees live and whether git ignores that location. */
+  worktreeRoot: {
+    absolute: string;
+    relativeFromRepo: string | null;
+    outsideRepo: boolean;
+    source: "config" | "default" | "ephemeral";
+    ignored: boolean;
+    gitignoreFile: string | null;
+    pattern: string | null;
+    reason: string | null;
+  };
+  /** Registered worktrees that live outside the current root. */
+  legacyWorktrees: {
+    count: number;
+    entries: { taskRef: string; path: string; exists: boolean }[];
+  };
   /** Post-integration spec sync visibility (R10). */
   specSync: {
     pending: string[];
@@ -222,6 +242,8 @@ function taskConfigReport(
     : "not a git repository; worktrees cannot be created";
 
   return {
+    worktreeRoot: worktreeRootReport(projectRoot, parallel, usable),
+    legacyWorktrees: legacyWorktreesReport(projectRoot, parallel, usable),
     worktreeInputs: {
       count: parallel.inputs.length,
       paths: parallel.inputs.map((input) => `${input.path} (${input.mode})`),
@@ -250,6 +272,90 @@ function taskConfigReport(
     },
     specSync: specSyncReport(projectRoot),
   };
+}
+
+/**
+ * Where task worktrees live, whether git ignores that location, and which
+ * registered worktrees sit outside it (created under the old layout or
+ * attached from a sibling directory). Read-only: `dryRun` keeps doctor from
+ * repairing anything.
+ */
+function worktreeRootReport(
+  projectRoot: string,
+  parallel: ParallelConfig,
+  usable: boolean,
+): DoctorTaskConfigReport["worktreeRoot"] {
+  const root = resolveWorktreeRoot({
+    configuredDir: parallel.worktreeDir,
+    mainRoot: projectRoot,
+    location: parallel.location,
+  });
+  if (!usable) {
+    return {
+      absolute: root.absolute,
+      relativeFromRepo: root.relativeFromRepo,
+      outsideRepo: root.outsideRepo,
+      source: root.source,
+      ignored: false,
+      gitignoreFile: null,
+      pattern: null,
+      reason: "not a git repository",
+    };
+  }
+  const outcome = ensureWorktreeIgnored({
+    mainRoot: projectRoot,
+    root,
+    git: createGitPort(),
+    dryRun: true,
+  });
+  return {
+    absolute: root.absolute,
+    relativeFromRepo: root.relativeFromRepo,
+    outsideRepo: root.outsideRepo,
+    source: root.source,
+    ignored: outcome.ignored,
+    gitignoreFile: outcome.path,
+    pattern: outcome.pattern,
+    reason: outcome.reason,
+  };
+}
+
+function legacyWorktreesReport(
+  projectRoot: string,
+  parallel: ParallelConfig,
+  usable: boolean,
+): DoctorTaskConfigReport["legacyWorktrees"] {
+  if (!usable) {
+    return { count: 0, entries: [] };
+  }
+  const root = resolveWorktreeRoot({
+    configuredDir: parallel.worktreeDir,
+    mainRoot: projectRoot,
+    location: parallel.location,
+  });
+  let entries: readonly { taskRef: string; path: string }[] = [];
+  try {
+    entries = listWorktrees({ cwd: projectRoot });
+  } catch {
+    return { count: 0, entries: [] };
+  }
+  const legacy = entries
+    .filter((entry) => !isInsideDirectory(root.absolute, entry.path))
+    .map((entry) => ({
+      taskRef: entry.taskRef,
+      path: entry.path,
+      exists: fs.existsSync(entry.path),
+    }));
+  return { count: legacy.length, entries: legacy };
+}
+
+function isInsideDirectory(parent: string, child: string): boolean {
+  const normalizedParent = path.resolve(parent);
+  const normalizedChild = path.resolve(child);
+  return (
+    normalizedChild === normalizedParent ||
+    normalizedChild.startsWith(`${normalizedParent}${path.sep}`)
+  );
 }
 
 function specSyncReport(
@@ -370,6 +476,31 @@ export function runDoctorCommand(options: DoctorOptions): number {
   ];
   const taskConfig = report.task;
   const parallel = report.parallel;
+  const worktreeRoot = taskConfig.worktreeRoot;
+  lines.push(
+    `Worktree root: ${worktreeRoot.relativeFromRepo ?? worktreeRoot.absolute} (${worktreeRoot.source}${worktreeRoot.outsideRepo ? ", outside repo" : ""})`,
+    `  gitignored: ${worktreeRoot.ignored ? "yes" : "no"}${
+      worktreeRoot.ignored
+        ? ""
+        : ` — ${worktreeRoot.reason ?? "pattern missing"}`
+    }`,
+  );
+  if (taskConfig.legacyWorktrees.count > 0) {
+    lines.push(
+      `  legacy worktrees outside the root: ${taskConfig.legacyWorktrees.count}`,
+    );
+    for (const entry of taskConfig.legacyWorktrees.entries.slice(0, 5)) {
+      lines.push(
+        `    ${entry.taskRef || "(provisional)"} → ${entry.path}${entry.exists ? "" : " (missing)"}`,
+      );
+    }
+    if (taskConfig.legacyWorktrees.entries.length > 5) {
+      lines.push(`    … and ${taskConfig.legacyWorktrees.entries.length - 5} more`);
+    }
+    lines.push(
+      "    cleanup: phronia task worktree list, then phronia task worktree prune",
+    );
+  }
   lines.push(
     `Worktree inputs: ${taskConfig.worktreeInputs.count} (${taskConfig.worktreeInputs.available ? "available" : `unavailable: ${taskConfig.worktreeInputs.reason ?? "unknown"}`})`,
     `Ignored inputs: ${taskConfig.ignoredInputs.count} (${taskConfig.ignoredInputs.available ? "available" : `unavailable: ${taskConfig.ignoredInputs.reason ?? "unknown"}`})`,
