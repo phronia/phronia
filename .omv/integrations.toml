@@ -76,3 +76,30 @@ status = "selected"
 capability = "finalize-boundary"
 selected = false
 status = "selected"
+
+[[providers]]
+provider = "phronia"
+selected = false
+
+[providers.detection]
+detected = true
+recommended = true
+
+[[providers.capabilities]]
+capability = "spec-guide"
+selected = false
+status = "selected"
+
+[[providers.capabilities]]
+capability = "spec-index-snippet"
+selected = false
+status = "selected"
+
+[[providers.capabilities]]
+capability = "finalize-boundary"
+selected = false
+status = "selected"
+
+[providers.capabilities.failure]
+reason_code = "phronia-finish-work-block-missing"
+display_message = "The OMV finalize-boundary block is missing from .agents/skills/phronia-finish-work/SKILL.md, .claude/commands/phronia/finish-work.md, .opencode/commands/phronia/finish-work.md. Run `omv integrate apply` to refresh the Phronia finish-work surface(s)."
