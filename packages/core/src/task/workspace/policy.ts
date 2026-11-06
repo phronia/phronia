@@ -415,6 +415,13 @@ export function resolveWorktreeRoot(input: {
   readonly location?: "persistent" | "ephemeral";
   /** Ephemeral root; defaults to the platform temp directory. */
   readonly tmpDir?: string;
+  /**
+   * Where `configuredDir` came from. Defaults to `"config"` because a caller
+   * that passes a directory usually read it from the config file; pass
+   * `"default"` when you forwarded the built-in default so `source` stays
+   * truthful instead of claiming the user chose it.
+   */
+  readonly configuredDirSource?: "config" | "default";
 }): WorktreeRoot {
   const mainRoot = normalizeDir(input.mainRoot);
 
@@ -445,13 +452,14 @@ export function resolveWorktreeRoot(input: {
     };
   }
 
+  const source = input.configuredDirSource ?? "config";
   if (isAbsoluteDirectory(configured)) {
     const root = normalizeDir(configured);
     return {
       absolute: root,
       relativeFromRepo: relativeInside(mainRoot, root),
       outsideRepo: !isInside(mainRoot, root),
-      source: "config",
+      source,
     };
   }
 
@@ -460,7 +468,7 @@ export function resolveWorktreeRoot(input: {
     absolute: root,
     relativeFromRepo: relativeInside(mainRoot, root),
     outsideRepo: !isInside(mainRoot, root),
-    source: "config",
+    source,
   };
 }
 

@@ -2433,6 +2433,7 @@ export async function update(options: UpdateOptions): Promise<void> {
         mainRoot: cwd,
         root: resolveWorktreeRoot({
           configuredDir: config.parallel.worktreeDir,
+          configuredDirSource: config.parallel.worktreeDirSource,
           mainRoot: cwd,
           location: config.parallel.location,
         }),

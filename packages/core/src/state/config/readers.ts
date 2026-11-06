@@ -136,6 +136,15 @@ export interface ParallelConfig {
   worktree: ParallelWorktreeMode;
   /** Relative to the project root, or absolute. */
   worktreeDir: string;
+  /**
+   * Whether `worktreeDir` came from the config file or is the built-in default.
+   *
+   * `worktreeDir` is always populated, so without this flag a caller cannot
+   * tell "the user chose this" from "nobody configured anything". Diagnostics
+   * that say "root: X (config)" are wrong for the default case, which is every
+   * project that never touched `parallel.worktree_dir`.
+   */
+  worktreeDirSource: "config" | "default";
   /** When `task archive` / `integrate` may remove a worktree. */
   cleanup: ParallelWorktreeCleanup;
   /** `persistent` keeps worktrees across restarts; `ephemeral` uses tmp. */
@@ -155,6 +164,7 @@ export const DEFAULT_PARALLEL_CONFIG: ParallelConfig = Object.freeze({
   maxConcurrent: DEFAULT_PARALLEL_MAX_CONCURRENT,
   worktree: DEFAULT_PARALLEL_WORKTREE,
   worktreeDir: DEFAULT_PARALLEL_WORKTREE_DIR,
+  worktreeDirSource: "default",
   cleanup: DEFAULT_PARALLEL_WORKTREE_CLEANUP,
   location: DEFAULT_PARALLEL_WORKTREE_LOCATION,
   copy: Object.freeze([]),
@@ -423,6 +433,7 @@ function readParallel(
     ),
     worktree: worktree.mode,
     worktreeDir: worktree.dir,
+    worktreeDirSource: worktree.dirSource,
     cleanup: worktree.cleanup,
     location: worktree.location,
     copy: readStringList(
@@ -457,11 +468,13 @@ function readParallelWorktree(
 ): {
   mode: ParallelWorktreeMode;
   dir: string;
+  dirSource: "config" | "default";
   cleanup: ParallelWorktreeCleanup;
   location: ParallelWorktreeLocation;
 } {
   let mode: ParallelWorktreeMode = DEFAULT_PARALLEL_WORKTREE;
   let dir: string = DEFAULT_PARALLEL_WORKTREE_DIR;
+  let dirSource: "config" | "default" = "default";
   let cleanup: ParallelWorktreeCleanup = DEFAULT_PARALLEL_WORKTREE_CLEANUP;
   let location: ParallelWorktreeLocation = DEFAULT_PARALLEL_WORKTREE_LOCATION;
 
@@ -502,6 +515,7 @@ function readParallelWorktree(
     const dirValue = rawWorktree.dir;
     if (typeof dirValue === "string" && dirValue.trim() !== "") {
       dir = dirValue.trim();
+      dirSource = "config";
     } else if (dirValue !== undefined) {
       diagnostics.push(
         diagnostic(
@@ -525,6 +539,7 @@ function readParallelWorktree(
 
   if (typeof rawDir === "string" && rawDir.trim() !== "") {
     dir = rawDir.trim();
+    dirSource = "config";
   } else if (rawDir !== undefined) {
     diagnostics.push(
       diagnostic(
@@ -555,7 +570,7 @@ function readParallelWorktree(
     configPath,
   );
 
-  return { mode, dir, cleanup, location };
+  return { mode, dir, dirSource, cleanup, location };
 }
 
 function readParallelIntegration(

@@ -287,6 +287,7 @@ function worktreeRootReport(
 ): DoctorTaskConfigReport["worktreeRoot"] {
   const root = resolveWorktreeRoot({
     configuredDir: parallel.worktreeDir,
+    configuredDirSource: parallel.worktreeDirSource,
     mainRoot: projectRoot,
     location: parallel.location,
   });
@@ -330,6 +331,7 @@ function legacyWorktreesReport(
   }
   const root = resolveWorktreeRoot({
     configuredDir: parallel.worktreeDir,
+    configuredDirSource: parallel.worktreeDirSource,
     mainRoot: projectRoot,
     location: parallel.location,
   });
@@ -498,7 +500,8 @@ export function runDoctorCommand(options: DoctorOptions): number {
       lines.push(`    … and ${taskConfig.legacyWorktrees.entries.length - 5} more`);
     }
     lines.push(
-      "    cleanup: phronia task worktree list, then phronia task worktree prune",
+      "    these keep working where they are; new worktrees use the root above.",
+      "    to reclaim one: finish its task, or `phronia task worktree remove <ref>`",
     );
   }
   lines.push(

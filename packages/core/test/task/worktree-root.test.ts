@@ -143,3 +143,28 @@ describe("resolveWorktreeRoot", () => {
     expect(root.relativeFromRepo).toBe(WORKTREE_ROOT_DIR_NAME);
   });
 });
+
+describe("resolveWorktreeRoot source provenance", () => {
+  it("reports `default` when the caller forwards the built-in default", () => {
+    const root = resolveWorktreeRoot({
+      configuredDir: WORKTREE_ROOT_DIR_NAME,
+      configuredDirSource: "default",
+      mainRoot: "/repo",
+    });
+    expect(root.source).toBe("default");
+    expect(root.relativeFromRepo).toBe(WORKTREE_ROOT_DIR_NAME);
+  });
+
+  it("reports `config` for a directory the user actually chose", () => {
+    const root = resolveWorktreeRoot({
+      configuredDir: ".custom-wt",
+      configuredDirSource: "config",
+      mainRoot: "/repo",
+    });
+    expect(root.source).toBe("config");
+  });
+
+  it("keeps `default` when no directory is supplied at all", () => {
+    expect(resolveWorktreeRoot({ mainRoot: "/repo" }).source).toBe("default");
+  });
+});

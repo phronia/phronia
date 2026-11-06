@@ -2815,6 +2815,7 @@ function findLease(context: WorkspaceContext, ref: string): TaskLease | null {
 function worktreeRootOf(context: WorkspaceContext): WorktreeRoot {
   return resolveWorktreeRoot({
     configuredDir: context.config.parallel.worktreeDir,
+    configuredDirSource: context.config.parallel.worktreeDirSource,
     mainRoot: context.mainRoot,
     location: context.config.parallel.location,
   });
