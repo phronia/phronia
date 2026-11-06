@@ -51,6 +51,12 @@
         "boundary"
       ],
       "missing_change_type": "pending/manual-action without finalize-task",
+      "release_mode_behavior": {
+        "assigns_version": true,
+        "call_required": true,
+        "mode": "local",
+        "notes": "Call at the commit confirmation boundary with an explicit change_type."
+      },
       "requires_change_type": true,
       "snapshot_normalization": {
         "fixed_core_files": [
