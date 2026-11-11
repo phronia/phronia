@@ -15,7 +15,7 @@
   "branch": null,
   "base_branch": "main",
   "worktree_path": null,
-  "commit": null,
+  "commit": "cffe1a8613db6458966b25dd3805bda9590311b0",
   "pr_url": null,
   "subtasks": [],
   "children": [],
@@ -25,6 +25,17 @@
   "meta": {
     "parallel": {
       "exclusive": true
+    },
+    "integration": {
+      "mode": "local",
+      "outcome": "landed",
+      "base_sha": "527ac898d498d79ffdf598085172b88a1485226c",
+      "commit": "cffe1a8613db6458966b25dd3805bda9590311b0",
+      "pr_url": null,
+      "verified": true,
+      "last_error": null,
+      "log_ref": ".phronia/.runtime/integration-logs/workspace-provisioning-2026-11-11T12-01-24-598Z.log",
+      "updated_at": "2026-11-11T12:02:55.866Z"
     }
   }
 }
