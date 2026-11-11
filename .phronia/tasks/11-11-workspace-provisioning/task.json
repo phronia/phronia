@@ -36,6 +36,15 @@
       "last_error": null,
       "log_ref": ".phronia/.runtime/integration-logs/workspace-provisioning-2026-11-11T12-01-24-598Z.log",
       "updated_at": "2026-11-11T12:02:55.866Z"
+    },
+    "spec_sync": {
+      "status": "synced",
+      "commit": "c85be81d0939dd04cfdcf2c7278a80926e128c7b",
+      "synced_at": "2026-11-11T12:05:45.352Z",
+      "refs": [
+        ".phronia/tasks/11-11-workspace-provisioning"
+      ],
+      "mode": "agent"
     }
   }
 }
