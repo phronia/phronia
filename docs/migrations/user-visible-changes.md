@@ -394,3 +394,43 @@ Batches that must update this file:
   restores the legacy root automatically and prints the backup path, so the
   command can be re-run instead of leaving a half-migrated tree that only
   reports `Both .trellis/ and .phronia/ exist`.
+
+## Unreleased (workspace provisioning)
+
+- **All platforms**: a new worktree's base ref is resolved by one contract:
+  `--base` → `task.base_branch` → `parallel.integration.branch` →
+  `parallel.base.mode` (`origin/HEAD` → `origin/main` → `origin/master`, or
+  local `main` → `master`) → explicit `HEAD`. `origin/HEAD` is now consulted
+  before the conventional names, so a repository whose default remote branch is
+  `develop` forks from `origin/develop`.
+  - Why: two CLI functions resolved the base differently, one silently fell
+    back to `"main"`, and a remote-tracking ref could be stale without the
+    caller knowing.
+  - Migration: scripts that relied on the implicit `"main"` fallback must pass
+    `--base <ref>` or configure `parallel.integration.branch`. Existing tasks
+    with `base_branch` keep their behavior.
+  - Escape hatch: `--base <ref>`, `parallel.base.mode: local`,
+    `parallel.base.fetch: never` (default).
+- **All platforms**: `ensure`/`prepare` `--json` now reports `baseSource`,
+  `baseCommit`, `remote`, `freshness`, `behind`, `ahead`, `shouldAsk`,
+  `alternatives`, and the resolved `worktreeRoot`. A remote base is
+  `unverified` unless `--fetch` is passed; `shouldAsk: true` means the agent
+  should confirm with the user and re-run with `--base`.
+  - Why: the base was opaque and remote freshness was unknowable.
+  - Migration: none; additive fields.
+  - Escape hatch: `parallel.base.confirm: never` for scripted flows.
+- **All platforms**: `worktree list --include-unmanaged` and `doctor` now show
+  git worktrees that have no Phronia registry entry, including sibling
+  directories outside the resolved root. Multiple provisional workspaces no
+  longer collapse to one on registry reload.
+  - Why: the registry was treated as the source of truth, so manual
+    `git worktree add` directories were invisible, and every provisional entry
+    shared the empty `taskRef` dedupe key.
+  - Migration: none; unmanaged entries are reported, never imported or moved.
+  - Escape hatch: omit `--include-unmanaged` to keep the old list output.
+- **All platforms**: `phronia task workspace prepare` accepts `--branch`,
+  `--base`, `--fetch`/`--no-fetch`, and `--isolate`, giving taskless hotfixes
+  a supported path under the managed root.
+  - Why: operators previously fell back to manual sibling worktrees.
+  - Migration: none; without the new flags `prepare` keeps its old behavior.
+  - Escape hatch: `parallel.worktree: never` still refuses worktree creation.

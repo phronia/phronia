@@ -18,9 +18,15 @@ import {
   decideWorkspace,
   isDedicatedFeatureBranch,
   readParallelMeta,
+  reconcileWorktrees,
+  resolveWorktreeBase,
   resolveWorktreeRoot,
   worktreeSlug,
+  type BaseRefFacts,
+  type BaseRefResolution,
+  type InventoryEntry,
   type TaskLease,
+  type WorkspaceBaseInfo,
   type WorkspaceClaim,
   type WorkspaceDecision,
   type WorkspaceWorktree,
@@ -115,6 +121,14 @@ export interface WorkspaceDependencies {
 export interface PrepareWorkspaceOptions extends WorkspaceDependencies {
   /** `--for-new-task "<title>"`: create a provisional workspace when main is busy. */
   readonly forNewTask?: string;
+  /** Explicit base ref for the provisional worktree. */
+  readonly base?: string;
+  /** Create the provisional worktree even when main is free. */
+  readonly isolate?: boolean;
+  /** Explicit provisional branch name (default `phronia/wip/<slug>-<hash>`). */
+  readonly branch?: string;
+  /** `--fetch` / `--no-fetch`; defaults to `parallel.base.fetch`. */
+  readonly fetch?: boolean;
   readonly force?: boolean;
   readonly reuseDirty?: boolean;
   readonly sessionKey?: string;
@@ -124,6 +138,10 @@ export interface PrepareWorkspaceOptions extends WorkspaceDependencies {
 export interface EnsureWorkspaceOptions extends WorkspaceDependencies {
   readonly taskRef: string;
   readonly path?: string;
+  /** Explicit base ref for a newly created worktree. */
+  readonly base?: string;
+  /** `--fetch` / `--no-fetch`; defaults to `parallel.base.fetch`. */
+  readonly fetch?: boolean;
   readonly force?: boolean;
   readonly reuseDirty?: boolean;
   readonly copyTask?: boolean;
@@ -189,6 +207,10 @@ export interface WorktreeRecord {
   createdAt: string;
   kind?: "phronia" | "platform";
   provisional?: boolean;
+  /** Derived inventory fields; absent on legacy records. */
+  managed?: boolean;
+  insideRoot?: boolean;
+  outsideRepo?: boolean;
   /** Best-effort recursive size measured before removal (bytes). */
   freedBytes?: number;
 }
@@ -300,6 +322,15 @@ export function prepareWorkspace(
       : null;
   const ownerActive =
     ownerStatus !== null && ACTIVE_TASK_STATUSES.has(ownerStatus);
+
+  if (options.isolate === true && (options.forNewTask?.trim() ?? "") !== "") {
+    return busyOrProvisional(context, options, sessionKey, ownerRef, {
+      code: "WORKSPACE_ISOLATE",
+      reason: "isolation was requested explicitly",
+      next: "",
+      owner: current,
+    });
+  }
 
   if (current !== null && !claimStale) {
     if (current.sessionKey === sessionKey && current.taskRef === null) {
@@ -420,14 +451,34 @@ function busyOrProvisional(
       ...(busy.owner === null ? {} : { owner: claimDetails(busy.owner) }),
     });
   }
+  if (context.config.parallel.worktree === "never") {
+    return workspaceFailure(
+      "WORKSPACE_WORKTREE_DISABLED",
+      "parallel.worktree is never; provisional workspaces are disabled",
+      "set parallel.worktree to auto/always, or work in the main checkout",
+    );
+  }
 
   const title = options.forNewTask.trim();
   const slug = safeSlug(title);
   const hash = shortHash(`${sessionKey}:${title}`);
   const directory = worktreeDirectory(context);
   const target = hardenedPath(directory, slug, `${slug}-${hash}`, context);
-  const branch = `phronia/wip/${slug.slice(0, 48)}-${hash}`;
-  const base = integrationBase(context, null);
+  const branchResult = provisionalBranch(context, options.branch, slug, hash);
+  if ("failure" in branchResult) return branchResult.failure;
+  const branch = branchResult.branch;
+  const baseResult = resolveBaseFor(context, null, {
+    base: options.base,
+    fetch: options.fetch,
+  });
+  if (!baseResult.resolution.ok) {
+    return workspaceFailure(
+      baseResult.resolution.code,
+      baseResult.resolution.reason,
+      baseResult.resolution.next,
+    );
+  }
+  const base = baseResult.resolution.ref;
 
   if (fs.existsSync(target)) {
     return workspaceFailure(
@@ -490,15 +541,56 @@ function busyOrProvisional(
       path: target,
       branch,
       base,
+      baseInfo: baseInfoOf(baseResult.resolution),
       code: busy.code,
       reason: `provisional workspace: ${busy.reason}`,
     },
     workspace: target,
     claim: busy.owner,
     lease: null,
-    warnings: [`${busy.reason}; created a provisional workspace`],
+    warnings: [
+      `${busy.reason}; created a provisional workspace`,
+      ...baseResult.warnings,
+    ],
     provisional: { title, path: target, branch },
   };
+}
+
+function provisionalBranch(
+  context: WorkspaceContext,
+  explicit: string | undefined,
+  slug: string,
+  hash: string,
+): { branch: string } | { failure: WorkspaceFailure } {
+  const fallback = `phronia/wip/${slug.slice(0, 48)}-${hash}`;
+  const raw = explicit?.trim() ?? "";
+  if (raw === "") return { branch: fallback };
+  const integration = localIntegrationRef(context) ?? "";
+  if (
+    !isDedicatedFeatureBranch(
+      raw,
+      integration,
+      safeBranch(context, context.mainRoot),
+    )
+  ) {
+    return {
+      failure: workspaceFailure(
+        "WORKSPACE_BRANCH_INVALID",
+        `branch ${raw} is the integration branch, HEAD, or the current main branch`,
+        "pass --branch <feature-branch>, for example fix/<slug>",
+      ),
+    };
+  }
+  if (refExists(context, `refs/heads/${raw}`)) {
+    return {
+      failure: workspaceFailure(
+        "WORKSPACE_BRANCH_EXISTS",
+        `branch ${raw} already exists`,
+        "choose another --branch or attach the existing worktree",
+      ),
+    };
+  }
+  return { branch: raw };
 }
 
 // ---------------------------------------------------------------------------
@@ -539,7 +631,11 @@ export function ensureWorkspace(
   const registryEntries = context.registryLoad.registry.worktrees;
   const existingEntries = enrichWithLegacy(context, registryEntries, view, ref);
   const existing = existingEntries.find((entry) => canonicalRef(entry.taskRef) === ref);
-  const integration = integrationBase(context, view);
+  const baseResult = resolveBaseFor(context, view, {
+    base: options.base,
+    fetch: options.fetch,
+  });
+  const integration = baseResult.resolution.ok ? baseResult.resolution.ref : "";
   const slug = worktreeSlug({ ref, id: view.id });
   // R13: `task.json.branch` may be the integration branch (`main`/`origin/main`)
   // because `task.py start` used to record whatever was checked out. That value
@@ -609,30 +705,43 @@ export function ensureWorkspace(
     reuseDirty: options.reuseDirty === true || options.force === true,
     force: options.force === true,
     worktreeRoot: worktreeRootOf(context),
+    base: baseResult.resolution,
   });
 
-  const linkedGuard = guardLinkedCheckout(context, decision, existing, options);
+  const linkedGuard = guardLinkedCheckout(
+    context,
+    decision,
+    existing,
+    options,
+    baseResult.resolution,
+  );
   if (linkedGuard !== null) {
     if (!linkedGuard.ok) return linkedGuard.failure;
-    return executeWorkspaceDecision(
+    return appendWarnings(
+      executeWorkspaceDecision(
+        context,
+        linkedGuard.decision,
+        view,
+        ref,
+        options,
+        sessionKey,
+        current,
+      ),
+      baseResult.warnings,
+    );
+  }
+
+  return appendWarnings(
+    executeWorkspaceDecision(
       context,
-      linkedGuard.decision,
+      decision,
       view,
       ref,
       options,
       sessionKey,
       current,
-    );
-  }
-
-  return executeWorkspaceDecision(
-    context,
-    decision,
-    view,
-    ref,
-    options,
-    sessionKey,
-    current,
+    ),
+    baseResult.warnings,
   );
 }
 
@@ -646,12 +755,19 @@ function guardLinkedCheckout(
   decision: WorkspaceDecision,
   existing: WorktreeRegistryEntry | undefined,
   options: EnsureWorkspaceOptions,
+  base: BaseRefResolution,
 ): LinkedGuard | { ok: false; failure: WorkspaceFailure } | null {
   if (comparablePath(context.cwd) === comparablePath(context.mainRoot)) return null;
   if (existing !== undefined) return null;
   // Running inside a linked worktree. Only the task that owns that checkout may
   // reuse it; everything else needs its own workspace.
   if (decision.kind === "reuse-current") {
+    if (!base.ok) {
+      return {
+        ok: false,
+        failure: workspaceFailure(base.code, base.reason, base.next),
+      };
+    }
     const slug = worktreeSlug({ ref: options.taskRef });
     return {
       ok: true,
@@ -664,7 +780,8 @@ function guardLinkedCheckout(
           context,
         ),
         branch: `phronia/${slug}`,
-        base: integrationBase(context, null),
+        base: base.ref,
+        baseInfo: baseInfoOf(base),
         reason:
           "the current checkout is a linked worktree for another task; this task needs its own workspace",
       },
@@ -1160,8 +1277,15 @@ export function addWorktree(taskRef: string, options: WorktreeOptions): Worktree
       "use the existing worktree or remove it first",
     );
   }
-  const base = resolveBase(context, view, options.base);
-  if (!base.ok) return worktreeFailure(base.code, base.message, base.next);
+  const baseResult = resolveBaseFor(context, view, { base: options.base });
+  if (!baseResult.resolution.ok) {
+    return worktreeFailure(
+      baseResult.resolution.code,
+      baseResult.resolution.reason,
+      baseResult.resolution.next,
+    );
+  }
+  const base = baseResult.resolution.ref;
 
   const branchExists = refExists(context, `refs/heads/${branch}`);
   // `--force` keeps its legacy "I know the main checkout is dirty" meaning;
@@ -1169,12 +1293,12 @@ export function addWorktree(taskRef: string, options: WorktreeOptions): Worktree
   const forcedDirty = options.force === true && dirtyPaths.length > 0;
   let forceWarning: string | null = null;
   if (options.copyTask !== true && !branchExists && !forcedDirty) {
-    const visible = assertTaskArtifactsVisible(context, ref, base.base, view);
+    const visible = assertTaskArtifactsVisible(context, ref, base, view);
     if (visible !== null) return visible;
   } else if (
     forcedDirty &&
     options.copyTask !== true &&
-    !taskArtifactsVisible(context, ref, base.base)
+    !taskArtifactsVisible(context, ref, base)
   ) {
     forceWarning = `worktree created with --force; task artifacts may be missing — commit ${ref} or re-run with --copy-task`;
   }
@@ -1192,7 +1316,7 @@ export function addWorktree(taskRef: string, options: WorktreeOptions): Worktree
       cwd: context.mainRoot,
       path: target,
       branch,
-      ...(branchExists ? {} : { base: base.base, createBranch: true }),
+      ...(branchExists ? {} : { base, createBranch: true }),
     });
   } catch (error) {
     return worktreeFailure(
@@ -1278,7 +1402,12 @@ export function listWorktreesWithRoot(options: {
   cwd: string;
   git?: GitPort;
   includeMissing?: boolean;
-}): { worktrees: WorktreeRecord[]; worktreeRoot: WorktreeRootReport | null } {
+  includeUnmanaged?: boolean;
+}): {
+  worktrees: WorktreeRecord[];
+  unmanaged: WorktreeRecord[];
+  worktreeRoot: WorktreeRootReport | null;
+} {
   let context: WorkspaceContext;
   try {
     context = loadContext(
@@ -1289,18 +1418,65 @@ export function listWorktreesWithRoot(options: {
       false,
     );
   } catch {
-    return { worktrees: [], worktreeRoot: null };
+    return { worktrees: [], unmanaged: [], worktreeRoot: null };
   }
-  const records = context.registryLoad.registry.worktrees.map((entry) => toRecord(entry));
-  const filtered =
-    options.includeMissing === true
-      ? records
-      : records.filter((record) => fs.existsSync(record.path));
+
+  let inventoryEntries: readonly InventoryEntry[] = [];
+  try {
+    inventoryEntries = reconcileWorktrees({
+      registry: context.registryLoad.registry.worktrees,
+      git: context.git.worktreeList(context.mainRoot).map((worktree) => ({
+        path: worktree.path,
+        branch: worktree.branch ?? "",
+        head: worktree.head,
+        bare: worktree.bare,
+      })),
+      mainRoot: context.mainRoot,
+      root: worktreeRootOf(context),
+      pathKey: comparablePath,
+    }).entries;
+  } catch {
+    inventoryEntries = context.registryLoad.registry.worktrees.map((entry) => ({
+      ...entry,
+      managed: entry.taskRef !== "",
+      provisional: entry.provisional === true,
+      insideRoot: false,
+      outsideRepo: false,
+      exists: fs.existsSync(entry.path),
+      head: null,
+    }));
+  }
+
+  const existing = inventoryEntries.filter(
+    (entry) => options.includeMissing === true || entry.exists,
+  );
+  const managed = existing.filter(
+    (entry) => entry.managed || entry.provisional === true,
+  );
+  const unmanaged = existing.filter(
+    (entry) => !entry.managed && entry.provisional !== true,
+  );
   return {
-    worktrees: filtered.sort((left, right) =>
-      left.taskRef.localeCompare(right.taskRef),
-    ),
+    worktrees: (options.includeUnmanaged === true ? existing : managed)
+      .map(toInventoryRecord)
+      .sort((left, right) => left.taskRef.localeCompare(right.taskRef)),
+    unmanaged: unmanaged.map(toInventoryRecord),
     worktreeRoot: worktreeRootReport(context),
+  };
+}
+
+function toInventoryRecord(entry: InventoryEntry): WorktreeRecord {
+  return {
+    taskRef: canonicalRef(entry.taskRef),
+    taskId: entry.taskId ?? basename(entry.taskRef),
+    path: entry.path,
+    branch: entry.branch,
+    createdAt: entry.createdAt ?? "",
+    kind: entry.kind === "platform" ? "platform" : "phronia",
+    ...(entry.provisional === true ? { provisional: true } : {}),
+    managed: entry.managed,
+    insideRoot: entry.insideRoot,
+    outsideRepo: entry.outsideRepo,
   };
 }
 
@@ -1784,10 +1960,18 @@ function loadContext(
   const resolution = resolveSharedRuntime({ cwd: mainRoot, git: gitPort });
   ensureSharedRuntime(resolution.paths);
   const state = openState({ root: mainRoot, ...(options.env === undefined ? {} : { env: options.env }) });
+  const config = state.config();
+  const worktreeRoot = resolveWorktreeRoot({
+    configuredDir: config.parallel.worktreeDir,
+    configuredDirSource: config.parallel.worktreeDirSource,
+    mainRoot,
+    location: config.parallel.location,
+  });
   const registryLoad = loadWorktreeRegistry({
     projectRoot: mainRoot,
     paths: resolution.paths,
     git: gitPort,
+    worktreeRoot,
     write: writeRegistry,
   });
   const nowFn = options.now ?? ((): Date => new Date());
@@ -1795,7 +1979,7 @@ function loadContext(
     cwd,
     mainRoot,
     git: gitPort,
-    config: state.config(),
+    config,
     paths: resolution.paths,
     registryLoad,
     now: nowFn(),
@@ -1971,45 +2155,127 @@ function toRecord(entry: WorktreeRegistryEntry): WorktreeRecord {
 // git helpers (thin wrappers over GitPort; branch deletion is the one gap)
 // ---------------------------------------------------------------------------
 
-function resolveBase(
+interface ResolvedBase {
+  readonly resolution: BaseRefResolution;
+  readonly warnings: readonly string[];
+}
+
+function resolveBaseFor(
   context: WorkspaceContext,
-  view: TaskRecordView,
-  explicit: string | undefined,
-): { ok: true; base: string } | { ok: false; code: string; message: string; next: string } {
-  if (explicit !== undefined && explicit !== "") {
-    return { ok: true, base: explicit };
-  }
-  if (view.baseBranch !== null && view.baseBranch !== "") {
-    return { ok: true, base: view.baseBranch };
-  }
-  const originHead = resolveOriginHead(context);
-  if (originHead !== null) {
-    return { ok: true, base: originHead };
-  }
-  const integration = localIntegrationRef(context);
-  const current = safeBranch(context, context.mainRoot);
-  if (integration !== null && current === integration) {
-    return { ok: true, base: current };
+  view: TaskRecordView | null,
+  options: { readonly base?: string; readonly fetch?: boolean },
+): ResolvedBase {
+  const warnings: string[] = [];
+  const shouldFetch =
+    options.fetch ?? context.config.parallel.base.fetch === "always";
+  let freshness: "fetched" | "unverified" = "unverified";
+  if (shouldFetch) {
+    const branch = fetchBranchFor(context, options.base);
+    if (branch !== null) {
+      const fetched = context.git.fetch(context.mainRoot, "origin", branch);
+      if (fetched.ok) {
+        freshness = "fetched";
+      } else {
+        warnings.push(
+          `could not fetch origin/${branch}: ${
+            fetched.detail ?? fetched.code ?? "unknown error"
+          }`,
+        );
+      }
+    }
   }
   return {
-    ok: false,
-    code: "WORKTREE_BASE_UNRESOLVED",
-    message:
-      "cannot determine the base branch (no --base, task.base_branch, origin/HEAD, or matching integration branch)",
-    next: "pass --base <branch> explicitly",
+    resolution: resolveWorktreeBase(
+      baseFacts(context, view, { cliBase: options.base, freshness }),
+    ),
+    warnings,
   };
 }
 
-function integrationBase(
+function baseFacts(
   context: WorkspaceContext,
   view: TaskRecordView | null,
-): string {
-  const configured = context.config.parallel.integration.branch;
-  if (configured !== null && configured !== "") return configured;
-  if (view?.baseBranch != null && view.baseBranch !== "") return view.baseBranch;
-  const origin = resolveOriginHead(context);
-  if (origin !== null) return origin;
-  return localIntegrationRef(context) ?? "main";
+  options: {
+    readonly cliBase?: string;
+    readonly freshness: "fetched" | "unverified";
+  },
+): BaseRefFacts {
+  return {
+    cliBase: options.cliBase ?? null,
+    taskBaseBranch: view?.baseBranch ?? null,
+    configBranch: context.config.parallel.integration.branch,
+    mode: context.config.parallel.base.mode,
+    confirm: context.config.parallel.base.confirm,
+    remoteHead: resolveOriginHead(context),
+    remoteMain: refExists(context, "refs/remotes/origin/main")
+      ? "origin/main"
+      : null,
+    remoteMaster: refExists(context, "refs/remotes/origin/master")
+      ? "origin/master"
+      : null,
+    localMain: refExists(context, "refs/heads/main") ? "main" : null,
+    localMaster: refExists(context, "refs/heads/master") ? "master" : null,
+    localIntegration: localIntegrationRef(context),
+    resolveRef: (ref) => {
+      try {
+        return context.git.resolveRef(context.mainRoot, ref);
+      } catch {
+        return null;
+      }
+    },
+    compare: (base, local) => {
+      try {
+        const { left, right } = context.git.revListLeftRight(
+          context.mainRoot,
+          base,
+          local,
+        );
+        return { ahead: left, behind: right };
+      } catch {
+        return null;
+      }
+    },
+    freshness: options.freshness,
+  };
+}
+
+function fetchBranchFor(
+  context: WorkspaceContext,
+  explicitBase: string | undefined,
+): string | null {
+  const base = explicitBase?.trim() ?? "";
+  if (base.startsWith("origin/")) return base.slice("origin/".length);
+  const head = resolveOriginHead(context);
+  if (head?.startsWith("origin/") === true) {
+    return head.slice("origin/".length);
+  }
+  if (refExists(context, "refs/remotes/origin/main")) return "main";
+  if (refExists(context, "refs/remotes/origin/master")) return "master";
+  return null;
+}
+
+function baseInfoOf(
+  base: BaseRefResolution,
+): WorkspaceBaseInfo | undefined {
+  if (!base.ok) return undefined;
+  return {
+    source: base.source,
+    commit: base.commit,
+    remote: base.remote,
+    freshness: base.freshness,
+    behind: base.behind,
+    ahead: base.ahead,
+    shouldAsk: base.shouldAsk,
+    alternatives: base.alternatives,
+  };
+}
+
+function appendWarnings(
+  result: WorkspaceResult,
+  extra: readonly string[],
+): WorkspaceResult {
+  if (extra.length === 0 || !result.ok) return result;
+  return { ...result, warnings: [...result.warnings, ...extra] };
 }
 
 function localIntegrationRef(context: WorkspaceContext): string | null {
@@ -2025,6 +2291,20 @@ function localIntegrationRef(context: WorkspaceContext): string | null {
 }
 
 function resolveOriginHead(context: WorkspaceContext): string | null {
+  try {
+    const symbolic = context.git.symbolicRef(
+      context.mainRoot,
+      "refs/remotes/origin/HEAD",
+    );
+    if (symbolic !== null) {
+      const ref = symbolic.replace(/^refs\/remotes\//, "");
+      if (ref.startsWith("origin/") && refExists(context, `refs/remotes/${ref}`)) {
+        return ref;
+      }
+    }
+  } catch {
+    // Fall through to the conventional names.
+  }
   for (const candidate of ["origin/main", "origin/master"]) {
     if (refExists(context, `refs/remotes/${candidate}`)) return candidate;
   }

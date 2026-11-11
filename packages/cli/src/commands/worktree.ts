@@ -32,6 +32,8 @@ export interface WorktreeOptions {
   branch?: string;
   base?: string;
   deleteBranch?: boolean;
+  /** Include git worktrees that have no registry entry (manual/platform). */
+  includeUnmanaged?: boolean;
   /** `--copy <path>` (repeatable); defaults to `parallel.copy`. */
   copy?: readonly string[];
   /** `--post-create <cmd>` (repeatable); defaults to `parallel.post_create`. */
@@ -102,14 +104,23 @@ export function runWorktreeRemove(
 }
 
 export function runWorktreeList(options: WorktreeOptions): number {
-  const { worktrees: records, worktreeRoot } = listWorktreesWithRoot({
+  const {
+    worktrees: records,
+    unmanaged,
+    worktreeRoot,
+  } = listWorktreesWithRoot({
     cwd: options.cwd,
     includeMissing: false,
+    includeUnmanaged: options.includeUnmanaged === true,
   });
   if (options.json === true) {
     process.stdout.write(
       `${JSON.stringify(
-        { worktrees: records, ...(worktreeRoot === null ? {} : { worktreeRoot }) },
+        {
+          worktrees: records,
+          ...(unmanaged.length === 0 ? {} : { unmanaged }),
+          ...(worktreeRoot === null ? {} : { worktreeRoot }),
+        },
         null,
         2,
       )}\n`,
@@ -125,12 +136,22 @@ export function runWorktreeList(options: WorktreeOptions): number {
   }
   if (records.length === 0) {
     process.stdout.write("No task worktrees.\n");
-    return 0;
+  } else {
+    for (const record of records) {
+      process.stdout.write(
+        `${record.taskRef.padEnd(40)} ${record.branch.padEnd(30)} ${record.path}\n`,
+      );
+    }
   }
-  for (const record of records) {
-    process.stdout.write(
-      `${record.taskRef.padEnd(40)} ${record.branch.padEnd(30)} ${record.path}\n`,
-    );
+  if (options.includeUnmanaged === true && unmanaged.length > 0) {
+    process.stdout.write("\nUnmanaged worktrees (git only):\n");
+    for (const record of unmanaged) {
+      process.stdout.write(
+        `${(record.branch || "(detached)").padEnd(30)} ${record.path}${
+          record.insideRoot ? "" : " (outside root)"
+        }\n`,
+      );
+    }
   }
   return 0;
 }

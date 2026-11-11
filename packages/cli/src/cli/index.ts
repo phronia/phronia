@@ -663,8 +663,16 @@ worktreeCommand
 worktreeCommand
   .command("list")
   .option("--json", "Output machine-readable JSON")
+  .option(
+    "--include-unmanaged",
+    "Also list git worktrees with no Phronia registry entry",
+  )
   .action((options: Record<string, unknown>) => {
-    const code = runWorktreeList({ cwd, json: Boolean(options.json) });
+    const code = runWorktreeList({
+      cwd,
+      json: Boolean(options.json),
+      includeUnmanaged: Boolean(options.includeUnmanaged),
+    });
     if (code !== 0) process.exitCode = code;
   });
 
@@ -837,6 +845,11 @@ const workspaceCommand = taskCommand
 workspaceCommand
   .command("prepare")
   .option("--for-new-task <title>", "Create a provisional workspace when main is occupied")
+  .option("--branch <name>", "Explicit branch for the provisional worktree")
+  .option("--base <ref>", "Base ref for the provisional worktree")
+  .option("--fetch", "Fetch the remote base before resolving")
+  .option("--no-fetch", "Do not fetch the remote base")
+  .option("--isolate", "Create a provisional worktree even when main is free")
   .option("--force", "Accept a dirty/occupied main checkout")
   .option("--reuse-dirty", "Reuse a dirty main checkout")
   .option("--session-key <key>", "Override the session identity")
@@ -845,6 +858,10 @@ workspaceCommand
     const code = runWorkspacePrepare({
       cwd,
       forNewTask: options.forNewTask as string | undefined,
+      branch: options.branch as string | undefined,
+      base: options.base as string | undefined,
+      fetch: options.fetch as boolean | undefined,
+      isolate: Boolean(options.isolate),
       force: Boolean(options.force),
       reuseDirty: Boolean(options.reuseDirty),
       sessionKey: options.sessionKey as string | undefined,
@@ -856,6 +873,9 @@ workspaceCommand
 workspaceCommand
   .command("ensure <task-ref>")
   .option("--path <dir>", "Attach an existing (platform) worktree")
+  .option("--base <ref>", "Base ref for a newly created worktree")
+  .option("--fetch", "Fetch the remote base before resolving")
+  .option("--no-fetch", "Do not fetch the remote base")
   .option("--force", "Accept a dirty main checkout")
   .option("--reuse-dirty", "Reuse a dirty main checkout")
   .option("--copy-task", "Copy the task directory instead of requiring a scoped commit")
@@ -867,6 +887,8 @@ workspaceCommand
     const code = runWorkspaceEnsure(taskRef, {
       cwd,
       path: options.path as string | undefined,
+      base: options.base as string | undefined,
+      fetch: options.fetch as boolean | undefined,
       force: Boolean(options.force),
       reuseDirty: Boolean(options.reuseDirty),
       copyTask: Boolean(options.copyTask),

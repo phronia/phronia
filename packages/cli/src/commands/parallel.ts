@@ -51,6 +51,8 @@ export interface WorkspaceCommandOptions {
   readonly cwd: string;
   readonly json?: boolean;
   readonly path?: string;
+  readonly base?: string;
+  readonly fetch?: boolean;
   readonly force?: boolean;
   readonly reuseDirty?: boolean;
   readonly copyTask?: boolean;
@@ -61,6 +63,10 @@ export interface WorkspaceCommandOptions {
 
 export interface PrepareCommandOptions extends WorkspaceCommandOptions {
   readonly forNewTask?: string;
+  /** Force a provisional worktree even when the main checkout is free. */
+  readonly isolate?: boolean;
+  /** Explicit provisional branch name. */
+  readonly branch?: string;
 }
 
 export interface ReclaimCommandOptions extends WorkspaceCommandOptions {
@@ -167,6 +173,10 @@ export function runWorkspacePrepare(options: PrepareCommandOptions): number {
   const result = prepareWorkspace({
     cwd: options.cwd,
     ...(options.forNewTask === undefined ? {} : { forNewTask: options.forNewTask }),
+    ...(options.base === undefined ? {} : { base: options.base }),
+    ...(options.fetch === undefined ? {} : { fetch: options.fetch }),
+    ...(options.isolate === true ? { isolate: true } : {}),
+    ...(options.branch === undefined ? {} : { branch: options.branch }),
     ...(options.force === true ? { force: true } : {}),
     ...(options.reuseDirty === true ? { reuseDirty: true } : {}),
     ...(options.sessionKey === undefined ? {} : { sessionKey: options.sessionKey }),
@@ -182,6 +192,8 @@ export function runWorkspaceEnsure(
     cwd: options.cwd,
     taskRef,
     ...(options.path === undefined ? {} : { path: options.path }),
+    ...(options.base === undefined ? {} : { base: options.base }),
+    ...(options.fetch === undefined ? {} : { fetch: options.fetch }),
     ...(options.force === true ? { force: true } : {}),
     ...(options.reuseDirty === true ? { reuseDirty: true } : {}),
     ...(options.copyTask === true ? { copyTask: true } : {}),
@@ -229,6 +241,10 @@ function renderWorkspace(
   verb: string,
 ): number {
   if (json) {
+    const baseInfo =
+      result.ok && result.decision.kind === "create"
+        ? result.decision.baseInfo
+        : undefined;
     process.stdout.write(
       `${JSON.stringify(
         result.ok
@@ -239,6 +255,21 @@ function renderWorkspace(
               claim: result.claim,
               lease: result.lease,
               warnings: result.warnings,
+              ...(baseInfo === undefined
+                ? {}
+                : {
+                    baseSource: baseInfo.source,
+                    baseCommit: baseInfo.commit,
+                    remote: baseInfo.remote,
+                    freshness: baseInfo.freshness,
+                    behind: baseInfo.behind,
+                    ahead: baseInfo.ahead,
+                    shouldAsk: baseInfo.shouldAsk,
+                    alternatives: baseInfo.alternatives,
+                  }),
+              ...(result.worktreeRoot === undefined
+                ? {}
+                : { worktreeRoot: result.worktreeRoot }),
               ...(result.inputs === undefined ? {} : { inputs: result.inputs }),
               ...(result.provisional === undefined
                 ? {}

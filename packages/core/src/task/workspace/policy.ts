@@ -351,11 +351,40 @@ function createDecision(
   reason: string,
   code?: string,
 ): WorkspaceDecision {
+  const base = context.base;
+  if (base?.ok === false) {
+    return refuse(base.code, base.reason, base.next);
+  }
+  const resolved = base?.ok === true ? base : null;
+  const baseRef =
+    resolved?.ref ??
+    (context.integrationBranch === "" ? null : context.integrationBranch);
+  if (baseRef === null) {
+    return refuse(
+      "WORKTREE_BASE_UNRESOLVED",
+      "no worktree base ref was resolved",
+      "pass --base <ref>, or configure parallel.integration.branch",
+    );
+  }
   const decision: WorkspaceDecision = {
     kind: "create",
     path: target.path,
     branch: target.branch,
-    base: context.integrationBranch === "" ? "main" : context.integrationBranch,
+    base: baseRef,
+    ...(resolved === null
+      ? {}
+      : {
+          baseInfo: {
+            source: resolved.source,
+            commit: resolved.commit,
+            remote: resolved.remote,
+            freshness: resolved.freshness,
+            behind: resolved.behind,
+            ahead: resolved.ahead,
+            shouldAsk: resolved.shouldAsk,
+            alternatives: resolved.alternatives,
+          },
+        }),
     reason,
   };
   if (code !== undefined) {

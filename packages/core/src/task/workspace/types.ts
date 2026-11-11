@@ -6,6 +6,12 @@
  * confirm, and persist them without core knowing about terminals.
  */
 
+import type {
+  BaseRefFreshness,
+  BaseRefResolution,
+  BaseRefSource,
+} from "./base.js";
+
 export type WorkspaceKind = "phronia" | "platform";
 
 export type WorktreePolicy = "auto" | "always" | "never";
@@ -85,6 +91,12 @@ export interface WorkspacePolicyContext {
    * the layout default lives in exactly one place.
    */
   readonly worktreeRoot?: WorktreeRoot;
+  /**
+   * Resolved worktree base. When present it wins over `integrationBranch` and
+   * carries provenance (source/commit/freshness) into the create decision.
+   * Callers that omit it keep the legacy integration-branch behavior.
+   */
+  readonly base?: BaseRefResolution;
 }
 
 /**
@@ -101,6 +113,17 @@ export interface WorktreeRoot {
   readonly source: "config" | "default" | "ephemeral";
 }
 
+export interface WorkspaceBaseInfo {
+  readonly source: BaseRefSource;
+  readonly commit: string;
+  readonly remote: boolean;
+  readonly freshness: BaseRefFreshness;
+  readonly behind: number | null;
+  readonly ahead: number | null;
+  readonly shouldAsk: boolean;
+  readonly alternatives: readonly string[];
+}
+
 export type WorkspaceDecision =
   | { kind: "reuse-current"; reason: string; code?: string }
   | {
@@ -115,6 +138,7 @@ export type WorkspaceDecision =
       path: string;
       branch: string;
       base: string;
+      baseInfo?: WorkspaceBaseInfo;
       reason: string;
       code?: string;
     }

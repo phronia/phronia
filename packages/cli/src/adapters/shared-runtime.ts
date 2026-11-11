@@ -13,6 +13,7 @@
 import fs from "node:fs";
 import path from "node:path";
 import { LAYOUT } from "@phronia/core/layout";
+import { reconcileWorktrees, type GitWorktreeFact } from "@phronia/core/task";
 import {
   diagnostic,
   isSupportedSchemaVersion,
@@ -92,6 +93,8 @@ export interface LoadWorktreeRegistryOptions {
   readonly paths: SharedRuntimePaths;
   /** Needed to rebuild when both registry files are missing. */
   readonly git?: Pick<GitPort, "worktreeList">;
+  /** Resolved worktree root, used to classify inside/outside-root entries. */
+  readonly worktreeRoot?: { readonly absolute: string };
   /** Defaults to true. `false` makes the load read-only (dry-run/tests). */
   readonly write?: boolean;
 }
@@ -357,13 +360,54 @@ export function loadWorktreeRegistry(
   }
 
   const originalSharedEntries = validEntries(sharedRead.value);
-  let sharedEntries = originalSharedEntries;
-  let legacyEntries = validEntries(legacyRead.value);
-  let pruned = 0;
+  const legacyEntries = validEntries(legacyRead.value);
+  const merged: WorktreeRegistryEntry[] = [];
+  const byTaskRef = new Map<string, WorktreeRegistryEntry>();
+  const byPath = new Set<string>();
 
-  if (sharedRead.ok && legacyRead.ok && options.git !== undefined) {
-    const live = liveWorktreePaths(options.projectRoot, options.git);
-    if (live === null) {
+  const add = (entry: WorktreeRegistryEntry): boolean => {
+    const normalized = normalizeEntry(entry);
+    if (normalized.path === "") {
+      return false;
+    }
+    if (byPath.has(normalized.path)) return false;
+    // `taskRef: ""` is not an identity: multiple provisional workspaces must
+    // coexist. Only a real task ref is deduplicated.
+    if (normalized.taskRef !== "" && byTaskRef.has(normalized.taskRef)) {
+      return false;
+    }
+    byTaskRef.set(normalized.taskRef, normalized);
+    byPath.add(normalized.path);
+    merged.push(normalized);
+    return true;
+  };
+
+  for (const entry of originalSharedEntries) {
+    add(entry);
+  }
+
+  for (const entry of legacyEntries) {
+    add(entry);
+  }
+
+  let rebuilt = false;
+  let seed: readonly WorktreeRegistryEntry[] = merged;
+  if (
+    options.write !== false &&
+    seed.length === 0 &&
+    options.git !== undefined
+  ) {
+    const discovered = rebuildFromGit(options.projectRoot, options.git);
+    if (discovered.length > 0) {
+      seed = discovered;
+      rebuilt = true;
+    }
+  }
+
+  let entries: readonly WorktreeRegistryEntry[] = seed;
+  if (options.git !== undefined) {
+    const gitWorktrees = readGitWorktrees(options.projectRoot, options.git);
+    if (gitWorktrees === null) {
       diagnostics.push(
         diagnostic(
           "RUNTIME_WORKTREES_UNVERIFIED",
@@ -373,21 +417,27 @@ export function loadWorktreeRegistry(
         ),
       );
     } else {
-      const before = sharedEntries.length + legacyEntries.length;
-      sharedEntries = sharedEntries.filter((entry) =>
-        live.has(comparablePath(entry.path)),
-      );
-      legacyEntries = legacyEntries.filter((entry) =>
-        live.has(comparablePath(entry.path)),
-      );
-      pruned = before - sharedEntries.length - legacyEntries.length;
-      if (pruned > 0) {
+      const inventory = reconcileWorktrees({
+        registry: seed,
+        git: gitWorktrees,
+        mainRoot: options.projectRoot,
+        root: options.worktreeRoot ?? {
+          absolute: path.join(options.projectRoot, LAYOUT.paths.worktrees),
+        },
+        pathKey: comparablePath,
+      });
+      entries = [...inventory.persisted];
+      for (const item of inventory.diagnostics) {
+        if (item.code === "RUNTIME_WORKTREES_MISSING") continue;
+        diagnostics.push(item);
+      }
+      if (inventory.missing.length > 0) {
         diagnostics.push(
           diagnostic(
             "RUNTIME_WORKTREES_PRUNED",
             "info",
-            `dropped ${pruned} worktree registry entr${
-              pruned === 1 ? "y" : "ies"
+            `dropped ${inventory.missing.length} worktree registry entr${
+              inventory.missing.length === 1 ? "y" : "ies"
             } no longer present in git worktree list`,
             { path: options.paths.worktrees },
           ),
@@ -396,53 +446,26 @@ export function loadWorktreeRegistry(
     }
   }
 
-  const entries: WorktreeRegistryEntry[] = [];
-  const byTaskRef = new Map<string, WorktreeRegistryEntry>();
-  const byPath = new Set<string>();
+  const sharedKeys = new Set(
+    originalSharedEntries.map((entry) => comparablePath(entry.path)),
+  );
+  const entryKeys = new Set(entries.map((entry) => comparablePath(entry.path)));
+  const migrated = legacyEntries.some(
+    (entry) =>
+      entry.path !== "" &&
+      entryKeys.has(comparablePath(entry.path)) &&
+      !sharedKeys.has(comparablePath(entry.path)),
+  );
 
-  const add = (entry: WorktreeRegistryEntry): boolean => {
-    const normalized = normalizeEntry(entry);
-    if (normalized.path === "") {
-      return false;
-    }
-    if (byTaskRef.has(normalized.taskRef) || byPath.has(normalized.path)) {
-      return false;
-    }
-    byTaskRef.set(normalized.taskRef, normalized);
-    byPath.add(normalized.path);
-    entries.push(normalized);
-    return true;
-  };
-
-  for (const entry of sharedEntries) {
-    add(entry);
-  }
-
-  let migrated = false;
-  for (const entry of legacyEntries) {
-    if (add(entry)) {
-      migrated = true;
-    }
-  }
-
-  let rebuilt = false;
-  if (entries.length === 0 && options.git !== undefined) {
-    const discovered = rebuildFromGit(options.projectRoot, options.git);
-    for (const entry of discovered) {
-      if (add(entry)) {
-        rebuilt = true;
-      }
-    }
-    if (rebuilt) {
-      diagnostics.push(
-        diagnostic(
-          "RUNTIME_WORKTREES_REBUILT",
-          "info",
-          `worktree registry rebuilt from git (${entries.length} linked worktrees)`,
-          { path: options.paths.worktrees },
-        ),
-      );
-    }
+  if (rebuilt) {
+    diagnostics.push(
+      diagnostic(
+        "RUNTIME_WORKTREES_REBUILT",
+        "info",
+        `worktree registry rebuilt from git (${entries.length} linked worktrees)`,
+        { path: options.paths.worktrees },
+      ),
+    );
   }
 
   if (migrated) {
@@ -460,13 +483,15 @@ export function loadWorktreeRegistry(
 
   const registry: WorktreeRegistry = {
     schemaVersion: SHARED_RUNTIME_SCHEMA_VERSION,
-    worktrees: entries,
+    worktrees: [...entries],
   };
 
-  const sharedPruned =
-    originalSharedEntries.length - sharedEntries.length;
+  const normalizedOriginal = originalSharedEntries.map(normalizeEntry);
   const needsWrite =
-    !sharedRead.ok || migrated || rebuilt || sharedPruned > 0;
+    !sharedRead.ok ||
+    migrated ||
+    rebuilt ||
+    JSON.stringify(entries) !== JSON.stringify(normalizedOriginal);
   let wrote = false;
   if (needsWrite && options.write !== false) {
     const writeResult = writeRuntimeJson(options.paths.worktrees, registry);
@@ -486,16 +511,17 @@ export function loadWorktreeRegistry(
   return { registry, migrated, rebuilt, wrote, diagnostics };
 }
 
-function liveWorktreePaths(
+function readGitWorktrees(
   projectRoot: string,
   git: Pick<GitPort, "worktreeList">,
-): ReadonlySet<string> | null {
+): GitWorktreeFact[] | null {
   try {
-    return new Set(
-      git
-        .worktreeList(projectRoot)
-        .map((worktree) => comparablePath(worktree.path)),
-    );
+    return git.worktreeList(projectRoot).map((worktree) => ({
+      path: worktree.path,
+      branch: worktree.branch ?? "",
+      head: worktree.head,
+      bare: worktree.bare,
+    }));
   } catch {
     return null;
   }

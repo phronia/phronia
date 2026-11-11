@@ -205,6 +205,14 @@ export interface GitStatus {
   readonly dirtyPaths: number;
 }
 
+/** Output of `git rev-list --left-right --count <left>...<right>`. */
+export interface GitRangeCount {
+  /** Commits reachable from `left` but not `right`. */
+  readonly left: number;
+  /** Commits reachable from `right` but not `left`. */
+  readonly right: number;
+}
+
 export interface GitPort {
   status(cwd: string): GitStatus;
   /** Raw `git status --porcelain` lines (tracked and untracked). */
@@ -221,6 +229,10 @@ export interface GitPort {
   branch(cwd: string): string;
   head(cwd: string): string;
   resolveRef(cwd: string, ref: string): string;
+  /** Resolve a symbolic ref (e.g. `refs/remotes/origin/HEAD`); null when absent. */
+  symbolicRef(cwd: string, ref: string): string | null;
+  /** Ahead/behind counts between two refs. */
+  revListLeftRight(cwd: string, left: string, right: string): GitRangeCount;
   isAncestor(cwd: string, ancestor: string, ref: string): boolean;
   isBare(cwd: string): boolean;
   isShallow(cwd: string): boolean;
@@ -307,6 +319,32 @@ export function createGitPort(exec: GitExec = defaultGitExec): GitPort {
 
     resolveRef(cwd: string, ref: string): string {
       return probeOk(["rev-parse", "--verify", ref], cwd).trim();
+    },
+
+    symbolicRef(cwd: string, ref: string): string | null {
+      const args = ["symbolic-ref", "--quiet", "--short", ref];
+      const result = probe(args, cwd);
+      if (
+        result.spawnError !== null ||
+        result.timedOut ||
+        result.exitCode !== 0
+      ) {
+        return null;
+      }
+      const value = result.stdout.trim();
+      return value === "" ? null : value;
+    },
+
+    revListLeftRight(cwd: string, left: string, right: string): GitRangeCount {
+      const output = probeOk(
+        ["rev-list", "--left-right", "--count", `${left}...${right}`],
+        cwd,
+      ).trim();
+      const [leftCount, rightCount] = output.split(/\s+/);
+      return {
+        left: Number.parseInt(leftCount ?? "0", 10) || 0,
+        right: Number.parseInt(rightCount ?? "0", 10) || 0,
+      };
     },
 
     isAncestor(cwd: string, ancestor: string, ref: string): boolean {

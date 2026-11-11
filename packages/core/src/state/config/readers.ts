@@ -68,6 +68,9 @@ const FALSE_VALUES = new Set(["false", "no", "0", "off"]);
 
 export type ParallelIntegrationMode = "auto" | "local" | "remote";
 export type ParallelIntegrationConfirm = "auto" | "always" | "never";
+export type ParallelBaseMode = "auto" | "local" | "remote";
+export type ParallelBaseConfirm = "auto" | "always" | "never";
+export type ParallelBaseFetch = "never" | "always";
 export type ParallelWorktreeMode = "auto" | "always" | "never";
 export type ParallelWorktreeCleanup = "on-archive" | "on-integrate" | "manual";
 export type ParallelWorktreeLocation = "persistent" | "ephemeral";
@@ -114,6 +117,19 @@ export interface ParallelIntegrationConfig {
   ignoredInputs: readonly string[];
 }
 
+/**
+ * Base-ref selection for new worktrees (`parallel.base`).
+ *
+ * `fetch: never` is the default: a remote-tracking base is reported as
+ * `unverified` instead of performing hidden network I/O. `--fetch` (or
+ * `fetch: always`) opts into a fetch before resolving.
+ */
+export interface ParallelBaseConfig {
+  mode: ParallelBaseMode;
+  confirm: ParallelBaseConfirm;
+  fetch: ParallelBaseFetch;
+}
+
 export interface ParallelConflictsConfig {
   alwaysSerial: readonly string[];
   generated: readonly string[];
@@ -154,6 +170,7 @@ export interface ParallelConfig {
   /** Declarative gitignored build inputs (`symlink` or `copy`). */
   inputs: readonly ParallelInput[];
   integration: ParallelIntegrationConfig;
+  base: ParallelBaseConfig;
   conflicts: ParallelConflictsConfig;
   dispatch: ParallelDispatchConfig;
   build: ParallelBuildConfig;
@@ -179,6 +196,11 @@ export const DEFAULT_PARALLEL_CONFIG: ParallelConfig = Object.freeze({
     lockTtl: DEFAULT_PARALLEL_LOCK_TTL,
     maxAttempts: DEFAULT_PARALLEL_MAX_ATTEMPTS,
     ignoredInputs: Object.freeze([]) as readonly string[],
+  }),
+  base: Object.freeze({
+    mode: "auto" as const,
+    confirm: "auto" as const,
+    fetch: "never" as const,
   }),
   conflicts: Object.freeze({
     alwaysSerial: DEFAULT_PARALLEL_ALWAYS_SERIAL,
@@ -452,6 +474,7 @@ function readParallel(
     ),
     inputs: readParallelInputs(raw.inputs, diagnostics, configPath),
     integration: readParallelIntegration(raw.integration, diagnostics, configPath),
+    base: readParallelBase(raw.base, diagnostics, configPath),
     conflicts: readParallelConflicts(raw.conflicts, diagnostics, configPath),
     dispatch: readParallelDispatch(raw.dispatch, diagnostics, configPath),
     build: readParallelBuild(raw.build, diagnostics, configPath),
@@ -571,6 +594,55 @@ function readParallelWorktree(
   );
 
   return { mode, dir, dirSource, cleanup, location };
+}
+
+function readParallelBase(
+  raw: YamlValue | undefined,
+  diagnostics: Diagnostic[],
+  configPath: string,
+): ParallelBaseConfig {
+  const defaults = DEFAULT_PARALLEL_CONFIG.base;
+  if (raw === undefined) {
+    return defaults;
+  }
+  if (!isObject(raw)) {
+    diagnostics.push(
+      diagnostic(
+        "state.config.invalid_value",
+        "warn",
+        `invalid parallel.base config: ${JSON.stringify(raw)}; using defaults`,
+        { path: configPath },
+      ),
+    );
+    return defaults;
+  }
+
+  return {
+    mode: readEnum(
+      raw.mode,
+      ["auto", "local", "remote"] as const,
+      defaults.mode,
+      "parallel.base.mode",
+      diagnostics,
+      configPath,
+    ),
+    confirm: readEnum(
+      raw.confirm,
+      ["auto", "always", "never"] as const,
+      defaults.confirm,
+      "parallel.base.confirm",
+      diagnostics,
+      configPath,
+    ),
+    fetch: readEnum(
+      raw.fetch,
+      ["never", "always"] as const,
+      defaults.fetch,
+      "parallel.base.fetch",
+      diagnostics,
+      configPath,
+    ),
+  };
 }
 
 function readParallelIntegration(

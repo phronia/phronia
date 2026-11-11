@@ -36,7 +36,7 @@ import { resolveWorktreeRoot } from "@phronia/core/task";
 import { createGitPort } from "../adapters/git.js";
 import { getConfiguredPlatforms } from "../configurators/index.js";
 import { ensureZcodePlugin } from "../configurators/zcode-plugin.js";
-import { listWorktrees } from "../services/workspace.js";
+import { listWorktreesWithRoot } from "../services/workspace.js";
 import { ensureWorktreeIgnored } from "../utils/ensure-gitignore.js";
 import {
   readSpecStates,
@@ -137,6 +137,12 @@ export interface DoctorTaskConfigReport {
   legacyWorktrees: {
     count: number;
     entries: { taskRef: string; path: string; exists: boolean }[];
+  };
+  /** Git worktrees with no registry entry; Phronia did not create them. */
+  unmanagedWorktrees: {
+    count: number;
+    outsideRoot: number;
+    entries: { path: string; branch: string; insideRoot: boolean }[];
   };
   /** Post-integration spec sync visibility (R10). */
   specSync: {
@@ -243,7 +249,7 @@ function taskConfigReport(
 
   return {
     worktreeRoot: worktreeRootReport(projectRoot, parallel, usable),
-    legacyWorktrees: legacyWorktreesReport(projectRoot, parallel, usable),
+    ...worktreeInventoryReport(projectRoot, parallel, usable),
     worktreeInputs: {
       count: parallel.inputs.length,
       paths: parallel.inputs.map((input) => `${input.path} (${input.mode})`),
@@ -321,13 +327,16 @@ function worktreeRootReport(
   };
 }
 
-function legacyWorktreesReport(
+function worktreeInventoryReport(
   projectRoot: string,
   parallel: ParallelConfig,
   usable: boolean,
-): DoctorTaskConfigReport["legacyWorktrees"] {
+): Pick<DoctorTaskConfigReport, "legacyWorktrees" | "unmanagedWorktrees"> {
   if (!usable) {
-    return { count: 0, entries: [] };
+    return {
+      legacyWorktrees: { count: 0, entries: [] },
+      unmanagedWorktrees: { count: 0, outsideRoot: 0, entries: [] },
+    };
   }
   const root = resolveWorktreeRoot({
     configuredDir: parallel.worktreeDir,
@@ -335,20 +344,41 @@ function legacyWorktreesReport(
     mainRoot: projectRoot,
     location: parallel.location,
   });
-  let entries: readonly { taskRef: string; path: string }[] = [];
+  let listing: ReturnType<typeof listWorktreesWithRoot>;
   try {
-    entries = listWorktrees({ cwd: projectRoot });
+    listing = listWorktreesWithRoot({
+      cwd: projectRoot,
+      includeUnmanaged: true,
+      includeMissing: true,
+    });
   } catch {
-    return { count: 0, entries: [] };
+    return {
+      legacyWorktrees: { count: 0, entries: [] },
+      unmanagedWorktrees: { count: 0, outsideRoot: 0, entries: [] },
+    };
   }
-  const legacy = entries
+  const legacy = listing.worktrees
+    .filter((entry) => entry.managed === true || entry.provisional === true)
     .filter((entry) => !isInsideDirectory(root.absolute, entry.path))
     .map((entry) => ({
       taskRef: entry.taskRef,
       path: entry.path,
       exists: fs.existsSync(entry.path),
     }));
-  return { count: legacy.length, entries: legacy };
+  const unmanaged = listing.unmanaged.map((entry) => ({
+    path: entry.path,
+    branch: entry.branch,
+    insideRoot:
+      entry.insideRoot ?? isInsideDirectory(root.absolute, entry.path),
+  }));
+  return {
+    legacyWorktrees: { count: legacy.length, entries: legacy },
+    unmanagedWorktrees: {
+      count: unmanaged.length,
+      outsideRoot: unmanaged.filter((entry) => !entry.insideRoot).length,
+      entries: unmanaged,
+    },
+  };
 }
 
 function isInsideDirectory(parent: string, child: string): boolean {
@@ -502,6 +532,26 @@ export function runDoctorCommand(options: DoctorOptions): number {
     lines.push(
       "    these keep working where they are; new worktrees use the root above.",
       "    to reclaim one: finish its task, or `phronia task worktree remove <ref>`",
+    );
+  }
+  if (taskConfig.unmanagedWorktrees.count > 0) {
+    lines.push(
+      `  unmanaged git worktrees: ${taskConfig.unmanagedWorktrees.count} (${taskConfig.unmanagedWorktrees.outsideRoot} outside the root)`,
+    );
+    for (const entry of taskConfig.unmanagedWorktrees.entries.slice(0, 5)) {
+      lines.push(
+        `    ${entry.branch || "(detached)"} → ${entry.path}${
+          entry.insideRoot ? "" : " (outside root)"
+        }`,
+      );
+    }
+    if (taskConfig.unmanagedWorktrees.entries.length > 5) {
+      lines.push(
+        `    … and ${taskConfig.unmanagedWorktrees.entries.length - 5} more`,
+      );
+    }
+    lines.push(
+      "    Phronia did not create these and will not modify them; attach one with `phronia task worktree attach <ref> --path <dir>`",
     );
   }
   lines.push(
