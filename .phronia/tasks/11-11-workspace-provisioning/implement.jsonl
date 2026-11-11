@@ -1,0 +1,6 @@
+{"file": ".phronia/spec/cli/backend/parallel-tasks.md", "reason": "Runtime contract for workspace decisions, shared runtime files, source-of-truth rules, worktree lifecycle, and error/output conventions."}
+{"file": ".phronia/spec/cli/backend/trellis-core-sdk.md", "reason": "Core/CLI package boundary: pure core decisions, public subpath exports, and no terminal/process control in core."}
+{"file": ".phronia/spec/cli/backend/error-handling.md", "reason": "Failure shape and executable next steps for the new WORKTREE_BASE_* and inventory diagnostics."}
+{"file": ".phronia/spec/cli/backend/filesystem-safety.md", "reason": "Atomic registry writes and path-safety rules for reconciliation and provisional workspace creation."}
+{"file": ".phronia/spec/cli/unit-test/conventions.md", "reason": "Where pure core tests vs CLI integration tests belong, and the regression-test expectation."}
+{"file": ".phronia/tasks/11-11-workspace-provisioning/research/bedrock-incident.md", "reason": "Concrete incident evidence, code findings, and the offline reproduction recipe used by the tests."}

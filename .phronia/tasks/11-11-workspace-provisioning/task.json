@@ -1,0 +1,30 @@
+{
+  "id": "workspace-provisioning",
+  "name": "workspace-provisioning",
+  "title": "Workspace provisioning: single base resolver, git-derived registry, taskless hotfix path",
+  "description": "Fix worktree provisioning end to end: one base-ref resolver in core with remote/local precedence and provenance, git as the source of truth for worktree visibility, and a supported taskless hotfix path that always lands under the managed worktree root.",
+  "status": "in_progress",
+  "dev_type": null,
+  "scope": null,
+  "package": "cli",
+  "priority": "P1",
+  "creator": "jingd2",
+  "assignee": "jingd2",
+  "createdAt": "2026-11-11",
+  "completedAt": null,
+  "branch": null,
+  "base_branch": "main",
+  "worktree_path": null,
+  "commit": null,
+  "pr_url": null,
+  "subtasks": [],
+  "children": [],
+  "parent": null,
+  "relatedFiles": [],
+  "notes": "",
+  "meta": {
+    "parallel": {
+      "exclusive": true
+    }
+  }
+}

@@ -1,0 +1,5 @@
+{"file": ".phronia/spec/cli/backend/parallel-tasks.md", "reason": "Check that base resolution, inventory buckets, provisional keying, and detached-hotfix behavior match the parallel runtime contract."}
+{"file": ".phronia/spec/cli/backend/error-handling.md", "reason": "Check every new refusal has a stable code, a reason, and an executable next."}
+{"file": ".phronia/spec/cli/backend/quality-guidelines.md", "reason": "Code standards, forbidden patterns, and package-scoped lint/typecheck gates."}
+{"file": ".phronia/spec/cli/unit-test/conventions.md", "reason": "Check the pure/unit vs integration split and that a regression test reproduces the incident."}
+{"file": ".phronia/tasks/11-11-workspace-provisioning/research/bedrock-incident.md", "reason": "Acceptance evidence: origin/base freshness, two provisional workspaces, and unmanaged worktree visibility."}

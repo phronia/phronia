@@ -195,3 +195,8 @@ tmp1/
 # Runtime build artifacts (binaries are release-only)
 packages/runtime/dist/
 packages/runtime/src/assets.generated.ts
+
+# PHRONIA:START
+# Task worktrees created by `phronia task workspace ensure`
+/.phronia-workspace/
+# PHRONIA:END
