@@ -45,12 +45,20 @@ Source of truth:
 | Question | Source |
 |---|---|
 | Branch exists / merged | git |
-| Task's worktree | `worktrees.json`, rebuildable from `git worktree list --porcelain` |
+| Task's worktree existence, path, branch, HEAD | `git worktree list --porcelain` |
+| Task's worktree metadata (`taskRef`, `kind`, `provisional`) | `worktrees.json`, managed/provisional entries only |
 | Who is integrating | `integration.lock` |
 | Who owns the main checkout | `workspace.claim.json` |
 | Who is doing a task | `leases/<hash>.json` |
 | Task intent / footprint / dependencies | the task's `task.json` |
 | Did the task land | `meta.integration.outcome` + git ancestry |
+
+The registry is a cache of task metadata, not the authority for existence.
+`reconcileWorktrees` unions it with git into `managed`, `provisional`,
+`unmanaged`, and `missing` buckets. Unmanaged entries are reported by
+`worktree list --include-unmanaged` and `doctor`, never persisted, moved, or
+deleted. `taskRef: ""` is not a unique key: multiple provisional workspaces
+must coexist, so only a non-empty `taskRef` deduplicates.
 
 `task.json.worktree_path` and `task.json.branch` are legacy B11 fields. New
 code must **not** write them; they are read-only fallbacks when the registry is
@@ -113,6 +121,29 @@ Rules:
   integration branch) → `phronia/<slug>`. A `task.branch` equal to the
   integration branch is treated as "no dedicated branch"; it never becomes the
   worktree branch (that would always fail with "already checked out").
+- **Base resolution is one contract.** `resolveWorktreeBase` in
+  `packages/core/src/task/workspace/base.ts` owns the fork point:
+  `--base` → `task.base_branch` → `parallel.integration.branch` →
+  `parallel.base.mode` (`remote`: `origin/HEAD` → `origin/main` →
+  `origin/master`; `local`: `main` → `master`) → explicit `HEAD`. There is no
+  silent `"main"` fallback: an unresolved base refuses with
+  `WORKTREE_BASE_UNRESOLVED`, `WORKTREE_BASE_REMOTE_UNAVAILABLE`, or
+  `WORKTREE_BASE_INVALID`. `--json` reports `baseSource`, `baseCommit`,
+  `remote`, `freshness` (`local|fetched|unverified`), `behind`, `ahead`,
+  `shouldAsk`, and `alternatives`.
+- **Remote freshness is explicit.** `parallel.base.fetch` defaults to `never`;
+  `--fetch` (or `fetch: always`) fetches the remote base first. An unfetched
+  remote base is `unverified`; a fetch failure is a warning, not a refusal.
+  `parallel.base.confirm` (`auto|always|never`) drives `shouldAsk`; the CLI
+  never reads stdin. The agent asks the user, then re-runs with `--base`.
+- **Provisional workspaces.** `prepare --for-new-task` accepts `--branch`,
+  `--base`, `--fetch`/`--no-fetch`, and `--isolate`. `--isolate` creates a
+  worktree even when main is free; without it `prepare` claims main. Multiple
+  provisional workspaces coexist; `workspace bind` attaches one to a task.
+- **Dirty main.** Under the default `auto` policy a dirty unclaimed main is a
+  `create` trigger. `parallel.worktree: never` still refuses worktree creation
+  (`WORKSPACE_DIRTY_UNCLAIMED` / `WORKSPACE_WORKTREE_DISABLED`), and
+  `worktree add` keeps its dirty refusal unless `--force`.
 - A task that does not require isolation reuses a clean, unclaimed main
   checkout (`reuse-current`) and records a task claim there. Only
   `parallel.worktree=always`, an `exclusive` task, a parallel batch, or a main

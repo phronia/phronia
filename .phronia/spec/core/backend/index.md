@@ -15,6 +15,8 @@ independent of CLI rendering and process-control concerns.
 | Channel API | `packages/core/src/channel/` | Durable channel/event APIs, reducers, workers, inbox, runtime contracts. |
 | Mem API | `packages/core/src/mem/` | Persisted AI session readers, search, filtering, dialogue extraction, and project aggregation. |
 | Task API | `packages/core/src/task/` | Reusable task record, schema, phase, and path helpers. |
+| Workspace domain | `packages/core/src/task/workspace/` | Pure workspace decision matrix and the single base-ref resolver (`base.ts`). |
+| Worktree inventory | `packages/core/src/task/worktree/` | Pure git/registry reconciliation into managed/provisional/unmanaged/missing. |
 | Testing API | `packages/core/src/testing/` | Public test helpers intended for package consumers. |
 | Tests | `packages/core/test/` | Core-owned unit/integration coverage. |
 
