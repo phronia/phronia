@@ -8,8 +8,8 @@
 
 <!-- @@@auto:current-status -->
 - **Active File**: `journal-1.md`
-- **Total Sessions**: 5
-- **Last Active**: 2026-10-30
+- **Total Sessions**: 6
+- **Last Active**: 2026-11-11
 <!-- @@@/auto:current-status -->
 
 ---
@@ -19,7 +19,7 @@
 <!-- @@@auto:active-documents -->
 | File | Lines | Status |
 |------|-------|--------|
-| `journal-1.md` | ~153 | Active |
+| `journal-1.md` | ~177 | Active |
 <!-- @@@/auto:active-documents -->
 
 ---
@@ -29,6 +29,7 @@
 <!-- @@@auto:session-history -->
 | # | Date | Title | Commits | Branch |
 |---|------|-------|---------|--------|
+| 6 | 2026-11-11 | Workspace provisioning: unified base resolver and git-derived registry | `cffe1a86`, `527ac898` | `main` |
 | 5 | 2026-10-30 | Adopt managed-path kinds and migration tail | `a37e7004`, `82975c7e` | `main` |
 | 4 | 2026-10-29 | Spec post-integration sync and worktree ergonomics | `71d7fe76` | `main` |
 | 3 | 2026-10-29 | Parallel dispatch admission | `433baad0` | `main` |

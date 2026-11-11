@@ -151,3 +151,27 @@ Split managed roots into dirs and files so adopt never walks a file, replaced th
 ### Next Steps
 
 - Run phronia upgrade locally, then remove adboost/.phronia and re-run phronia adopt
+
+
+## Session 6: Workspace provisioning: unified base resolver and git-derived registry
+<!-- phronia-session: v=2 fp=0e3c5de488526c43 -->
+
+**Date**: 2026-11-11
+**Task**: Workspace provisioning: unified base resolver and git-derived registry
+**Package**: cli
+**Branch**: `main`
+
+### Summary
+
+Unified worktree base resolution in core, made git the source of truth for worktree inventory, fixed multi-provisional registry keying, and added taskless hotfix provisioning; released 2611.11.1.
+
+### Git Commits
+
+| Hash | Message |
+|------|---------|
+| `cffe1a86` | fix(workspace): unify base resolution and provision detached worktrees |
+| `527ac898` | chore(task): plan workspace-provisioning |
+
+### Status
+
+[OK] **Completed**
